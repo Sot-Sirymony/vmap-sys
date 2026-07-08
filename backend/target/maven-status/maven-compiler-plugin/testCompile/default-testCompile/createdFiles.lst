@@ -1,5 +1,0 @@
-com/visionmapping/VisionMappingApplicationTests.class
-com/visionmapping/controller/HealthControllerTests.class
-com/visionmapping/security/JwtServiceTest.class
-com/visionmapping/service/VisionMappingServiceTest.class
-com/visionmapping/controller/AuthAndTaskFlowTests.class

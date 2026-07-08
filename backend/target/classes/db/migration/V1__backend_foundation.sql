@@ -1,2 +1,0 @@
--- Phase 2 foundation migration.
--- Business tables will be added in the data model phase.
