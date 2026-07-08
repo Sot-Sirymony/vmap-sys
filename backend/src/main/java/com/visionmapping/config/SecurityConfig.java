@@ -2,8 +2,9 @@ package com.visionmapping.config;
 
 import com.visionmapping.security.AppUserDetailsService;
 import com.visionmapping.security.JwtAuthenticationFilter;
+import java.util.Arrays;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,11 +25,23 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
+    private final List<String> corsAllowedOrigins;
+
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            AppUserDetailsService appUserDetailsService,
+            @Value("${app.cors.allowed-origins}") String corsAllowedOrigins) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.appUserDetailsService = appUserDetailsService;
+        this.corsAllowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -66,12 +79,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:5174",
-                "http://127.0.0.1:5174"
-        ));
+        configuration.setAllowedOrigins(corsAllowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setExposedHeaders(List.of("Authorization"));

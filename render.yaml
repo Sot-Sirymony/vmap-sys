@@ -1,0 +1,64 @@
+databases:
+  - name: vision-mapping-db
+    databaseName: vision_mapping
+    user: vision_mapping
+    plan: free
+
+services:
+  # Spring Boot API — deployed from backend/Dockerfile
+  - type: web
+    name: vision-mapping-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_MINUTES
+        value: "1440"
+      - key: DB_HOST
+        fromDatabase:
+          name: vision-mapping-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: vision-mapping-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: vision-mapping-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: vision-mapping-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: vision-mapping-db
+          property: password
+      # Update this if the frontend service ends up on a different
+      # Render subdomain than the one predicted below.
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://vision-mapping-frontend.onrender.com
+
+  # React/Vite SPA — static build, served from frontend/dist
+  - type: web
+    name: vision-mapping-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      # Update this if the backend service ends up on a different
+      # Render subdomain than the one predicted above.
+      - key: VITE_API_BASE_URL
+        value: https://vision-mapping-backend.onrender.com/api
+    routes:
+      # SPA fallback so React Router routes don't 404 on refresh/direct link
+      - type: rewrite
+        source: /*
+        destination: /index.html
