@@ -400,7 +400,7 @@ a {
 
 .kanban {
   display: grid;
-  grid-template-columns: repeat(6, minmax(180px, 1fr));
+  grid-template-columns: repeat(6, minmax(240px, 1fr));
   gap: 12px;
   overflow-x: auto;
   padding-bottom: 4px;
