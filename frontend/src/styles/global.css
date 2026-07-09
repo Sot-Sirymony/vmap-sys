@@ -189,6 +189,14 @@ a {
   gap: 16px;
 }
 
+.card-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-top: 0 !important;
+}
+
 .toolbar {
   display: flex;
   align-items: center;

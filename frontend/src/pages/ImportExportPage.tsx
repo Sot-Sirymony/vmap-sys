@@ -3,6 +3,7 @@ import { exportExcelWorkbook, importExcelWorkbook } from '../api/excelApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
+import MuiButton from '@mui/material/Button';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -13,6 +14,7 @@ import { PageSection } from './PageSection';
 export function ImportExportPage() {
   const { token } = useAuth();
   const [summary, setSummary] = useState<ExcelImportSummary | null>(null);
+  const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,6 +44,7 @@ export function ImportExportPage() {
     if (!token || !file) {
       return;
     }
+    setFileName(file.name);
     setLoading(true);
     try {
       setSummary(await importExcelWorkbook(token, file));
@@ -60,17 +63,18 @@ export function ImportExportPage() {
       {error && <ErrorMessage message={error} />}
       <div className="two-column">
         <Card>
-          <CardHeader title="Import Excel" />
-          <CardContent>
-            <label className="button button-secondary">
+          <CardHeader title="Import Excel" subheader="Upload an .xlsx workbook to validate its structure against the required sheets." />
+          <CardContent className="card-action">
+            <MuiButton component="label" variant="contained" color="secondary" size="small">
               Choose workbook
               <input type="file" accept=".xlsx" hidden onChange={(event) => void handleImport(event)} />
-            </label>
+            </MuiButton>
+            {fileName && <p className="field-hint">Selected: {fileName}</p>}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader title="Export Excel" />
-          <CardContent>
+          <CardHeader title="Export Excel" subheader="Download all current Vision Mapping data as a formatted workbook." />
+          <CardContent className="card-action">
             <Button type="button" onClick={() => void handleExport()}>Export workbook</Button>
           </CardContent>
         </Card>
