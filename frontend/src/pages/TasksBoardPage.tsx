@@ -7,11 +7,20 @@ import { listSteps } from '../api/stepApi';
 import { archiveTask, createTask, listTasks, updateTask, updateTaskStatus } from '../api/taskApi';
 import { Checkbox } from '@/components/ui/checkbox';
 import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -19,6 +28,7 @@ import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { ProgressBar } from '../components/common/ProgressBar';
+import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
@@ -90,6 +100,8 @@ export function TasksBoardPage() {
   const [filterDreamId, setFilterDreamId] = useState('');
   const [filterGoalId, setFilterGoalId] = useState('');
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
 
   useEffect(() => {
     if (!token) {
@@ -226,6 +238,12 @@ export function TasksBoardPage() {
     }
     if (filterOverdueOnly && !isOverdue(task.dueDate, task.status)) {
       return false;
+    }
+    if (searchTerm) {
+      const haystack = `${task.title} ${task.owner} ${task.description ?? ''} ${task.nextAction ?? ''} ${task.blockerReason ?? ''}`.toLowerCase();
+      if (!haystack.includes(searchTerm.toLowerCase())) {
+        return false;
+      }
     }
     const step = stepById.get(task.stepId);
     if (filterGoalId && String(step?.goalId ?? '') !== filterGoalId) {
@@ -388,6 +406,64 @@ export function TasksBoardPage() {
           <Link to="/tasks">Clear filter</Link>
         </Card>
       )}
+      <div className="toolbar">
+        <Input
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search Here"
+          aria-label="Search tasks"
+        />
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          size="small"
+          onChange={(_event, value) => { if (value) setViewMode(value); }}
+          aria-label="Task view"
+        >
+          <ToggleButton value="board">Board</ToggleButton>
+          <ToggleButton value="list">List</ToggleButton>
+        </ToggleButtonGroup>
+      </div>
+      {viewMode === 'list' ? (
+        <Card>
+          <CardContent>
+            {visibleTasks.length === 0 ? (
+              <EmptyState>No tasks match these filters.</EmptyState>
+            ) : (
+              <TableContainer>
+                <Table className="data-table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Task</TableCell>
+                      <TableCell>Owner</TableCell>
+                      <TableCell>Due</TableCell>
+                      <TableCell>Priority</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Progress</TableCell>
+                      <TableCell>Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {visibleTasks.map((task) => (
+                      <TableRow key={task.id} className={isOverdue(task.dueDate, task.status) ? 'row-overdue' : ''}>
+                        <TableCell sx={{ fontWeight: 500 }}>{task.title}</TableCell>
+                        <TableCell>{task.owner}</TableCell>
+                        <TableCell>{task.dueDate}</TableCell>
+                        <TableCell><PriorityBadge priority={task.priority} /></TableCell>
+                        <TableCell><StatusBadge status={task.status} /></TableCell>
+                        <TableCell sx={{ width: 160 }}><ProgressBar value={Number(task.progressPercent)} /></TableCell>
+                        <TableCell className="row-actions">
+                          <TaskCardMenu onEdit={() => startEdit(task)} onArchive={() => void crud.archive(task.id)} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
       <div className="kanban">
         {columns.map((column) => {
           const columnTasks = visibleTasks.filter((task) => task.status === column);
@@ -439,6 +515,7 @@ export function TasksBoardPage() {
           );
         })}
       </div>
+      )}
     </PageSection>
   );
 }
