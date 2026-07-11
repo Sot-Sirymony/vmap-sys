@@ -261,6 +261,16 @@ export type Page<T> = {
   last: boolean;
 };
 
+export type DashboardTrendPoint = {
+  weekEnd: string;
+  progress: number;
+};
+
+export type DashboardAreaProgress = {
+  name: string;
+  progress: number;
+};
+
 export type DashboardSummary = {
   totalVisionAreas: number;
   activeDreams: number;
@@ -273,4 +283,12 @@ export type DashboardSummary = {
   tasksDueThisWeek: number;
   goalsByStatus: Record<string, number>;
   dreamsByVisionArea: Record<string, number>;
+  tasksByStatus: Record<string, number>;
+  tasksByPriority: Record<string, number>;
+  activeObstaclesByType: Record<string, number>;
+  partnersByStatus: Record<string, number>;
+  reviewCadence: Record<string, number>;
+  progressTrend: DashboardTrendPoint[];
+  visionAreaProgress: DashboardAreaProgress[];
+  priorityTasks: TaskItem[];
 };

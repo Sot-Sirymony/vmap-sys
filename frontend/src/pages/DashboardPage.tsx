@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Compass } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { getDashboardSummary } from '../api/dashboardApi';
-import { listDreams } from '../api/dreamApi';
-import { listGoals } from '../api/goalApi';
-import { listObstacles } from '../api/obstacleApi';
-import { listPartners } from '../api/partnerApi';
-import { listProgressLogs } from '../api/progressLogApi';
-import { listReviews } from '../api/reviewApi';
-import { listTasks } from '../api/taskApi';
-import { listVisionAreas } from '../api/visionAreaApi';
 import { CategoryBreakdownChart } from '../components/dashboard/CategoryBreakdownChart';
 import { ChartTooltipContent } from '../components/dashboard/ChartTooltipContent';
 import { DashboardSummary } from '../components/dashboard/DashboardSummary';
@@ -19,6 +13,7 @@ import { PriorityBadge } from '../components/common/PriorityBadge';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { StatusBadge } from '../components/common/StatusBadge';
 import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
@@ -32,7 +27,7 @@ import TableRow from '@mui/material/TableRow';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
-import type { DashboardSummary as DashboardSummaryData, Dream, Goal, Obstacle, Partner, PartnerStatus, Priority, ProgressLog, Review, TaskItem, VisionArea, WorkStatus } from '../types/vision';
+import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, WorkStatus } from '../types/vision';
 import { obstacleTypeLabels, partnerStatusLabels, priorityColors, workStatusColors } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
 
@@ -42,7 +37,6 @@ const OTHER_OBSTACLE_TYPES_KEY = 'OTHER_TYPES';
 const PARTNER_STATUS_ORDER: PartnerStatus[] = ['TO_CONTACT', 'CONTACTED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'];
 const HEATMAP_WEEKS = 12;
 const HEATMAP_LEVEL_COLORS = ['#e5e5e5', '#86efac', '#4ade80', '#22c55e', '#15803d'];
-const PROGRESS_TREND_WEEKS = 12;
 
 // Pipeline stage colors — not/yet (gray) → reached out (blue) → engaged (green) /
 // stalled (amber) / declined (red) → done (teal, kept distinct from the green
@@ -89,14 +83,6 @@ const OBSTACLE_TYPE_COLORS: Record<string, string> = {
 export function DashboardPage() {
   const { token } = useAuth();
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
-  const [dreams, setDreams] = useState<Dream[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [progressLogs, setProgressLogs] = useState<ProgressLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -106,56 +92,27 @@ export function DashboardPage() {
     }
 
     setLoading(true);
-    Promise.all([
-      getDashboardSummary(token),
-      listTasks(token),
-      listVisionAreas(token),
-      listDreams(token),
-      listGoals(token),
-      listObstacles(token),
-      listPartners(token, 0, 500),
-      listReviews(token),
-      listProgressLogs(token),
-    ])
-      .then(([summaryData, taskData, visionAreaData, dreamData, goalData, obstacleData, partnerPage, reviewData, progressLogData]) => {
+    getDashboardSummary(token)
+      .then((summaryData) => {
         setSummary(summaryData);
-        setTasks(taskData);
-        setVisionAreas(visionAreaData);
-        setDreams(dreamData);
-        setGoals(goalData);
-        setObstacles(obstacleData);
-        setPartners(partnerPage.content);
-        setReviews(reviewData);
-        setProgressLogs(progressLogData);
         setError('');
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load dashboard.'))
       .finally(() => setLoading(false));
   }, [token]);
 
-  const priorityTasks = [...tasks]
-    .filter((task) => task.status !== 'COMPLETED')
-    .sort((first, second) => priorityScore(second.priority) - priorityScore(first.priority))
-    .slice(0, 5);
-
-  const tasksByStatus = tasks.reduce<Record<string, number>>((counts, task) => {
-    counts[task.status] = (counts[task.status] ?? 0) + 1;
-    return counts;
-  }, {});
+  // Everything below reshapes the single /api/dashboard payload for its
+  // widget — the per-entity list fetches this page used to make (8 requests
+  // per load) now happen server-side.
+  const priorityTasks = summary?.priorityTasks ?? [];
+  const tasksByStatus = summary?.tasksByStatus ?? {};
 
   const tasksByPriority = PRIORITY_ORDER.reduce<Record<string, number>>((counts, priority) => {
-    counts[priority] = tasks.filter((task) => task.priority === priority).length;
+    counts[priority] = summary?.tasksByPriority?.[priority] ?? 0;
     return counts;
   }, {});
 
-  const activeObstacleTypeCounts = obstacles
-    .filter((obstacle) => obstacle.status === 'OPEN' || obstacle.status === 'IN_PROGRESS')
-    .reduce<Record<string, number>>((counts, obstacle) => {
-      counts[obstacle.obstacleType] = (counts[obstacle.obstacleType] ?? 0) + 1;
-      return counts;
-    }, {});
-
-  const sortedObstacleTypes = Object.entries(activeObstacleTypeCounts).sort(([, first], [, second]) => second - first);
+  const sortedObstacleTypes = Object.entries(summary?.activeObstaclesByType ?? {}).sort(([, first], [, second]) => second - first);
   const topObstaclesByType = Object.fromEntries(sortedObstacleTypes.slice(0, TOP_OBSTACLE_TYPE_COUNT));
   const remainingObstacleCount = sortedObstacleTypes
     .slice(TOP_OBSTACLE_TYPE_COUNT)
@@ -165,35 +122,89 @@ export function DashboardPage() {
   }
 
   const partnerCounts = PARTNER_STATUS_ORDER.reduce<Record<string, number>>((counts, status) => {
-    counts[status] = partners.filter((partner) => partner.status === status).length;
+    counts[status] = summary?.partnersByStatus?.[status] ?? 0;
     return counts;
   }, {});
+  const totalPartners = Object.values(partnerCounts).reduce((sum, count) => sum + count, 0);
 
   const partnerPipelineData = [{ name: 'Partners', ...partnerCounts }];
 
-  const activeReviews = reviews.filter((review) => !review.archived);
-  const reviewHeatmapWeeks = buildReviewHeatmapWeeks(activeReviews);
-  const cadenceReviewCount = activeReviews.filter((review) => review.reviewType === 'DAILY' || review.reviewType === 'WEEKLY').length;
+  const reviewCadence = summary?.reviewCadence ?? {};
+  const reviewHeatmapWeeks = buildReviewHeatmapWeeks(reviewCadence);
+  const cadenceReviewCount = Object.values(reviewCadence).reduce((sum, count) => sum + count, 0);
 
-  const progressTrend = buildProgressTrend(progressLogs);
+  const progressTrend = (summary?.progressTrend ?? []).map((point) => ({
+    label: new Date(`${point.weekEnd}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    progress: Number(point.progress),
+  }));
 
-  const visionAreaProgress = visionAreas
-    .filter((area) => area.status !== 'ARCHIVED')
-    .map((area) => {
-      const dreamIds = new Set(dreams.filter((dream) => dream.visionAreaId === area.id).map((dream) => dream.id));
-      const areaGoals = goals.filter((goal) => dreamIds.has(goal.dreamId));
-      const progress = areaGoals.length === 0
-        ? 0
-        : Math.round(areaGoals.reduce((sum, goal) => sum + Number(goal.progressPercent), 0) / areaGoals.length);
-      return { name: area.name, progress };
-    })
-    .sort((first, second) => first.progress - second.progress);
+  const visionAreaProgress = (summary?.visionAreaProgress ?? []).map((area) => ({
+    name: area.name,
+    progress: Number(area.progress),
+  }));
+
+  // The whole hierarchy hangs off Vision Areas, so zero areas means a brand
+  // new account — show one guided prompt instead of nine "0" tiles and six
+  // empty chart shells. Gated on !loading so it can't flash during fetch.
+  const isFirstRun = !loading && !error && summary !== null && summary.totalVisionAreas === 0;
 
   return (
     <PageSection title="Dashboard" subtitle="Track progress across dreams, goals, steps, and tasks.">
       {loading && <Loading />}
       {error && <ErrorMessage message={error} />}
+      {isFirstRun ? (
+        <Card>
+          <CardContent sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 48, height: 48, borderRadius: '8px', bgcolor: '#deecf9', color: '#005a9e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Compass size={26} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Start your Vision Map</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 440 }}>
+              Everything here builds from a Vision Area — a major area of your life or work,
+              like Career, Health, or Family. Create your first one, then add dreams, goals,
+              steps, and tasks under it. This dashboard fills in as you go.
+            </Typography>
+            <MuiButton component={Link} to="/vision-areas" variant="contained" disableElevation sx={{ mt: 1 }}>
+              Create your first Vision Area
+            </MuiButton>
+          </CardContent>
+        </Card>
+      ) : (
+      <>
       <DashboardSummary summary={summary} />
+      <Card>
+        <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />
+        <CardContent>
+          {priorityTasks.length === 0 ? (
+            <EmptyState>No open priority tasks.</EmptyState>
+          ) : (
+            <TableContainer>
+            <Table className="data-table">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Task</TableCell>
+                  <TableCell>Due</TableCell>
+                  <TableCell>Priority</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Progress</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {priorityTasks.map((task) => (
+                  <TableRow key={task.id}>
+                    <TableCell sx={{ fontWeight: 500 }}>{task.title}</TableCell>
+                    <TableCell>{task.dueDate}</TableCell>
+                    <TableCell><PriorityBadge priority={task.priority} /></TableCell>
+                    <TableCell><StatusBadge status={task.status} /></TableCell>
+                    <TableCell sx={{ width: 160 }}><ProgressBar value={Number(task.progressPercent)} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            </TableContainer>
+          )}
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader title="Progress trend" subheader="Portfolio-wide average task progress over the last 12 weeks" />
         <CardContent>
@@ -211,9 +222,9 @@ export function DashboardPage() {
                     dataKey="progress"
                     name="Average progress %"
                     type="monotone"
-                    fill="#2563eb"
+                    fill="#0078d4"
                     fillOpacity={0.15}
-                    stroke="#2563eb"
+                    stroke="#0078d4"
                     strokeWidth={2}
                   />
                 </AreaChart>
@@ -260,31 +271,32 @@ export function DashboardPage() {
           variant="donut"
           colorForKey={(key) => OBSTACLE_TYPE_COLORS[key] ?? '#a3a3a3'}
         />
+        <Card>
+          <CardHeader title="Vision Area progress" subheader="Average goal progress per area — lowest first is what needs attention" />
+          <CardContent>
+            {visionAreaProgress.length === 0 ? (
+              <EmptyState>No vision areas yet.</EmptyState>
+            ) : (
+              <Box sx={{ width: '100%', height: Math.max(220, visionAreaProgress.length * 44) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={visionAreaProgress} layout="vertical" margin={{ left: 8, right: 16 }}>
+                    <CartesianGrid horizontal={false} />
+                    <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} />
+                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={120} />
+                    <RechartsTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="progress" name="Progress %" radius={4} fill="#0078d4" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
       </Box>
-      <Card>
-        <CardHeader title="Vision Area progress" subheader="Average goal progress per area — lowest first is what needs attention" />
-        <CardContent>
-          {visionAreaProgress.length === 0 ? (
-            <EmptyState>No vision areas yet.</EmptyState>
-          ) : (
-            <Box sx={{ width: '100%', height: Math.max(220, visionAreaProgress.length * 44) }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={visionAreaProgress} layout="vertical" margin={{ left: 8, right: 16 }}>
-                  <CartesianGrid horizontal={false} />
-                  <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} />
-                  <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={120} />
-                  <RechartsTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="progress" name="Progress %" radius={4} fill="#7c3aed" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
       <Card>
         <CardHeader title="Partner engagement" subheader="Where partners sit in the pipeline, from first contact to done" />
         <CardContent>
-          {partners.length === 0 ? (
+          {totalPartners === 0 ? (
             <EmptyState>No partners yet.</EmptyState>
           ) : (
             <>
@@ -352,45 +364,11 @@ export function DashboardPage() {
           )}
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />
-        <CardContent>
-          {priorityTasks.length === 0 ? (
-            <EmptyState>No open priority tasks.</EmptyState>
-          ) : (
-            <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Task</TableCell>
-                  <TableCell>Due</TableCell>
-                  <TableCell>Priority</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Progress</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {priorityTasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell sx={{ fontWeight: 500 }}>{task.title}</TableCell>
-                    <TableCell>{task.dueDate}</TableCell>
-                    <TableCell><PriorityBadge priority={task.priority} /></TableCell>
-                    <TableCell><StatusBadge status={task.status} /></TableCell>
-                    <TableCell sx={{ width: 160 }}><ProgressBar value={Number(task.progressPercent)} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+      </Box>
+      </>
+      )}
     </PageSection>
   );
-}
-
-function priorityScore(priority: TaskItem['priority']) {
-  return { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 }[priority];
 }
 
 function formatLabel(value: string) {
@@ -399,14 +377,7 @@ function formatLabel(value: string) {
 
 type HeatmapDay = { date: string; count: number; isFuture: boolean };
 
-function buildReviewHeatmapWeeks(reviews: Review[]): HeatmapDay[][] {
-  const countsByDate = reviews
-    .filter((review) => review.reviewType === 'DAILY' || review.reviewType === 'WEEKLY')
-    .reduce<Record<string, number>>((counts, review) => {
-      counts[review.reviewDate] = (counts[review.reviewDate] ?? 0) + 1;
-      return counts;
-    }, {});
-
+function buildReviewHeatmapWeeks(countsByDate: Record<string, number>): HeatmapDay[][] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const endOfWeek = new Date(today);
@@ -457,76 +428,4 @@ function formatHeatmapTooltip(day: HeatmapDay) {
   });
   const reviewWord = day.count === 1 ? 'review' : 'reviews';
   return `${label} — ${day.count} ${reviewWord}`;
-}
-
-// Reconstructs a running "average task progress" snapshot per day from the
-// before/after log history, then samples one point per week. This mirrors the
-// same "Average Progress" KPI the dashboard already shows, but as a trend
-// instead of a single frozen number — each task's latest known value as of a
-// given day carries forward until its next logged change.
-function buildProgressTrend(logs: ProgressLog[]): { label: string; progress: number }[] {
-  const byTask = new Map<number, ProgressLog[]>();
-  for (const log of logs) {
-    if (log.archived) {
-      continue;
-    }
-    const entries = byTask.get(log.relatedTaskId) ?? [];
-    entries.push(log);
-    byTask.set(log.relatedTaskId, entries);
-  }
-  for (const entries of byTask.values()) {
-    entries.sort((first, second) => new Date(first.loggedAt).getTime() - new Date(second.loggedAt).getTime());
-  }
-
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const totalDays = PROGRESS_TREND_WEEKS * 7;
-  const start = new Date(today);
-  start.setDate(start.getDate() - totalDays + 1);
-  start.setHours(0, 0, 0, 0);
-
-  const dailyAverages: Array<number | null> = [];
-  for (let i = 0; i < totalDays; i += 1) {
-    const cursor = new Date(start);
-    cursor.setDate(start.getDate() + i);
-    cursor.setHours(23, 59, 59, 999);
-
-    const valuesAsOfDay: number[] = [];
-    for (const entries of byTask.values()) {
-      let latest: ProgressLog | undefined;
-      for (const entry of entries) {
-        if (new Date(entry.loggedAt) <= cursor) {
-          latest = entry;
-        } else {
-          break;
-        }
-      }
-      if (latest) {
-        valuesAsOfDay.push(Number(latest.progressPercentAfter));
-      }
-    }
-    dailyAverages.push(
-      valuesAsOfDay.length > 0
-        ? valuesAsOfDay.reduce((sum, value) => sum + value, 0) / valuesAsOfDay.length
-        : null,
-    );
-  }
-
-  const weeklyPoints: Array<{ label: string; progress: number | null }> = [];
-  for (let week = 0; week < PROGRESS_TREND_WEEKS; week += 1) {
-    const weekValues = dailyAverages.slice(week * 7, week * 7 + 7);
-    const lastKnown = [...weekValues].reverse().find((value) => value !== null) ?? null;
-    const weekEndDate = new Date(start);
-    weekEndDate.setDate(start.getDate() + week * 7 + 6);
-    weeklyPoints.push({
-      label: weekEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      progress: lastKnown === null ? null : Math.round(lastKnown),
-    });
-  }
-
-  const firstDataIndex = weeklyPoints.findIndex((point) => point.progress !== null);
-  if (firstDataIndex === -1) {
-    return [];
-  }
-  return weeklyPoints.slice(firstDataIndex).map((point) => ({ label: point.label, progress: point.progress ?? 0 }));
 }

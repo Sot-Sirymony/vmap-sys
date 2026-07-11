@@ -37,6 +37,7 @@ import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.PartnerStatus;
+import com.visionmapping.entity.enums.ReviewType;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
@@ -56,6 +57,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -641,6 +645,10 @@ public class VisionMappingService {
         List<Dream> dreams = dreamRepository.findByUser_IdAndArchivedFalse(userId);
         List<Goal> goals = goalRepository.findByUser_IdAndArchivedFalse(userId);
         List<TaskItem> tasks = taskItemRepository.findByUser_IdAndArchivedFalse(userId);
+        List<Obstacle> obstacles = obstacleRepository.findByUser_IdAndArchivedFalse(userId);
+        List<Partner> partners = partnerRepository.findByUser_IdAndArchivedFalse(userId);
+        List<Review> reviews = reviewRepository.findByUser_IdAndArchivedFalse(userId);
+        List<ProgressLog> progressLogs = progressLogRepository.findByUser_IdAndArchivedFalse(userId);
         LocalDate today = LocalDate.now();
         LocalDate weekEnd = today.plusDays(7);
         BigDecimal averageProgress = goals.isEmpty()
@@ -653,6 +661,40 @@ public class VisionMappingService {
                 .collect(Collectors.groupingBy(goal -> goal.getStatus().name(), Collectors.counting()));
         Map<String, Long> dreamsByArea = dreams.stream()
                 .collect(Collectors.groupingBy(dream -> dream.getVisionArea().getName(), Collectors.counting()));
+        Map<String, Long> tasksByStatus = tasks.stream()
+                .collect(Collectors.groupingBy(task -> task.getStatus().name(), Collectors.counting()));
+        Map<String, Long> tasksByPriority = tasks.stream()
+                .collect(Collectors.groupingBy(task -> task.getPriority().name(), Collectors.counting()));
+        Map<String, Long> activeObstaclesByType = obstacles.stream()
+                .filter(obstacle -> obstacle.getStatus() == ObstacleStatus.OPEN || obstacle.getStatus() == ObstacleStatus.IN_PROGRESS)
+                .collect(Collectors.groupingBy(obstacle -> obstacle.getObstacleType().name(), Collectors.counting()));
+        Map<String, Long> partnersByStatus = partners.stream()
+                .collect(Collectors.groupingBy(partner -> partner.getStatus().name(), Collectors.counting()));
+        Map<String, Long> reviewCadence = reviews.stream()
+                .filter(review -> review.getReviewType() == ReviewType.DAILY || review.getReviewType() == ReviewType.WEEKLY)
+                .collect(Collectors.groupingBy(review -> review.getReviewDate().toString(), Collectors.counting()));
+        List<DashboardSummaryResponse.AreaProgress> visionAreaProgress = areas.stream()
+                .filter(area -> area.getStatus() != LifecycleStatus.ARCHIVED)
+                .map(area -> {
+                    List<Goal> areaGoals = goals.stream()
+                            .filter(goal -> goal.getDream().getVisionArea().getId().equals(area.getId()))
+                            .toList();
+                    BigDecimal progress = areaGoals.isEmpty()
+                            ? ZERO
+                            : areaGoals.stream()
+                            .map(Goal::getProgressPercent)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(BigDecimal.valueOf(areaGoals.size()), 0, RoundingMode.HALF_UP);
+                    return new DashboardSummaryResponse.AreaProgress(area.getName(), progress);
+                })
+                .sorted(Comparator.comparing(DashboardSummaryResponse.AreaProgress::progress))
+                .toList();
+        List<TaskItemResponse> priorityTasks = tasks.stream()
+                .filter(task -> task.getStatus() != WorkStatus.COMPLETED)
+                .sorted(Comparator.comparingInt((TaskItem task) -> task.getPriority().ordinal()).reversed())
+                .limit(5)
+                .map(mapper::toResponse)
+                .toList();
 
         return new DashboardSummaryResponse(
                 areas.size(),
@@ -665,8 +707,79 @@ public class VisionMappingService {
                 averageProgress,
                 tasks.stream().filter(task -> !task.getDueDate().isBefore(today) && !task.getDueDate().isAfter(weekEnd)).count(),
                 goalsByStatus,
-                dreamsByArea
+                dreamsByArea,
+                tasksByStatus,
+                tasksByPriority,
+                activeObstaclesByType,
+                partnersByStatus,
+                reviewCadence,
+                buildProgressTrend(progressLogs, today),
+                visionAreaProgress,
+                priorityTasks
         );
+    }
+
+    /**
+     * Weekly samples of the running "average task progress" over the last
+     * twelve weeks, reconstructed from the progress-log history: each task's
+     * latest logged value as of a given day carries forward until its next
+     * change, and each week reports the last day that had any data. Mirrors
+     * the same Average Progress KPI, but as a trend instead of one number.
+     */
+    private List<DashboardSummaryResponse.TrendPoint> buildProgressTrend(List<ProgressLog> logs, LocalDate today) {
+        int trendWeeks = 12;
+        int totalDays = trendWeeks * 7;
+        LocalDate start = today.minusDays(totalDays - 1L);
+        Map<Long, List<ProgressLog>> byTask = logs.stream()
+                .collect(Collectors.groupingBy(log -> log.getRelatedTask().getId()));
+        byTask.values().forEach(entries -> entries.sort(Comparator.comparing(ProgressLog::getLoggedAt)));
+
+        List<BigDecimal> dailyAverages = new ArrayList<>(totalDays);
+        for (int i = 0; i < totalDays; i++) {
+            LocalDate cursor = start.plusDays(i);
+            List<BigDecimal> valuesAsOfDay = new ArrayList<>();
+            for (List<ProgressLog> entries : byTask.values()) {
+                ProgressLog latest = null;
+                for (ProgressLog entry : entries) {
+                    LocalDate logDate = entry.getLoggedAt().atZone(ZoneId.systemDefault()).toLocalDate();
+                    if (!logDate.isAfter(cursor)) {
+                        latest = entry;
+                    } else {
+                        break;
+                    }
+                }
+                if (latest != null) {
+                    valuesAsOfDay.add(latest.getProgressPercentAfter());
+                }
+            }
+            dailyAverages.add(valuesAsOfDay.isEmpty()
+                    ? null
+                    : valuesAsOfDay.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(valuesAsOfDay.size()), 2, RoundingMode.HALF_UP));
+        }
+
+        List<DashboardSummaryResponse.TrendPoint> weeklyPoints = new ArrayList<>(trendWeeks);
+        for (int week = 0; week < trendWeeks; week++) {
+            BigDecimal lastKnown = null;
+            for (int day = week * 7 + 6; day >= week * 7; day--) {
+                if (dailyAverages.get(day) != null) {
+                    lastKnown = dailyAverages.get(day);
+                    break;
+                }
+            }
+            weeklyPoints.add(new DashboardSummaryResponse.TrendPoint(start.plusDays(week * 7L + 6), lastKnown));
+        }
+
+        int firstDataIndex = 0;
+        while (firstDataIndex < weeklyPoints.size() && weeklyPoints.get(firstDataIndex).progress() == null) {
+            firstDataIndex++;
+        }
+        if (firstDataIndex == weeklyPoints.size()) {
+            return List.of();
+        }
+        return weeklyPoints.subList(firstDataIndex, weeklyPoints.size()).stream()
+                .map(point -> new DashboardSummaryResponse.TrendPoint(point.weekEnd(), point.progress() == null ? ZERO : point.progress()))
+                .toList();
     }
 
     private void applyCommunicationRequest(CommunicationMessage entity, CommunicationMessageRequest request) {
