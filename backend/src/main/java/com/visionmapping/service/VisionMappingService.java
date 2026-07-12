@@ -3,7 +3,6 @@ package com.visionmapping.service;
 import com.visionmapping.dto.request.CommunicationMessageRequest;
 import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.request.GoalRequest;
-import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.request.PartnerRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
@@ -13,7 +12,6 @@ import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
-import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.dto.response.PartnerResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
@@ -533,63 +531,6 @@ public class VisionMappingService {
     }
 
     @Transactional(readOnly = true)
-    public List<ObstacleResponse> listObstacles(boolean includeArchived) {
-        List<Obstacle> entities = includeArchived
-                ? obstacleRepository.findByUser_Id(lookup.userId())
-                : obstacleRepository.findByUser_IdAndArchivedFalse(lookup.userId());
-        return entities.stream().map(mapper::toResponse).toList();
-    }
-
-    public ObstacleResponse createObstacle(ObstacleRequest request) {
-        Obstacle entity = Obstacle.builder()
-                .user(lookup.currentUser())
-                .relatedDream(lookup.optionalDream(request.relatedDreamId()))
-                .relatedGoal(lookup.optionalGoal(request.relatedGoalId()))
-                .relatedStep(lookup.optionalStep(request.relatedStepId()))
-                .relatedTask(lookup.optionalTask(request.relatedTaskId()))
-                .title(request.title())
-                .description(request.description())
-                .obstacleType(request.obstacleType())
-                .severity(request.severity())
-                .solution(request.solution())
-                .requiredPartner(lookup.optionalPartner(request.requiredPartnerId()))
-                .status(request.status())
-                .build();
-        return mapper.toResponse(obstacleRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public ObstacleResponse getObstacle(Long id) {
-        return mapper.toResponse(lookup.obstacle(id));
-    }
-
-    public ObstacleResponse updateObstacle(Long id, ObstacleRequest request) {
-        Obstacle entity = lookup.obstacle(id);
-        entity.setRelatedDream(lookup.optionalDream(request.relatedDreamId()));
-        entity.setRelatedGoal(lookup.optionalGoal(request.relatedGoalId()));
-        entity.setRelatedStep(lookup.optionalStep(request.relatedStepId()));
-        entity.setRelatedTask(lookup.optionalTask(request.relatedTaskId()));
-        entity.setTitle(request.title());
-        entity.setDescription(request.description());
-        entity.setObstacleType(request.obstacleType());
-        entity.setSeverity(request.severity());
-        entity.setSolution(request.solution());
-        entity.setRequiredPartner(lookup.optionalPartner(request.requiredPartnerId()));
-        entity.setStatus(request.status());
-        return mapper.toResponse(entity);
-    }
-
-    public ObstacleResponse updateObstacleStatus(Long id, String status) {
-        Obstacle entity = lookup.obstacle(id);
-        entity.setStatus(parse(ObstacleStatus.class, status));
-        return mapper.toResponse(entity);
-    }
-
-    public void archiveObstacle(Long id) {
-        lookup.obstacle(id).setArchived(true);
-    }
-
-    @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
         Long userId = lookup.userId();
         List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
@@ -858,10 +799,6 @@ public class VisionMappingService {
         lookup.communicationMessage(id).setArchived(false);
     }
 
-    public void restoreObstacle(Long id) {
-        lookup.obstacle(id).setArchived(false);
-    }
-
     // --- Permanent delete (irreversible; only for already-archived records) --
 
     public void permanentlyDeleteVisionArea(Long id) {
@@ -915,12 +852,6 @@ public class VisionMappingService {
         CommunicationMessage message = lookup.communicationMessage(id);
         requireArchived(message.isArchived(), "Communication message");
         communicationMessageRepository.delete(message);
-    }
-
-    public void permanentlyDeleteObstacle(Long id) {
-        Obstacle obstacle = lookup.obstacle(id);
-        requireArchived(obstacle.isArchived(), "Obstacle");
-        obstacleRepository.delete(obstacle);
     }
 
     /**

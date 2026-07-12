@@ -24,6 +24,7 @@ import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.service.ProgressLogService;
+import com.visionmapping.service.ObstacleService;
 import com.visionmapping.service.ReviewService;
 import com.visionmapping.service.VisionMappingService;
 import java.io.ByteArrayOutputStream;
@@ -71,6 +72,7 @@ public class ExcelService {
     private final VisionMappingService visionMappingService;
     private final ProgressLogService progressLogService;
     private final ReviewService reviewService;
+    private final ObstacleService obstacleService;
 
     public byte[] exportWorkbook() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -130,7 +132,7 @@ public class ExcelService {
                             .toList(), headerStyle);
 
             writeRows(workbook, "Obstacles", List.of("ID", "Dream ID", "Goal ID", "Step ID", "Task ID", TITLE, TYPE, "Severity", STATUS, "Solution"),
-                    visionMappingService.listObstacles(false).stream()
+                    obstacleService.listObstacles(false).stream()
                             .map(item -> List.of(item.id(), value(item.relatedDreamId()), value(item.relatedGoalId()), value(item.relatedStepId()), value(item.relatedTaskId()), item.title(), item.obstacleType(), item.severity(), item.status(), value(item.solution())))
                             .toList(), headerStyle);
 

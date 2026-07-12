@@ -3,7 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ObstacleResponse;
-import com.visionmapping.service.VisionMappingService;
+import com.visionmapping.service.ObstacleService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ObstacleController {
 
-    private final VisionMappingService service;
+    private final ObstacleService service;
 
     @GetMapping
     public List<ObstacleResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
