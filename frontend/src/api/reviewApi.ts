@@ -34,3 +34,10 @@ export function restoreReview(token: string, id: number) {
     token,
   });
 }
+
+export function permanentlyDeleteReview(token: string, id: number) {
+  return apiClient<void>(`/reviews/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

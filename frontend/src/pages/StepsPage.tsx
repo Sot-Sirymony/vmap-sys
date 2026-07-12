@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listGoals } from '../api/goalApi';
-import { archiveStep, createStep, getStepArchiveImpact, listSteps, restoreStep, updateStep } from '../api/stepApi';
+import { archiveStep, permanentlyDeleteStep, createStep, getStepArchiveImpact, listSteps, restoreStep, updateStep } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -41,6 +41,7 @@ export function StepsPage() {
     create: createStep,
     update: updateStep,
     archive: archiveStep,
+    permanentlyDelete: permanentlyDeleteStep,
     restore: restoreStep,
   });
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -305,6 +306,7 @@ export function StepsPage() {
                         onEdit={() => startEdit(step)}
                         onArchive={() => void crud.archive(step.id)}
                         onRestore={() => void crud.restore(step.id)}
+                        onDeletePermanently={() => void crud.permanentlyDelete(step.id)}
                         archived={step.archived}
                         confirmArchive={() => archiveImpactMessage(step)}
                         label="Step actions"

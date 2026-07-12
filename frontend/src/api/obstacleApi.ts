@@ -34,3 +34,10 @@ export function restoreObstacle(token: string, id: number) {
     token,
   });
 }
+
+export function permanentlyDeleteObstacle(token: string, id: number) {
+  return apiClient<void>(`/obstacles/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

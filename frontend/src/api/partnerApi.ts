@@ -34,3 +34,10 @@ export function restorePartner(token: string, id: number) {
     token,
   });
 }
+
+export function permanentlyDeletePartner(token: string, id: number) {
+  return apiClient<void>(`/partners/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

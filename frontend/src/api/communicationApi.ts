@@ -34,3 +34,10 @@ export function restoreCommunicationMessage(token: string, id: number) {
     token,
   });
 }
+
+export function permanentlyDeleteCommunicationMessage(token: string, id: number) {
+  return apiClient<void>(`/communication-messages/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
-import { archiveObstacle, createObstacle, listObstacles, restoreObstacle, updateObstacle } from '../api/obstacleApi';
+import { archiveObstacle, permanentlyDeleteObstacle, createObstacle, listObstacles, restoreObstacle, updateObstacle } from '../api/obstacleApi';
 import { listPartners } from '../api/partnerApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
@@ -45,6 +45,7 @@ export function ObstaclesPage() {
     create: createObstacle,
     update: updateObstacle,
     archive: archiveObstacle,
+    permanentlyDelete: permanentlyDeleteObstacle,
     archiveMessage: 'Archived.',
   });
   const [dreams, setDreams] = useState<Dream[]>([]);
@@ -274,6 +275,7 @@ export function ObstaclesPage() {
                         onEdit={() => startEdit(obstacle)}
                         onArchive={() => void crud.archive(obstacle.id)}
                         onRestore={() => void crud.restore(obstacle.id)}
+                        onDeletePermanently={() => void crud.permanentlyDelete(obstacle.id)}
                         archived={obstacle.archived}
                         label="Obstacle actions"
                       />

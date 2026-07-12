@@ -69,4 +69,10 @@ public class CommunicationMessageController {
     public void restore(@PathVariable Long id) {
         service.restoreCommunicationMessage(id);
     }
+
+    @DeleteMapping("/{id}/permanent")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePermanently(@PathVariable Long id) {
+        service.permanentlyDeleteCommunicationMessage(id);
+    }
 }

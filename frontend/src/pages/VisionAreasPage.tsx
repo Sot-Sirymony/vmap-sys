@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { archiveVisionArea, createVisionArea, getVisionAreaArchiveImpact, listVisionAreas, restoreVisionArea, updateVisionArea } from '../api/visionAreaApi';
+import { archiveVisionArea, permanentlyDeleteVisionArea, createVisionArea, getVisionAreaArchiveImpact, listVisionAreas, restoreVisionArea, updateVisionArea } from '../api/visionAreaApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
@@ -35,6 +35,7 @@ export function VisionAreasPage() {
     create: createVisionArea,
     update: updateVisionArea,
     archive: archiveVisionArea,
+    permanentlyDelete: permanentlyDeleteVisionArea,
     restore: restoreVisionArea,
   });
   const [name, setName] = useState('');
@@ -161,6 +162,7 @@ export function VisionAreasPage() {
                       onEdit={() => startEdit(area)}
                       onArchive={() => void crud.archive(area.id)}
                       onRestore={() => void crud.restore(area.id)}
+                      onDeletePermanently={() => void crud.permanentlyDelete(area.id)}
                       archived={area.archived}
                       confirmArchive={() => archiveImpactMessage(area)}
                       label="Vision area actions"

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { listDreams } from '../api/dreamApi';
-import { archiveReview, createReview, listReviews, restoreReview, updateReview } from '../api/reviewApi';
+import { archiveReview, permanentlyDeleteReview, createReview, listReviews, restoreReview, updateReview } from '../api/reviewApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -83,6 +83,7 @@ export function ReviewsPage() {
     create: createReview,
     update: updateReview,
     archive: archiveReview,
+    permanentlyDelete: permanentlyDeleteReview,
     restore: restoreReview,
   });
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
@@ -327,6 +328,7 @@ export function ReviewsPage() {
                       onEdit={() => startEdit(review)}
                       onArchive={() => void crud.archive(review.id)}
                       onRestore={() => void crud.restore(review.id)}
+                      onDeletePermanently={() => void crud.permanentlyDelete(review.id)}
                       archived={review.archived}
                       label="Review actions"
                     />

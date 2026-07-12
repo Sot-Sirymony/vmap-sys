@@ -39,3 +39,10 @@ export function restoreDream(token: string, id: number) {
 export function getDreamArchiveImpact(token: string, id: number) {
   return apiClient<ArchiveImpact>(`/dreams/${id}/archive-impact`, { token });
 }
+
+export function permanentlyDeleteDream(token: string, id: number) {
+  return apiClient<void>(`/dreams/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

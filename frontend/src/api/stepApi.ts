@@ -39,3 +39,10 @@ export function restoreStep(token: string, id: number) {
 export function getStepArchiveImpact(token: string, id: number) {
   return apiClient<ArchiveImpact>(`/steps/${id}/archive-impact`, { token });
 }
+
+export function permanentlyDeleteStep(token: string, id: number) {
+  return apiClient<void>(`/steps/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

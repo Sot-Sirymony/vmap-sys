@@ -11,9 +11,11 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   onConfirm: () => void;
   onClose: () => void;
+  /** Style the confirm button as a destructive (red) action. */
+  danger?: boolean;
 };
 
-export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose, danger = false }: ConfirmDialogProps) {
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{title}</DialogTitle>
@@ -21,7 +23,7 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose
         <DialogContentText>{message}</DialogContentText>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button type="button" onClick={onConfirm}>{confirmLabel}</Button>
+        <Button type="button" variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirmLabel}</Button>
         <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
       </DialogActions>
     </Dialog>

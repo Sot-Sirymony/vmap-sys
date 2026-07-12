@@ -9,9 +9,11 @@ type UseCrudEntityConfig<T, TRequest> = {
   update: (token: string, id: number, request: TRequest) => Promise<T>;
   archive: (token: string, id: number) => Promise<void>;
   restore?: (token: string, id: number) => Promise<void>;
+  permanentlyDelete?: (token: string, id: number) => Promise<void>;
   saveMessage?: string;
   archiveMessage?: string;
   restoreMessage?: string;
+  deleteMessage?: string;
 };
 
 /**
@@ -28,8 +30,9 @@ type UseCrudEntityConfig<T, TRequest> = {
  */
 export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCrudEntityConfig<T, TRequest>) {
   const {
-    token, entityLabel, list, create, update, archive, restore,
+    token, entityLabel, list, create, update, archive, restore, permanentlyDelete,
     saveMessage = 'Saved.', archiveMessage = 'Archived.', restoreMessage = 'Restored.',
+    deleteMessage = 'Permanently deleted.',
   } = config;
   const { showToast } = useToast();
   const [items, setItems] = useState<T[]>([]);
@@ -109,6 +112,19 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     }
   }
 
+  async function destroy(id: number) {
+    if (!token || !permanentlyDelete) {
+      return;
+    }
+    try {
+      await permanentlyDelete(token, id);
+      await reload();
+      showToast(deleteMessage);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : `Unable to delete ${entityLabel}.`);
+    }
+  }
+
   function startEdit(id: number) {
     setEditingId(id);
   }
@@ -130,6 +146,7 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     save,
     archive: remove,
     restore: restoreItem,
+    permanentlyDelete: destroy,
     startEdit,
     cancelEdit,
   };

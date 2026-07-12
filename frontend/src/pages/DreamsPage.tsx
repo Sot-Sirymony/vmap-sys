@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { archiveDream, createDream, getDreamArchiveImpact, listDreams, restoreDream, updateDream } from '../api/dreamApi';
+import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, restoreDream, updateDream } from '../api/dreamApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import MuiButton from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -38,6 +38,7 @@ export function DreamsPage() {
     create: createDream,
     update: updateDream,
     archive: archiveDream,
+    permanentlyDelete: permanentlyDeleteDream,
     restore: restoreDream,
   });
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
@@ -258,6 +259,7 @@ export function DreamsPage() {
                       onEdit={() => startEdit(dream)}
                       onArchive={() => void crud.archive(dream.id)}
                       onRestore={() => void crud.restore(dream.id)}
+                      onDeletePermanently={() => void crud.permanentlyDelete(dream.id)}
                       archived={dream.archived}
                       confirmArchive={() => archiveImpactMessage(dream)}
                       label="Dream actions"

@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { archiveCommunicationMessage, createCommunicationMessage, listCommunicationMessages, restoreCommunicationMessage, updateCommunicationMessage } from '../api/communicationApi';
+import { archiveCommunicationMessage, permanentlyDeleteCommunicationMessage, createCommunicationMessage, listCommunicationMessages, restoreCommunicationMessage, updateCommunicationMessage } from '../api/communicationApi';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listPartners } from '../api/partnerApi';
@@ -46,6 +46,7 @@ export function CommunicationBuilderPage() {
     create: createCommunicationMessage,
     update: updateCommunicationMessage,
     archive: archiveCommunicationMessage,
+    permanentlyDelete: permanentlyDeleteCommunicationMessage,
     restore: restoreCommunicationMessage,
   });
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -356,6 +357,7 @@ export function CommunicationBuilderPage() {
                       onEdit={() => startEdit(message)}
                       onArchive={() => void crud.archive(message.id)}
                       onRestore={() => void crud.restore(message.id)}
+                      onDeletePermanently={() => void crud.permanentlyDelete(message.id)}
                       archived={message.archived}
                       label="Message actions"
                     />

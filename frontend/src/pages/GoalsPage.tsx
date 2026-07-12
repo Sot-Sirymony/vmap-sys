@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Rocket } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
-import { archiveGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
+import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import { EmptyState } from '../components/common/EmptyState';
 import Box from '@mui/material/Box';
@@ -54,6 +54,7 @@ export function GoalsPage() {
     create: createGoal,
     update: updateGoal,
     archive: archiveGoal,
+    permanentlyDelete: permanentlyDeleteGoal,
     restore: restoreGoal,
   });
   const [dreams, setDreams] = useState<Dream[]>([]);
@@ -405,6 +406,7 @@ export function GoalsPage() {
                       onEdit={() => startEdit(goal)}
                       onArchive={() => void crud.archive(goal.id)}
                       onRestore={() => void crud.restore(goal.id)}
+                      onDeletePermanently={() => void crud.permanentlyDelete(goal.id)}
                       archived={goal.archived}
                       confirmArchive={() => archiveImpactMessage(goal)}
                       label="Goal actions"

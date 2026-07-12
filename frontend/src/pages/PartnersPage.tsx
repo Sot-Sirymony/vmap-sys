@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
-import { archivePartner, createPartner, listPartners, restorePartner, updatePartner } from '../api/partnerApi';
+import { archivePartner, permanentlyDeletePartner, createPartner, listPartners, restorePartner, updatePartner } from '../api/partnerApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
 import { listVisionAreas } from '../api/visionAreaApi';
@@ -47,6 +47,7 @@ export function PartnersPage() {
     create: createPartner,
     update: updatePartner,
     archive: archivePartner,
+    permanentlyDelete: permanentlyDeletePartner,
     restore: restorePartner,
   });
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
@@ -286,6 +287,7 @@ export function PartnersPage() {
                       onEdit={() => startEdit(partner)}
                       onArchive={() => void crud.archive(partner.id)}
                       onRestore={() => void crud.restore(partner.id)}
+                      onDeletePermanently={() => void crud.permanentlyDelete(partner.id)}
                       archived={partner.archived}
                       label="Partner actions"
                     />

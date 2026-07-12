@@ -65,6 +65,12 @@ public class VisionAreaController {
         service.restoreVisionArea(id);
     }
 
+    @DeleteMapping("/{id}/permanent")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePermanently(@PathVariable Long id) {
+        service.permanentlyDeleteVisionArea(id);
+    }
+
     @GetMapping("/{id}/archive-impact")
     public ArchiveImpactResponse archiveImpact(@PathVariable Long id) {
         return service.visionAreaArchiveImpact(id);

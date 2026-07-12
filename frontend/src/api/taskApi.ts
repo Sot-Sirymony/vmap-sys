@@ -42,3 +42,10 @@ export function restoreTask(token: string, id: number) {
     token,
   });
 }
+
+export function permanentlyDeleteTask(token: string, id: number) {
+  return apiClient<void>(`/tasks/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
-import { archiveTask, createTask, listTasks, restoreTask, updateTask, updateTaskStatus } from '../api/taskApi';
+import { archiveTask, permanentlyDeleteTask, createTask, listTasks, restoreTask, updateTask, updateTaskStatus } from '../api/taskApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Checkbox from '@mui/material/Checkbox';
@@ -51,6 +51,7 @@ export function TasksBoardPage() {
     create: createTask,
     update: updateTask,
     archive: archiveTask,
+    permanentlyDelete: permanentlyDeleteTask,
     restore: restoreTask,
   });
   const [steps, setSteps] = useState<VisionStep[]>([]);
@@ -433,6 +434,7 @@ export function TasksBoardPage() {
                             onEdit={() => startEdit(task)}
                             onArchive={() => void crud.archive(task.id)}
                             onRestore={() => void crud.restore(task.id)}
+                            onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
                             archived={task.archived}
                             label="Task actions"
                           />
@@ -493,6 +495,7 @@ export function TasksBoardPage() {
                         onEdit={() => startEdit(task)}
                         onArchive={() => void crud.archive(task.id)}
                         onRestore={() => void crud.restore(task.id)}
+                        onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
                         archived={task.archived}
                         label="Task actions"
                       />

@@ -47,3 +47,10 @@ export function restoreGoal(token: string, id: number) {
 export function getGoalArchiveImpact(token: string, id: number) {
   return apiClient<ArchiveImpact>(`/goals/${id}/archive-impact`, { token });
 }
+
+export function permanentlyDeleteGoal(token: string, id: number) {
+  return apiClient<void>(`/goals/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}

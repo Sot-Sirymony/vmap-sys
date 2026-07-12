@@ -65,6 +65,12 @@ public class VisionStepController {
         service.restoreStep(id);
     }
 
+    @DeleteMapping("/{id}/permanent")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePermanently(@PathVariable Long id) {
+        service.permanentlyDeleteStep(id);
+    }
+
     @GetMapping("/{id}/archive-impact")
     public ArchiveImpactResponse archiveImpact(@PathVariable Long id) {
         return service.stepArchiveImpact(id);

@@ -6,12 +6,18 @@ import MenuItem from '@mui/material/MenuItem';
 import { ConfirmDialog } from './ConfirmDialog';
 
 const DEFAULT_CONFIRM_MESSAGE = 'Archive this record? You can bring it back later with "Show archived".';
+const DEFAULT_DELETE_MESSAGE = 'Permanently delete this record and everything under it? This cannot be undone.';
 
 type RowActionsMenuProps = {
   onEdit: () => void;
   onArchive: () => void;
   /** When set and `archived` is true, the menu offers Restore instead of Edit/Archive. */
   onRestore?: () => void;
+  /**
+   * When set and `archived` is true, the menu also offers "Delete permanently",
+   * gated behind a strong confirmation. Only archived records can be deleted.
+   */
+  onDeletePermanently?: () => void;
   archived?: boolean;
   /**
    * Confirmation text shown before archiving. A function may fetch it lazily
@@ -19,12 +25,15 @@ type RowActionsMenuProps = {
    * generic message.
    */
   confirmArchive?: string | (() => Promise<string>);
+  /** Confirmation text shown before permanently deleting. Falls back to a generic warning. */
+  confirmDelete?: string;
   label?: string;
 };
 
-export function RowActionsMenu({ onEdit, onArchive, onRestore, archived = false, confirmArchive, label = 'Row actions' }: RowActionsMenuProps) {
+export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanently, archived = false, confirmArchive, confirmDelete, label = 'Row actions' }: RowActionsMenuProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
 
   function handleOpen(event: MouseEvent<HTMLElement>) {
     event.stopPropagation();
@@ -57,9 +66,18 @@ export function RowActionsMenu({ onEdit, onArchive, onRestore, archived = false,
         <MoreVertical size={16} />
       </IconButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
-        {archived && onRestore ? (
-          <MenuItem onClick={() => { handleClose(); onRestore(); }}>Restore</MenuItem>
-        ) : ([
+        {archived ? ([
+          onRestore && <MenuItem key="restore" onClick={() => { handleClose(); onRestore(); }}>Restore</MenuItem>,
+          onDeletePermanently && (
+            <MenuItem
+              key="delete"
+              onClick={() => { handleClose(); setDeleteMessage(confirmDelete ?? DEFAULT_DELETE_MESSAGE); }}
+              sx={{ color: 'error.main' }}
+            >
+              Delete permanently
+            </MenuItem>
+          ),
+        ]) : ([
           <MenuItem key="edit" onClick={() => { handleClose(); onEdit(); }}>Edit</MenuItem>,
           <MenuItem key="archive" onClick={() => void handleArchiveClick()}>Archive</MenuItem>,
         ])}
@@ -71,6 +89,16 @@ export function RowActionsMenu({ onEdit, onArchive, onRestore, archived = false,
           confirmLabel="Archive"
           onConfirm={() => { setConfirmMessage(null); onArchive(); }}
           onClose={() => setConfirmMessage(null)}
+        />
+      )}
+      {deleteMessage !== null && onDeletePermanently && (
+        <ConfirmDialog
+          title="Delete permanently"
+          message={deleteMessage}
+          confirmLabel="Delete permanently"
+          danger
+          onConfirm={() => { setDeleteMessage(null); onDeletePermanently(); }}
+          onClose={() => setDeleteMessage(null)}
         />
       )}
     </>

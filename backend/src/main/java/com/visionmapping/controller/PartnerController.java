@@ -69,4 +69,10 @@ public class PartnerController {
     public void restore(@PathVariable Long id) {
         service.restorePartner(id);
     }
+
+    @DeleteMapping("/{id}/permanent")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePermanently(@PathVariable Long id) {
+        service.permanentlyDeletePartner(id);
+    }
 }

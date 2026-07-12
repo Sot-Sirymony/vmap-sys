@@ -39,3 +39,10 @@ export function restoreVisionArea(token: string, id: number) {
 export function getVisionAreaArchiveImpact(token: string, id: number) {
   return apiClient<ArchiveImpact>(`/vision-areas/${id}/archive-impact`, { token });
 }
+
+export function permanentlyDeleteVisionArea(token: string, id: number) {
+  return apiClient<void>(`/vision-areas/${id}/permanent`, {
+    method: 'DELETE',
+    token,
+  });
+}
