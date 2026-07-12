@@ -1,11 +1,9 @@
 package com.visionmapping.service;
 
-import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
-import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.entity.AppUser;
@@ -125,65 +123,6 @@ public class VisionMappingService {
         entity.setStatus(LifecycleStatus.ARCHIVED);
         entity.setArchived(true);
         archiveCascade.archiveDreamsUnder(entity.getId());
-    }
-
-    @Transactional(readOnly = true)
-    public List<DreamResponse> listDreams(boolean includeArchived) {
-        List<Dream> entities = includeArchived
-                ? dreamRepository.findByUser_Id(lookup.userId())
-                : dreamRepository.findByUser_IdAndArchivedFalse(lookup.userId());
-        return entities.stream().map(mapper::toResponse).toList();
-    }
-
-    public DreamResponse createDream(DreamRequest request) {
-        AppUser user = lookup.currentUser();
-        VisionArea visionArea = lookup.visionArea(request.visionAreaId());
-        Dream entity = Dream.builder()
-                .code(nextCode("D", dreamRepository.findByUser_Id(user.getId()).size()))
-                .user(user)
-                .visionArea(visionArea)
-                .title(request.title())
-                .description(request.description())
-                .whyImportant(request.whyImportant())
-                .successDefinition(request.successDefinition())
-                .dreamType(request.dreamType())
-                .priority(request.priority())
-                .targetDate(request.targetDate())
-                .status(request.status())
-                .build();
-        return mapper.toResponse(dreamRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public DreamResponse getDream(Long id) {
-        return mapper.toResponse(lookup.dream(id));
-    }
-
-    public DreamResponse updateDream(Long id, DreamRequest request) {
-        Dream entity = lookup.dream(id);
-        entity.setVisionArea(lookup.visionArea(request.visionAreaId()));
-        entity.setTitle(request.title());
-        entity.setDescription(request.description());
-        entity.setWhyImportant(request.whyImportant());
-        entity.setSuccessDefinition(request.successDefinition());
-        entity.setDreamType(request.dreamType());
-        entity.setPriority(request.priority());
-        entity.setTargetDate(request.targetDate());
-        entity.setStatus(request.status());
-        return mapper.toResponse(entity);
-    }
-
-    public DreamResponse updateDreamStatus(Long id, String status) {
-        Dream entity = lookup.dream(id);
-        entity.setStatus(parse(DreamStatus.class, status));
-        return mapper.toResponse(entity);
-    }
-
-    public void archiveDream(Long id) {
-        Dream entity = lookup.dream(id);
-        entity.setStatus(DreamStatus.ARCHIVED);
-        entity.setArchived(true);
-        archiveCascade.archiveGoalsUnder(entity.getId());
     }
 
     @Transactional(readOnly = true)
@@ -352,19 +291,10 @@ public class VisionMappingService {
         return archiveCascade.impactOfVisionArea(lookup.visionArea(id));
     }
 
-    @Transactional(readOnly = true)
-    public ArchiveImpactResponse dreamArchiveImpact(Long id) {
-        return archiveCascade.impactOfDream(lookup.dream(id));
-    }
-
     // --- Restore (un-archive, pulling archived parents back with it) ---------
 
     public void restoreVisionArea(Long id) {
         archiveCascade.unarchiveVisionArea(lookup.visionArea(id));
-    }
-
-    public void restoreDream(Long id) {
-        archiveCascade.unarchiveDreamChain(lookup.dream(id));
     }
 
     // --- Permanent delete (irreversible; only for already-archived records) --
@@ -373,12 +303,6 @@ public class VisionMappingService {
         VisionArea area = lookup.visionArea(id);
         requireArchived(area.isArchived(), "Vision area");
         permanentDeleteCascade.deleteVisionArea(area);
-    }
-
-    public void permanentlyDeleteDream(Long id) {
-        Dream dream = lookup.dream(id);
-        requireArchived(dream.isArchived(), "Dream");
-        permanentDeleteCascade.deleteDream(dream);
     }
 
     /**

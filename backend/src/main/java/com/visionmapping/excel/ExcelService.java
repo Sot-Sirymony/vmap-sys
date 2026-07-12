@@ -27,6 +27,7 @@ import com.visionmapping.service.ProgressLogService;
 import com.visionmapping.service.CommunicationMessageService;
 import com.visionmapping.service.PartnerService;
 import com.visionmapping.service.TaskItemService;
+import com.visionmapping.service.DreamService;
 import com.visionmapping.service.GoalService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.ObstacleService;
@@ -83,6 +84,7 @@ public class ExcelService {
     private final TaskItemService taskItemService;
     private final VisionStepService visionStepService;
     private final GoalService goalService;
+    private final DreamService dreamService;
 
     public byte[] exportWorkbook() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -107,7 +109,7 @@ public class ExcelService {
                             .toList(), headerStyle);
 
             writeRows(workbook, DREAMS, List.of("ID", CODE, "Vision Area ID", TITLE, "Why Important", "Success Definition", TYPE, PRIORITY, "Target Date", STATUS),
-                    visionMappingService.listDreams(false).stream()
+                    dreamService.listDreams(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.visionAreaId(), item.title(), value(item.whyImportant()), value(item.successDefinition()), item.dreamType(), item.priority(), value(item.targetDate()), item.status()))
                             .toList(), headerStyle);
 
@@ -182,7 +184,7 @@ public class ExcelService {
         List<String> errors = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             validateStructure(workbook, errors);
-            return new HierarchyImport(visionMappingService, goalService, visionStepService, taskItemService).run(workbook, errors);
+            return new HierarchyImport(visionMappingService, dreamService, goalService, visionStepService, taskItemService).run(workbook, errors);
         } catch (IOException exception) {
             errors.add("Unable to read workbook: " + exception.getMessage());
             return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);

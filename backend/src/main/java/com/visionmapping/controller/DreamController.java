@@ -4,7 +4,7 @@ import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DreamResponse;
-import com.visionmapping.service.VisionMappingService;
+import com.visionmapping.service.DreamService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DreamController {
 
-    private final VisionMappingService service;
+    private final DreamService service;
 
     @GetMapping
     public List<DreamResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
