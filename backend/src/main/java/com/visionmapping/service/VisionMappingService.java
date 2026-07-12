@@ -43,6 +43,7 @@ import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.ProgressCalculator;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
@@ -81,6 +82,7 @@ public class VisionMappingService {
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100).setScale(2, RoundingMode.HALF_UP);
 
     private final EntityLookup lookup;
+    private final ProgressCalculator progress;
     private final VisionMappingMapper mapper;
     private final VisionAreaRepository visionAreaRepository;
     private final DreamRepository dreamRepository;
@@ -292,7 +294,7 @@ public class VisionMappingService {
                 .manualProgressOverride(false)
                 .build();
         VisionStep saved = visionStepRepository.save(entity);
-        recalculateGoal(goal);
+        progress.recalculateGoal(goal);
         return mapper.toResponse(saved);
     }
 
@@ -313,8 +315,8 @@ public class VisionMappingService {
         entity.setTargetDate(request.targetDate());
         entity.setStatus(request.status());
         validateComplexStep(entity);
-        recalculateGoal(oldGoal);
-        recalculateGoal(entity.getGoal());
+        progress.recalculateGoal(oldGoal);
+        progress.recalculateGoal(entity.getGoal());
         return mapper.toResponse(entity);
     }
 
@@ -325,7 +327,7 @@ public class VisionMappingService {
         if (manualOverride) {
             entity.setManualProgressOverride(true);
         }
-        recalculateGoal(entity.getGoal());
+        progress.recalculateGoal(entity.getGoal());
         return mapper.toResponse(entity);
     }
 
@@ -333,7 +335,7 @@ public class VisionMappingService {
         VisionStep entity = lookup.step(id);
         entity.setArchived(true);
         cascadeArchiveTasks(entity.getId());
-        recalculateGoal(entity.getGoal());
+        progress.recalculateGoal(entity.getGoal());
     }
 
     @Transactional(readOnly = true)
@@ -358,7 +360,7 @@ public class VisionMappingService {
                 .startDate(request.startDate())
                 .dueDate(request.dueDate())
                 .status(request.status())
-                .progressPercent(normalizeProgress(request.progressPercent()))
+                .progressPercent(progress.normalizeProgress(request.progressPercent()))
                 .estimatedHours(request.estimatedHours())
                 .actualHours(request.actualHours())
                 .blockerReason(request.blockerReason())
@@ -366,7 +368,7 @@ public class VisionMappingService {
                 .build();
         prepareTask(entity);
         TaskItem saved = taskItemRepository.save(entity);
-        recalculateStep(step);
+        progress.recalculateStep(step);
         return mapper.toResponse(saved);
     }
 
@@ -387,14 +389,14 @@ public class VisionMappingService {
         entity.setStartDate(request.startDate());
         entity.setDueDate(request.dueDate());
         entity.setStatus(request.status());
-        entity.setProgressPercent(normalizeProgress(request.progressPercent()));
+        entity.setProgressPercent(progress.normalizeProgress(request.progressPercent()));
         entity.setEstimatedHours(request.estimatedHours());
         entity.setActualHours(request.actualHours());
         entity.setBlockerReason(request.blockerReason());
         entity.setNextAction(request.nextAction());
         prepareTask(entity);
-        recalculateStep(oldStep);
-        recalculateStep(entity.getStep());
+        progress.recalculateStep(oldStep);
+        progress.recalculateStep(entity.getStep());
         logProgressChange(entity, progressBefore);
         return mapper.toResponse(entity);
     }
@@ -404,7 +406,7 @@ public class VisionMappingService {
         BigDecimal progressBefore = entity.getProgressPercent();
         entity.setStatus(parse(WorkStatus.class, status));
         prepareTask(entity);
-        recalculateStep(entity.getStep());
+        progress.recalculateStep(entity.getStep());
         logProgressChange(entity, progressBefore);
         return mapper.toResponse(entity);
     }
@@ -412,7 +414,7 @@ public class VisionMappingService {
     public void archiveTask(Long id) {
         TaskItem entity = lookup.task(id);
         entity.setArchived(true);
-        recalculateStep(entity.getStep());
+        progress.recalculateStep(entity.getStep());
     }
 
     private void logProgressChange(TaskItem entity, BigDecimal progressBefore) {
@@ -681,8 +683,8 @@ public class VisionMappingService {
         ProgressLog entity = ProgressLog.builder()
                 .user(user)
                 .relatedTask(task)
-                .progressPercentBefore(normalizeProgress(request.progressPercentBefore()))
-                .progressPercentAfter(normalizeProgress(request.progressPercentAfter()))
+                .progressPercentBefore(progress.normalizeProgress(request.progressPercentBefore()))
+                .progressPercentAfter(progress.normalizeProgress(request.progressPercentAfter()))
                 .note(request.note())
                 .loggedAt(Instant.now(clock))
                 .build();
@@ -691,7 +693,7 @@ public class VisionMappingService {
             task.setStatus(WorkStatus.COMPLETED);
             task.setCompletedAt(Instant.now(clock));
         }
-        recalculateStep(task.getStep());
+        progress.recalculateStep(task.getStep());
         return mapper.toResponse(progressLogRepository.save(entity));
     }
 
@@ -781,7 +783,7 @@ public class VisionMappingService {
                 goals.stream().filter(goal -> goal.getStatus() == WorkStatus.IN_PROGRESS || goal.getStatus() == WorkStatus.NOT_STARTED).count(),
                 tasks.stream().filter(task -> task.getStatus() != WorkStatus.COMPLETED).count(),
                 tasks.stream().filter(task -> task.getStatus() == WorkStatus.COMPLETED).count(),
-                tasks.stream().filter(task -> isOverdue(task, today)).count(),
+                tasks.stream().filter(task -> progress.isOverdue(task, today)).count(),
                 tasks.stream().filter(task -> task.getStatus() == WorkStatus.BLOCKED).count(),
                 averageProgress,
                 tasks.stream().filter(task -> !task.getDueDate().isBefore(today) && !task.getDueDate().isAfter(weekEnd)).count(),
@@ -914,30 +916,6 @@ public class VisionMappingService {
         }
     }
 
-    private void recalculateStep(VisionStep step) {
-        if (step.isManualProgressOverride()) {
-            recalculateGoal(step.getGoal());
-            return;
-        }
-        List<TaskItem> tasks = taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), step.getUser().getId());
-        step.setProgressPercent(average(tasks, TaskItem::getProgressPercent));
-        if (!tasks.isEmpty() && tasks.stream().allMatch(task -> task.getStatus() == WorkStatus.COMPLETED)) {
-            step.setStatus(WorkStatus.COMPLETED);
-        }
-        recalculateGoal(step.getGoal());
-    }
-
-    private void recalculateGoal(Goal goal) {
-        if (goal.isManualProgressOverride()) {
-            return;
-        }
-        List<VisionStep> steps = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), goal.getUser().getId());
-        goal.setProgressPercent(average(steps, VisionStep::getProgressPercent));
-        if (!steps.isEmpty() && steps.stream().allMatch(step -> step.getStatus() == WorkStatus.COMPLETED)) {
-            goal.setStatus(WorkStatus.COMPLETED);
-        }
-    }
-
     private void cascadeArchiveDreams(Long visionAreaId) {
         Long userId = lookup.userId();
         for (Dream dream : dreamRepository.findByVisionArea_IdAndUser_Id(visionAreaId, userId)) {
@@ -1057,7 +1035,7 @@ public class VisionMappingService {
         VisionStep entity = lookup.step(id);
         unarchiveGoalChain(entity.getGoal());
         entity.setArchived(false);
-        recalculateGoal(entity.getGoal());
+        progress.recalculateGoal(entity.getGoal());
     }
 
     public void restoreTask(Long id) {
@@ -1065,7 +1043,7 @@ public class VisionMappingService {
         unarchiveGoalChain(entity.getStep().getGoal());
         entity.getStep().setArchived(false);
         entity.setArchived(false);
-        recalculateStep(entity.getStep());
+        progress.recalculateStep(entity.getStep());
     }
 
     public void restorePartner(Long id) {
@@ -1324,30 +1302,6 @@ public class VisionMappingService {
     private void unarchiveGoalChain(Goal goal) {
         unarchiveDreamChain(goal.getDream());
         goal.setArchived(false);
-    }
-
-    private <T> BigDecimal average(List<T> values, Function<T, BigDecimal> progressGetter) {
-        if (values.isEmpty()) {
-            return ZERO;
-        }
-        return values.stream()
-                .map(progressGetter)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(values.size()), 2, RoundingMode.HALF_UP);
-    }
-
-    private boolean isOverdue(TaskItem task, LocalDate today) {
-        return task.getDueDate().isBefore(today) && task.getStatus() != WorkStatus.COMPLETED;
-    }
-
-    private BigDecimal normalizeProgress(BigDecimal value) {
-        if (value == null) {
-            return ZERO;
-        }
-        if (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(ONE_HUNDRED) > 0) {
-            throw new BusinessRuleException("Progress percent must be between 0 and 100.");
-        }
-        return value.setScale(2, RoundingMode.HALF_UP);
     }
 
 

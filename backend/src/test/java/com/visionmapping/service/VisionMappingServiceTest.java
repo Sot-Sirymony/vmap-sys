@@ -40,6 +40,7 @@ import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.ProgressCalculator;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -80,7 +81,8 @@ class VisionMappingServiceTest {
         EntityLookup lookup = new EntityLookup(userScope, visionAreaRepository, dreamRepository, goalRepository,
                 visionStepRepository, taskItemRepository, partnerRepository, communicationMessageRepository,
                 reviewRepository, obstacleRepository, progressLogRepository);
-        service = new VisionMappingService(lookup, new VisionMappingMapper(), visionAreaRepository,
+        ProgressCalculator progress = new ProgressCalculator(visionStepRepository, taskItemRepository);
+        service = new VisionMappingService(lookup, progress, new VisionMappingMapper(), visionAreaRepository,
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository,
                 Clock.systemDefaultZone());
