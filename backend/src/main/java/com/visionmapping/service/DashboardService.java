@@ -1,12 +1,7 @@
 package com.visionmapping.service;
 
-import com.visionmapping.dto.request.TaskItemRequest;
-import com.visionmapping.dto.request.VisionAreaRequest;
-import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
-import com.visionmapping.dto.response.VisionAreaResponse;
-import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Obstacle;
@@ -15,13 +10,11 @@ import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.Review;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
-import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ReviewType;
 import com.visionmapping.entity.enums.WorkStatus;
-import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
@@ -31,15 +24,11 @@ import com.visionmapping.repository.ProgressLogRepository;
 import com.visionmapping.repository.ReviewRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionAreaRepository;
-import com.visionmapping.repository.VisionStepRepository;
-import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
-import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
@@ -48,82 +37,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Assembles the single dashboard payload: the KPI counts, the per-status and
+ * per-area breakdowns, the top-priority task list, and the twelve-week progress
+ * trend reconstructed from the progress-log history.
+ */
 @Service
 @RequiredArgsConstructor
-@Transactional
-public class VisionMappingService {
+@Transactional(readOnly = true)
+public class DashboardService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100).setScale(2, RoundingMode.HALF_UP);
 
     private final EntityLookup lookup;
     private final ProgressCalculator progress;
-    private final PermanentDeleteCascade permanentDeleteCascade;
-    private final ArchiveCascade archiveCascade;
     private final VisionMappingMapper mapper;
     private final VisionAreaRepository visionAreaRepository;
     private final DreamRepository dreamRepository;
     private final GoalRepository goalRepository;
-    private final VisionStepRepository visionStepRepository;
     private final TaskItemRepository taskItemRepository;
     private final PartnerRepository partnerRepository;
     private final ReviewRepository reviewRepository;
     private final ObstacleRepository obstacleRepository;
     private final ProgressLogRepository progressLogRepository;
     private final Clock clock;
-
-    @Transactional(readOnly = true)
-    public List<VisionAreaResponse> listVisionAreas(boolean includeArchived) {
-        List<VisionArea> entities = includeArchived
-                ? visionAreaRepository.findByUser_Id(lookup.userId())
-                : visionAreaRepository.findByUser_IdAndArchivedFalse(lookup.userId());
-        return entities.stream().map(mapper::toResponse).toList();
-    }
-
-    public VisionAreaResponse createVisionArea(VisionAreaRequest request) {
-        AppUser user = lookup.currentUser();
-        VisionArea entity = VisionArea.builder()
-                .code(nextCode("VA", visionAreaRepository.findByUser_Id(user.getId()).size()))
-                .user(user)
-                .name(request.name())
-                .description(request.description())
-                .priority(request.priority())
-                .status(request.status())
-                .build();
-        return mapper.toResponse(visionAreaRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public VisionAreaResponse getVisionArea(Long id) {
-        return mapper.toResponse(lookup.visionArea(id));
-    }
-
-    public VisionAreaResponse updateVisionArea(Long id, VisionAreaRequest request) {
-        VisionArea entity = lookup.visionArea(id);
-        entity.setName(request.name());
-        entity.setDescription(request.description());
-        entity.setPriority(request.priority());
-        entity.setStatus(request.status());
-        return mapper.toResponse(entity);
-    }
-
-    public VisionAreaResponse updateVisionAreaStatus(Long id, String status) {
-        VisionArea entity = lookup.visionArea(id);
-        entity.setStatus(parse(LifecycleStatus.class, status));
-        return mapper.toResponse(entity);
-    }
-
-    public void archiveVisionArea(Long id) {
-        VisionArea entity = lookup.visionArea(id);
-        entity.setStatus(LifecycleStatus.ARCHIVED);
-        entity.setArchived(true);
-        archiveCascade.archiveDreamsUnder(entity.getId());
-    }
 
     @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
@@ -286,52 +226,16 @@ public class VisionMappingService {
 
     // --- Archive impact (what a cascade would newly archive) -----------------
 
-    @Transactional(readOnly = true)
-    public ArchiveImpactResponse visionAreaArchiveImpact(Long id) {
-        return archiveCascade.impactOfVisionArea(lookup.visionArea(id));
-    }
-
     // --- Restore (un-archive, pulling archived parents back with it) ---------
 
-    public void restoreVisionArea(Long id) {
-        archiveCascade.unarchiveVisionArea(lookup.visionArea(id));
-    }
-
     // --- Permanent delete (irreversible; only for already-archived records) --
-
-    public void permanentlyDeleteVisionArea(Long id) {
-        VisionArea area = lookup.visionArea(id);
-        requireArchived(area.isArchived(), "Vision area");
-        permanentDeleteCascade.deleteVisionArea(area);
-    }
 
     /**
      * Clears every surviving record's link into the doomed subtree, removes the
      * progress logs that cannot outlive their task, then deletes the subtree
      * bottom-up so no foreign key is ever left dangling.
      */
-    private void requireArchived(boolean archived, String label) {
-        if (!archived) {
-            throw new BusinessRuleException(label + " must be archived before it can be permanently deleted.");
-        }
-    }
-
     /** The database ids in a subtree, grouped by level, for fast link-membership checks. */
     /** Every hierarchy record a single permanent-delete will remove, gathered before the delete runs. */
 
-    private String nextCode(String prefix, int currentCount) {
-        return "%s-%03d".formatted(prefix, currentCount + 1);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private <E extends Enum<E>> E parse(Class<E> enumType, String status) {
-        try {
-            return Enum.valueOf(enumType, status.trim().toUpperCase().replace('-', '_').replace(' ', '_'));
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessRuleException("Invalid status: " + status);
-        }
-    }
 }

@@ -1,30 +1,23 @@
 package com.visionmapping.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
-import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
-import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
-import com.visionmapping.entity.enums.PartnerStatus;
-import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
 import com.visionmapping.entity.enums.WorkStatus;
-import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
@@ -36,16 +29,13 @@ import com.visionmapping.repository.ReviewRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
-import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
-import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,12 +43,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Pure unit tests for the business rules in {@link VisionMappingService}, complementing the
- * existing MockMvc integration tests. Repositories are mocked; the mapper is real since it has
- * no dependencies of its own.
+ * Unit tests for {@link DashboardService}'s aggregation: overdue/blocked/moonshot
+ * counts, per-area progress ordering, top-priority selection, and the progress
+ * trend. Repositories are mocked; Mockito returns empty lists for the ones a
+ * given case does not stub.
  */
 @ExtendWith(MockitoExtension.class)
-class VisionMappingServiceTest {
+class DashboardServiceTest {
 
     @Mock private UserScope userScope;
     @Mock private VisionAreaRepository visionAreaRepository;
@@ -72,7 +63,7 @@ class VisionMappingServiceTest {
     @Mock private ObstacleRepository obstacleRepository;
     @Mock private ProgressLogRepository progressLogRepository;
 
-    private VisionMappingService service;
+    private DashboardService service;
     private AppUser testUser;
 
     @BeforeEach
@@ -81,15 +72,9 @@ class VisionMappingServiceTest {
                 visionStepRepository, taskItemRepository, partnerRepository, communicationMessageRepository,
                 reviewRepository, obstacleRepository, progressLogRepository);
         ProgressCalculator progress = new ProgressCalculator(visionStepRepository, taskItemRepository);
-        PermanentDeleteCascade permanentDeleteCascade = new PermanentDeleteCascade(lookup, visionAreaRepository,
-                dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
-                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository);
-        ArchiveCascade archiveCascade = new ArchiveCascade(lookup, dreamRepository, goalRepository,
-                visionStepRepository, taskItemRepository);
-        service = new VisionMappingService(lookup, progress, permanentDeleteCascade, archiveCascade, new VisionMappingMapper(), visionAreaRepository,
-                dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
-                reviewRepository, obstacleRepository, progressLogRepository,
-                Clock.systemDefaultZone());
+        service = new DashboardService(lookup, progress, new VisionMappingMapper(), visionAreaRepository,
+                dreamRepository, goalRepository, taskItemRepository, partnerRepository,
+                reviewRepository, obstacleRepository, progressLogRepository, Clock.systemDefaultZone());
 
         testUser = AppUser.builder()
                 .id(1L)
@@ -131,9 +116,7 @@ class VisionMappingServiceTest {
                 .status(status).progressPercent(progress).build();
     }
 
-    // --- Progress rollup -------------------------------------------------
 
-    // --- Overdue detection -------------------------------------------------
 
     @Test
     void dashboardCountsOverdueTasksExcludingCompletedOnes() {
@@ -178,46 +161,12 @@ class VisionMappingServiceTest {
         assertThat(summary.activeGoals()).isEqualTo(2);
     }
 
-    // --- Restore pulls archived parents back with the child -----------------
 
-    // --- Archive impact counts only what a cascade would newly archive ------
 
-    @Test
-    void archiveImpactCountsOnlyUnarchivedDescendants() {
-        VisionArea area = visionArea(1L);
-        Dream dream = dream(1L, area);
-        Goal goal = goal(10L, dream, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
-        VisionStep activeStep = step(20L, goal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
-        VisionStep archivedStep = step(21L, goal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
-        archivedStep.setArchived(true);
-        TaskItem activeTask = task(30L, activeStep, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
-        TaskItem archivedTask = task(31L, activeStep, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
-        archivedTask.setArchived(true);
-        when(visionAreaRepository.findById(1L)).thenReturn(Optional.of(area));
-        when(dreamRepository.findByVisionArea_IdAndUser_Id(1L, 1L)).thenReturn(List.of(dream));
-        when(goalRepository.findByDream_IdAndUser_Id(1L, 1L)).thenReturn(List.of(goal));
-        when(visionStepRepository.findByGoal_IdAndUser_Id(10L, 1L)).thenReturn(List.of(activeStep, archivedStep));
-        when(taskItemRepository.findByStep_IdAndUser_Id(20L, 1L)).thenReturn(List.of(activeTask, archivedTask));
-        when(taskItemRepository.findByStep_IdAndUser_Id(21L, 1L)).thenReturn(List.of());
 
-        var impact = service.visionAreaArchiveImpact(1L);
 
-        assertThat(impact.dreams()).isEqualTo(1);
-        assertThat(impact.goals()).isEqualTo(1);
-        assertThat(impact.steps()).isEqualTo(1);
-        assertThat(impact.tasks()).isEqualTo(1);
-    }
 
-    // --- Blocked task requires a reason ------------------------------------
 
-    // --- Goal completion rule ----------------------------------------------
-
-    // --- Complex step requires at least one task ---------------------------
-
-    // --- Progress normalization ----------------------------------------------
-    // --- prepareTask completion side effects ---------------------------------
-
-    // --- Delete / archive ---------------------------------------------------
 
     // --- Dashboard characterization (pins behavior before the Clean Code split) --
 

@@ -28,11 +28,12 @@ import com.visionmapping.service.CommunicationMessageService;
 import com.visionmapping.service.PartnerService;
 import com.visionmapping.service.TaskItemService;
 import com.visionmapping.service.DreamService;
+import com.visionmapping.service.VisionAreaService;
 import com.visionmapping.service.GoalService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.ObstacleService;
 import com.visionmapping.service.ReviewService;
-import com.visionmapping.service.VisionMappingService;
+import com.visionmapping.service.DashboardService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -75,7 +76,7 @@ public class ExcelService {
             "Instructions"
     );
 
-    private final VisionMappingService visionMappingService;
+    private final DashboardService dashboardService;
     private final ProgressLogService progressLogService;
     private final ReviewService reviewService;
     private final ObstacleService obstacleService;
@@ -85,12 +86,13 @@ public class ExcelService {
     private final VisionStepService visionStepService;
     private final GoalService goalService;
     private final DreamService dreamService;
+    private final VisionAreaService visionAreaService;
 
     public byte[] exportWorkbook() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             CellStyle headerStyle = headerStyle(workbook);
 
-            DashboardSummaryResponse dashboard = visionMappingService.buildDashboardSummary();
+            DashboardSummaryResponse dashboard = dashboardService.buildDashboardSummary();
             writeRows(workbook, "Dashboard", List.of("Metric", "Value"), List.of(
                     List.of("Total Vision Areas", dashboard.totalVisionAreas()),
                     List.of("Active Dreams", dashboard.activeDreams()),
@@ -104,7 +106,7 @@ public class ExcelService {
             ), headerStyle);
 
             writeRows(workbook, VISION_AREAS, List.of("ID", CODE, "Name", "Description", PRIORITY, STATUS),
-                    visionMappingService.listVisionAreas(false).stream()
+                    visionAreaService.listVisionAreas(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.description()), item.priority(), item.status()))
                             .toList(), headerStyle);
 
@@ -184,7 +186,7 @@ public class ExcelService {
         List<String> errors = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             validateStructure(workbook, errors);
-            return new HierarchyImport(visionMappingService, dreamService, goalService, visionStepService, taskItemService).run(workbook, errors);
+            return new HierarchyImport(visionAreaService, dreamService, goalService, visionStepService, taskItemService).run(workbook, errors);
         } catch (IOException exception) {
             errors.add("Unable to read workbook: " + exception.getMessage());
             return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);

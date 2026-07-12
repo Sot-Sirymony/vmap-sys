@@ -17,10 +17,10 @@ import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.service.DreamService;
+import com.visionmapping.service.VisionAreaService;
 import com.visionmapping.service.GoalService;
 import com.visionmapping.service.TaskItemService;
 import com.visionmapping.service.VisionStepService;
-import com.visionmapping.service.VisionMappingService;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -42,7 +42,7 @@ class HierarchyImport {
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
-    private final VisionMappingService service;
+    private final VisionAreaService visionAreaService;
     private final DreamService dreamService;
     private final GoalService goalService;
     private final VisionStepService stepService;
@@ -57,8 +57,8 @@ class HierarchyImport {
     private int created;
     private int skipped;
 
-    HierarchyImport(VisionMappingService service, DreamService dreamService, GoalService goalService, VisionStepService stepService, TaskItemService taskService) {
-        this.service = service;
+    HierarchyImport(VisionAreaService visionAreaService, DreamService dreamService, GoalService goalService, VisionStepService stepService, TaskItemService taskService) {
+        this.visionAreaService = visionAreaService;
         this.dreamService = dreamService;
         this.goalService = goalService;
         this.stepService = stepService;
@@ -82,7 +82,7 @@ class HierarchyImport {
                     reader.textOrNull(3),
                     reader.enumValue(Priority.class, 4, PRIORITY),
                     reader.enumValue(LifecycleStatus.class, 5, STATUS));
-            long newId = service.createVisionArea(request).id();
+            long newId = visionAreaService.createVisionArea(request).id();
             mapWorkbookId(reader, newVisionAreaIds, newId);
         });
     }
