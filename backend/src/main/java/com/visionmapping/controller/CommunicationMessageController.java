@@ -3,7 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.CommunicationMessageRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.CommunicationMessageResponse;
-import com.visionmapping.service.VisionMappingService;
+import com.visionmapping.service.CommunicationMessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CommunicationMessageController {
 
-    private final VisionMappingService service;
+    private final CommunicationMessageService service;
 
     @GetMapping
     public Page<CommunicationMessageResponse> list(

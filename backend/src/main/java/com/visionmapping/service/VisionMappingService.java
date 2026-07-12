@@ -1,6 +1,5 @@
 package com.visionmapping.service;
 
-import com.visionmapping.dto.request.CommunicationMessageRequest;
 import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.request.GoalRequest;
 import com.visionmapping.dto.request.PartnerRequest;
@@ -8,7 +7,6 @@ import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
 import com.visionmapping.dto.request.VisionStepRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
-import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
@@ -27,7 +25,6 @@ import com.visionmapping.entity.Review;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
-import com.visionmapping.entity.enums.CommunicationStatus;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
@@ -495,42 +492,6 @@ public class VisionMappingService {
     }
 
     @Transactional(readOnly = true)
-    public Page<CommunicationMessageResponse> listCommunicationMessages(Pageable pageable, boolean includeArchived) {
-        Page<CommunicationMessage> entities = includeArchived
-                ? communicationMessageRepository.findByUser_Id(lookup.userId(), pageable)
-                : communicationMessageRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
-        return entities.map(mapper::toResponse);
-    }
-
-    public CommunicationMessageResponse createCommunicationMessage(CommunicationMessageRequest request) {
-        CommunicationMessage entity = new CommunicationMessage();
-        entity.setUser(lookup.currentUser());
-        applyCommunicationRequest(entity, request);
-        return mapper.toResponse(communicationMessageRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public CommunicationMessageResponse getCommunicationMessage(Long id) {
-        return mapper.toResponse(lookup.communicationMessage(id));
-    }
-
-    public CommunicationMessageResponse updateCommunicationMessage(Long id, CommunicationMessageRequest request) {
-        CommunicationMessage entity = lookup.communicationMessage(id);
-        applyCommunicationRequest(entity, request);
-        return mapper.toResponse(entity);
-    }
-
-    public CommunicationMessageResponse updateCommunicationStatus(Long id, String status) {
-        CommunicationMessage entity = lookup.communicationMessage(id);
-        entity.setStatus(parse(CommunicationStatus.class, status));
-        return mapper.toResponse(entity);
-    }
-
-    public void archiveCommunicationMessage(Long id) {
-        lookup.communicationMessage(id).setArchived(true);
-    }
-
-    @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
         Long userId = lookup.userId();
         List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
@@ -689,25 +650,6 @@ public class VisionMappingService {
                 .toList();
     }
 
-    private void applyCommunicationRequest(CommunicationMessage entity, CommunicationMessageRequest request) {
-        entity.setPartner(lookup.optionalPartner(request.partnerId()));
-        entity.setRelatedDream(lookup.optionalDream(request.relatedDreamId()));
-        entity.setRelatedGoal(lookup.optionalGoal(request.relatedGoalId()));
-        entity.setRelatedTask(lookup.optionalTask(request.relatedTaskId()));
-        entity.setAudience(request.audience());
-        entity.setPurpose(request.purpose());
-        entity.setSubject(request.subject());
-        entity.setHook(request.hook());
-        entity.setProblem(request.problem());
-        entity.setRequest(request.request());
-        entity.setBenefitToPartner(request.benefitToPartner());
-        entity.setWordPicture(request.wordPicture());
-        entity.setExpectedOutcome(request.expectedOutcome());
-        entity.setMessageBody(request.messageBody());
-        entity.setStatus(request.status());
-        entity.setFollowUpDate(request.followUpDate());
-    }
-
     private void prepareTask(TaskItem entity) {
         if (entity.getStatus() == WorkStatus.BLOCKED && isBlank(entity.getBlockerReason())) {
             throw new BusinessRuleException("Blocked tasks must include a blocker reason.");
@@ -795,10 +737,6 @@ public class VisionMappingService {
         lookup.partner(id).setArchived(false);
     }
 
-    public void restoreCommunicationMessage(Long id) {
-        lookup.communicationMessage(id).setArchived(false);
-    }
-
     // --- Permanent delete (irreversible; only for already-archived records) --
 
     public void permanentlyDeleteVisionArea(Long id) {
@@ -846,12 +784,6 @@ public class VisionMappingService {
             }
         }
         partnerRepository.delete(partner);
-    }
-
-    public void permanentlyDeleteCommunicationMessage(Long id) {
-        CommunicationMessage message = lookup.communicationMessage(id);
-        requireArchived(message.isArchived(), "Communication message");
-        communicationMessageRepository.delete(message);
     }
 
     /**
