@@ -91,7 +91,7 @@ class VisionMappingServiceTest {
                 visionStepRepository, taskItemRepository);
         service = new VisionMappingService(lookup, progress, permanentDeleteCascade, archiveCascade, new VisionMappingMapper(), visionAreaRepository,
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
-                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository,
+                reviewRepository, obstacleRepository, progressLogRepository,
                 Clock.systemDefaultZone());
 
         testUser = AppUser.builder()
@@ -530,18 +530,6 @@ class VisionMappingServiceTest {
         assertThat(task1.isArchived()).isTrue();
         assertThat(step.getProgressPercent()).isEqualByComparingTo("80.00");
         assertThat(goal.getProgressPercent()).isEqualByComparingTo("80.00");
-    }
-
-    @Test
-    void archivingPartnerSetsArchivedFlagWithoutOverwritingStatus() {
-        Partner partner = Partner.builder().id(40L).user(testUser).code("P-001").name("Mentor")
-                .supportType(PartnerSupportType.MENTOR).status(PartnerStatus.ACTIVE).build();
-        when(partnerRepository.findById(40L)).thenReturn(Optional.of(partner));
-
-        service.archivePartner(40L);
-
-        assertThat(partner.isArchived()).isTrue();
-        assertThat(partner.getStatus()).isEqualTo(PartnerStatus.ACTIVE);
     }
 
     // --- Dashboard characterization (pins behavior before the Clean Code split) --

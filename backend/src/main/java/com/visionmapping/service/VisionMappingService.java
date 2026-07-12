@@ -2,7 +2,6 @@ package com.visionmapping.service;
 
 import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.request.GoalRequest;
-import com.visionmapping.dto.request.PartnerRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
 import com.visionmapping.dto.request.VisionStepRequest;
@@ -10,12 +9,10 @@ import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
-import com.visionmapping.dto.response.PartnerResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.entity.AppUser;
-import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Obstacle;
@@ -28,12 +25,10 @@ import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
-import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.ReviewType;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
-import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
 import com.visionmapping.repository.ObstacleRepository;
@@ -83,7 +78,6 @@ public class VisionMappingService {
     private final VisionStepRepository visionStepRepository;
     private final TaskItemRepository taskItemRepository;
     private final PartnerRepository partnerRepository;
-    private final CommunicationMessageRepository communicationMessageRepository;
     private final ReviewRepository reviewRepository;
     private final ObstacleRepository obstacleRepository;
     private final ProgressLogRepository progressLogRepository;
@@ -427,71 +421,6 @@ public class VisionMappingService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PartnerResponse> listPartners(Pageable pageable, boolean includeArchived) {
-        Page<Partner> entities = includeArchived
-                ? partnerRepository.findByUser_Id(lookup.userId(), pageable)
-                : partnerRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
-        return entities.map(mapper::toResponse);
-    }
-
-    public PartnerResponse createPartner(PartnerRequest request) {
-        AppUser user = lookup.currentUser();
-        Partner entity = Partner.builder()
-                .code(nextCode("P", partnerRepository.findByUser_Id(user.getId()).size()))
-                .user(user)
-                .name(request.name())
-                .role(request.role())
-                .organization(request.organization())
-                .email(request.email())
-                .phone(request.phone())
-                .strength(request.strength())
-                .supportType(request.supportType())
-                .relatedVisionArea(lookup.optionalVisionArea(request.relatedVisionAreaId()))
-                .relatedDream(lookup.optionalDream(request.relatedDreamId()))
-                .relatedGoal(lookup.optionalGoal(request.relatedGoalId()))
-                .relatedStep(lookup.optionalStep(request.relatedStepId()))
-                .relatedTask(lookup.optionalTask(request.relatedTaskId()))
-                .status(request.status())
-                .notes(request.notes())
-                .build();
-        return mapper.toResponse(partnerRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public PartnerResponse getPartner(Long id) {
-        return mapper.toResponse(lookup.partner(id));
-    }
-
-    public PartnerResponse updatePartner(Long id, PartnerRequest request) {
-        Partner entity = lookup.partner(id);
-        entity.setName(request.name());
-        entity.setRole(request.role());
-        entity.setOrganization(request.organization());
-        entity.setEmail(request.email());
-        entity.setPhone(request.phone());
-        entity.setStrength(request.strength());
-        entity.setSupportType(request.supportType());
-        entity.setRelatedVisionArea(lookup.optionalVisionArea(request.relatedVisionAreaId()));
-        entity.setRelatedDream(lookup.optionalDream(request.relatedDreamId()));
-        entity.setRelatedGoal(lookup.optionalGoal(request.relatedGoalId()));
-        entity.setRelatedStep(lookup.optionalStep(request.relatedStepId()));
-        entity.setRelatedTask(lookup.optionalTask(request.relatedTaskId()));
-        entity.setStatus(request.status());
-        entity.setNotes(request.notes());
-        return mapper.toResponse(entity);
-    }
-
-    public PartnerResponse updatePartnerStatus(Long id, String status) {
-        Partner entity = lookup.partner(id);
-        entity.setStatus(parse(PartnerStatus.class, status));
-        return mapper.toResponse(entity);
-    }
-
-    public void archivePartner(Long id) {
-        lookup.partner(id).setArchived(true);
-    }
-
-    @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
         Long userId = lookup.userId();
         List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
@@ -733,10 +662,6 @@ public class VisionMappingService {
         progress.recalculateStep(entity.getStep());
     }
 
-    public void restorePartner(Long id) {
-        lookup.partner(id).setArchived(false);
-    }
-
     // --- Permanent delete (irreversible; only for already-archived records) --
 
     public void permanentlyDeleteVisionArea(Long id) {
@@ -767,23 +692,6 @@ public class VisionMappingService {
         TaskItem task = lookup.task(id);
         requireArchived(task.isArchived(), "Task");
         permanentDeleteCascade.deleteTask(task);
-    }
-
-    public void permanentlyDeletePartner(Long id) {
-        Partner partner = lookup.partner(id);
-        requireArchived(partner.isArchived(), "Partner");
-        Long partnerId = partner.getId();
-        for (Obstacle obstacle : obstacleRepository.findByUser_Id(lookup.userId())) {
-            if (obstacle.getRequiredPartner() != null && obstacle.getRequiredPartner().getId().equals(partnerId)) {
-                obstacle.setRequiredPartner(null);
-            }
-        }
-        for (CommunicationMessage message : communicationMessageRepository.findByUser_Id(lookup.userId())) {
-            if (message.getPartner() != null && message.getPartner().getId().equals(partnerId)) {
-                message.setPartner(null);
-            }
-        }
-        partnerRepository.delete(partner);
     }
 
     /**

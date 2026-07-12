@@ -3,7 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.PartnerRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.PartnerResponse;
-import com.visionmapping.service.VisionMappingService;
+import com.visionmapping.service.PartnerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PartnerController {
 
-    private final VisionMappingService service;
+    private final PartnerService service;
 
     @GetMapping
     public Page<PartnerResponse> list(
