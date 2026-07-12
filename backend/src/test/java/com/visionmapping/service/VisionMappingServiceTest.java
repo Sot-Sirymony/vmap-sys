@@ -14,6 +14,7 @@ import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Partner;
+import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
@@ -557,5 +558,92 @@ class VisionMappingServiceTest {
 
         assertThat(partner.isArchived()).isTrue();
         assertThat(partner.getStatus()).isEqualTo(PartnerStatus.ACTIVE);
+    }
+
+    // --- Dashboard characterization (pins behavior before the Clean Code split) --
+
+    @Test
+    void dashboardAveragesGoalProgressPerVisionAreaSortedAscending() {
+        VisionArea career = visionArea(1L);
+        VisionArea health = visionArea(2L);
+        health.setName("Health");
+        Dream careerDream = dream(1L, career);
+        Dream healthDream = dream(2L, health);
+        Goal careerGoalA = goal(10L, careerDream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(80), false);
+        Goal careerGoalB = goal(11L, careerDream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(40), false);
+        Goal healthGoal = goal(12L, healthDream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(20), false);
+
+        when(visionAreaRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(career, health));
+        when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerDream, healthDream));
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerGoalA, careerGoalB, healthGoal));
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of());
+
+        DashboardSummaryResponse summary = service.dashboard();
+
+        // Health (20) sorts before Career (avg of 80 and 40 = 60), rounded to whole percent.
+        assertThat(summary.visionAreaProgress()).hasSize(2);
+        assertThat(summary.visionAreaProgress().get(0).name()).isEqualTo("Health");
+        assertThat(summary.visionAreaProgress().get(0).progress()).isEqualByComparingTo("20");
+        assertThat(summary.visionAreaProgress().get(1).name()).isEqualTo("Career");
+        assertThat(summary.visionAreaProgress().get(1).progress()).isEqualByComparingTo("60");
+        assertThat(summary.dreamsByVisionArea()).containsEntry("Career", 1L).containsEntry("Health", 1L);
+    }
+
+    @Test
+    void dashboardCountsMoonshotGoalsAndBlockedTasks() {
+        Dream dream = dream(1L, visionArea(1L));
+        Goal moonshot = goal(10L, dream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(10), false);
+        moonshot.setMoonshot(true);
+        Goal standard = goal(11L, dream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(10), false);
+        VisionStep step = step(20L, moonshot, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        TaskItem blocked = task(30L, step, WorkStatus.BLOCKED, BigDecimal.ZERO);
+
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(moonshot, standard));
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(blocked));
+
+        DashboardSummaryResponse summary = service.dashboard();
+
+        assertThat(summary.moonshotGoals()).isEqualTo(1);
+        assertThat(summary.blockedTasks()).isEqualTo(1);
+    }
+
+    @Test
+    void dashboardTopPriorityTasksExcludeCompletedAndCapAtFive() {
+        VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false),
+                WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        List<TaskItem> tasks = new java.util.ArrayList<>();
+        for (long i = 0; i < 6; i++) {
+            tasks.add(task(30L + i, step, WorkStatus.IN_PROGRESS, BigDecimal.ZERO));
+        }
+        TaskItem completed = task(40L, step, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
+        completed.setPriority(Priority.CRITICAL);
+        tasks.add(completed);
+
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(tasks);
+
+        DashboardSummaryResponse summary = service.dashboard();
+
+        assertThat(summary.priorityTasks()).hasSize(5);
+        assertThat(summary.priorityTasks()).noneMatch(task -> task.status() == WorkStatus.COMPLETED);
+    }
+
+    @Test
+    void dashboardProgressTrendCarriesLatestLoggedAverageToTheFinalWeek() {
+        VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.valueOf(40), false),
+                WorkStatus.IN_PROGRESS, BigDecimal.valueOf(40), false, false);
+        TaskItem task = task(30L, step, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(40));
+        ProgressLog log = ProgressLog.builder()
+                .id(1L).user(testUser).relatedTask(task)
+                .progressPercentBefore(BigDecimal.ZERO).progressPercentAfter(BigDecimal.valueOf(40))
+                .loggedAt(java.time.Instant.now().minus(java.time.Duration.ofDays(2)))
+                .build();
+
+        when(progressLogRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(log));
+
+        DashboardSummaryResponse summary = service.dashboard();
+
+        assertThat(summary.progressTrend()).isNotEmpty();
+        assertThat(summary.progressTrend().get(summary.progressTrend().size() - 1).progress())
+                .isEqualByComparingTo("40.00");
     }
 }
