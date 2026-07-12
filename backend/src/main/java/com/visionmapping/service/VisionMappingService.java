@@ -56,9 +56,9 @@ import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -93,6 +93,7 @@ public class VisionMappingService {
     private final ReviewRepository reviewRepository;
     private final ObstacleRepository obstacleRepository;
     private final ProgressLogRepository progressLogRepository;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public List<VisionAreaResponse> listVisionAreas(boolean includeArchived) {
@@ -425,7 +426,7 @@ public class VisionMappingService {
                 .relatedTask(entity)
                 .progressPercentBefore(progressBefore)
                 .progressPercentAfter(progressAfter)
-                .loggedAt(Instant.now())
+                .loggedAt(Instant.now(clock))
                 .archived(false)
                 .build();
         progressLogRepository.save(entry);
@@ -684,12 +685,12 @@ public class VisionMappingService {
                 .progressPercentBefore(normalizeProgress(request.progressPercentBefore()))
                 .progressPercentAfter(normalizeProgress(request.progressPercentAfter()))
                 .note(request.note())
-                .loggedAt(Instant.now())
+                .loggedAt(Instant.now(clock))
                 .build();
         task.setProgressPercent(entity.getProgressPercentAfter());
         if (ONE_HUNDRED.compareTo(entity.getProgressPercentAfter()) == 0) {
             task.setStatus(WorkStatus.COMPLETED);
-            task.setCompletedAt(Instant.now());
+            task.setCompletedAt(Instant.now(clock));
         }
         recalculateStep(task.getStep());
         return mapper.toResponse(progressLogRepository.save(entity));
@@ -705,7 +706,7 @@ public class VisionMappingService {
     }
 
     @Transactional(readOnly = true)
-    public DashboardSummaryResponse dashboard() {
+    public DashboardSummaryResponse buildDashboardSummary() {
         Long userId = userId();
         List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
         List<Dream> dreams = dreamRepository.findByUser_IdAndArchivedFalse(userId);
@@ -715,7 +716,7 @@ public class VisionMappingService {
         List<Partner> partners = partnerRepository.findByUser_IdAndArchivedFalse(userId);
         List<Review> reviews = reviewRepository.findByUser_IdAndArchivedFalse(userId);
         List<ProgressLog> progressLogs = progressLogRepository.findByUser_IdAndArchivedFalse(userId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate weekEnd = today.plusDays(7);
         BigDecimal averageProgress = goals.isEmpty()
                 ? ZERO
@@ -822,7 +823,7 @@ public class VisionMappingService {
             for (List<ProgressLog> entries : byTask.values()) {
                 ProgressLog latest = null;
                 for (ProgressLog entry : entries) {
-                    LocalDate logDate = entry.getLoggedAt().atZone(ZoneId.systemDefault()).toLocalDate();
+                    LocalDate logDate = entry.getLoggedAt().atZone(clock.getZone()).toLocalDate();
                     if (!logDate.isAfter(cursor)) {
                         latest = entry;
                     } else {
@@ -889,7 +890,7 @@ public class VisionMappingService {
         if (entity.getStatus() == WorkStatus.COMPLETED) {
             entity.setProgressPercent(ONE_HUNDRED);
             if (entity.getCompletedAt() == null) {
-                entity.setCompletedAt(Instant.now());
+                entity.setCompletedAt(Instant.now(clock));
             }
         } else {
             entity.setCompletedAt(null);

@@ -1,5 +1,10 @@
 package com.visionmapping.excel;
 
+import static com.visionmapping.excel.WorkbookSchema.PRIORITY;
+import static com.visionmapping.excel.WorkbookSchema.STATUS;
+import static com.visionmapping.excel.WorkbookSchema.TITLE;
+import static com.visionmapping.excel.WorkbookSchema.TYPE;
+
 import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.request.GoalRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
@@ -63,8 +68,8 @@ class HierarchyImport {
             VisionAreaRequest request = new VisionAreaRequest(
                     reader.requiredText(2, "Name"),
                     reader.textOrNull(3),
-                    reader.enumValue(Priority.class, 4, "Priority"),
-                    reader.enumValue(LifecycleStatus.class, 5, "Status"));
+                    reader.enumValue(Priority.class, 4, PRIORITY),
+                    reader.enumValue(LifecycleStatus.class, 5, STATUS));
             long newId = service.createVisionArea(request).id();
             mapWorkbookId(reader, newVisionAreaIds, newId);
         });
@@ -75,14 +80,14 @@ class HierarchyImport {
             long parentId = resolveParent(newVisionAreaIds, reader.requiredReference(2, "Vision Area ID"), "Vision Area");
             DreamRequest request = new DreamRequest(
                     parentId,
-                    reader.requiredText(3, "Title"),
+                    reader.requiredText(3, TITLE),
                     null,
                     reader.textOrNull(4),
                     reader.textOrNull(5),
-                    reader.enumValue(DreamType.class, 6, "Type"),
-                    reader.enumValue(Priority.class, 7, "Priority"),
+                    reader.enumValue(DreamType.class, 6, TYPE),
+                    reader.enumValue(Priority.class, 7, PRIORITY),
                     reader.dateOrNull(8),
-                    reader.enumValue(DreamStatus.class, 9, "Status"));
+                    reader.enumValue(DreamStatus.class, 9, STATUS));
             long newId = service.createDream(request).id();
             mapWorkbookId(reader, newDreamIds, newId);
         });
@@ -93,12 +98,12 @@ class HierarchyImport {
             long parentId = resolveParent(newDreamIds, reader.requiredReference(2, "Dream ID"), "Dream");
             GoalRequest request = new GoalRequest(
                     parentId,
-                    reader.requiredText(3, "Title"),
+                    reader.requiredText(3, TITLE),
                     null,
                     reader.textOrNull(4),
-                    reader.enumValue(Priority.class, 5, "Priority"),
+                    reader.enumValue(Priority.class, 5, PRIORITY),
                     reader.dateOrNull(6),
-                    reader.enumValue(WorkStatus.class, 7, "Status"),
+                    reader.enumValue(WorkStatus.class, 7, STATUS),
                     false,
                     null);
             long newId = service.createGoal(request).id();
@@ -111,13 +116,13 @@ class HierarchyImport {
             long parentId = resolveParent(newGoalIds, reader.requiredReference(2, "Goal ID"), "Goal");
             VisionStepRequest request = new VisionStepRequest(
                     parentId,
-                    reader.requiredText(3, "Title"),
+                    reader.requiredText(3, TITLE),
                     null,
                     reader.intOrDefault(4, 1),
                     reader.bool(5),
-                    reader.enumValue(Priority.class, 6, "Priority"),
+                    reader.enumValue(Priority.class, 6, PRIORITY),
                     reader.dateOrNull(7),
-                    reader.enumValue(WorkStatus.class, 8, "Status"));
+                    reader.enumValue(WorkStatus.class, 8, STATUS));
             long newId = service.createStep(request).id();
             mapWorkbookId(reader, newStepIds, newId);
         });
@@ -126,7 +131,7 @@ class HierarchyImport {
     private void importTasks(Sheet sheet) {
         eachRow(sheet, "Tasks", reader -> {
             long parentId = resolveParent(newStepIds, reader.requiredReference(2, "Step ID"), "Step");
-            WorkStatus status = reader.enumValue(WorkStatus.class, 8, "Status");
+            WorkStatus status = reader.enumValue(WorkStatus.class, 8, STATUS);
             String blockerReason = reader.textOrNull(10);
             if (status == WorkStatus.BLOCKED && blockerReason == null) {
                 throw new RowParseException("a blocked task needs a blocker reason");
@@ -137,10 +142,10 @@ class HierarchyImport {
             }
             TaskItemRequest request = new TaskItemRequest(
                     parentId,
-                    reader.requiredText(3, "Title"),
+                    reader.requiredText(3, TITLE),
                     null,
                     reader.requiredText(4, "Owner"),
-                    reader.enumValue(Priority.class, 5, "Priority"),
+                    reader.enumValue(Priority.class, 5, PRIORITY),
                     reader.dateOrNull(6),
                     reader.requiredDate(7, "Due Date"),
                     status,

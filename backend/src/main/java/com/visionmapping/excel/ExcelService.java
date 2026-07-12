@@ -1,5 +1,16 @@
 package com.visionmapping.excel;
 
+import static com.visionmapping.excel.WorkbookSchema.CODE;
+import static com.visionmapping.excel.WorkbookSchema.DREAMS;
+import static com.visionmapping.excel.WorkbookSchema.GOALS;
+import static com.visionmapping.excel.WorkbookSchema.PRIORITY;
+import static com.visionmapping.excel.WorkbookSchema.STATUS;
+import static com.visionmapping.excel.WorkbookSchema.STEPS;
+import static com.visionmapping.excel.WorkbookSchema.TASKS;
+import static com.visionmapping.excel.WorkbookSchema.TITLE;
+import static com.visionmapping.excel.WorkbookSchema.TYPE;
+import static com.visionmapping.excel.WorkbookSchema.VISION_AREAS;
+
 import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
@@ -42,11 +53,11 @@ public class ExcelService {
 
     private static final List<String> REQUIRED_SHEETS = List.of(
             "Dashboard",
-            "Vision Areas",
-            "Dreams",
-            "Goals",
-            "Steps",
-            "Tasks",
+            VISION_AREAS,
+            DREAMS,
+            GOALS,
+            STEPS,
+            TASKS,
             "Partners",
             "Communication",
             "Reviews",
@@ -61,7 +72,7 @@ public class ExcelService {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             CellStyle headerStyle = headerStyle(workbook);
 
-            DashboardSummaryResponse dashboard = visionMappingService.dashboard();
+            DashboardSummaryResponse dashboard = visionMappingService.buildDashboardSummary();
             writeRows(workbook, "Dashboard", List.of("Metric", "Value"), List.of(
                     List.of("Total Vision Areas", dashboard.totalVisionAreas()),
                     List.of("Active Dreams", dashboard.activeDreams()),
@@ -74,47 +85,47 @@ public class ExcelService {
                     List.of("Tasks Due This Week", dashboard.tasksDueThisWeek())
             ), headerStyle);
 
-            writeRows(workbook, "Vision Areas", List.of("ID", "Code", "Name", "Description", "Priority", "Status"),
+            writeRows(workbook, VISION_AREAS, List.of("ID", CODE, "Name", "Description", PRIORITY, STATUS),
                     visionMappingService.listVisionAreas(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.description()), item.priority(), item.status()))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Dreams", List.of("ID", "Code", "Vision Area ID", "Title", "Why Important", "Success Definition", "Type", "Priority", "Target Date", "Status"),
+            writeRows(workbook, DREAMS, List.of("ID", CODE, "Vision Area ID", TITLE, "Why Important", "Success Definition", TYPE, PRIORITY, "Target Date", STATUS),
                     visionMappingService.listDreams(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.visionAreaId(), item.title(), value(item.whyImportant()), value(item.successDefinition()), item.dreamType(), item.priority(), value(item.targetDate()), item.status()))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Goals", List.of("ID", "Code", "Dream ID", "Title", "Success Criteria", "Priority", "Target Date", "Status", "Progress"),
+            writeRows(workbook, GOALS, List.of("ID", CODE, "Dream ID", TITLE, "Success Criteria", PRIORITY, "Target Date", STATUS, "Progress"),
                     visionMappingService.listGoals(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.dreamId(), item.title(), value(item.successCriteria()), item.priority(), value(item.targetDate()), item.status(), item.progressPercent()))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Steps", List.of("ID", "Code", "Goal ID", "Title", "Sequence", "Complex", "Priority", "Target Date", "Status", "Progress"),
+            writeRows(workbook, STEPS, List.of("ID", CODE, "Goal ID", TITLE, "Sequence", "Complex", PRIORITY, "Target Date", STATUS, "Progress"),
                     visionMappingService.listSteps(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.goalId(), item.title(), item.sequenceNumber(), item.complex(), item.priority(), value(item.targetDate()), item.status(), item.progressPercent()))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Tasks", List.of("ID", "Code", "Step ID", "Title", "Owner", "Priority", "Start Date", "Due Date", "Status", "Progress", "Blocker", "Next Action"),
+            writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action"),
                     visionMappingService.listTasks(false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction())))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Partners", List.of("ID", "Code", "Name", "Role", "Organization", "Email", "Support Type", "Status", "Notes"),
+            writeRows(workbook, "Partners", List.of("ID", CODE, "Name", "Role", "Organization", "Email", "Support Type", STATUS, "Notes"),
                     visionMappingService.listPartners(Pageable.unpaged(), false).stream()
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.role()), value(item.organization()), value(item.email()), item.supportType(), item.status(), value(item.notes())))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Communication", List.of("ID", "Partner ID", "Audience", "Purpose", "Subject", "Request", "Message", "Status", "Follow Up"),
+            writeRows(workbook, "Communication", List.of("ID", "Partner ID", "Audience", "Purpose", "Subject", "Request", "Message", STATUS, "Follow Up"),
                     visionMappingService.listCommunicationMessages(Pageable.unpaged(), false).stream()
                             .map(item -> List.of(item.id(), value(item.partnerId()), value(item.audience()), value(item.purpose()), value(item.subject()), value(item.request()), value(item.messageBody()), item.status(), value(item.followUpDate())))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Reviews", List.of("ID", "Type", "Date", "Vision Area ID", "Dream ID", "Summary", "Next Actions"),
+            writeRows(workbook, "Reviews", List.of("ID", TYPE, "Date", "Vision Area ID", "Dream ID", "Summary", "Next Actions"),
                     visionMappingService.listReviews(false).stream()
                             .map(item -> List.of(item.id(), item.reviewType(), item.reviewDate(), value(item.relatedVisionAreaId()), value(item.relatedDreamId()), value(item.summary()), value(item.nextActions())))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Obstacles", List.of("ID", "Dream ID", "Goal ID", "Step ID", "Task ID", "Title", "Type", "Severity", "Status", "Solution"),
+            writeRows(workbook, "Obstacles", List.of("ID", "Dream ID", "Goal ID", "Step ID", "Task ID", TITLE, TYPE, "Severity", STATUS, "Solution"),
                     visionMappingService.listObstacles(false).stream()
                             .map(item -> List.of(item.id(), value(item.relatedDreamId()), value(item.relatedGoalId()), value(item.relatedStepId()), value(item.relatedTaskId()), item.title(), item.obstacleType(), item.severity(), item.status(), value(item.solution())))
                             .toList(), headerStyle);
@@ -127,13 +138,13 @@ public class ExcelService {
             writeRows(workbook, "Instructions", List.of("Topic", "Instruction"), List.of(
                     List.of("Import", "Use this workbook as a clean template. Keep required sheet names and header rows."),
                     List.of("Export", "Export creates a new workbook and does not overwrite the original workbook."),
-                    List.of("Status", "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
-                    List.of("Priority", "Use LOW, MEDIUM, HIGH, or CRITICAL.")
+                    List.of(STATUS, "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
+                    List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL.")
             ), headerStyle);
 
-            addDropdown(workbook.getSheet("Vision Areas"), 4, "LOW,MEDIUM,HIGH,CRITICAL");
-            addDropdown(workbook.getSheet("Tasks"), 5, "LOW,MEDIUM,HIGH,CRITICAL");
-            addDropdown(workbook.getSheet("Tasks"), 8, "NOT_STARTED,IN_PROGRESS,WAITING,BLOCKED,COMPLETED,PAUSED");
+            addDropdown(workbook.getSheet(VISION_AREAS), 4, "LOW,MEDIUM,HIGH,CRITICAL");
+            addDropdown(workbook.getSheet(TASKS), 5, "LOW,MEDIUM,HIGH,CRITICAL");
+            addDropdown(workbook.getSheet(TASKS), 8, "NOT_STARTED,IN_PROGRESS,WAITING,BLOCKED,COMPLETED,PAUSED");
 
             workbook.write(output);
             return output.toByteArray();

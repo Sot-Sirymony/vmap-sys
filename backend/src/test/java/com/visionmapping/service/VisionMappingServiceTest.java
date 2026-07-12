@@ -41,6 +41,7 @@ import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +78,8 @@ class VisionMappingServiceTest {
     void setUp() {
         service = new VisionMappingService(userScope, new VisionMappingMapper(), visionAreaRepository,
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
-                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository);
+                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository,
+                Clock.systemDefaultZone());
 
         testUser = AppUser.builder()
                 .id(1L)
@@ -193,7 +195,7 @@ class VisionMappingServiceTest {
         when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of());
         when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(overdue, overdueButCompleted, dueThisWeek));
 
-        DashboardSummaryResponse summary = service.dashboard();
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
 
         assertThat(summary.overdueTasks()).isEqualTo(1);
         assertThat(summary.completedTasks()).isEqualTo(1);
@@ -213,7 +215,7 @@ class VisionMappingServiceTest {
         when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(g1, g2, g3));
         when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of());
 
-        DashboardSummaryResponse summary = service.dashboard();
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
 
         assertThat(summary.averageProgress()).isEqualByComparingTo("60.00");
         assertThat(summary.goalsByStatus()).containsEntry("IN_PROGRESS", 2L).containsEntry("COMPLETED", 1L);
@@ -578,7 +580,7 @@ class VisionMappingServiceTest {
         when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerGoalA, careerGoalB, healthGoal));
         when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of());
 
-        DashboardSummaryResponse summary = service.dashboard();
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
 
         // Health (20) sorts before Career (avg of 80 and 40 = 60), rounded to whole percent.
         assertThat(summary.visionAreaProgress()).hasSize(2);
@@ -601,7 +603,7 @@ class VisionMappingServiceTest {
         when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(moonshot, standard));
         when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(blocked));
 
-        DashboardSummaryResponse summary = service.dashboard();
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
 
         assertThat(summary.moonshotGoals()).isEqualTo(1);
         assertThat(summary.blockedTasks()).isEqualTo(1);
@@ -621,7 +623,7 @@ class VisionMappingServiceTest {
 
         when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(tasks);
 
-        DashboardSummaryResponse summary = service.dashboard();
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
 
         assertThat(summary.priorityTasks()).hasSize(5);
         assertThat(summary.priorityTasks()).noneMatch(task -> task.status() == WorkStatus.COMPLETED);
@@ -640,7 +642,7 @@ class VisionMappingServiceTest {
 
         when(progressLogRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(log));
 
-        DashboardSummaryResponse summary = service.dashboard();
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
 
         assertThat(summary.progressTrend()).isNotEmpty();
         assertThat(summary.progressTrend().get(summary.progressTrend().size() - 1).progress())
