@@ -1,13 +1,11 @@
 package com.visionmapping.service;
 
 import com.visionmapping.dto.request.DreamRequest;
-import com.visionmapping.dto.request.GoalRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
-import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.entity.AppUser;
@@ -189,71 +187,6 @@ public class VisionMappingService {
     }
 
     @Transactional(readOnly = true)
-    public List<GoalResponse> listGoals(boolean includeArchived) {
-        List<Goal> entities = includeArchived
-                ? goalRepository.findByUser_Id(lookup.userId())
-                : goalRepository.findByUser_IdAndArchivedFalse(lookup.userId());
-        return entities.stream().map(mapper::toResponse).toList();
-    }
-
-    public GoalResponse createGoal(GoalRequest request) {
-        AppUser user = lookup.currentUser();
-        Dream dream = lookup.dream(request.dreamId());
-        Goal entity = Goal.builder()
-                .code(nextCode("G", goalRepository.findByUser_Id(user.getId()).size()))
-                .user(user)
-                .dream(dream)
-                .title(request.title())
-                .description(request.description())
-                .successCriteria(request.successCriteria())
-                .priority(request.priority())
-                .targetDate(request.targetDate())
-                .status(request.status())
-                .progressPercent(ZERO)
-                .manualProgressOverride(false)
-                .moonshot(request.moonshot())
-                .moonshotVision(request.moonshotVision())
-                .build();
-        return mapper.toResponse(goalRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public GoalResponse getGoal(Long id) {
-        return mapper.toResponse(lookup.goal(id));
-    }
-
-    public GoalResponse updateGoal(Long id, GoalRequest request) {
-        Goal entity = lookup.goal(id);
-        entity.setDream(lookup.dream(request.dreamId()));
-        entity.setTitle(request.title());
-        entity.setDescription(request.description());
-        entity.setSuccessCriteria(request.successCriteria());
-        entity.setPriority(request.priority());
-        entity.setTargetDate(request.targetDate());
-        entity.setStatus(request.status());
-        entity.setMoonshot(request.moonshot());
-        entity.setMoonshotVision(request.moonshotVision());
-        validateGoalCompletion(entity, false);
-        return mapper.toResponse(entity);
-    }
-
-    public GoalResponse updateGoalStatus(Long id, String status, boolean manualOverride) {
-        Goal entity = lookup.goal(id);
-        entity.setStatus(parse(WorkStatus.class, status));
-        validateGoalCompletion(entity, manualOverride);
-        if (manualOverride) {
-            entity.setManualProgressOverride(true);
-        }
-        return mapper.toResponse(entity);
-    }
-
-    public void archiveGoal(Long id) {
-        Goal entity = lookup.goal(id);
-        entity.setArchived(true);
-        archiveCascade.archiveStepsUnder(entity.getId());
-    }
-
-    @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
         Long userId = lookup.userId();
         List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
@@ -412,17 +345,6 @@ public class VisionMappingService {
                 .toList();
     }
 
-    private void validateGoalCompletion(Goal goal, boolean manualOverride) {
-        if (goal.getStatus() != WorkStatus.COMPLETED || manualOverride) {
-            return;
-        }
-        boolean allStepsComplete = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), goal.getUser().getId()).stream()
-                .allMatch(step -> step.getStatus() == WorkStatus.COMPLETED);
-        if (!allStepsComplete) {
-            throw new BusinessRuleException("A goal cannot be completed until all steps are completed, unless manualOverride is true.");
-        }
-    }
-
     // --- Archive impact (what a cascade would newly archive) -----------------
 
     @Transactional(readOnly = true)
@@ -435,11 +357,6 @@ public class VisionMappingService {
         return archiveCascade.impactOfDream(lookup.dream(id));
     }
 
-    @Transactional(readOnly = true)
-    public ArchiveImpactResponse goalArchiveImpact(Long id) {
-        return archiveCascade.impactOfGoal(lookup.goal(id));
-    }
-
     // --- Restore (un-archive, pulling archived parents back with it) ---------
 
     public void restoreVisionArea(Long id) {
@@ -448,10 +365,6 @@ public class VisionMappingService {
 
     public void restoreDream(Long id) {
         archiveCascade.unarchiveDreamChain(lookup.dream(id));
-    }
-
-    public void restoreGoal(Long id) {
-        archiveCascade.unarchiveGoalChain(lookup.goal(id));
     }
 
     // --- Permanent delete (irreversible; only for already-archived records) --
@@ -466,12 +379,6 @@ public class VisionMappingService {
         Dream dream = lookup.dream(id);
         requireArchived(dream.isArchived(), "Dream");
         permanentDeleteCascade.deleteDream(dream);
-    }
-
-    public void permanentlyDeleteGoal(Long id) {
-        Goal goal = lookup.goal(id);
-        requireArchived(goal.isArchived(), "Goal");
-        permanentDeleteCascade.deleteGoal(goal);
     }
 
     /**

@@ -212,55 +212,12 @@ class VisionMappingServiceTest {
 
     // --- Goal completion rule ----------------------------------------------
 
-    @Test
-    void completingGoalWithIncompleteStepsThrowsUnlessManualOverride() {
-        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
-        VisionStep incompleteStep = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
-        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(incompleteStep));
-
-        assertThatThrownBy(() -> service.updateGoalStatus(10L, "COMPLETED", false))
-                .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("A goal cannot be completed until all steps are completed, unless manualOverride is true.");
-    }
-
-    @Test
-    void completingGoalWithManualOverrideSucceedsAndFlagsOverride() {
-        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
-        VisionStep incompleteStep = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
-        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
-        lenient().when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(incompleteStep));
-
-        service.updateGoalStatus(10L, "COMPLETED", true);
-
-        assertThat(goal.getStatus()).isEqualTo(WorkStatus.COMPLETED);
-        assertThat(goal.isManualProgressOverride()).isTrue();
-    }
-
     // --- Complex step requires at least one task ---------------------------
 
     // --- Progress normalization ----------------------------------------------
     // --- prepareTask completion side effects ---------------------------------
 
     // --- Delete / archive ---------------------------------------------------
-
-    @Test
-    void archivingGoalSetsArchivedFlagWithoutChangingStatusAndCascadesToChildren() {
-        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.valueOf(50), false);
-        VisionStep step = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(50), false, false);
-        TaskItem task = task(30L, step, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(50));
-
-        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
-        when(visionStepRepository.findByGoal_IdAndUser_Id(10L, 1L)).thenReturn(List.of(step));
-        when(taskItemRepository.findByStep_IdAndUser_Id(20L, 1L)).thenReturn(List.of(task));
-
-        service.archiveGoal(10L);
-
-        assertThat(goal.isArchived()).isTrue();
-        assertThat(goal.getStatus()).isEqualTo(WorkStatus.IN_PROGRESS);
-        assertThat(step.isArchived()).isTrue();
-        assertThat(task.isArchived()).isTrue();
-    }
 
     // --- Dashboard characterization (pins behavior before the Clean Code split) --
 

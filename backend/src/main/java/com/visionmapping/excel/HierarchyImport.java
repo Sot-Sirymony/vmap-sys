@@ -16,6 +16,7 @@ import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.service.GoalService;
 import com.visionmapping.service.TaskItemService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.VisionMappingService;
@@ -41,6 +42,7 @@ class HierarchyImport {
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
 
     private final VisionMappingService service;
+    private final GoalService goalService;
     private final VisionStepService stepService;
     private final TaskItemService taskService;
     private final Map<Long, Long> newVisionAreaIds = new HashMap<>();
@@ -53,8 +55,9 @@ class HierarchyImport {
     private int created;
     private int skipped;
 
-    HierarchyImport(VisionMappingService service, VisionStepService stepService, TaskItemService taskService) {
+    HierarchyImport(VisionMappingService service, GoalService goalService, VisionStepService stepService, TaskItemService taskService) {
         this.service = service;
+        this.goalService = goalService;
         this.stepService = stepService;
         this.taskService = taskService;
     }
@@ -112,7 +115,7 @@ class HierarchyImport {
                     reader.enumValue(WorkStatus.class, 7, STATUS),
                     false,
                     null);
-            long newId = service.createGoal(request).id();
+            long newId = goalService.createGoal(request).id();
             mapWorkbookId(reader, newGoalIds, newId);
         });
     }
