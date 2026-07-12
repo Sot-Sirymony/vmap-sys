@@ -40,6 +40,7 @@ import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
@@ -82,7 +83,10 @@ class VisionMappingServiceTest {
                 visionStepRepository, taskItemRepository, partnerRepository, communicationMessageRepository,
                 reviewRepository, obstacleRepository, progressLogRepository);
         ProgressCalculator progress = new ProgressCalculator(visionStepRepository, taskItemRepository);
-        service = new VisionMappingService(lookup, progress, new VisionMappingMapper(), visionAreaRepository,
+        PermanentDeleteCascade permanentDeleteCascade = new PermanentDeleteCascade(lookup, visionAreaRepository,
+                dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
+                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository);
+        service = new VisionMappingService(lookup, progress, permanentDeleteCascade, new VisionMappingMapper(), visionAreaRepository,
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository,
                 Clock.systemDefaultZone());
