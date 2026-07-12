@@ -63,7 +63,7 @@ export function ImportExportPage() {
       {error && <ErrorMessage message={error} />}
       <div className="two-column">
         <Card>
-          <CardHeader title="Import Excel" subheader="Upload an .xlsx workbook to validate its structure against the required sheets." />
+          <CardHeader title="Import Excel" subheader="Upload an exported .xlsx workbook to recreate its vision areas, dreams, goals, steps, and tasks." />
           <CardContent className="card-action">
             <MuiButton component="label" variant="contained" color="secondary" size="small">
               Choose workbook
@@ -83,24 +83,28 @@ export function ImportExportPage() {
         <Card>
           <CardHeader title="Import Summary" />
           <CardContent>
-            <div className="metric-grid">
+            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
               <div className="metric-card">
-                <p>Created</p>
+                <p>Records created</p>
                 <strong>{summary.createdRecords}</strong>
               </div>
               <div className="metric-card">
-                <p>Skipped</p>
+                <p>Rows skipped</p>
                 <strong>{summary.skippedRecords}</strong>
-              </div>
-              <div className="metric-card">
-                <p>Sheets</p>
-                <strong>{Object.keys(summary.rowsBySheet).length}</strong>
               </div>
               <div className="metric-card">
                 <p>Errors</p>
                 <strong>{summary.validationErrors.length}</strong>
               </div>
             </div>
+            {Object.keys(summary.rowsBySheet).length > 0 && (
+              <p className="field-hint" style={{ color: '#616161' }}>
+                {Object.entries(summary.rowsBySheet).map(([sheet, count]) => `${sheet}: ${count}`).join(' · ')}
+              </p>
+            )}
+            {summary.createdRecords > 0 && (
+              <p className="field-hint">Open Goals, Steps, or Tasks to see the imported records.</p>
+            )}
             {summary.validationErrors.length > 0 && (
               <div className="stack-list">
                 {summary.validationErrors.map((validationError) => (

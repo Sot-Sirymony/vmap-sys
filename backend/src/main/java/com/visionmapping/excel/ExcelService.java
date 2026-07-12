@@ -33,6 +33,7 @@ import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -141,28 +142,35 @@ public class ExcelService {
         }
     }
 
+    /**
+     * Reads a Vision Mapping export workbook and recreates its Vision Area →
+     * Dream → Goal → Step → Task hierarchy for the current user. Runs in one
+     * transaction so a broken hierarchy is never half-imported: any row whose
+     * required fields are invalid, or whose parent was itself skipped, is
+     * skipped with a reported reason rather than aborting the whole import.
+     * The other sheets (Partners, Reviews, and so on) are not imported yet.
+     */
+    @Transactional
     public ExcelImportSummaryResponse importWorkbook(MultipartFile file) {
-        Map<String, Integer> rowsBySheet = new LinkedHashMap<>();
-        List<String> validationErrors = new ArrayList<>();
-
+        List<String> errors = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            for (String sheetName : REQUIRED_SHEETS) {
-                Sheet sheet = workbook.getSheet(sheetName);
-                if (sheet == null) {
-                    validationErrors.add("Missing sheet: " + sheetName);
-                    continue;
-                }
-                rowsBySheet.put(sheetName, Math.max(0, sheet.getLastRowNum()));
-                if (sheet.getRow(0) == null) {
-                    validationErrors.add("Missing header row: " + sheetName);
-                }
-            }
+            validateStructure(workbook, errors);
+            return new HierarchyImport(visionMappingService).run(workbook, errors);
         } catch (IOException exception) {
-            validationErrors.add("Unable to read workbook: " + exception.getMessage());
+            errors.add("Unable to read workbook: " + exception.getMessage());
+            return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);
         }
+    }
 
-        int skippedRecords = rowsBySheet.values().stream().mapToInt(Integer::intValue).sum();
-        return new ExcelImportSummaryResponse(0, skippedRecords, rowsBySheet, validationErrors);
+    private void validateStructure(Workbook workbook, List<String> errors) {
+        for (String sheetName : REQUIRED_SHEETS) {
+            Sheet sheet = workbook.getSheet(sheetName);
+            if (sheet == null) {
+                errors.add("Missing sheet: " + sheetName);
+            } else if (sheet.getRow(0) == null) {
+                errors.add("Missing header row: " + sheetName);
+            }
+        }
     }
 
     private void writeRows(Workbook workbook, String sheetName, List<String> headers, List<? extends List<?>> rows, CellStyle headerStyle) {
