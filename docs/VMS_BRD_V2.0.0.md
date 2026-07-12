@@ -3,14 +3,37 @@
 | | |
 |---|---|
 | **Document** | VMS_BRD_V2.0.0 |
-| **Version** | 2.0.0 (Draft) |
-| **Date** | 2026-07-11 |
-| **Status** | Draft — proposed scope for the next release; nothing below is implemented |
+| **Version** | 2.0.0 (In progress) |
+| **Date** | 2026-07-11 (progress updated 2026-07-12) |
+| **Status** | In progress — 6 of 11 items shipped to `main`; see the tracker below |
 | **Baseline** | Builds on VMS_BRD_V1.0.0 (all V1 requirements remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
-Requirement numbering continues from V1.0.0 (which ended at FR-13). Every
-requirement below is **Planned** unless stated otherwise.
+Requirement numbering continues from V1.0.0 (which ended at FR-13).
+
+## Progress tracker (as of 2026-07-12)
+
+Each item's status is also marked inline in its section heading below.
+
+| Item | Description | Status | Commit |
+|---|---|---|---|
+| FR-17.0 | Expose hook / problem / benefit fields | ✅ Done | `741f7a6e` |
+| C-2 + C-3 | Archive confirmation + show-archived/restore | ✅ Done | `741f7a6e` |
+| FR-16 | Diligence checkup + guided review templates | ✅ Done | `741f7a6e` |
+| FR-17 | Persuasive communication module | ✅ Done | `741f7a6e` |
+| FR-14 | Moonshot goals | ✅ Done | `741f7a6e` |
+| C-1 | Excel import persistence | ✅ Done | `5be80973` |
+| FR-15 | Partner Recruitment Portal | ⬜ Not started | — |
+| C-4 | Task estimated / actual hours in UI | ⬜ Not started | — |
+| C-5 | Partner phone in UI | ⬜ Not started | — |
+| C-6 | Due-date / target-date range filters | ⬜ Not started | — |
+| C-7 | Automatic export snapshot before import | ⬜ Not started | — |
+
+**Done (6):** FR-17.0, C-2+C-3, FR-16, FR-17, FR-14, C-1 — all verified (backend + frontend tests, Playwright end-to-end) and pushed to `main`. Migrations V5 (diligence checklist), V6 (word picture), and V7 (goal moonshot) are applied.
+
+**Remaining (5):** FR-15 (largest — the next item in the build order), then the C-4…C-7 small-field batch.
+
+Where a requirement below still says **Planned**, that is its original wording and it is not yet implemented; the ✅ marks added to headings show what has shipped.
 
 ---
 
@@ -64,7 +87,7 @@ V2.0.0 also closes the functional gaps carried over from the V1 baseline
 
 ## 5. New Functional Requirements
 
-### FR-14 Moonshot Goal Setting — Planned (Effort: S)
+### FR-14 Moonshot Goal Setting — ✅ Done (Effort: S)
 
 Encourage goals that exceed the user's current perceived limits.
 
@@ -94,7 +117,7 @@ track both versions separately.
 
 ---
 
-### FR-15 Partner Recruitment Portal — Planned (Effort: L)
+### FR-15 Partner Recruitment Portal — ⬜ Not started (Effort: L)
 
 Grow the Partner module from a contact list into a recruitment workflow:
 **Identify → Contact → Recruit → Utilize**.
@@ -129,7 +152,7 @@ view shows fully structured messages.
 
 ---
 
-### FR-16 Diligence Checkup in Reviews — Planned (Effort: M)
+### FR-16 Diligence Checkup in Reviews — ✅ Done (Effort: M)
 
 Turn reviews into a check on working *smart*, and give each review type the
 guided questions the method prescribes (this absorbs carried-over gap G-11).
@@ -161,13 +184,13 @@ guided questions the method prescribes (this absorbs carried-over gap G-11).
 
 ---
 
-### FR-17 Persuasive Communication Module — Planned (Effort: M)
+### FR-17 Persuasive Communication Module — ✅ Done (Effort: M)
 
 Upgrade the Communication Builder into a persuasion assistant.
 
-- FR-17.0 **Prerequisite (carried-over gap G-7):** expose the three structured
-  fields that already exist in the API and database but not in the form —
-  **Hook**, **Problem**, and **Benefit to Partner**. No backend change needed.
+- FR-17.0 **Prerequisite (carried-over gap G-7) — ✅ Done:** expose the three
+  structured fields that already exist in the API and database but not in the
+  form — **Hook**, **Problem**, and **Benefit to Partner**. No backend change needed.
 - FR-17.1 **Hook guidance.** Inline helper text and 2–3 original example
   patterns for opening lines that earn attention (a specific question, a
   shared reference, a concrete result).
@@ -205,30 +228,30 @@ additive migration (`word_picture` column).
 
 These close the remaining Partial/Planned items in VMS_BRD_V1.0.0.
 
-| Item | V1 reference | Requirement | Effort |
-|---|---|---|---|
-| C-1 | FR-11.2 | Excel import creates records: map validated rows into vision areas, dreams, goals, steps, and tasks in hierarchy order; report created / skipped / errored counts per sheet; never partially import a broken hierarchy. | L |
-| C-2 | FR-13.3 | Confirmation dialog before archiving, stating the cascade ("this archives N dreams, N goals…"). | S |
-| C-3 | FR-13.4 | "Show archived" toggle on list pages, with restore. Restoring a child whose parent is archived also restores the parent chain. | M |
-| C-4 | G-8 | Expose task estimated/actual hours in the task form and list view. | S |
-| C-5 | G-9 | Expose partner phone in the partner form. | S |
-| C-6 | G-10 | Due-date range filter on the Tasks Board; target-date range filter on Goals. | S |
-| C-7 | G-13 | Automatic export snapshot ("backup") saved before any import runs. | M |
+| Item | V1 reference | Requirement | Effort | Status |
+|---|---|---|---|---|
+| C-1 | FR-11.2 | Excel import creates records: map validated rows into vision areas, dreams, goals, steps, and tasks in hierarchy order; report created / skipped / errored counts per sheet; never partially import a broken hierarchy. | L | ✅ Done |
+| C-2 | FR-13.3 | Confirmation dialog before archiving, stating the cascade ("this archives N dreams, N goals…"). | S | ✅ Done |
+| C-3 | FR-13.4 | "Show archived" toggle on list pages, with restore. Restoring a child whose parent is archived also restores the parent chain. | M | ✅ Done |
+| C-4 | G-8 | Expose task estimated/actual hours in the task form and list view. | S | ⬜ Not started |
+| C-5 | G-9 | Expose partner phone in the partner form. | S | ⬜ Not started |
+| C-6 | G-10 | Due-date range filter on the Tasks Board; target-date range filter on Goals. | S | ⬜ Not started |
+| C-7 | G-13 | Automatic export snapshot ("backup") saved before any import runs. | M | ⬜ Not started |
 
 *(G-7 became FR-17.0; G-11 was absorbed into FR-16.)*
 
 ## 8. Priority and Build Order
 
-| Order | Work | Why this order |
-|---|---|---|
-| 1 | FR-17.0 (expose hook/problem/benefit) | Smallest change; unblocks FR-17 and improves V1 immediately |
-| 2 | C-2 + C-3 (archive confirm + restore) | Data-safety debt; independent of everything else |
-| 3 | FR-16 (+ absorbed G-11) | High method value, medium effort |
-| 4 | FR-17 (persuasion module) | Builds directly on step 1 |
-| 5 | FR-14 (moonshot) | Small, independent — can slot anywhere |
-| 6 | C-1 (Excel import persistence) | Largest carried-over item; closes the last V1 acceptance criterion |
-| 7 | FR-15 (partner portal) | Largest new feature; benefits from FR-17 being done |
-| 8 | C-4 … C-7 | Small completeness batch; fill spare capacity |
+| Order | Work | Why this order | Status |
+|---|---|---|---|
+| 1 | FR-17.0 (expose hook/problem/benefit) | Smallest change; unblocks FR-17 and improves V1 immediately | ✅ Done |
+| 2 | C-2 + C-3 (archive confirm + restore) | Data-safety debt; independent of everything else | ✅ Done |
+| 3 | FR-16 (+ absorbed G-11) | High method value, medium effort | ✅ Done |
+| 4 | FR-17 (persuasion module) | Builds directly on step 1 | ✅ Done |
+| 5 | FR-14 (moonshot) | Small, independent — can slot anywhere | ✅ Done |
+| 6 | C-1 (Excel import persistence) | Largest carried-over item; closes the last V1 acceptance criterion | ✅ Done |
+| 7 | FR-15 (partner portal) | Largest new feature; benefits from FR-17 being done | ⬜ Not started (next) |
+| 8 | C-4 … C-7 | Small completeness batch; fill spare capacity | ⬜ Not started |
 
 ## 9. Non-Functional Notes
 
