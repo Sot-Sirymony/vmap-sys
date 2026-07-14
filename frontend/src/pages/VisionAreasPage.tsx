@@ -9,6 +9,7 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterSelect, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
@@ -20,6 +21,7 @@ import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { LifecycleStatus, Priority, VisionArea, VisionAreaRequest } from '../types/vision';
+import { lifecycleStatusLabels, priorityLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
@@ -42,6 +44,8 @@ export function VisionAreasPage() {
   const [status, setStatus] = useState<LifecycleStatus>('ACTIVE');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
     void crud.reload();
@@ -82,9 +86,17 @@ export function VisionAreasPage() {
     return `Archiving "${area.name}" also archives ${impact.dreams} dream(s), ${impact.goals} goal(s), ${impact.steps} step(s), and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
   }
 
-  const filteredAreas = crud.items.filter((area) =>
-    matchesSearch(searchTerm, area.code, area.name, area.description),
-  );
+  const filteredAreas = crud.items.filter((area) => {
+    if (filterPriority && area.priority !== filterPriority) {
+      return false;
+    }
+    if (filterStatus && area.status !== filterStatus) {
+      return false;
+    }
+    return matchesSearch(searchTerm, area.code, area.name, area.description);
+  });
+
+  const hasFilters = Boolean(searchTerm || filterPriority || filterStatus);
 
   const columns: DataTableColumn<VisionArea>[] = [
     { key: 'code', label: 'Code', sortValue: (area) => area.code, render: (area) => area.code },
@@ -170,6 +182,18 @@ export function VisionAreasPage() {
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="vision areas" />
+        <FilterSelect
+          label="Priority"
+          value={filterPriority}
+          onChange={setFilterPriority}
+          options={optionsFromLabels(priorityLabels)}
+        />
+        <FilterSelect
+          label="Status"
+          value={filterStatus}
+          onChange={setFilterStatus}
+          options={optionsFromLabels(lifecycleStatusLabels)}
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
@@ -177,8 +201,8 @@ export function VisionAreasPage() {
           <DataTable
             rows={filteredAreas}
             columns={columns}
-            emptyMessage={searchTerm ? 'No vision areas match this search.' : 'No vision areas yet.'}
-            pageResetKey={searchTerm}
+            emptyMessage={hasFilters ? 'No vision areas match these filters.' : 'No vision areas yet.'}
+            pageResetKey={`${searchTerm}|${filterPriority}|${filterStatus}`}
             rowClassName={(area) => (area.archived ? 'row-archived' : '')}
             selection={{
               selectedIds,

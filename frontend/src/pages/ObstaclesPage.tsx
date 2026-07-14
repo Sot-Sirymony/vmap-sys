@@ -14,6 +14,7 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
@@ -25,7 +26,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Dream, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity, TaskItem, VisionStep } from '../types/vision';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
-import { obstacleStatusLabels, obstacleTypeLabels, priorityLabels } from '../utils/enumLabels';
+import { obstacleStatusLabels, obstacleTypeLabels, priorityLabels, severityLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { severityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
@@ -64,6 +65,10 @@ export function ObstaclesPage() {
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterObstacleType, setFilterObstacleType] = useState('');
+  const [filterSeverity, setFilterSeverity] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterDreamId, setFilterDreamId] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -137,14 +142,30 @@ export function ObstaclesPage() {
 
   const partnerSuggestion = suggestPartnerFor(obstacleType);
 
-  const filteredObstacles = crud.items.filter((obstacle) =>
-    matchesSearch(
+  const filteredObstacles = crud.items.filter((obstacle) => {
+    if (filterObstacleType && obstacle.obstacleType !== filterObstacleType) {
+      return false;
+    }
+    if (filterSeverity && obstacle.severity !== filterSeverity) {
+      return false;
+    }
+    if (filterStatus && obstacle.status !== filterStatus) {
+      return false;
+    }
+    if (filterDreamId && String(obstacle.relatedDreamId ?? '') !== filterDreamId) {
+      return false;
+    }
+    return matchesSearch(
       searchTerm,
       obstacle.title,
       obstacle.description,
       obstacle.solution,
       obstacleTypeLabels[obstacle.obstacleType],
-    ),
+    );
+  });
+
+  const hasFilters = Boolean(
+    searchTerm || filterObstacleType || filterSeverity || filterStatus || filterDreamId,
   );
 
   const columns: DataTableColumn<Obstacle>[] = [
@@ -299,6 +320,30 @@ export function ObstaclesPage() {
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
+        <FilterSelect
+          label="Type"
+          value={filterObstacleType}
+          onChange={setFilterObstacleType}
+          options={optionsFromLabels(obstacleTypeLabels)}
+        />
+        <FilterSelect
+          label="Severity"
+          value={filterSeverity}
+          onChange={setFilterSeverity}
+          options={optionsFromLabels(severityLabels)}
+        />
+        <FilterSelect
+          label="Status"
+          value={filterStatus}
+          onChange={setFilterStatus}
+          options={optionsFromLabels(obstacleStatusLabels)}
+        />
+        <FilterSelect
+          label="Dream"
+          value={filterDreamId}
+          onChange={setFilterDreamId}
+          options={optionsFromEntities(dreams, (dream) => dream.title)}
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
@@ -306,8 +351,8 @@ export function ObstaclesPage() {
         <DataTable
           rows={filteredObstacles}
           columns={columns}
-          emptyMessage={searchTerm ? 'No obstacles match this search.' : 'No obstacles yet.'}
-          pageResetKey={searchTerm}
+          emptyMessage={hasFilters ? 'No obstacles match these filters.' : 'No obstacles yet.'}
+          pageResetKey={`${searchTerm}|${filterObstacleType}|${filterSeverity}|${filterStatus}|${filterDreamId}`}
           rowClassName={(obstacle) => (obstacle.archived ? 'row-archived' : '')}
           selection={{
             selectedIds,

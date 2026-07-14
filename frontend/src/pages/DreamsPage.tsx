@@ -5,6 +5,7 @@ import { listVisionAreas } from '../api/visionAreaApi';
 import MuiButton from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -12,6 +13,7 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
@@ -23,6 +25,8 @@ import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, VisionArea } from '../types/vision';
+import { dreamStatusLabels, dreamTypeLabels, priorityLabels } from '../utils/enumLabels';
+import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
@@ -51,6 +55,11 @@ export function DreamsPage() {
   const [status, setStatus] = useState<DreamStatus>('ACTIVE');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterVisionAreaId, setFilterVisionAreaId] = useState('');
+  const [filterDreamType, setFilterDreamType] = useState('');
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -122,8 +131,27 @@ export function DreamsPage() {
     return `Archiving "${dream.title}" also archives ${impact.goals} goal(s), ${impact.steps} step(s), and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
   }
 
-  const filteredDreams = crud.items.filter((dream) =>
-    matchesSearch(searchTerm, dream.code, dream.title, dream.description, dream.whyImportant, dream.successDefinition),
+  const filteredDreams = crud.items.filter((dream) => {
+    if (filterVisionAreaId && String(dream.visionAreaId) !== filterVisionAreaId) {
+      return false;
+    }
+    if (filterDreamType && dream.dreamType !== filterDreamType) {
+      return false;
+    }
+    if (filterPriority && dream.priority !== filterPriority) {
+      return false;
+    }
+    if (filterStatus && dream.status !== filterStatus) {
+      return false;
+    }
+    if (filterOverdueOnly && !isOverdue(dream.targetDate, dream.status)) {
+      return false;
+    }
+    return matchesSearch(searchTerm, dream.code, dream.title, dream.description, dream.whyImportant, dream.successDefinition);
+  });
+
+  const hasFilters = Boolean(
+    searchTerm || filterVisionAreaId || filterDreamType || filterPriority || filterStatus || filterOverdueOnly,
   );
 
   const columns: DataTableColumn<Dream>[] = [
@@ -273,6 +301,34 @@ export function DreamsPage() {
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="dreams" />
+        <FilterSelect
+          label="Vision Area"
+          value={filterVisionAreaId}
+          onChange={setFilterVisionAreaId}
+          options={optionsFromEntities(visionAreas, (area) => area.name)}
+        />
+        <FilterSelect
+          label="Type"
+          value={filterDreamType}
+          onChange={setFilterDreamType}
+          options={optionsFromLabels(dreamTypeLabels)}
+        />
+        <FilterSelect
+          label="Priority"
+          value={filterPriority}
+          onChange={setFilterPriority}
+          options={optionsFromLabels(priorityLabels)}
+        />
+        <FilterSelect
+          label="Status"
+          value={filterStatus}
+          onChange={setFilterStatus}
+          options={optionsFromLabels(dreamStatusLabels)}
+        />
+        <label className="checkbox-field">
+          <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
+          Overdue only
+        </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
@@ -280,8 +336,8 @@ export function DreamsPage() {
         <DataTable
           rows={filteredDreams}
           columns={columns}
-          emptyMessage={searchTerm ? 'No dreams match this search.' : 'No dreams yet.'}
-          pageResetKey={searchTerm}
+          emptyMessage={hasFilters ? 'No dreams match these filters.' : 'No dreams yet.'}
+          pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamType}|${filterPriority}|${filterStatus}|${filterOverdueOnly}`}
           rowClassName={(dream) => (dream.archived ? 'row-archived' : '')}
           selection={{
             selectedIds,

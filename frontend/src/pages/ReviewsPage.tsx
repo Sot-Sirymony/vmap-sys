@@ -13,6 +13,7 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
@@ -98,6 +99,9 @@ export function ReviewsPage() {
   const [diligenceNote, setDiligenceNote] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterReviewType, setFilterReviewType] = useState('');
+  const [filterVisionAreaId, setFilterVisionAreaId] = useState('');
+  const [filterDreamId, setFilterDreamId] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -187,8 +191,17 @@ export function ReviewsPage() {
     setDiligenceNote('');
   }
 
-  const filteredReviews = crud.items.filter((review) =>
-    matchesSearch(
+  const filteredReviews = crud.items.filter((review) => {
+    if (filterReviewType && review.reviewType !== filterReviewType) {
+      return false;
+    }
+    if (filterVisionAreaId && String(review.relatedVisionAreaId ?? '') !== filterVisionAreaId) {
+      return false;
+    }
+    if (filterDreamId && String(review.relatedDreamId ?? '') !== filterDreamId) {
+      return false;
+    }
+    return matchesSearch(
       searchTerm,
       reviewTypeLabels[review.reviewType],
       review.reviewDate,
@@ -198,8 +211,10 @@ export function ReviewsPage() {
       review.blockedTasks,
       review.lessonsLearned,
       review.nextActions,
-    ),
-  );
+    );
+  });
+
+  const hasFilters = Boolean(searchTerm || filterReviewType || filterVisionAreaId || filterDreamId);
 
   const columns: DataTableColumn<Review>[] = [
     {
@@ -353,6 +368,24 @@ export function ReviewsPage() {
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="reviews" />
+        <FilterSelect
+          label="Review Type"
+          value={filterReviewType}
+          onChange={setFilterReviewType}
+          options={optionsFromLabels(reviewTypeLabels)}
+        />
+        <FilterSelect
+          label="Vision Area"
+          value={filterVisionAreaId}
+          onChange={setFilterVisionAreaId}
+          options={optionsFromEntities(visionAreas, (area) => area.name)}
+        />
+        <FilterSelect
+          label="Dream"
+          value={filterDreamId}
+          onChange={setFilterDreamId}
+          options={optionsFromEntities(dreams, (dream) => dream.title)}
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
@@ -360,8 +393,8 @@ export function ReviewsPage() {
         <DataTable
           rows={filteredReviews}
           columns={columns}
-          emptyMessage={searchTerm ? 'No reviews match this search.' : 'No reviews yet.'}
-          pageResetKey={searchTerm}
+          emptyMessage={hasFilters ? 'No reviews match these filters.' : 'No reviews yet.'}
+          pageResetKey={`${searchTerm}|${filterReviewType}|${filterVisionAreaId}|${filterDreamId}`}
           defaultSortKey="reviewDate"
           defaultSortDirection="desc"
           rowClassName={(review) => (review.archived ? 'row-archived' : '')}

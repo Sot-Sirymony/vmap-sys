@@ -14,6 +14,7 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
@@ -37,14 +38,22 @@ export function PartnersPage() {
   const [sort, setSort] = useState('id,desc');
   const [totalRows, setTotalRows] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  // Search runs on the server too, so it spans every page, not just the loaded one.
+  // Search and the filters both run on the server, so they span every page, not
+  // just the loaded one.
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm);
+  const [filterSupportType, setFilterSupportType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterDreamId, setFilterDreamId] = useState('');
   const crud = useCrudEntity<Partner, PartnerRequest>({
     token,
     entityLabel: 'partners',
     list: async (currentToken, includeArchived) => {
-      const result = await listPartners(currentToken, page, rowsPerPage, includeArchived, sort, debouncedSearch);
+      const result = await listPartners(currentToken, page, rowsPerPage, includeArchived, sort, debouncedSearch, {
+        supportType: filterSupportType,
+        status: filterStatus,
+        dreamId: filterDreamId,
+      });
       setTotalRows(result.totalElements);
       return result.content;
     },
@@ -88,7 +97,16 @@ export function PartnersPage() {
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, rowsPerPage, sort, debouncedSearch]);
+  }, [token, page, rowsPerPage, sort, debouncedSearch, filterSupportType, filterStatus, filterDreamId]);
+
+  // A filter change can shrink the result below the current page, which would
+  // otherwise leave the user staring at an empty page 3.
+  function applyFilter(setFilter: (value: string) => void) {
+    return (value: string) => {
+      setFilter(value);
+      setPage(0);
+    };
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -302,6 +320,24 @@ export function PartnersPage() {
           }}
           entityLabel="partners"
         />
+        <FilterSelect
+          label="Support Type"
+          value={filterSupportType}
+          onChange={applyFilter(setFilterSupportType)}
+          options={optionsFromLabels(partnerSupportTypeLabels)}
+        />
+        <FilterSelect
+          label="Status"
+          value={filterStatus}
+          onChange={applyFilter(setFilterStatus)}
+          options={optionsFromLabels(partnerStatusLabels)}
+        />
+        <FilterSelect
+          label="Dream"
+          value={filterDreamId}
+          onChange={applyFilter(setFilterDreamId)}
+          options={optionsFromEntities(dreams, (dream) => dream.title)}
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
@@ -309,7 +345,11 @@ export function PartnersPage() {
         <DataTable
           rows={crud.items}
           columns={columns}
-          emptyMessage={searchTerm ? 'No partners match this search.' : 'No partners yet.'}
+          emptyMessage={
+            searchTerm || filterSupportType || filterStatus || filterDreamId
+              ? 'No partners match these filters.'
+              : 'No partners yet.'
+          }
           rowClassName={(partner) => (partner.archived ? 'row-archived' : '')}
           serverPaging={{
             page,

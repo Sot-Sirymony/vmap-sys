@@ -10,6 +10,7 @@ import type {
   PartnerSupportType,
   Priority,
   ReviewType,
+  Severity,
   WorkStatus,
 } from '../types/vision';
 
@@ -29,6 +30,15 @@ export const priorityColors: Record<Priority, string> = {
   MEDIUM: priorityPalette.MEDIUM,
   HIGH: priorityPalette.HIGH,
   CRITICAL: priorityPalette.CRITICAL,
+};
+
+// Severity shares its levels with Priority but is its own enum on the backend —
+// kept separate so a change to one can't silently redefine the other.
+export const severityLabels: Record<Severity, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
+  CRITICAL: 'Critical',
 };
 
 export const workStatusLabels: Record<WorkStatus, string> = {

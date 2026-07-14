@@ -14,6 +14,7 @@ import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
@@ -37,9 +38,12 @@ export function CommunicationBuilderPage() {
   const [sort, setSort] = useState('id,desc');
   const [totalRows, setTotalRows] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  // Search runs on the server too, so it spans every page, not just the loaded one.
+  // Search and the filters both run on the server, so they span every page, not
+  // just the loaded one.
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebouncedValue(searchTerm);
+  const [filterPartnerId, setFilterPartnerId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const crud = useCrudEntity<CommunicationMessage, CommunicationMessageRequest>({
     token,
     entityLabel: 'communication messages',
@@ -51,6 +55,7 @@ export function CommunicationBuilderPage() {
         includeArchived,
         sort,
         debouncedSearch,
+        { partnerId: filterPartnerId, status: filterStatus },
       );
       setTotalRows(result.totalElements);
       return result.content;
@@ -96,7 +101,16 @@ export function CommunicationBuilderPage() {
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, rowsPerPage, sort, debouncedSearch]);
+  }, [token, page, rowsPerPage, sort, debouncedSearch, filterPartnerId, filterStatus]);
+
+  // A filter change can shrink the result below the current page, which would
+  // otherwise leave the user staring at an empty page 3.
+  function applyFilter(setFilter: (value: string) => void) {
+    return (value: string) => {
+      setFilter(value);
+      setPage(0);
+    };
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -391,6 +405,18 @@ export function CommunicationBuilderPage() {
           }}
           entityLabel="messages"
         />
+        <FilterSelect
+          label="Partner"
+          value={filterPartnerId}
+          onChange={applyFilter(setFilterPartnerId)}
+          options={optionsFromEntities(partners, (partner) => partner.name)}
+        />
+        <FilterSelect
+          label="Status"
+          value={filterStatus}
+          onChange={applyFilter(setFilterStatus)}
+          options={optionsFromLabels(communicationStatusLabels)}
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
@@ -398,7 +424,9 @@ export function CommunicationBuilderPage() {
         <DataTable
           rows={crud.items}
           columns={columns}
-          emptyMessage={searchTerm ? 'No messages match this search.' : 'No messages yet.'}
+          emptyMessage={
+            searchTerm || filterPartnerId || filterStatus ? 'No messages match these filters.' : 'No messages yet.'
+          }
           rowClassName={(message) => (message.archived ? 'row-archived' : '')}
           serverPaging={{
             page,

@@ -1,14 +1,46 @@
 import { apiClient } from './apiClient';
 import type { Page, Partner, PartnerRequest } from '../types/vision';
 
-/** `sort` is a Spring sort expression, e.g. "name,asc". `search` matches the partner's text fields. */
-export function listPartners(token: string, page = 0, size = 20, includeArchived = false, sort?: string, search?: string) {
-  const sortParam = sort ? `&sort=${sort}` : '';
-  const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-  return apiClient<Page<Partner>>(
-    `/partners?page=${page}&size=${size}&includeArchived=${includeArchived}${sortParam}${searchParam}`,
-    { token },
-  );
+/** Empty values are omitted, which the API reads as "don't filter on this". */
+export type PartnerFilters = {
+  supportType?: string;
+  status?: string;
+  dreamId?: string;
+};
+
+/**
+ * `sort` is a Spring sort expression, e.g. "name,asc". `search` matches the
+ * partner's text fields. Filters are applied by the server, not the browser —
+ * the client only holds one page, so filtering here would report just the
+ * matches on that page.
+ */
+export function listPartners(
+  token: string,
+  page = 0,
+  size = 20,
+  includeArchived = false,
+  sort?: string,
+  search?: string,
+  filters: PartnerFilters = {},
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    includeArchived: String(includeArchived),
+  });
+  if (sort) {
+    params.set('sort', sort);
+  }
+  if (search) {
+    params.set('search', search);
+  }
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+
+  return apiClient<Page<Partner>>(`/partners?${params.toString()}`, { token });
 }
 
 export function createPartner(token: string, request: PartnerRequest) {
