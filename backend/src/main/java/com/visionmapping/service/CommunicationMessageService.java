@@ -32,17 +32,27 @@ public class CommunicationMessageService {
     @Transactional(readOnly = true)
     public Page<CommunicationMessageResponse> listCommunicationMessages(
             Pageable pageable, boolean includeArchived, String search) {
-        String term = search == null ? "" : search.trim();
-        Page<CommunicationMessage> entities;
-        if (term.isEmpty()) {
-            entities = includeArchived
-                    ? communicationMessageRepository.findByUser_Id(lookup.userId(), pageable)
-                    : communicationMessageRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
-        } else {
-            entities = communicationMessageRepository.search(
-                    lookup.userId(), includeArchived, "%" + term.toLowerCase() + "%", pageable);
+        return listCommunicationMessages(pageable, includeArchived, search, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CommunicationMessageResponse> listCommunicationMessages(
+            Pageable pageable,
+            boolean includeArchived,
+            String search,
+            Long partnerId,
+            CommunicationStatus status) {
+        return communicationMessageRepository
+                .findFiltered(lookup.userId(), includeArchived, partnerId, status, likeTerm(search), pageable)
+                .map(mapper::toResponse);
+    }
+
+    /** Null (not an empty string) means "no search", which the query treats as "match everything". */
+    private static String likeTerm(String search) {
+        if (search == null || search.isBlank()) {
+            return null;
         }
-        return entities.map(mapper::toResponse);
+        return "%" + search.trim().toLowerCase() + "%";
     }
 
     public CommunicationMessageResponse createCommunicationMessage(CommunicationMessageRequest request) {

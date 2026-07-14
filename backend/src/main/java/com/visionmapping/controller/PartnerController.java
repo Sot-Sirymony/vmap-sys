@@ -3,6 +3,8 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.PartnerRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.PartnerResponse;
+import com.visionmapping.entity.enums.PartnerStatus;
+import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.service.PartnerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +36,11 @@ public class PartnerController {
     public Page<PartnerResponse> list(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(defaultValue = "false") boolean includeArchived,
-            @RequestParam(required = false) String search) {
-        return service.listPartners(pageable, includeArchived, search);
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) PartnerSupportType supportType,
+            @RequestParam(required = false) PartnerStatus status,
+            @RequestParam(required = false) Long dreamId) {
+        return service.listPartners(pageable, includeArchived, search, supportType, status, dreamId);
     }
 
     @PostMapping

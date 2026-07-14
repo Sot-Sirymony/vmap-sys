@@ -11,6 +11,7 @@ import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Obstacle;
 import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.enums.PartnerStatus;
+import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.ObstacleRepository;
@@ -40,17 +41,28 @@ public class PartnerService {
 
     @Transactional(readOnly = true)
     public Page<PartnerResponse> listPartners(Pageable pageable, boolean includeArchived, String search) {
-        String term = search == null ? "" : search.trim();
-        Page<Partner> entities;
-        if (term.isEmpty()) {
-            entities = includeArchived
-                    ? partnerRepository.findByUser_Id(lookup.userId(), pageable)
-                    : partnerRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
-        } else {
-            entities = partnerRepository.search(
-                    lookup.userId(), includeArchived, "%" + term.toLowerCase() + "%", pageable);
+        return listPartners(pageable, includeArchived, search, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PartnerResponse> listPartners(
+            Pageable pageable,
+            boolean includeArchived,
+            String search,
+            PartnerSupportType supportType,
+            PartnerStatus status,
+            Long dreamId) {
+        return partnerRepository
+                .findFiltered(lookup.userId(), includeArchived, supportType, status, dreamId, likeTerm(search), pageable)
+                .map(mapper::toResponse);
+    }
+
+    /** Null (not an empty string) means "no search", which the query treats as "match everything". */
+    private static String likeTerm(String search) {
+        if (search == null || search.isBlank()) {
+            return null;
         }
-        return entities.map(mapper::toResponse);
+        return "%" + search.trim().toLowerCase() + "%";
     }
 
     public PartnerResponse createPartner(PartnerRequest request) {

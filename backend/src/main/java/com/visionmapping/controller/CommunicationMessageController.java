@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.CommunicationMessageRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.CommunicationMessageResponse;
+import com.visionmapping.entity.enums.CommunicationStatus;
 import com.visionmapping.service.CommunicationMessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +35,10 @@ public class CommunicationMessageController {
     public Page<CommunicationMessageResponse> list(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(defaultValue = "false") boolean includeArchived,
-            @RequestParam(required = false) String search) {
-        return service.listCommunicationMessages(pageable, includeArchived, search);
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long partnerId,
+            @RequestParam(required = false) CommunicationStatus status) {
+        return service.listCommunicationMessages(pageable, includeArchived, search, partnerId, status);
     }
 
     @PostMapping
