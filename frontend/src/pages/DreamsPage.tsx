@@ -24,6 +24,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, VisionArea } from '../types/vision';
 import { dreamStatusLabels, dreamTypeLabels, priorityLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
@@ -55,11 +56,13 @@ export function DreamsPage() {
   const [status, setStatus] = useState<DreamStatus>('ACTIVE');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterVisionAreaId, setFilterVisionAreaId] = useState('');
-  const [filterDreamType, setFilterDreamType] = useState('');
-  const [filterPriority, setFilterPriority] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  // In the URL, not component state: the dashboard links straight into a
+  // filtered view, and a filtered list stays shareable and bookmarkable.
+  const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
+  const [filterDreamType, setFilterDreamType] = useUrlFilter('type');
+  const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterStatus, setFilterStatus] = useUrlFilter('status');
+  const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
 
   useEffect(() => {
     if (!token) {

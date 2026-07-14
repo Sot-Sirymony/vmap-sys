@@ -41,18 +41,28 @@ function TileGroup({ label, columns, children }: { label: string; columns: numbe
 export function DashboardSummary({ summary }: DashboardSummaryProps) {
   return (
     <Box sx={{ display: 'grid', gap: 2.5 }}>
+      {/*
+        A tile links only where a filter reproduces its number exactly. "Active
+        Goals" counts IN_PROGRESS *or* NOT_STARTED and "Open Tasks" counts
+        everything not completed — no single-status filter matches either, and a
+        tile that lands on a different number than it advertised is worse than
+        one that doesn't link at all. Same for Due This Week (no date filter yet)
+        and Average Progress, which isn't a set of rows.
+      */}
       <TileGroup label="Needs attention" columns={3}>
         <DashboardCard
           label="Overdue Tasks"
           value={summary?.overdueTasks ?? 0}
           icon={CalendarClock}
           tone={(summary?.overdueTasks ?? 0) > 0 ? 'critical' : 'neutral'}
+          to="/tasks?overdue=true"
         />
         <DashboardCard
           label="Blocked Tasks"
           value={summary?.blockedTasks ?? 0}
           icon={Ban}
           tone={(summary?.blockedTasks ?? 0) > 0 ? 'warning' : 'neutral'}
+          to="/tasks?status=BLOCKED"
         />
         <DashboardCard
           label="Due This Week"
@@ -62,8 +72,13 @@ export function DashboardSummary({ summary }: DashboardSummaryProps) {
         />
       </TileGroup>
       <TileGroup label="Portfolio overview" columns={3}>
-        <DashboardCard label="Vision Areas" value={summary?.totalVisionAreas ?? 0} icon={Compass} />
-        <DashboardCard label="Active Dreams" value={summary?.activeDreams ?? 0} icon={Sparkles} />
+        <DashboardCard label="Vision Areas" value={summary?.totalVisionAreas ?? 0} icon={Compass} to="/vision-areas" />
+        <DashboardCard
+          label="Active Dreams"
+          value={summary?.activeDreams ?? 0}
+          icon={Sparkles}
+          to="/dreams?status=ACTIVE"
+        />
         <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} icon={Flag} />
         <DashboardCard label="Open Tasks" value={summary?.activeTasks ?? 0} icon={CheckSquare} />
         <DashboardCard
@@ -71,6 +86,7 @@ export function DashboardSummary({ summary }: DashboardSummaryProps) {
           value={summary?.completedTasks ?? 0}
           icon={CheckCircle2}
           tone={(summary?.completedTasks ?? 0) > 0 ? 'positive' : 'neutral'}
+          to="/tasks?status=COMPLETED"
         />
         <DashboardCard
           label="Average Progress"

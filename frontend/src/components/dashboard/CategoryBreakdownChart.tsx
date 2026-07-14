@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Pie, PieChart, Rectangle, ResponsiveContainer, Sector, Tooltip, XAxis } from 'recharts';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -24,6 +25,11 @@ type CategoryBreakdownChartProps = {
   formatLabel?: (key: string) => string;
   variant?: 'bar' | 'donut';
   colorForKey?: (key: string) => string;
+  /**
+   * Makes a slice or bar a way in: clicking it opens the list filtered to that
+   * category. Only pass it when a filter reproduces the segment exactly.
+   */
+  linkForKey?: (key: string) => string;
 };
 
 export function CategoryBreakdownChart({
@@ -33,13 +39,26 @@ export function CategoryBreakdownChart({
   formatLabel = (key) => key,
   variant = 'bar',
   colorForKey,
+  linkForKey,
 }: CategoryBreakdownChartProps) {
+  const navigate = useNavigate();
   const chartData = Object.entries(data).map(([key, count], index) => ({
     category: formatLabel(key),
     count,
     key,
     fill: colorForKey ? colorForKey(key) : DEFAULT_DONUT_COLORS[index % DEFAULT_DONUT_COLORS.length],
   }));
+
+  // Recharts hands the clicked datum back untyped, so narrow it here rather than
+  // fight the library's overloads.
+  const openCategory = linkForKey
+    ? (entry: unknown) => {
+        const key = (entry as { key?: string } | null | undefined)?.key;
+        if (key) {
+          navigate(linkForKey(key));
+        }
+      }
+    : undefined;
 
   return (
     <Card>
@@ -62,6 +81,7 @@ export function CategoryBreakdownChart({
                     innerRadius={55}
                     outerRadius={85}
                     paddingAngle={2}
+                    onClick={openCategory}
                     shape={(props) => {
                       const { payload, ...sectorProps } = props;
                       return <Sector {...sectorProps} fill={payload.fill} />;
@@ -90,6 +110,7 @@ export function CategoryBreakdownChart({
                   dataKey="count"
                   fill="#0078d4"
                   radius={4}
+                  onClick={openCategory}
                   shape={
                     colorForKey
                       ? (props) => {

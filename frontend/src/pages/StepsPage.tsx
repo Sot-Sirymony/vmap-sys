@@ -24,6 +24,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Goal, Priority, TaskItem, VisionStep, VisionStepRequest, WorkStatus } from '../types/vision';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
@@ -52,10 +53,14 @@ export function StepsPage() {
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
-  const [filterGoalId, setFilterGoalId] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterPriority, setFilterPriority] = useState('');
-  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  // In the URL, not component state: the dashboard links straight into a
+  // filtered view, and a filtered list stays shareable and bookmarkable.
+  const [filterGoalId, setFilterGoalId] = useUrlFilter('goalId');
+  const [filterStatus, setFilterStatus] = useUrlFilter('status');
+  const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
+  // The dashboard's "complex steps with no tasks" finding lands here.
+  const [filterComplexOnly, setFilterComplexOnly] = useUrlFlag('complex');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -139,6 +144,9 @@ export function StepsPage() {
       return false;
     }
     if (filterOverdueOnly && !isOverdue(step.targetDate, step.status)) {
+      return false;
+    }
+    if (filterComplexOnly && !step.complex) {
       return false;
     }
     if (!matchesSearch(searchTerm, step.code, step.title, step.description)) {
@@ -333,6 +341,10 @@ export function StepsPage() {
         <label className="checkbox-field">
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
           Overdue only
+        </label>
+        <label className="checkbox-field">
+          <Checkbox checked={filterComplexOnly} onChange={(event) => setFilterComplexOnly(event.target.checked)} />
+          Complex only
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>

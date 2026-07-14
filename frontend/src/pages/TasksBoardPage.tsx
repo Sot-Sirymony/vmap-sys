@@ -27,6 +27,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, ObstacleType, Priority, TaskItem, TaskItemRequest, VisionStep, WorkStatus } from '../types/vision';
 import { isOverdue } from '../utils/overdue';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
@@ -68,11 +69,19 @@ export function TasksBoardPage() {
   const [nextAction, setNextAction] = useState('');
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<WorkStatus | null>(null);
-  const [filterOwner, setFilterOwner] = useState('');
-  const [filterPriority, setFilterPriority] = useState('');
-  const [filterDreamId, setFilterDreamId] = useState('');
-  const [filterGoalId, setFilterGoalId] = useState('');
-  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  // In the URL, not component state: the dashboard links straight into a
+  // filtered board, and a filtered board stays shareable and bookmarkable.
+  const [filterOwner, setFilterOwner] = useUrlFilter('owner');
+  const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterDreamId, setFilterDreamId] = useUrlFilter('dreamId');
+  const [filterGoalId, setFilterGoalId] = useUrlFilter('goalId');
+  const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
+  // Narrows the board to a single column. The board is organised by status, so
+  // "show me the blocked ones" means showing one column, not filtering rows.
+  const [filterStatus] = useUrlFilter('status');
+  const visibleColumns = filterStatus
+    ? columns.filter((column) => column === filterStatus)
+    : columns;
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -467,7 +476,7 @@ export function TasksBoardPage() {
         </Card>
       ) : (
       <div className="kanban">
-        {columns.map((column) => {
+        {visibleColumns.map((column) => {
           const columnTasks = visibleTasks.filter((task) => task.status === column);
           return (
           <section

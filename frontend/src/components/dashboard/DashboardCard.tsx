@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -22,12 +23,32 @@ type DashboardCardProps = {
   value: string | number;
   icon: LucideIcon;
   tone?: DashboardCardTone;
+  /**
+   * Where clicking the tile goes — a list view filtered to exactly the rows this
+   * number counted. Only set it when a filter reproduces the count precisely; a
+   * tile that lands on a different number is worse than one that doesn't link.
+   */
+  to?: string;
 };
 
-export function DashboardCard({ label, value, icon: Icon, tone = 'neutral' }: DashboardCardProps) {
+export function DashboardCard({ label, value, icon: Icon, tone = 'neutral', to }: DashboardCardProps) {
   const { bg, fg } = TONE_STYLES[tone];
-  return (
-    <Card>
+
+  const card = (
+    <Card
+      sx={
+        to
+          ? {
+              height: '100%',
+              transition: (theme) => theme.transitions.create(['border-color', 'box-shadow'], { duration: 120 }),
+              '&:hover': {
+                borderColor: 'primary.main',
+                boxShadow: '0 1.6px 3.6px rgba(0,0,0,0.13), 0 0.3px 0.9px rgba(0,0,0,0.10)',
+              },
+            }
+          : { height: '100%' }
+      }
+    >
       <CardContent>
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="body2" color="text.secondary">{label}</Typography>
@@ -38,5 +59,15 @@ export function DashboardCard({ label, value, icon: Icon, tone = 'neutral' }: Da
         <Typography variant="h5" sx={{ fontWeight: 600 }}>{value}</Typography>
       </CardContent>
     </Card>
+  );
+
+  if (!to) {
+    return card;
+  }
+
+  return (
+    <Link to={to} aria-label={`${label}: ${value}. View these records.`} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
+      {card}
+    </Link>
   );
 }

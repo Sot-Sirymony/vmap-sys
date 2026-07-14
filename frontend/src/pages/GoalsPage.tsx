@@ -28,6 +28,7 @@ import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, GoalRequest, Priority, VisionArea, WorkStatus } from '../types/vision';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
@@ -66,11 +67,13 @@ export function GoalsPage() {
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
   const [moonshot, setMoonshot] = useState(false);
   const [moonshotVision, setMoonshotVision] = useState('');
-  const [filterVisionAreaId, setFilterVisionAreaId] = useState('');
-  const [filterDreamId, setFilterDreamId] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterPriority, setFilterPriority] = useState('');
-  const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  // In the URL, not component state: the dashboard links straight into a
+  // filtered view, and a filtered list stays shareable and bookmarkable.
+  const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
+  const [filterDreamId, setFilterDreamId] = useUrlFilter('dreamId');
+  const [filterStatus, setFilterStatus] = useUrlFilter('status');
+  const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
   const [bulkApplying, setBulkApplying] = useState(false);
