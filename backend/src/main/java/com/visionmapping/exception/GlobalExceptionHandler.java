@@ -9,6 +9,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -24,6 +25,22 @@ public class GlobalExceptionHandler {
                 .orElse("Validation failed");
 
         return buildResponse(HttpStatus.BAD_REQUEST, message, request);
+    }
+
+    /**
+     * A query param that can't be converted to its target type — most often an
+     * unknown enum constant in a filter, e.g. ?supportType=NOPE. That is bad
+     * input, not a server fault, so it must not surface as a 500.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "Invalid value for '" + exception.getName() + "'.",
+                request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
