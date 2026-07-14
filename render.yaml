@@ -2,7 +2,10 @@ databases:
   - name: vision-mapping-db
     databaseName: vision_mapping
     user: vision_mapping
-    plan: free
+    # Basic-256MB, not free: free Postgres is deleted 30 days after creation
+    # (plus a 14-day grace period). This must stay in step with the dashboard —
+    # Blueprint auto-sync overwrites manual plan changes on the next push.
+    plan: basic-256mb
 
 services:
   # Spring Boot API — deployed from backend/Dockerfile
@@ -11,7 +14,10 @@ services:
     runtime: docker
     rootDir: backend
     dockerfilePath: ./Dockerfile
-    plan: free
+    # Starter, not free: free web services spin down after 15 minutes idle, and
+    # the next request pays a 30-60s JVM + Spring cold boot. That request is the
+    # user's login, which is why the first login felt broken.
+    plan: starter
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
