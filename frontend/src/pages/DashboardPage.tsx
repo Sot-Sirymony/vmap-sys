@@ -28,6 +28,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
 import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, WorkStatus } from '../types/vision';
+import { neutralFallback } from '../theme';
 import { obstacleTypeLabels, partnerStatusLabels, priorityColors, workStatusColors } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
 
@@ -240,7 +241,7 @@ export function DashboardPage() {
           data={summary?.goalsByStatus ?? {}}
           formatLabel={formatLabel}
           variant="donut"
-          colorForKey={(key) => workStatusColors[key as WorkStatus] ?? '#a3a3a3'}
+          colorForKey={(key) => workStatusColors[key as WorkStatus] ?? neutralFallback}
         />
         <CategoryBreakdownChart
           title="Dreams by vision area"
@@ -253,7 +254,7 @@ export function DashboardPage() {
           data={tasksByStatus}
           formatLabel={formatLabel}
           variant="donut"
-          colorForKey={(key) => workStatusColors[key as WorkStatus] ?? '#a3a3a3'}
+          colorForKey={(key) => workStatusColors[key as WorkStatus] ?? neutralFallback}
         />
         <CategoryBreakdownChart
           title="Tasks by priority"
@@ -261,7 +262,7 @@ export function DashboardPage() {
           data={tasksByPriority}
           formatLabel={formatLabel}
           variant="bar"
-          colorForKey={(key) => priorityColors[key as Priority] ?? '#a3a3a3'}
+          colorForKey={(key) => priorityColors[key as Priority] ?? neutralFallback}
         />
         <CategoryBreakdownChart
           title="Top obstacles"
@@ -269,7 +270,7 @@ export function DashboardPage() {
           data={topObstaclesByType}
           formatLabel={(key) => (key === OTHER_OBSTACLE_TYPES_KEY ? 'Other types' : obstacleTypeLabels[key as keyof typeof obstacleTypeLabels])}
           variant="donut"
-          colorForKey={(key) => OBSTACLE_TYPE_COLORS[key] ?? '#a3a3a3'}
+          colorForKey={(key) => OBSTACLE_TYPE_COLORS[key] ?? neutralFallback}
         />
         <Card>
           <CardHeader title="Vision Area progress" subheader="Average goal progress per area — lowest first is what needs attention" />

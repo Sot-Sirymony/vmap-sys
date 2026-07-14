@@ -1,13 +1,8 @@
-import Chip from '@mui/material/Chip';
-
-const HIGH_PRIORITY = new Set(['HIGH', 'CRITICAL']);
+import { neutralFallback, priorityColors, type PriorityToken } from '../../theme';
+import { TintedChip } from './TintedChip';
 
 export function PriorityBadge({ priority }: { priority: string }) {
-  return (
-    <Chip
-      size="small"
-      label={priority}
-      color={HIGH_PRIORITY.has(priority.toUpperCase()) ? 'error' : 'default'}
-    />
-  );
+  const hue = priorityColors[priority.toUpperCase() as PriorityToken] ?? neutralFallback;
+
+  return <TintedChip label={priority} hue={hue} />;
 }

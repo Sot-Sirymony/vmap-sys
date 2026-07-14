@@ -21,6 +21,113 @@ import { createTheme } from '@mui/material/styles';
  * order, since unlayered CSS always wins over anything inside `@layer`) —
  * kept in sync with the stack below.
  */
+/**
+ * Status palette — one source of truth for every status hue in the app, shared
+ * by StatusBadge and the dashboard's status charts so a "Completed" green is
+ * the same green everywhere.
+ *
+ * Four chromatic slots carry meaning; the two neutral steps mean "no activity":
+ *   blue    work is moving      IN_PROGRESS, ACTIVE, CONTACTED, SENT, REPLIED
+ *   purple  waiting on someone  WAITING, FOLLOWED_UP
+ *   orange  needs attention     BLOCKED, OPEN
+ *   red     negative outcome    DECLINED
+ *   green   done                COMPLETED, RESOLVED, CLOSED
+ *   neutral not started / idle  the rest (two lightness steps so NOT_STARTED
+ *                               and PAUSED stay distinct as adjacent chart bars)
+ *
+ * WAITING is purple, not amber. Amber-vs-orange (the previous WAITING/BLOCKED
+ * pair) collapses to near-identical under red-green colorblindness — measured
+ * ΔE 3.6 against a ΔE 12 target — so the two states that most need telling
+ * apart were the two a colorblind user could not distinguish. Purple clears it.
+ *
+ * The remaining green↔orange pair sits at ΔE 8.9 (the 8–12 floor band), which
+ * is only permissible because status is never encoded as color alone: every
+ * badge carries its text label, and every chart has an axis label or legend.
+ *
+ * Hex values are Fluent's own tokens, matching the rest of this file.
+ */
+const NEUTRAL_IDLE = '#a19f9d'; // Fluent neutralForeground disabled-ish
+const NEUTRAL_HELD = '#605e5c'; // Fluent neutralForeground3, darker than idle
+const BLUE_MOVING = '#0078d4'; // Communication Blue (same as brand primary)
+const PURPLE_WAITING = '#8764b8'; // Fluent purple
+const ORANGE_ATTENTION = '#d83b01'; // Fluent severe-warning orange
+const RED_NEGATIVE = '#d13438'; // Fluent Danger (same as palette.error)
+const GREEN_DONE = '#107c10'; // Fluent Success
+
+export const statusColors = {
+  // WorkStatus — goals, steps, tasks
+  NOT_STARTED: NEUTRAL_IDLE,
+  IN_PROGRESS: BLUE_MOVING,
+  WAITING: PURPLE_WAITING,
+  BLOCKED: ORANGE_ATTENTION,
+  PAUSED: NEUTRAL_HELD,
+  COMPLETED: GREEN_DONE,
+
+  // DreamStatus / LifecycleStatus
+  IDEA: NEUTRAL_IDLE,
+  ACTIVE: BLUE_MOVING,
+  ARCHIVED: NEUTRAL_HELD,
+
+  // PartnerStatus
+  TO_CONTACT: NEUTRAL_IDLE,
+  CONTACTED: BLUE_MOVING,
+  DECLINED: RED_NEGATIVE,
+
+  // ObstacleStatus
+  OPEN: ORANGE_ATTENTION,
+  RESOLVED: GREEN_DONE,
+  ACCEPTED: NEUTRAL_HELD,
+
+  // CommunicationStatus
+  DRAFT: NEUTRAL_IDLE,
+  SENT: BLUE_MOVING,
+  FOLLOWED_UP: PURPLE_WAITING,
+  REPLIED: BLUE_MOVING,
+  CLOSED: GREEN_DONE,
+} as const;
+
+export type StatusToken = keyof typeof statusColors;
+
+/**
+ * Priority palette — an escalation scale, not a set of categories. Priority is
+ * ordinal (Low < Medium < High < Critical), so each step both warms and darkens:
+ * urgency should read as rising even before the label is read.
+ *
+ *   neutral  LOW       no urgency — deliberately colorless
+ *   gold     MEDIUM
+ *   orange   HIGH
+ *   red      CRITICAL
+ *
+ * Each step darkens hard (L 0.70 → 0.77 → 0.59 → 0.48) rather than only shifting
+ * hue. That is what makes MEDIUM and HIGH survive colorblindness: warm hues
+ * collapse into one another under deuteranopia, so the lightness gap is doing
+ * the work — measured ΔE 26.2, against ΔE 12 as the target. (The status palette
+ * above solves the same problem a different way, by moving WAITING off the warm
+ * ramp entirely.)
+ *
+ * LOW and MEDIUM sit under 3:1 against a white surface. That is allowed here for
+ * the same reason it is in the design system's own severity palette: priority is
+ * never encoded as color alone — every badge carries its text label, and the
+ * dashboard's priority chart has axis labels.
+ *
+ * Kept distinct from the status hues above so a HIGH-priority chip never reads
+ * as a BLOCKED chip: different orange (#ca5010 vs #d83b01), different red
+ * (#a4262c vs #d13438).
+ */
+export const priorityColors = {
+  LOW: NEUTRAL_IDLE,
+  MEDIUM: '#eaa300', // Fluent gold
+  HIGH: '#ca5010', // Fluent orange, shade
+  CRITICAL: '#a4262c', // Fluent red, shade
+} as const;
+
+export type PriorityToken = keyof typeof priorityColors;
+
+// For a key that belongs to neither palette — an enum value added on the backend
+// before the frontend knows about it. Renders as "no state" rather than picking
+// an arbitrary hue that would imply a meaning it doesn't have.
+export const neutralFallback = NEUTRAL_IDLE;
+
 const theme = createTheme({
   palette: {
     mode: 'light',

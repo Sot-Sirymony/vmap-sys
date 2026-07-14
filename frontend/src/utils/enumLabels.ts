@@ -1,3 +1,4 @@
+import { priorityColors as priorityPalette, statusColors } from '../theme';
 import type {
   CommunicationStatus,
   DreamStatus,
@@ -19,14 +20,15 @@ export const priorityLabels: Record<Priority, string> = {
   CRITICAL: 'Critical',
 };
 
-// A sequential (not categorical) ramp — priority is ordinal, so color should read
-// as increasing urgency rather than four unrelated hues. Critical matches the
-// theme's --destructive red already used for high-priority badges.
+// Drawn from the theme's priority palette so the dashboard chart and
+// PriorityBadge can never disagree. Still an escalation ramp (priority is
+// ordinal, so color reads as rising urgency rather than four unrelated hues) —
+// see theme.ts for why each step darkens as well as warms.
 export const priorityColors: Record<Priority, string> = {
-  LOW: '#a3a3a3',
-  MEDIUM: '#d97706',
-  HIGH: '#ea580c',
-  CRITICAL: '#dc2626',
+  LOW: priorityPalette.LOW,
+  MEDIUM: priorityPalette.MEDIUM,
+  HIGH: priorityPalette.HIGH,
+  CRITICAL: priorityPalette.CRITICAL,
 };
 
 export const workStatusLabels: Record<WorkStatus, string> = {
@@ -38,15 +40,17 @@ export const workStatusLabels: Record<WorkStatus, string> = {
   COMPLETED: 'Completed',
 };
 
-// Matches the semantic scheme already used for Excel export conditional formatting
-// (completed = green, blocked = orange) so the dashboard chart reads the same way.
+// Drawn from the theme's status palette so the dashboard chart and StatusBadge
+// can never disagree about what, say, "Completed" green is. Still matches the
+// semantic scheme used for Excel export conditional formatting (completed =
+// green, blocked = orange). See theme.ts for why WAITING is purple, not amber.
 export const workStatusColors: Record<WorkStatus, string> = {
-  NOT_STARTED: '#a3a3a3',
-  IN_PROGRESS: '#2563eb',
-  WAITING: '#d97706',
-  BLOCKED: '#ea580c',
-  PAUSED: '#7c3aed',
-  COMPLETED: '#16a34a',
+  NOT_STARTED: statusColors.NOT_STARTED,
+  IN_PROGRESS: statusColors.IN_PROGRESS,
+  WAITING: statusColors.WAITING,
+  BLOCKED: statusColors.BLOCKED,
+  PAUSED: statusColors.PAUSED,
+  COMPLETED: statusColors.COMPLETED,
 };
 
 export const dreamStatusLabels: Record<DreamStatus, string> = {
