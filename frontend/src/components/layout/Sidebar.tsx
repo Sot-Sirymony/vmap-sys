@@ -166,6 +166,17 @@ function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavi
       <Divider />
       <Box sx={{ p: 1 }}>
         <NavUser collapsed={collapsed} />
+        {!collapsed && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            align="center"
+            noWrap
+            sx={{ display: 'block', pt: 1, opacity: 0.7 }}
+          >
+            v{import.meta.env.VITE_APP_VERSION}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

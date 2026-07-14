@@ -13,7 +13,7 @@
 
     <groupId>com.visionmapping</groupId>
     <artifactId>vision-mapping-backend</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <name>Vision Mapping Management System Backend</name>
     <description>Backend foundation for the Vision Mapping Management System</description>
 
