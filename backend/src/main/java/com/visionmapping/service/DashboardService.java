@@ -1,7 +1,10 @@
 package com.visionmapping.service;
 
 import com.visionmapping.dto.response.DashboardSummaryResponse;
+import com.visionmapping.dto.response.DreamResponse;
+import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
+import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Obstacle;
@@ -10,6 +13,7 @@ import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.Review;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
+import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
@@ -24,6 +28,7 @@ import com.visionmapping.repository.ProgressLogRepository;
 import com.visionmapping.repository.ReviewRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionAreaRepository;
+import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
@@ -35,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -58,6 +65,7 @@ public class DashboardService {
     private final VisionAreaRepository visionAreaRepository;
     private final DreamRepository dreamRepository;
     private final GoalRepository goalRepository;
+    private final VisionStepRepository visionStepRepository;
     private final TaskItemRepository taskItemRepository;
     private final PartnerRepository partnerRepository;
     private final ReviewRepository reviewRepository;
@@ -71,6 +79,7 @@ public class DashboardService {
         List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
         List<Dream> dreams = dreamRepository.findByUser_IdAndArchivedFalse(userId);
         List<Goal> goals = goalRepository.findByUser_IdAndArchivedFalse(userId);
+        List<VisionStep> steps = visionStepRepository.findByUser_IdAndArchivedFalse(userId);
         List<TaskItem> tasks = taskItemRepository.findByUser_IdAndArchivedFalse(userId);
         List<Obstacle> obstacles = obstacleRepository.findByUser_IdAndArchivedFalse(userId);
         List<Partner> partners = partnerRepository.findByUser_IdAndArchivedFalse(userId);
@@ -157,8 +166,71 @@ public class DashboardService {
                 visionAreaProgress,
                 priorityTasks,
                 weeksWithDiligence,
-                moonshotGoals
+                moonshotGoals,
+                buildAttention(dreams, goals, steps, tasks, partners)
         );
+    }
+
+    /**
+     * The method's own rules, checked against the user's records. Everything here
+     * is derived from lists already loaded above, so this costs one extra query
+     * (steps) rather than four.
+     */
+    private DashboardSummaryResponse.Attention buildAttention(
+            List<Dream> dreams,
+            List<Goal> goals,
+            List<VisionStep> steps,
+            List<TaskItem> tasks,
+            List<Partner> partners) {
+
+        Set<Long> stepIdsWithTasks = tasks.stream()
+                .map(task -> task.getStep().getId())
+                .collect(Collectors.toSet());
+        Set<Long> goalIdsWithSteps = steps.stream()
+                .map(step -> step.getGoal().getId())
+                .collect(Collectors.toSet());
+        Set<Long> dreamIdsWithGoals = goals.stream()
+                .map(goal -> goal.getDream().getId())
+                .collect(Collectors.toSet());
+        // A task counts as having a partner if any partner points at it.
+        Set<Long> taskIdsWithPartner = partners.stream()
+                .map(Partner::getRelatedTask)
+                .filter(Objects::nonNull)
+                .map(TaskItem::getId)
+                .collect(Collectors.toSet());
+
+        List<TaskItemResponse> blockedTasksWithoutPartner = tasks.stream()
+                .filter(task -> task.getStatus() == WorkStatus.BLOCKED)
+                .filter(task -> !taskIdsWithPartner.contains(task.getId()))
+                .map(mapper::toResponse)
+                .toList();
+
+        // Business rule: a step marked complex should be broken into tasks.
+        List<VisionStepResponse> complexStepsWithoutTasks = steps.stream()
+                .filter(VisionStep::isComplex)
+                .filter(step -> step.getStatus() != WorkStatus.COMPLETED)
+                .filter(step -> !stepIdsWithTasks.contains(step.getId()))
+                .map(mapper::toResponse)
+                .toList();
+
+        // A dream with no goals is still a wish — nothing can be executed on it.
+        List<DreamResponse> dreamsWithoutGoals = dreams.stream()
+                .filter(dream -> dream.getStatus() != DreamStatus.COMPLETED)
+                .filter(dream -> !dreamIdsWithGoals.contains(dream.getId()))
+                .map(mapper::toResponse)
+                .toList();
+
+        List<GoalResponse> goalsWithoutSteps = goals.stream()
+                .filter(goal -> goal.getStatus() != WorkStatus.COMPLETED)
+                .filter(goal -> !goalIdsWithSteps.contains(goal.getId()))
+                .map(mapper::toResponse)
+                .toList();
+
+        return new DashboardSummaryResponse.Attention(
+                blockedTasksWithoutPartner,
+                complexStepsWithoutTasks,
+                dreamsWithoutGoals,
+                goalsWithoutSteps);
     }
 
     /**

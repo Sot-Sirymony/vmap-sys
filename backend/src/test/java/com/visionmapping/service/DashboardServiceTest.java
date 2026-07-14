@@ -8,12 +8,15 @@ import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.LifecycleStatus;
+import com.visionmapping.entity.enums.PartnerStatus;
+import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
@@ -73,7 +76,7 @@ class DashboardServiceTest {
                 reviewRepository, obstacleRepository, progressLogRepository);
         ProgressCalculator progress = new ProgressCalculator(visionStepRepository, taskItemRepository);
         service = new DashboardService(lookup, progress, new VisionMappingMapper(), visionAreaRepository,
-                dreamRepository, goalRepository, taskItemRepository, partnerRepository,
+                dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 reviewRepository, obstacleRepository, progressLogRepository, Clock.systemDefaultZone());
 
         testUser = AppUser.builder()
@@ -117,6 +120,96 @@ class DashboardServiceTest {
     }
 
 
+
+    private Partner partnerFor(Long id, TaskItem task) {
+        return Partner.builder().id(id).user(testUser).code("P-001").name("Mentor")
+                .supportType(PartnerSupportType.MENTOR).status(PartnerStatus.ACTIVE)
+                .relatedTask(task).build();
+    }
+
+    @Test
+    void attentionFlagsComplexStepsThatHaveNoTasks() {
+        Goal parentGoal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+        VisionStep complexWithoutTasks = step(20L, parentGoal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, true, false);
+        VisionStep complexWithTasks = step(21L, parentGoal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, true, false);
+        VisionStep simpleWithoutTasks = step(22L, parentGoal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(parentGoal));
+        when(visionStepRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(complexWithoutTasks, complexWithTasks, simpleWithoutTasks));
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(task(30L, complexWithTasks, WorkStatus.NOT_STARTED, BigDecimal.ZERO)));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        // A simple step needs no tasks — only a complex one is a dead end.
+        assertThat(summary.attention().complexStepsWithoutTasks())
+                .extracting(com.visionmapping.dto.response.VisionStepResponse::id)
+                .containsExactly(20L);
+    }
+
+    @Test
+    void attentionFlagsBlockedTasksWithNoPartnerToUnblockThem() {
+        VisionStep parentStep = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false),
+                WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        TaskItem blockedWithPartner = task(30L, parentStep, WorkStatus.BLOCKED, BigDecimal.ZERO);
+        TaskItem blockedAlone = task(31L, parentStep, WorkStatus.BLOCKED, BigDecimal.ZERO);
+        TaskItem movingAlong = task(32L, parentStep, WorkStatus.IN_PROGRESS, BigDecimal.ZERO);
+
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(blockedWithPartner, blockedAlone, movingAlong));
+        when(partnerRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(partnerFor(40L, blockedWithPartner)));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.attention().blockedTasksWithoutPartner())
+                .extracting(com.visionmapping.dto.response.TaskItemResponse::id)
+                .containsExactly(31L);
+    }
+
+    @Test
+    void attentionFlagsDreamsWithNoGoalsAndGoalsWithNoSteps() {
+        VisionArea area = visionArea(1L);
+        Dream dreamWithGoals = dream(1L, area);
+        Dream dreamAlone = dream(2L, area);
+        Goal goalWithSteps = goal(10L, dreamWithGoals, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+        Goal goalAlone = goal(11L, dreamWithGoals, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
+
+        when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(dreamWithGoals, dreamAlone));
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(goalWithSteps, goalAlone));
+        when(visionStepRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(step(20L, goalWithSteps, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false)));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.attention().dreamsWithoutGoals())
+                .extracting(com.visionmapping.dto.response.DreamResponse::id)
+                .containsExactly(2L);
+        assertThat(summary.attention().goalsWithoutSteps())
+                .extracting(com.visionmapping.dto.response.GoalResponse::id)
+                .containsExactly(11L);
+    }
+
+    @Test
+    void attentionIgnoresCompletedRecords() {
+        Dream completedDream = dream(1L, visionArea(1L));
+        completedDream.setStatus(DreamStatus.COMPLETED);
+        Goal completedGoal = goal(10L, completedDream, WorkStatus.COMPLETED, BigDecimal.valueOf(100), false);
+        VisionStep completedComplexStep = step(20L, completedGoal, WorkStatus.COMPLETED, BigDecimal.valueOf(100), true, false);
+
+        when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(completedDream));
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(completedGoal));
+        when(visionStepRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(completedComplexStep));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        // Finished work is not a dead end — nagging about it would train users to
+        // ignore the panel.
+        assertThat(summary.attention().dreamsWithoutGoals()).isEmpty();
+        assertThat(summary.attention().goalsWithoutSteps()).isEmpty();
+        assertThat(summary.attention().complexStepsWithoutTasks()).isEmpty();
+    }
 
     @Test
     void dashboardCountsOverdueTasksExcludingCompletedOnes() {

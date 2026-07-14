@@ -311,4 +311,13 @@ export type DashboardSummary = {
   priorityTasks: TaskItem[];
   weeksWithDiligence: number;
   moonshotGoals: number;
+  attention: DashboardAttention;
+};
+
+/** Places the map has stopped being a map — see DashboardSummaryResponse.Attention. */
+export type DashboardAttention = {
+  blockedTasksWithoutPartner: TaskItem[];
+  complexStepsWithoutTasks: VisionStep[];
+  dreamsWithoutGoals: Dream[];
+  goalsWithoutSteps: Goal[];
 };

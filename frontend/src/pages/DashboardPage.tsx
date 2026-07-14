@@ -5,6 +5,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { getDashboardSummary } from '../api/dashboardApi';
 import { CategoryBreakdownChart } from '../components/dashboard/CategoryBreakdownChart';
 import { ChartTooltipContent } from '../components/dashboard/ChartTooltipContent';
+import { AttentionPanel } from '../components/dashboard/AttentionPanel';
 import { DashboardSummary } from '../components/dashboard/DashboardSummary';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -173,6 +174,7 @@ export function DashboardPage() {
       ) : (
       <>
       <DashboardSummary summary={summary} />
+      <AttentionPanel attention={summary?.attention} />
       <Card>
         <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />
         <CardContent>
@@ -237,11 +239,12 @@ export function DashboardPage() {
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
         <CategoryBreakdownChart
           title="Goals by status"
-          description="Current distribution across all active goals"
+          description="Current distribution across all active goals — click a slice to open those goals"
           data={summary?.goalsByStatus ?? {}}
           formatLabel={formatLabel}
           variant="donut"
           colorForKey={(key) => workStatusColors[key as WorkStatus] ?? neutralFallback}
+          linkForKey={(key) => `/goals?status=${key}`}
         />
         <CategoryBreakdownChart
           title="Dreams by vision area"
@@ -250,19 +253,21 @@ export function DashboardPage() {
         />
         <CategoryBreakdownChart
           title="Tasks by status"
-          description="Current distribution across all tasks"
+          description="Current distribution across all tasks — click a slice to open that column"
           data={tasksByStatus}
           formatLabel={formatLabel}
           variant="donut"
           colorForKey={(key) => workStatusColors[key as WorkStatus] ?? neutralFallback}
+          linkForKey={(key) => `/tasks?status=${key}`}
         />
         <CategoryBreakdownChart
           title="Tasks by priority"
-          description="Workload skew from Low to Critical"
+          description="Workload skew from Low to Critical — click a bar to open those tasks"
           data={tasksByPriority}
           formatLabel={formatLabel}
           variant="bar"
           colorForKey={(key) => priorityColors[key as Priority] ?? neutralFallback}
+          linkForKey={(key) => `/tasks?priority=${key}`}
         />
         <CategoryBreakdownChart
           title="Top obstacles"

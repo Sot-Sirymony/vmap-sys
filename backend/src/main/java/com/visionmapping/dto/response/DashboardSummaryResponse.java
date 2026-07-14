@@ -32,7 +32,8 @@ public record DashboardSummaryResponse(
         List<AreaProgress> visionAreaProgress,
         List<TaskItemResponse> priorityTasks,
         long weeksWithDiligence,
-        long moonshotGoals
+        long moonshotGoals,
+        Attention attention
 ) {
 
     /** Weekly sample of the running average task progress. */
@@ -41,5 +42,23 @@ public record DashboardSummaryResponse(
 
     /** Average goal progress for one vision area, pre-sorted lowest first. */
     public record AreaProgress(String name, BigDecimal progress) {
+    }
+
+    /**
+     * Places where the map has stopped being a map: the method's own rules,
+     * checked against the user's actual records. Each of these is a dead end a
+     * user can accumulate silently — a dream with no goals is a wish, a complex
+     * step with no tasks is a step nobody can start, a blocked task with no
+     * partner is a task with nothing that will unblock it.
+     *
+     * These are lists, not counts, because the point is to click straight
+     * through to the record and fix it.
+     */
+    public record Attention(
+            List<TaskItemResponse> blockedTasksWithoutPartner,
+            List<VisionStepResponse> complexStepsWithoutTasks,
+            List<DreamResponse> dreamsWithoutGoals,
+            List<GoalResponse> goalsWithoutSteps
+    ) {
     }
 }
