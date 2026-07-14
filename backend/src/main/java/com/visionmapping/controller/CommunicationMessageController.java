@@ -33,8 +33,9 @@ public class CommunicationMessageController {
     @GetMapping
     public Page<CommunicationMessageResponse> list(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listCommunicationMessages(pageable, includeArchived);
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @RequestParam(required = false) String search) {
+        return service.listCommunicationMessages(pageable, includeArchived, search);
     }
 
     @PostMapping

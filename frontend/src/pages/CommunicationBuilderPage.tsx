@@ -9,38 +9,50 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
-import { EmptyState } from '../components/common/EmptyState';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { CommunicationMessage, CommunicationMessageRequest, CommunicationStatus, Dream, Goal, Partner, TaskItem } from '../types/vision';
 import { communicationStatusLabels } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
 
 export function CommunicationBuilderPage() {
   const { token } = useAuth();
+  // Messages are paged and sorted by the server, so the table only renders what
+  // the current request returned.
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sort, setSort] = useState('id,desc');
+  const [totalRows, setTotalRows] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  // Search runs on the server too, so it spans every page, not just the loaded one.
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm);
   const crud = useCrudEntity<CommunicationMessage, CommunicationMessageRequest>({
     token,
     entityLabel: 'communication messages',
     list: async (currentToken, includeArchived) => {
-      const result = await listCommunicationMessages(currentToken, page, 20, includeArchived);
-      setTotalPages(result.totalPages);
+      const result = await listCommunicationMessages(
+        currentToken,
+        page,
+        rowsPerPage,
+        includeArchived,
+        sort,
+        debouncedSearch,
+      );
+      setTotalRows(result.totalElements);
       return result.content;
     },
     create: createCommunicationMessage,
@@ -84,7 +96,7 @@ export function CommunicationBuilderPage() {
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page]);
+  }, [token, page, rowsPerPage, sort, debouncedSearch]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -159,6 +171,50 @@ export function CommunicationBuilderPage() {
     setStatus('DRAFT');
     setFollowUpDate('');
   }
+
+  // Column keys double as the server's sort fields, so they match CommunicationMessage's JPA property names.
+  const columns: DataTableColumn<CommunicationMessage>[] = [
+    {
+      key: 'subject',
+      label: 'Subject',
+      sortValue: (message) => message.subject,
+      sx: { fontWeight: 500 },
+      render: (message) => message.subject || '-',
+    },
+    {
+      key: 'audience',
+      label: 'Audience',
+      sortValue: (message) => message.audience,
+      render: (message) => message.audience || '-',
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (message) => message.status,
+      render: (message) => <StatusBadge status={message.status} />,
+    },
+    {
+      key: 'followUpDate',
+      label: 'Follow Up',
+      sortValue: (message) => message.followUpDate,
+      render: (message) => message.followUpDate ?? '-',
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (message) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(message)}
+          onArchive={() => void crud.archive(message.id)}
+          onRestore={() => void crud.restore(message.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(message.id)}
+          archived={message.archived}
+          label="Message actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -327,54 +383,53 @@ export function CommunicationBuilderPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setPage(0);
+          }}
+          entityLabel="messages"
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
         <CardContent>
-        {crud.items.length === 0 ? (
-          <EmptyState>No messages yet.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Subject</TableCell>
-                <TableCell>Audience</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Follow Up</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {crud.items.map((message) => (
-                <TableRow key={message.id} className={message.archived ? 'row-archived' : ''}>
-                  <TableCell sx={{ fontWeight: 500 }}>{message.subject || '-'}</TableCell>
-                  <TableCell>{message.audience || '-'}</TableCell>
-                  <TableCell><StatusBadge status={message.status} /></TableCell>
-                  <TableCell>{message.followUpDate || '-'}</TableCell>
-                  <TableCell className="row-actions">
-                    <RowActionsMenu
-                      onEdit={() => startEdit(message)}
-                      onArchive={() => void crud.archive(message.id)}
-                      onRestore={() => void crud.restore(message.id)}
-                      onDeletePermanently={() => void crud.permanentlyDelete(message.id)}
-                      archived={message.archived}
-                      label="Message actions"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
-        {totalPages > 1 && (
-          <div className="pagination">
-            <Button type="button" variant="secondary" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous</Button>
-            <span>Page {page + 1} of {totalPages}</span>
-            <Button type="button" variant="secondary" disabled={page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</Button>
-          </div>
-        )}
+        <DataTable
+          rows={crud.items}
+          columns={columns}
+          emptyMessage={searchTerm ? 'No messages match this search.' : 'No messages yet.'}
+          rowClassName={(message) => (message.archived ? 'row-archived' : '')}
+          serverPaging={{
+            page,
+            rowsPerPage,
+            totalRows,
+            onPageChange: setPage,
+            onRowsPerPageChange: (nextRowsPerPage) => {
+              setRowsPerPage(nextRowsPerPage);
+              setPage(0);
+            },
+            onSortChange: (key, direction) => {
+              setSort(`${key},${direction}`);
+              setPage(0);
+            },
+          }}
+          selection={{
+            selectedIds,
+            onChange: setSelectedIds,
+            rowLabel: (message) => message.subject || 'message',
+            actions: (
+              <BulkArchiveAction
+                selectedIds={selectedIds}
+                entityLabel="message(s)"
+                onArchive={async (ids) => {
+                  await crud.archiveMany(ids);
+                  setSelectedIds(new Set());
+                }}
+              />
+            ),
+          }}
+        />
         </CardContent>
       </Card>
     </PageSection>

@@ -99,6 +99,19 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     }
   }
 
+  async function removeMany(ids: number[]) {
+    if (!token || ids.length === 0) {
+      return;
+    }
+    try {
+      await Promise.all(ids.map((id) => archive(token, id)));
+      await reload();
+      showToast(`Archived ${ids.length} item${ids.length === 1 ? '' : 's'}.`);
+    } catch (archiveError) {
+      setError(archiveError instanceof Error ? archiveError.message : `Unable to archive ${entityLabel}.`);
+    }
+  }
+
   async function restoreItem(id: number) {
     if (!token || !restore) {
       return;
@@ -145,6 +158,7 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     reload,
     save,
     archive: remove,
+    archiveMany: removeMany,
     restore: restoreItem,
     permanentlyDelete: destroy,
     startEdit,

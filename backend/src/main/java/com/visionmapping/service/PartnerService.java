@@ -39,10 +39,17 @@ public class PartnerService {
     private final CommunicationMessageRepository communicationMessageRepository;
 
     @Transactional(readOnly = true)
-    public Page<PartnerResponse> listPartners(Pageable pageable, boolean includeArchived) {
-        Page<Partner> entities = includeArchived
-                ? partnerRepository.findByUser_Id(lookup.userId(), pageable)
-                : partnerRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
+    public Page<PartnerResponse> listPartners(Pageable pageable, boolean includeArchived, String search) {
+        String term = search == null ? "" : search.trim();
+        Page<Partner> entities;
+        if (term.isEmpty()) {
+            entities = includeArchived
+                    ? partnerRepository.findByUser_Id(lookup.userId(), pageable)
+                    : partnerRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
+        } else {
+            entities = partnerRepository.search(
+                    lookup.userId(), includeArchived, "%" + term.toLowerCase() + "%", pageable);
+        }
         return entities.map(mapper::toResponse);
     }
 

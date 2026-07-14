@@ -10,38 +10,42 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import { Button } from '../components/common/Button';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
-import { EmptyState } from '../components/common/EmptyState';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { Dream, Goal, Partner, PartnerRequest, PartnerStatus, PartnerSupportType, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { partnerStatusLabels, partnerSupportTypeLabels } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
 
 export function PartnersPage() {
   const { token } = useAuth();
+  // Partners are paged and sorted by the server, so the table only renders what
+  // the current request returned.
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sort, setSort] = useState('id,desc');
+  const [totalRows, setTotalRows] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  // Search runs on the server too, so it spans every page, not just the loaded one.
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm);
   const crud = useCrudEntity<Partner, PartnerRequest>({
     token,
     entityLabel: 'partners',
     list: async (currentToken, includeArchived) => {
-      const result = await listPartners(currentToken, page, 20, includeArchived);
-      setTotalPages(result.totalPages);
+      const result = await listPartners(currentToken, page, rowsPerPage, includeArchived, sort, debouncedSearch);
+      setTotalRows(result.totalElements);
       return result.content;
     },
     create: createPartner,
@@ -84,7 +88,7 @@ export function PartnersPage() {
       },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page]);
+  }, [token, page, rowsPerPage, sort, debouncedSearch]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -147,6 +151,39 @@ export function PartnersPage() {
     setRelatedTaskId('');
     setNotes('');
   }
+
+  // Column keys double as the server's sort fields, so they match Partner's JPA property names.
+  const columns: DataTableColumn<Partner>[] = [
+    { key: 'code', label: 'Code', sortValue: (partner) => partner.code, render: (partner) => partner.code },
+    { key: 'name', label: 'Name', sortValue: (partner) => partner.name, sx: { fontWeight: 500 }, render: (partner) => partner.name },
+    {
+      key: 'supportType',
+      label: 'Support',
+      sortValue: (partner) => partner.supportType,
+      render: (partner) => partnerSupportTypeLabels[partner.supportType],
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (partner) => partner.status,
+      render: (partner) => <StatusBadge status={partner.status} />,
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (partner) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(partner)}
+          onArchive={() => void crud.archive(partner.id)}
+          onRestore={() => void crud.restore(partner.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(partner.id)}
+          archived={partner.archived}
+          label="Partner actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -257,54 +294,53 @@ export function PartnersPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setPage(0);
+          }}
+          entityLabel="partners"
+        />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
         <CardContent>
-        {crud.items.length === 0 ? (
-          <EmptyState>No partners yet.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Code</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Support</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {crud.items.map((partner) => (
-                <TableRow key={partner.id} className={partner.archived ? 'row-archived' : ''}>
-                  <TableCell>{partner.code}</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>{partner.name}</TableCell>
-                  <TableCell>{partnerSupportTypeLabels[partner.supportType]}</TableCell>
-                  <TableCell><StatusBadge status={partner.status} /></TableCell>
-                  <TableCell className="row-actions">
-                    <RowActionsMenu
-                      onEdit={() => startEdit(partner)}
-                      onArchive={() => void crud.archive(partner.id)}
-                      onRestore={() => void crud.restore(partner.id)}
-                      onDeletePermanently={() => void crud.permanentlyDelete(partner.id)}
-                      archived={partner.archived}
-                      label="Partner actions"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
-        {totalPages > 1 && (
-          <div className="pagination">
-            <Button type="button" variant="secondary" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous</Button>
-            <span>Page {page + 1} of {totalPages}</span>
-            <Button type="button" variant="secondary" disabled={page + 1 >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</Button>
-          </div>
-        )}
+        <DataTable
+          rows={crud.items}
+          columns={columns}
+          emptyMessage={searchTerm ? 'No partners match this search.' : 'No partners yet.'}
+          rowClassName={(partner) => (partner.archived ? 'row-archived' : '')}
+          serverPaging={{
+            page,
+            rowsPerPage,
+            totalRows,
+            onPageChange: setPage,
+            onRowsPerPageChange: (nextRowsPerPage) => {
+              setRowsPerPage(nextRowsPerPage);
+              setPage(0);
+            },
+            onSortChange: (key, direction) => {
+              setSort(`${key},${direction}`);
+              setPage(0);
+            },
+          }}
+          selection={{
+            selectedIds,
+            onChange: setSelectedIds,
+            rowLabel: (partner) => partner.name,
+            actions: (
+              <BulkArchiveAction
+                selectedIds={selectedIds}
+                entityLabel="partner(s)"
+                onArchive={async (ids) => {
+                  await crud.archiveMany(ids);
+                  setSelectedIds(new Set());
+                }}
+              />
+            ),
+          }}
+        />
         </CardContent>
       </Card>
     </PageSection>

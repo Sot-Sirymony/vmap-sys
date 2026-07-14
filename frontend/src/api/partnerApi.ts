@@ -1,8 +1,14 @@
 import { apiClient } from './apiClient';
 import type { Page, Partner, PartnerRequest } from '../types/vision';
 
-export function listPartners(token: string, page = 0, size = 20, includeArchived = false) {
-  return apiClient<Page<Partner>>(`/partners?page=${page}&size=${size}&includeArchived=${includeArchived}`, { token });
+/** `sort` is a Spring sort expression, e.g. "name,asc". `search` matches the partner's text fields. */
+export function listPartners(token: string, page = 0, size = 20, includeArchived = false, sort?: string, search?: string) {
+  const sortParam = sort ? `&sort=${sort}` : '';
+  const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+  return apiClient<Page<Partner>>(
+    `/partners?page=${page}&size=${size}&includeArchived=${includeArchived}${sortParam}${searchParam}`,
+    { token },
+  );
 }
 
 export function createPartner(token: string, request: PartnerRequest) {

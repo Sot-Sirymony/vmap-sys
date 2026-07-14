@@ -8,25 +8,23 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
-import { EmptyState } from '../components/common/EmptyState';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, VisionArea } from '../types/vision';
+import { matchesSearch } from '../utils/search';
+import { priorityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 
 export function DreamsPage() {
@@ -51,6 +49,8 @@ export function DreamsPage() {
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<DreamStatus>('ACTIVE');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -121,6 +121,52 @@ export function DreamsPage() {
     const impact = await getDreamArchiveImpact(token, dream.id);
     return `Archiving "${dream.title}" also archives ${impact.goals} goal(s), ${impact.steps} step(s), and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
   }
+
+  const filteredDreams = crud.items.filter((dream) =>
+    matchesSearch(searchTerm, dream.code, dream.title, dream.description, dream.whyImportant, dream.successDefinition),
+  );
+
+  const columns: DataTableColumn<Dream>[] = [
+    { key: 'code', label: 'Code', sortValue: (dream) => dream.code, render: (dream) => dream.code },
+    { key: 'title', label: 'Dream', sortValue: (dream) => dream.title, sx: { fontWeight: 500 }, render: (dream) => dream.title },
+    {
+      key: 'priority',
+      label: 'Priority',
+      sortValue: (dream) => priorityRank(dream.priority),
+      render: (dream) => <PriorityBadge priority={dream.priority} />,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (dream) => dream.status,
+      render: (dream) => <StatusBadge status={dream.status} />,
+    },
+    {
+      key: 'targetDate',
+      label: 'Target',
+      sortValue: (dream) => dream.targetDate,
+      render: (dream) => dream.targetDate ?? '-',
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (dream) => (
+        <>
+          <MuiButton component={Link} to={`/dreams/${dream.id}`} variant="contained" color="secondary" size="small" disableElevation>View Map</MuiButton>
+          <RowActionsMenu
+            onEdit={() => startEdit(dream)}
+            onArchive={() => void crud.archive(dream.id)}
+            onRestore={() => void crud.restore(dream.id)}
+            onDeletePermanently={() => void crud.permanentlyDelete(dream.id)}
+            archived={dream.archived}
+            confirmArchive={() => archiveImpactMessage(dream)}
+            label="Dream actions"
+          />
+        </>
+      ),
+    },
+  ];
 
   const clarityChecks = [
     { label: 'What exactly do you want to achieve?', met: title.trim().length >= 8 },
@@ -226,51 +272,33 @@ export function DreamsPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="dreams" />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
         <CardContent>
-        {crud.items.length === 0 ? (
-          <EmptyState>No dreams yet.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Code</TableCell>
-                <TableCell>Dream</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Target</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {crud.items.map((dream) => (
-                <TableRow key={dream.id} className={dream.archived ? 'row-archived' : ''}>
-                  <TableCell>{dream.code}</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>{dream.title}</TableCell>
-                  <TableCell><PriorityBadge priority={dream.priority} /></TableCell>
-                  <TableCell><StatusBadge status={dream.status} /></TableCell>
-                  <TableCell>{dream.targetDate ?? '-'}</TableCell>
-                  <TableCell className="row-actions">
-                    <MuiButton component={Link} to={`/dreams/${dream.id}`} variant="contained" color="secondary" size="small" disableElevation>View Map</MuiButton>
-                    <RowActionsMenu
-                      onEdit={() => startEdit(dream)}
-                      onArchive={() => void crud.archive(dream.id)}
-                      onRestore={() => void crud.restore(dream.id)}
-                      onDeletePermanently={() => void crud.permanentlyDelete(dream.id)}
-                      archived={dream.archived}
-                      confirmArchive={() => archiveImpactMessage(dream)}
-                      label="Dream actions"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
+        <DataTable
+          rows={filteredDreams}
+          columns={columns}
+          emptyMessage={searchTerm ? 'No dreams match this search.' : 'No dreams yet.'}
+          pageResetKey={searchTerm}
+          rowClassName={(dream) => (dream.archived ? 'row-archived' : '')}
+          selection={{
+            selectedIds,
+            onChange: setSelectedIds,
+            rowLabel: (dream) => dream.title,
+            actions: (
+              <BulkArchiveAction
+                selectedIds={selectedIds}
+                entityLabel="dream(s)"
+                onArchive={async (ids) => {
+                  await crud.archiveMany(ids);
+                  setSelectedIds(new Set());
+                }}
+              />
+            ),
+          }}
+        />
         </CardContent>
       </Card>
     </PageSection>

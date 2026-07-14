@@ -10,18 +10,14 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
-import { EmptyState } from '../components/common/EmptyState';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
@@ -30,6 +26,8 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Dream, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity, TaskItem, VisionStep } from '../types/vision';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { obstacleStatusLabels, obstacleTypeLabels, priorityLabels } from '../utils/enumLabels';
+import { matchesSearch } from '../utils/search';
+import { severityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 
 const obstacleTypes: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY', 'MOTIVATION', 'PARTNER', 'SYSTEM', 'DECISION', 'OTHER'];
@@ -64,6 +62,8 @@ export function ObstaclesPage() {
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -136,6 +136,65 @@ export function ObstaclesPage() {
   }
 
   const partnerSuggestion = suggestPartnerFor(obstacleType);
+
+  const filteredObstacles = crud.items.filter((obstacle) =>
+    matchesSearch(
+      searchTerm,
+      obstacle.title,
+      obstacle.description,
+      obstacle.solution,
+      obstacleTypeLabels[obstacle.obstacleType],
+    ),
+  );
+
+  const columns: DataTableColumn<Obstacle>[] = [
+    { key: 'title', label: 'Title', sortValue: (obstacle) => obstacle.title, sx: { fontWeight: 500 }, render: (obstacle) => obstacle.title },
+    {
+      key: 'obstacleType',
+      label: 'Type',
+      sortValue: (obstacle) => obstacleTypeLabels[obstacle.obstacleType],
+      render: (obstacle) => obstacleTypeLabels[obstacle.obstacleType],
+    },
+    {
+      key: 'suggestedPartner',
+      label: 'Suggested Partner',
+      sortValue: (obstacle) => suggestPartnerFor(obstacle.obstacleType)?.label,
+      render: (obstacle) => suggestPartnerFor(obstacle.obstacleType)?.label ?? '-',
+    },
+    {
+      key: 'severity',
+      label: 'Severity',
+      sortValue: (obstacle) => severityRank(obstacle.severity),
+      render: (obstacle) => <StatusBadge status={obstacle.severity} />,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (obstacle) => obstacle.status,
+      render: (obstacle) => <StatusBadge status={obstacle.status} />,
+    },
+    {
+      key: 'solution',
+      label: 'Solution',
+      sortValue: (obstacle) => obstacle.solution,
+      render: (obstacle) => obstacle.solution || '-',
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (obstacle) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(obstacle)}
+          onArchive={() => void crud.archive(obstacle.id)}
+          onRestore={() => void crud.restore(obstacle.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(obstacle.id)}
+          archived={obstacle.archived}
+          label="Obstacle actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -239,54 +298,33 @@ export function ObstaclesPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
         <CardContent>
-        {crud.items.length === 0 ? (
-          <EmptyState>No obstacles yet.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Suggested Partner</TableCell>
-                <TableCell>Severity</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Solution</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {crud.items.map((obstacle) => {
-                const suggestion = suggestPartnerFor(obstacle.obstacleType);
-                return (
-                  <TableRow key={obstacle.id} className={obstacle.archived ? 'row-archived' : ''}>
-                    <TableCell sx={{ fontWeight: 500 }}>{obstacle.title}</TableCell>
-                    <TableCell>{obstacleTypeLabels[obstacle.obstacleType]}</TableCell>
-                    <TableCell>{suggestion ? suggestion.label : '-'}</TableCell>
-                    <TableCell><StatusBadge status={obstacle.severity} /></TableCell>
-                    <TableCell><StatusBadge status={obstacle.status} /></TableCell>
-                    <TableCell>{obstacle.solution || '-'}</TableCell>
-                    <TableCell className="row-actions">
-                      <RowActionsMenu
-                        onEdit={() => startEdit(obstacle)}
-                        onArchive={() => void crud.archive(obstacle.id)}
-                        onRestore={() => void crud.restore(obstacle.id)}
-                        onDeletePermanently={() => void crud.permanentlyDelete(obstacle.id)}
-                        archived={obstacle.archived}
-                        label="Obstacle actions"
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
+        <DataTable
+          rows={filteredObstacles}
+          columns={columns}
+          emptyMessage={searchTerm ? 'No obstacles match this search.' : 'No obstacles yet.'}
+          pageResetKey={searchTerm}
+          rowClassName={(obstacle) => (obstacle.archived ? 'row-archived' : '')}
+          selection={{
+            selectedIds,
+            onChange: setSelectedIds,
+            rowLabel: (obstacle) => obstacle.title,
+            actions: (
+              <BulkArchiveAction
+                selectedIds={selectedIds}
+                entityLabel="obstacle(s)"
+                onArchive={async (ids) => {
+                  await crud.archiveMany(ids);
+                  setSelectedIds(new Set());
+                }}
+              />
+            ),
+          }}
+        />
         </CardContent>
       </Card>
     </PageSection>

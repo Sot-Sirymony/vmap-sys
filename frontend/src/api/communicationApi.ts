@@ -1,8 +1,21 @@
 import { apiClient } from './apiClient';
 import type { CommunicationMessage, CommunicationMessageRequest, Page } from '../types/vision';
 
-export function listCommunicationMessages(token: string, page = 0, size = 20, includeArchived = false) {
-  return apiClient<Page<CommunicationMessage>>(`/communication-messages?page=${page}&size=${size}&includeArchived=${includeArchived}`, { token });
+/** `sort` is a Spring sort expression, e.g. "subject,asc". `search` matches the message's text fields. */
+export function listCommunicationMessages(
+  token: string,
+  page = 0,
+  size = 20,
+  includeArchived = false,
+  sort?: string,
+  search?: string,
+) {
+  const sortParam = sort ? `&sort=${sort}` : '';
+  const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+  return apiClient<Page<CommunicationMessage>>(
+    `/communication-messages?page=${page}&size=${size}&includeArchived=${includeArchived}${sortParam}${searchParam}`,
+    { token },
+  );
 }
 
 export function createCommunicationMessage(token: string, request: CommunicationMessageRequest) {

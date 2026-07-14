@@ -3,7 +3,6 @@ import { Rocket } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
 import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
 import { listVisionAreas } from '../api/visionAreaApi';
-import { EmptyState } from '../components/common/EmptyState';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -12,20 +11,17 @@ import FormControl from '@mui/material/FormControl';
 import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
@@ -34,6 +30,8 @@ import { useToast } from '../context/ToastContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Dream, Goal, GoalRequest, Priority, VisionArea, WorkStatus } from '../types/vision';
 import { isOverdue } from '../utils/overdue';
+import { matchesSearch } from '../utils/search';
+import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 
 const statusOptions: { value: WorkStatus; label: string }[] = [
@@ -76,6 +74,7 @@ export function GoalsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
   const [bulkApplying, setBulkApplying] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -169,26 +168,11 @@ export function GoalsPage() {
     if (filterOverdueOnly && !isOverdue(goal.targetDate, goal.status)) {
       return false;
     }
+    if (!matchesSearch(searchTerm, goal.code, goal.title, goal.description, goal.successCriteria)) {
+      return false;
+    }
     return true;
   });
-
-  const allFilteredSelected = filteredGoals.length > 0 && filteredGoals.every((goal) => selectedIds.has(goal.id));
-
-  function toggleSelected(id: number) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    setSelectedIds(allFilteredSelected ? new Set() : new Set(filteredGoals.map((goal) => goal.id)));
-  }
 
   async function handleBulkApply() {
     if (!token || selectedIds.size === 0) {
@@ -206,6 +190,62 @@ export function GoalsPage() {
       setBulkApplying(false);
     }
   }
+
+  const columns: DataTableColumn<Goal>[] = [
+    { key: 'code', label: 'Code', sortValue: (goal) => goal.code, render: (goal) => goal.code },
+    {
+      key: 'title',
+      label: 'Goal',
+      sortValue: (goal) => goal.title,
+      sx: { fontWeight: 500 },
+      render: (goal) => (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+          {goal.moonshot && (
+            <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
+              <Box component="span" sx={{ display: 'inline-flex', color: '#7c3aed' }} aria-label="Moonshot goal">
+                <Rocket size={15} />
+              </Box>
+            </Tooltip>
+          )}
+          {goal.title}
+        </Box>
+      ),
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      sortValue: (goal) => priorityRank(goal.priority),
+      render: (goal) => <PriorityBadge priority={goal.priority} />,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (goal) => workStatusRank(goal.status),
+      render: (goal) => <StatusBadge status={goal.status} />,
+    },
+    {
+      key: 'progress',
+      label: 'Progress',
+      sortValue: (goal) => Number(goal.progressPercent),
+      render: (goal) => <ProgressBar value={Number(goal.progressPercent)} />,
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (goal) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(goal)}
+          onArchive={() => void crud.archive(goal.id)}
+          onRestore={() => void crud.restore(goal.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(goal.id)}
+          archived={goal.archived}
+          confirmArchive={() => archiveImpactMessage(goal)}
+          label="Goal actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -292,6 +332,7 @@ export function GoalsPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="goals" />
         <label>
           Vision Area
           <FormControl fullWidth size="small">
@@ -342,82 +383,43 @@ export function GoalsPage() {
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
-      {selectedIds.size > 0 && (
-        <Card className="bulk-actions-bar flex-row">
-          <span className="bulk-count">{selectedIds.size} selected</span>
-          <label>
-            Set status
-            <FormControl fullWidth size="small">
-              <Select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as WorkStatus)}>
-                {statusOptions.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </label>
-          <Button type="button" onClick={() => void handleBulkApply()} disabled={bulkApplying}>
-            {bulkApplying ? 'Applying...' : 'Apply'}
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => setSelectedIds(new Set())}>Clear selection</Button>
-        </Card>
-      )}
       <Card>
         <CardContent>
-        {filteredGoals.length === 0 ? (
-          <EmptyState>No goals match these filters.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>
-                  <Checkbox checked={allFilteredSelected} onChange={toggleSelectAll} aria-label="Select all goals" />
-                </TableCell>
-                <TableCell>Code</TableCell>
-                <TableCell>Goal</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Progress</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredGoals.map((goal) => (
-                <TableRow key={goal.id} className={goal.archived ? 'row-archived' : isOverdue(goal.targetDate, goal.status) ? 'row-overdue' : ''}>
-                  <TableCell>
-                    <Checkbox checked={selectedIds.has(goal.id)} onChange={() => toggleSelected(goal.id)} aria-label={`Select ${goal.title}`} />
-                  </TableCell>
-                  <TableCell>{goal.code}</TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>
-                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-                      {goal.moonshot && (
-                        <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
-                          <Box component="span" sx={{ display: 'inline-flex', color: '#7c3aed' }} aria-label="Moonshot goal">
-                            <Rocket size={15} />
-                          </Box>
-                        </Tooltip>
-                      )}
-                      {goal.title}
-                    </Box>
-                  </TableCell>
-                  <TableCell><PriorityBadge priority={goal.priority} /></TableCell>
-                  <TableCell><StatusBadge status={goal.status} /></TableCell>
-                  <TableCell><ProgressBar value={Number(goal.progressPercent)} /></TableCell>
-                  <TableCell className="row-actions">
-                    <RowActionsMenu
-                      onEdit={() => startEdit(goal)}
-                      onArchive={() => void crud.archive(goal.id)}
-                      onRestore={() => void crud.restore(goal.id)}
-                      onDeletePermanently={() => void crud.permanentlyDelete(goal.id)}
-                      archived={goal.archived}
-                      confirmArchive={() => archiveImpactMessage(goal)}
-                      label="Goal actions"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
+          <DataTable
+            rows={filteredGoals}
+            columns={columns}
+            emptyMessage="No goals match these filters."
+            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamId}|${filterStatus}|${filterPriority}|${filterOverdueOnly}`}
+            rowClassName={(goal) => (goal.archived ? 'row-archived' : isOverdue(goal.targetDate, goal.status) ? 'row-overdue' : '')}
+            selection={{
+              selectedIds,
+              onChange: setSelectedIds,
+              rowLabel: (goal) => goal.title,
+              actions: (
+                <>
+                  <label>
+                    Set status
+                    <FormControl fullWidth size="small">
+                      <Select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as WorkStatus)}>
+                        {statusOptions.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  </label>
+                  <Button type="button" onClick={() => void handleBulkApply()} disabled={bulkApplying}>
+                    {bulkApplying ? 'Applying...' : 'Apply'}
+                  </Button>
+                  <BulkArchiveAction
+                    selectedIds={selectedIds}
+                    entityLabel="goal(s)"
+                    onArchive={async (ids) => {
+                      await crud.archiveMany(ids);
+                      setSelectedIds(new Set());
+                    }}
+                  />
+                </>
+              ),
+            }}
+          />
         </CardContent>
       </Card>
     </PageSection>

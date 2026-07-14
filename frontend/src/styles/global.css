@@ -141,6 +141,12 @@ a {
   min-width: 0;
 }
 
+/* Search leads the filter bar and takes the slack, so the selects keep their size. */
+.filter-bar .search-bar {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
 .bulk-actions-bar {
   display: flex;
   flex-wrap: wrap;

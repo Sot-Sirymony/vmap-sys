@@ -10,15 +10,11 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
@@ -35,6 +31,7 @@ import type { Dream, Goal, ObstacleType, Priority, TaskItem, TaskItemRequest, Vi
 import { isOverdue } from '../utils/overdue';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { obstacleTypeLabels, workStatusLabels } from '../utils/enumLabels';
+import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 
 const columns: WorkStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'WAITING', 'BLOCKED', 'COMPLETED', 'PAUSED'];
@@ -78,6 +75,7 @@ export function TasksBoardPage() {
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!token) {
@@ -233,6 +231,46 @@ export function TasksBoardPage() {
     }
     return true;
   });
+
+  const taskColumns: DataTableColumn<TaskItem>[] = [
+    { key: 'title', label: 'Task', sortValue: (task) => task.title, sx: { fontWeight: 500 }, render: (task) => task.title },
+    { key: 'owner', label: 'Owner', sortValue: (task) => task.owner, render: (task) => task.owner },
+    { key: 'dueDate', label: 'Due', sortValue: (task) => task.dueDate, render: (task) => task.dueDate },
+    {
+      key: 'priority',
+      label: 'Priority',
+      sortValue: (task) => priorityRank(task.priority),
+      render: (task) => <PriorityBadge priority={task.priority} />,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (task) => workStatusRank(task.status),
+      render: (task) => <StatusBadge status={task.status} />,
+    },
+    {
+      key: 'progress',
+      label: 'Progress',
+      sortValue: (task) => Number(task.progressPercent),
+      sx: { width: 160 },
+      render: (task) => <ProgressBar value={Number(task.progressPercent)} />,
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (task) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(task)}
+          onArchive={() => void crud.archive(task.id)}
+          onRestore={() => void crud.restore(task.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
+          archived={task.archived}
+          label="Task actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -404,47 +442,27 @@ export function TasksBoardPage() {
       {viewMode === 'list' ? (
         <Card>
           <CardContent>
-            {visibleTasks.length === 0 ? (
-              <EmptyState>No tasks match these filters.</EmptyState>
-            ) : (
-              <TableContainer>
-                <Table className="data-table">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Task</TableCell>
-                      <TableCell>Owner</TableCell>
-                      <TableCell>Due</TableCell>
-                      <TableCell>Priority</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell>Progress</TableCell>
-                      <TableCell>Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {visibleTasks.map((task) => (
-                      <TableRow key={task.id} className={task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : ''}>
-                        <TableCell sx={{ fontWeight: 500 }}>{task.title}</TableCell>
-                        <TableCell>{task.owner}</TableCell>
-                        <TableCell>{task.dueDate}</TableCell>
-                        <TableCell><PriorityBadge priority={task.priority} /></TableCell>
-                        <TableCell><StatusBadge status={task.status} /></TableCell>
-                        <TableCell sx={{ width: 160 }}><ProgressBar value={Number(task.progressPercent)} /></TableCell>
-                        <TableCell className="row-actions">
-                          <RowActionsMenu
-                            onEdit={() => startEdit(task)}
-                            onArchive={() => void crud.archive(task.id)}
-                            onRestore={() => void crud.restore(task.id)}
-                            onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
-                            archived={task.archived}
-                            label="Task actions"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
+            <DataTable
+              rows={visibleTasks}
+              columns={taskColumns}
+              emptyMessage="No tasks match these filters."
+              rowClassName={(task) => (task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : '')}
+              selection={{
+                selectedIds,
+                onChange: setSelectedIds,
+                rowLabel: (task) => task.title,
+                actions: (
+                  <BulkArchiveAction
+                    selectedIds={selectedIds}
+                    entityLabel="task(s)"
+                    onArchive={async (ids) => {
+                      await crud.archiveMany(ids);
+                      setSelectedIds(new Set());
+                    }}
+                  />
+                ),
+              }}
+            />
           </CardContent>
         </Card>
       ) : (

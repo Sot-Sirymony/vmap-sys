@@ -9,20 +9,16 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
-import { EmptyState } from '../components/common/EmptyState';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
@@ -30,6 +26,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Goal, Priority, TaskItem, VisionStep, VisionStepRequest, WorkStatus } from '../types/vision';
 import { isOverdue } from '../utils/overdue';
+import { matchesSearch } from '../utils/search';
+import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 
 export function StepsPage() {
@@ -58,6 +56,8 @@ export function StepsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -141,8 +141,83 @@ export function StepsPage() {
     if (filterOverdueOnly && !isOverdue(step.targetDate, step.status)) {
       return false;
     }
+    if (!matchesSearch(searchTerm, step.code, step.title, step.description)) {
+      return false;
+    }
     return true;
   });
+
+  function taskCountFor(step: VisionStep) {
+    return tasks.filter((task) => task.stepId === step.id).length;
+  }
+
+  const columns: DataTableColumn<VisionStep>[] = [
+    { key: 'code', label: 'Code', sortValue: (step) => step.code, render: (step) => step.code },
+    {
+      key: 'title',
+      label: 'Step',
+      sortValue: (step) => step.title,
+      sx: { fontWeight: 500 },
+      render: (step) => (
+        <>
+          {step.title}
+          {step.complex && taskCountFor(step) === 0 && (
+            <div className="coaching-panel step-needs-tasks">
+              <strong>Complex step, no tasks yet</strong>
+              <p>Break this into executable tasks so it can actually move forward.</p>
+              <Link to={`/tasks?stepId=${step.id}`}>Break this into tasks →</Link>
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'sequenceNumber',
+      label: 'Seq',
+      sortValue: (step) => step.sequenceNumber,
+      render: (step) => step.sequenceNumber,
+    },
+    {
+      key: 'priority',
+      label: 'Priority',
+      sortValue: (step) => priorityRank(step.priority),
+      render: (step) => <PriorityBadge priority={step.priority} />,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (step) => workStatusRank(step.status),
+      render: (step) => <StatusBadge status={step.status} />,
+    },
+    {
+      key: 'progress',
+      label: 'Progress',
+      sortValue: (step) => Number(step.progressPercent),
+      render: (step) => <ProgressBar value={Number(step.progressPercent)} />,
+    },
+    {
+      key: 'taskCount',
+      label: 'Tasks',
+      sortValue: (step) => taskCountFor(step),
+      render: (step) => taskCountFor(step),
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (step) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(step)}
+          onArchive={() => void crud.archive(step.id)}
+          onRestore={() => void crud.restore(step.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(step.id)}
+          archived={step.archived}
+          confirmArchive={() => archiveImpactMessage(step)}
+          label="Step actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -219,6 +294,7 @@ export function StepsPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="steps" />
         <label>
           Goal
           <FormControl fullWidth size="small">
@@ -262,63 +338,29 @@ export function StepsPage() {
       </Card>
       <Card>
         <CardContent>
-        {filteredSteps.length === 0 ? (
-          <EmptyState>No steps match these filters.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Code</TableCell>
-                <TableCell>Step</TableCell>
-                <TableCell>Seq</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Progress</TableCell>
-                <TableCell>Tasks</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredSteps.map((step) => {
-                const taskCount = tasks.filter((task) => task.stepId === step.id).length;
-                const needsTasks = step.complex && taskCount === 0;
-                return (
-                  <TableRow key={step.id} className={step.archived ? 'row-archived' : isOverdue(step.targetDate, step.status) ? 'row-overdue' : ''}>
-                    <TableCell>{step.code}</TableCell>
-                    <TableCell sx={{ fontWeight: 500 }}>
-                      {step.title}
-                      {needsTasks && (
-                        <div className="coaching-panel step-needs-tasks">
-                          <strong>Complex step, no tasks yet</strong>
-                          <p>Break this into executable tasks so it can actually move forward.</p>
-                          <Link to={`/tasks?stepId=${step.id}`}>Break this into tasks →</Link>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>{step.sequenceNumber}</TableCell>
-                    <TableCell><PriorityBadge priority={step.priority} /></TableCell>
-                    <TableCell><StatusBadge status={step.status} /></TableCell>
-                    <TableCell><ProgressBar value={Number(step.progressPercent)} /></TableCell>
-                    <TableCell>{taskCount}</TableCell>
-                    <TableCell className="row-actions">
-                      <RowActionsMenu
-                        onEdit={() => startEdit(step)}
-                        onArchive={() => void crud.archive(step.id)}
-                        onRestore={() => void crud.restore(step.id)}
-                        onDeletePermanently={() => void crud.permanentlyDelete(step.id)}
-                        archived={step.archived}
-                        confirmArchive={() => archiveImpactMessage(step)}
-                        label="Step actions"
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
+          <DataTable
+            rows={filteredSteps}
+            columns={columns}
+            emptyMessage="No steps match these filters."
+            defaultSortKey="sequenceNumber"
+            pageResetKey={`${searchTerm}|${filterGoalId}|${filterStatus}|${filterPriority}|${filterOverdueOnly}`}
+            rowClassName={(step) => (step.archived ? 'row-archived' : isOverdue(step.targetDate, step.status) ? 'row-overdue' : '')}
+            selection={{
+              selectedIds,
+              onChange: setSelectedIds,
+              rowLabel: (step) => step.title,
+              actions: (
+                <BulkArchiveAction
+                  selectedIds={selectedIds}
+                  entityLabel="step(s)"
+                  onArchive={async (ids) => {
+                    await crud.archiveMany(ids);
+                    setSelectedIds(new Set());
+                  }}
+                />
+              ),
+            }}
+          />
         </CardContent>
       </Card>
     </PageSection>

@@ -131,12 +131,12 @@ public class ExcelService {
                             .toList(), headerStyle);
 
             writeRows(workbook, "Partners", List.of("ID", CODE, "Name", "Role", "Organization", "Email", "Support Type", STATUS, "Notes"),
-                    partnerService.listPartners(Pageable.unpaged(), false).stream()
+                    partnerService.listPartners(Pageable.unpaged(), false, null).stream()
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.role()), value(item.organization()), value(item.email()), item.supportType(), item.status(), value(item.notes())))
                             .toList(), headerStyle);
 
             writeRows(workbook, "Communication", List.of("ID", "Partner ID", "Audience", "Purpose", "Subject", "Request", "Message", STATUS, "Follow Up"),
-                    communicationMessageService.listCommunicationMessages(Pageable.unpaged(), false).stream()
+                    communicationMessageService.listCommunicationMessages(Pageable.unpaged(), false, null).stream()
                             .map(item -> List.of(item.id(), value(item.partnerId()), value(item.audience()), value(item.purpose()), value(item.subject()), value(item.request()), value(item.messageBody()), item.status(), value(item.followUpDate())))
                             .toList(), headerStyle);
 

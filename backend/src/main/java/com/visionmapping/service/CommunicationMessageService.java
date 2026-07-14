@@ -30,10 +30,18 @@ public class CommunicationMessageService {
     private final CommunicationMessageRepository communicationMessageRepository;
 
     @Transactional(readOnly = true)
-    public Page<CommunicationMessageResponse> listCommunicationMessages(Pageable pageable, boolean includeArchived) {
-        Page<CommunicationMessage> entities = includeArchived
-                ? communicationMessageRepository.findByUser_Id(lookup.userId(), pageable)
-                : communicationMessageRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
+    public Page<CommunicationMessageResponse> listCommunicationMessages(
+            Pageable pageable, boolean includeArchived, String search) {
+        String term = search == null ? "" : search.trim();
+        Page<CommunicationMessage> entities;
+        if (term.isEmpty()) {
+            entities = includeArchived
+                    ? communicationMessageRepository.findByUser_Id(lookup.userId(), pageable)
+                    : communicationMessageRepository.findByUser_IdAndArchivedFalse(lookup.userId(), pageable);
+        } else {
+            entities = communicationMessageRepository.search(
+                    lookup.userId(), includeArchived, "%" + term.toLowerCase() + "%", pageable);
+        }
         return entities.map(mapper::toResponse);
     }
 

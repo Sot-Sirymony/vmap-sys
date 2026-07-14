@@ -33,8 +33,9 @@ public class PartnerController {
     @GetMapping
     public Page<PartnerResponse> list(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listPartners(pageable, includeArchived);
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @RequestParam(required = false) String search) {
+        return service.listPartners(pageable, includeArchived, search);
     }
 
     @PostMapping

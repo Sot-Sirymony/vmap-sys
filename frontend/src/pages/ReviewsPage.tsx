@@ -7,20 +7,16 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import Table from '@mui/material/Table';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
+import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
-import { EmptyState } from '../components/common/EmptyState';
+import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
@@ -28,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import type { Dream, Review, ReviewRequest, ReviewType, VisionArea } from '../types/vision';
 import { reviewTypeLabels } from '../utils/enumLabels';
+import { matchesSearch } from '../utils/search';
 import { PageSection } from './PageSection';
 
 // FR-16.3: guided questions per review type, shown alongside the form.
@@ -99,6 +96,8 @@ export function ReviewsPage() {
   const [nextActions, setNextActions] = useState('');
   const [diligence, setDiligence] = useState<Record<DiligenceKey, boolean | null>>(EMPTY_DILIGENCE);
   const [diligenceNote, setDiligenceNote] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -187,6 +186,63 @@ export function ReviewsPage() {
     setDiligence(EMPTY_DILIGENCE);
     setDiligenceNote('');
   }
+
+  const filteredReviews = crud.items.filter((review) =>
+    matchesSearch(
+      searchTerm,
+      reviewTypeLabels[review.reviewType],
+      review.reviewDate,
+      review.summary,
+      review.completedTasks,
+      review.delayedTasks,
+      review.blockedTasks,
+      review.lessonsLearned,
+      review.nextActions,
+    ),
+  );
+
+  const columns: DataTableColumn<Review>[] = [
+    {
+      key: 'reviewType',
+      label: 'Type',
+      sortValue: (review) => reviewTypeLabels[review.reviewType],
+      render: (review) => <StatusBadge status={review.reviewType} />,
+    },
+    { key: 'reviewDate', label: 'Date', sortValue: (review) => review.reviewDate, render: (review) => review.reviewDate },
+    {
+      key: 'summary',
+      label: 'Summary',
+      sortValue: (review) => review.summary,
+      render: (review) => review.summary || '-',
+    },
+    {
+      key: 'diligence',
+      label: 'Diligence',
+      sortValue: (review) => review.diligenceClearVision != null,
+      render: (review) => (review.diligenceClearVision != null ? 'Done' : '-'),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortValue: (review) => review.archived,
+      render: (review) => <StatusBadge status={review.archived ? 'ARCHIVED' : 'ACTIVE'} />,
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      className: 'row-actions',
+      render: (review) => (
+        <RowActionsMenu
+          onEdit={() => startEdit(review)}
+          onArchive={() => void crud.archive(review.id)}
+          onRestore={() => void crud.restore(review.id)}
+          onDeletePermanently={() => void crud.permanentlyDelete(review.id)}
+          archived={review.archived}
+          label="Review actions"
+        />
+      ),
+    },
+  ];
 
   const formFields = (
     <>
@@ -296,49 +352,35 @@ export function ReviewsPage() {
       {crud.loading && <Loading />}
       {crud.error && <ErrorMessage message={crud.error} />}
       <Card className="filter-bar flex-row">
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="reviews" />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <Card>
         <CardContent>
-        {crud.items.length === 0 ? (
-          <EmptyState>No reviews yet.</EmptyState>
-        ) : (
-          <TableContainer>
-          <Table className="data-table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Type</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Summary</TableCell>
-                <TableCell>Diligence</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {crud.items.map((review) => (
-                <TableRow key={review.id} className={review.archived ? 'row-archived' : ''}>
-                  <TableCell><StatusBadge status={review.reviewType} /></TableCell>
-                  <TableCell>{review.reviewDate}</TableCell>
-                  <TableCell>{review.summary || '-'}</TableCell>
-                  <TableCell>{review.diligenceClearVision != null ? 'Done' : '-'}</TableCell>
-                  <TableCell><StatusBadge status={review.archived ? 'ARCHIVED' : 'ACTIVE'} /></TableCell>
-                  <TableCell className="row-actions">
-                    <RowActionsMenu
-                      onEdit={() => startEdit(review)}
-                      onArchive={() => void crud.archive(review.id)}
-                      onRestore={() => void crud.restore(review.id)}
-                      onDeletePermanently={() => void crud.permanentlyDelete(review.id)}
-                      archived={review.archived}
-                      label="Review actions"
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </TableContainer>
-        )}
+        <DataTable
+          rows={filteredReviews}
+          columns={columns}
+          emptyMessage={searchTerm ? 'No reviews match this search.' : 'No reviews yet.'}
+          pageResetKey={searchTerm}
+          defaultSortKey="reviewDate"
+          defaultSortDirection="desc"
+          rowClassName={(review) => (review.archived ? 'row-archived' : '')}
+          selection={{
+            selectedIds,
+            onChange: setSelectedIds,
+            rowLabel: (review) => `${reviewTypeLabels[review.reviewType]} review ${review.reviewDate}`,
+            actions: (
+              <BulkArchiveAction
+                selectedIds={selectedIds}
+                entityLabel="review(s)"
+                onArchive={async (ids) => {
+                  await crud.archiveMany(ids);
+                  setSelectedIds(new Set());
+                }}
+              />
+            ),
+          }}
+        />
         </CardContent>
       </Card>
     </PageSection>
