@@ -27,10 +27,16 @@ type RowActionsMenuProps = {
   confirmArchive?: string | (() => Promise<string>);
   /** Confirmation text shown before permanently deleting. Falls back to a generic warning. */
   confirmDelete?: string;
+  /**
+   * Extra menu items shown (for a live record) above Edit — e.g. "Add goal" on a
+   * dream, which jumps to creating its child. Hidden once archived, where the
+   * only sensible actions are restore/delete.
+   */
+  extraActions?: { label: string; onClick: () => void }[];
   label?: string;
 };
 
-export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanently, archived = false, confirmArchive, confirmDelete, label = 'Row actions' }: RowActionsMenuProps) {
+export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanently, archived = false, confirmArchive, confirmDelete, extraActions = [], label = 'Row actions' }: RowActionsMenuProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
@@ -78,6 +84,9 @@ export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanent
             </MenuItem>
           ),
         ]) : ([
+          ...extraActions.map((action) => (
+            <MenuItem key={action.label} onClick={() => { handleClose(); action.onClick(); }}>{action.label}</MenuItem>
+          )),
           <MenuItem key="edit" onClick={() => { handleClose(); onEdit(); }}>Edit</MenuItem>,
           <MenuItem key="archive" onClick={() => void handleArchiveClick()}>Archive</MenuItem>,
         ])}

@@ -41,8 +41,9 @@ const blockerCategories: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY'
 
 export function TasksBoardPage() {
   const { token } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const filterStepId = searchParams.get('stepId');
+  const [autoOpenCreate, setAutoOpenCreate] = useState(false);
   const crud = useCrudEntity<TaskItem, TaskItemRequest>({
     token,
     entityLabel: 'tasks',
@@ -86,6 +87,24 @@ export function TasksBoardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Arrived from a step's "Add task" shortcut: pre-select that step and open the
+  // create form, then strip the params so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get('create') !== 'task') {
+      return;
+    }
+    const parent = searchParams.get('parent');
+    if (parent) {
+      setStepId(parent);
+    }
+    setAutoOpenCreate(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    next.delete('parent');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -370,6 +389,7 @@ export function TasksBoardPage() {
         editTitle="Edit Task"
         saving={crud.saving}
         disabled={steps.length === 0}
+        autoOpenCreate={autoOpenCreate}
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >

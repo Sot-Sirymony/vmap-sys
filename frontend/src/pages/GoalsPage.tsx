@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Rocket } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
 import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
@@ -48,6 +49,8 @@ const statusOptions: { value: WorkStatus; label: string }[] = [
 
 export function GoalsPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
+  const [autoOpenCreate, setAutoOpenCreate] = useState(false);
   const crud = useCrudEntity<Goal, GoalRequest>({
     token,
     entityLabel: 'goals',
@@ -80,7 +83,27 @@ export function GoalsPage() {
   const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
+
+  // Arrived from a dream's "Add goal" shortcut: pre-select that dream and open
+  // the create form. The create params are then stripped so a refresh or back
+  // doesn't reopen an empty form. Runs once on mount.
+  useEffect(() => {
+    if (searchParams.get('create') !== 'goal') {
+      return;
+    }
+    const parent = searchParams.get('parent');
+    if (parent) {
+      setDreamId(parent);
+    }
+    setAutoOpenCreate(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    next.delete('parent');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -246,6 +269,7 @@ export function GoalsPage() {
           onDeletePermanently={() => void crud.permanentlyDelete(goal.id)}
           archived={goal.archived}
           confirmArchive={() => archiveImpactMessage(goal)}
+          extraActions={[{ label: 'Add step', onClick: () => navigate(`/steps?create=step&parent=${goal.id}`) }]}
           label="Goal actions"
         />
       ),
@@ -329,6 +353,7 @@ export function GoalsPage() {
         editTitle="Edit Goal"
         saving={crud.saving}
         disabled={dreams.length === 0}
+        autoOpenCreate={autoOpenCreate}
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >

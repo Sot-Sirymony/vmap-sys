@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, restoreDream, updateDream } from '../api/dreamApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import MuiButton from '@mui/material/Button';
@@ -34,6 +34,7 @@ import { PageSection } from './PageSection';
 
 export function DreamsPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const crud = useCrudEntity<Dream, DreamRequest>({
     token,
     entityLabel: 'dreams',
@@ -192,6 +193,7 @@ export function DreamsPage() {
             onDeletePermanently={() => void crud.permanentlyDelete(dream.id)}
             archived={dream.archived}
             confirmArchive={() => archiveImpactMessage(dream)}
+            extraActions={[{ label: 'Add goal', onClick: () => navigate(`/goals?create=goal&parent=${dream.id}`) }]}
             label="Dream actions"
           />
         </>

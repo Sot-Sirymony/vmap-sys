@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
@@ -9,6 +9,13 @@ type CrudModalFormProps = {
   saving: boolean;
   disabled?: boolean;
   extraActions?: ReactNode;
+  /**
+   * Open the create modal on arrival, without a button click. Set by a page that
+   * was linked to with "create the child now" intent (e.g. a dream's "Add goal"
+   * shortcut lands on the Goals page with this true). It only fires the initial
+   * open, so cancelling the modal doesn't immediately reopen it.
+   */
+  autoOpenCreate?: boolean;
   onSubmit: (event: FormEvent) => void | Promise<boolean>;
   onCancelEdit: () => void;
   children: ReactNode;
@@ -33,11 +40,20 @@ export function CrudModalForm({
   saving,
   disabled,
   extraActions,
+  autoOpenCreate = false,
   onSubmit,
   onCancelEdit,
   children,
 }: CrudModalFormProps) {
   const [creating, setCreating] = useState(false);
+
+  // Open once when arriving with create intent; the flag going false again
+  // (after the page clears its URL param) must not slam the modal shut.
+  useEffect(() => {
+    if (autoOpenCreate) {
+      setCreating(true);
+    }
+  }, [autoOpenCreate]);
 
   async function handleCreateSubmit(event: FormEvent) {
     const result = onSubmit(event);
