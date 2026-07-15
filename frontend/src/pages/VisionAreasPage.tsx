@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { archiveVisionArea, permanentlyDeleteVisionArea, createVisionArea, getVisionAreaArchiveImpact, listVisionAreas, restoreVisionArea, updateVisionArea } from '../api/visionAreaApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -28,6 +29,7 @@ import { PageSection } from './PageSection';
 
 export function VisionAreasPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const crud = useCrudEntity<VisionArea, VisionAreaRequest>({
     token,
     entityLabel: 'vision areas',
@@ -125,6 +127,7 @@ export function VisionAreasPage() {
           onDeletePermanently={() => void crud.permanentlyDelete(area.id)}
           archived={area.archived}
           confirmArchive={() => archiveImpactMessage(area)}
+          extraActions={[{ label: 'Add dream', onClick: () => navigate(`/dreams?create=dream&parent=${area.id}`) }]}
           label="Vision area actions"
         />
       ),

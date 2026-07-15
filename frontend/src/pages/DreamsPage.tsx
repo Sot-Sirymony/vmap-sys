@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, restoreDream, updateDream } from '../api/dreamApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import MuiButton from '@mui/material/Button';
@@ -64,6 +64,26 @@ export function DreamsPage() {
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
   const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [autoOpenCreate, setAutoOpenCreate] = useState(false);
+
+  // Arrived from a vision area's "Add dream" shortcut: pre-select that area and
+  // open the create form, then strip the params so a refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get('create') !== 'dream') {
+      return;
+    }
+    const parent = searchParams.get('parent');
+    if (parent) {
+      setVisionAreaId(parent);
+    }
+    setAutoOpenCreate(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    next.delete('parent');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -297,6 +317,7 @@ export function DreamsPage() {
         editTitle="Edit Dream"
         saving={crud.saving}
         disabled={visionAreas.length === 0}
+        autoOpenCreate={autoOpenCreate}
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
