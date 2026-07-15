@@ -21,6 +21,11 @@ public record DashboardSummaryResponse(
         long blockedTasks,
         BigDecimal averageProgress,
         long tasksDueThisWeek,
+        // Scoped to the dashboard's selectable window (default: current month).
+        // Separate from the all-time counts above so the Excel export keeps its
+        // all-time numbers while the dashboard tiles show the period.
+        long tasksDueInPeriod,
+        long completedTasksInPeriod,
         Map<String, Long> goalsByStatus,
         Map<String, Long> dreamsByVisionArea,
         Map<String, Long> tasksByStatus,

@@ -76,7 +76,12 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
-        return buildDashboardSummary(null);
+        return buildDashboardSummary(null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId) {
+        return buildDashboardSummary(visionAreaId, null, null);
     }
 
     /**
@@ -85,9 +90,14 @@ public class DashboardService {
      *                     browser because what the client receives are already
      *                     sums — you cannot re-filter a total by area without the
      *                     rows behind it.
+     * @param periodStart  start of the window (inclusive) for the two time-based
+     *                     metrics — tasks due in the period and completed in the
+     *                     period. Null defaults to the first of the current month.
+     * @param periodEnd    end of that window (inclusive). Null defaults to the
+     *                     last of the current month.
      */
     @Transactional(readOnly = true)
-    public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId) {
+    public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId, LocalDate periodStart, LocalDate periodEnd) {
         Long userId = lookup.userId();
         List<VisionArea> areas = scoped(visionAreaRepository.findByUser_IdAndArchivedFalse(userId),
                 VisionArea::getId, visionAreaId);
@@ -109,6 +119,21 @@ public class DashboardService {
                 DashboardService::areaIdOf, visionAreaId);
         LocalDate today = LocalDate.now(clock);
         LocalDate weekEnd = today.plusDays(7);
+        // The selectable window for the two time-based tiles. Defaults to the
+        // current month when the caller passes nothing.
+        LocalDate from = periodStart != null ? periodStart : today.withDayOfMonth(1);
+        LocalDate to = periodEnd != null ? periodEnd : today.withDayOfMonth(today.lengthOfMonth());
+        long tasksDueInPeriod = tasks.stream()
+                .filter(task -> task.getDueDate() != null
+                        && !task.getDueDate().isBefore(from) && !task.getDueDate().isAfter(to))
+                .count();
+        long completedTasksInPeriod = tasks.stream()
+                .filter(task -> task.getCompletedAt() != null)
+                .filter(task -> {
+                    LocalDate completed = LocalDate.ofInstant(task.getCompletedAt(), clock.getZone());
+                    return !completed.isBefore(from) && !completed.isAfter(to);
+                })
+                .count();
         BigDecimal averageProgress = goals.isEmpty()
                 ? ZERO
                 : goals.stream()
@@ -177,6 +202,8 @@ public class DashboardService {
                 tasks.stream().filter(task -> task.getStatus() == WorkStatus.BLOCKED).count(),
                 averageProgress,
                 tasks.stream().filter(task -> !task.getDueDate().isBefore(today) && !task.getDueDate().isAfter(weekEnd)).count(),
+                tasksDueInPeriod,
+                completedTasksInPeriod,
                 goalsByStatus,
                 dreamsByArea,
                 tasksByStatus,

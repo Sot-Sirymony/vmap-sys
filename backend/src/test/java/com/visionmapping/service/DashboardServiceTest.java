@@ -38,6 +38,7 @@ import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -165,6 +166,31 @@ class DashboardServiceTest {
         assertThat(everything.totalVisionAreas()).isEqualTo(2);
         assertThat(everything.blockedTasks()).isEqualTo(2);
         assertThat(everything.averageProgress()).isEqualByComparingTo(BigDecimal.valueOf(60).setScale(2));
+    }
+
+    @Test
+    void periodScopesDueAndCompletedTasksToTheWindow() {
+        VisionStep parentStep = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false),
+                WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+
+        TaskItem dueInside = task(30L, parentStep, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        dueInside.setDueDate(LocalDate.of(2026, 3, 15));
+        TaskItem dueOutside = task(31L, parentStep, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        dueOutside.setDueDate(LocalDate.of(2026, 5, 1));
+        TaskItem completedInside = task(32L, parentStep, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
+        completedInside.setCompletedAt(LocalDate.of(2026, 3, 20).atStartOfDay(ZoneOffset.UTC).toInstant());
+        TaskItem completedOutside = task(33L, parentStep, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
+        completedOutside.setCompletedAt(LocalDate.of(2026, 1, 5).atStartOfDay(ZoneOffset.UTC).toInstant());
+
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(dueInside, dueOutside, completedInside, completedOutside));
+
+        DashboardSummaryResponse march = service.buildDashboardSummary(
+                null, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+
+        // Only the two records whose date falls inside March are counted.
+        assertThat(march.tasksDueInPeriod()).isEqualTo(1);
+        assertThat(march.completedTasksInPeriod()).isEqualTo(1);
     }
 
     @Test

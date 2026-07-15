@@ -20,6 +20,9 @@ import MuiButton from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -85,6 +88,40 @@ const OBSTACLE_TYPE_COLORS: Record<string, string> = {
   [OTHER_OBSTACLE_TYPES_KEY]: '#e1e1e1',
 };
 
+type DashboardPeriod = 'month' | 'quarter' | 'year';
+
+const PERIOD_OPTIONS = [
+  { value: 'month', label: 'This month' },
+  { value: 'quarter', label: 'This quarter' },
+  { value: 'year', label: 'This year' },
+];
+
+function isPeriod(value: string): value is DashboardPeriod {
+  return value === 'month' || value === 'quarter' || value === 'year';
+}
+
+function isoDay(year: number, month1: number, day: number): string {
+  return `${year}-${String(month1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Calendar-aligned window for the two time-based tiles. All bounds are inclusive
+// and computed from the browser's local date.
+function periodRange(period: DashboardPeriod): { from: string; to: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-11
+  if (period === 'year') {
+    return { from: isoDay(year, 1, 1), to: isoDay(year, 12, 31) };
+  }
+  if (period === 'quarter') {
+    const startMonth = Math.floor(month / 3) * 3; // 0, 3, 6, 9
+    const lastDay = new Date(year, startMonth + 3, 0).getDate();
+    return { from: isoDay(year, startMonth + 1, 1), to: isoDay(year, startMonth + 3, lastDay) };
+  }
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return { from: isoDay(year, month + 1, 1), to: isoDay(year, month + 1, lastDay) };
+}
+
 export function DashboardPage() {
   const { token } = useAuth();
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
@@ -93,6 +130,9 @@ export function DashboardPage() {
   const [error, setError] = useState('');
   // In the URL, so a scoped dashboard can be bookmarked and shared.
   const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
+  const [periodValue, setPeriodValue] = useUrlFilter('period');
+  const period = isPeriod(periodValue) ? periodValue : 'month';
+  const { from, to } = periodRange(period);
 
   useEffect(() => {
     if (!token) {
@@ -100,14 +140,14 @@ export function DashboardPage() {
     }
 
     setLoading(true);
-    getDashboardSummary(token, filterVisionAreaId)
+    getDashboardSummary(token, filterVisionAreaId, from, to)
       .then((summaryData) => {
         setSummary(summaryData);
         setError('');
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load dashboard.'))
       .finally(() => setLoading(false));
-  }, [token, filterVisionAreaId]);
+  }, [token, filterVisionAreaId, from, to]);
 
   // The dropdown always offers every area, even while the dashboard is scoped to
   // one — otherwise picking an area would leave you unable to pick a different
@@ -197,8 +237,22 @@ export function DashboardPage() {
           options={optionsFromEntities(visionAreas, (area) => area.name)}
           allLabel="All areas"
         />
+        <label>
+          Period
+          <FormControl fullWidth size="small">
+            <Select value={period} onChange={(event) => setPeriodValue(event.target.value)}>
+              {PERIOD_OPTIONS.map((option) => (
+                <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </label>
       </Card>
-      <DashboardSummary summary={summary} />
+      <DashboardSummary
+        summary={summary}
+        periodLabel={PERIOD_OPTIONS.find((option) => option.value === period)?.label.toLowerCase() ?? 'this month'}
+        dueInPeriodLink={`/tasks?dueFrom=${from}&dueTo=${to}`}
+      />
       <AttentionPanel attention={summary?.attention} />
       <Card>
         <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />

@@ -6,6 +6,10 @@ import type { DashboardSummary as DashboardSummaryData } from '../../types/visio
 
 type DashboardSummaryProps = {
   summary?: DashboardSummaryData | null;
+  // Lowercase phrase for the two windowed tiles, e.g. "this month".
+  periodLabel: string;
+  // Link for the "Due" tile — the tasks board filtered to the same window.
+  dueInPeriodLink: string;
 };
 
 function TileGroup({ label, columns, children }: { label: string; columns: number; children: React.ReactNode }) {
@@ -38,7 +42,7 @@ function TileGroup({ label, columns, children }: { label: string; columns: numbe
  * with no orphaned tile (the old flat 9-tile grid always left one
  * hanging alone in a half-empty last row).
  */
-export function DashboardSummary({ summary }: DashboardSummaryProps) {
+export function DashboardSummary({ summary, periodLabel, dueInPeriodLink }: DashboardSummaryProps) {
   return (
     <Box sx={{ display: 'grid', gap: 2.5 }}>
       {/*
@@ -46,8 +50,9 @@ export function DashboardSummary({ summary }: DashboardSummaryProps) {
         Goals" counts IN_PROGRESS *or* NOT_STARTED and "Open Tasks" counts
         everything not completed — no single-status filter matches either, and a
         tile that lands on a different number than it advertised is worse than
-        one that doesn't link at all. Same for Due This Week (no date filter yet)
-        and Average Progress, which isn't a set of rows.
+        one that doesn't link at all. Average Progress also stays unlinked — it's
+        an aggregate, not a set of rows. Due This Week now links via the tasks
+        due-date range (BRD C-6).
       */}
       <TileGroup label="Needs attention" columns={3}>
         <DashboardCard
@@ -65,10 +70,11 @@ export function DashboardSummary({ summary }: DashboardSummaryProps) {
           to="/tasks?status=BLOCKED"
         />
         <DashboardCard
-          label="Due This Week"
-          value={summary?.tasksDueThisWeek ?? 0}
+          label={`Due ${periodLabel}`}
+          value={summary?.tasksDueInPeriod ?? 0}
           icon={CalendarDays}
-          tone={(summary?.tasksDueThisWeek ?? 0) > 0 ? 'warning' : 'neutral'}
+          tone={(summary?.tasksDueInPeriod ?? 0) > 0 ? 'warning' : 'neutral'}
+          to={dueInPeriodLink}
         />
       </TileGroup>
       <TileGroup label="Portfolio overview" columns={3}>
@@ -81,12 +87,17 @@ export function DashboardSummary({ summary }: DashboardSummaryProps) {
         />
         <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} icon={Flag} />
         <DashboardCard label="Open Tasks" value={summary?.activeTasks ?? 0} icon={CheckSquare} />
+        {/*
+          Completed is scoped to the period by completion date. It doesn't link:
+          the tasks board filters by *due* date, not completion date, so no
+          filter reproduces "completed this month" — and a tile that links to a
+          different number is worse than one that doesn't link.
+        */}
         <DashboardCard
-          label="Completed Tasks"
-          value={summary?.completedTasks ?? 0}
+          label={`Completed ${periodLabel}`}
+          value={summary?.completedTasksInPeriod ?? 0}
           icon={CheckCircle2}
-          tone={(summary?.completedTasks ?? 0) > 0 ? 'positive' : 'neutral'}
-          to="/tasks?status=COMPLETED"
+          tone={(summary?.completedTasksInPeriod ?? 0) > 0 ? 'positive' : 'neutral'}
         />
         <DashboardCard
           label="Average Progress"

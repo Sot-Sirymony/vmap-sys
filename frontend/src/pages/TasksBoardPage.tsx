@@ -78,6 +78,10 @@ export function TasksBoardPage() {
   const [filterDreamId, setFilterDreamId] = useUrlFilter('dreamId');
   const [filterGoalId, setFilterGoalId] = useUrlFilter('goalId');
   const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
+  // Due-date range (BRD C-6). Inclusive on both ends; either bound may be empty.
+  // This is what makes the dashboard's "Due This Week" tile a link.
+  const [filterDueFrom, setFilterDueFrom] = useUrlFilter('dueFrom');
+  const [filterDueTo, setFilterDueTo] = useUrlFilter('dueTo');
   // Narrows the board to a single column. The board is organised by status, so
   // "show me the blocked ones" means showing one column, not filtering rows.
   const [filterStatus] = useUrlFilter('status');
@@ -240,6 +244,13 @@ export function TasksBoardPage() {
       return false;
     }
     if (filterOverdueOnly && !isOverdue(task.dueDate, task.status)) {
+      return false;
+    }
+    // Due-date range: string compare is safe because dueDate is ISO yyyy-MM-dd.
+    if (filterDueFrom && task.dueDate < filterDueFrom) {
+      return false;
+    }
+    if (filterDueTo && task.dueDate > filterDueTo) {
       return false;
     }
     if (searchTerm) {
@@ -423,6 +434,14 @@ export function TasksBoardPage() {
           onChange={setFilterGoalId}
           options={optionsFromEntities(goalsForFilter, (goal) => goal.title)}
         />
+        <label>
+          Due from
+          <Input type="date" value={filterDueFrom} onChange={(event) => setFilterDueFrom(event.target.value)} />
+        </label>
+        <label>
+          Due to
+          <Input type="date" value={filterDueTo} onChange={(event) => setFilterDueTo(event.target.value)} />
+        </label>
         <label className="checkbox-field">
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
           Overdue only

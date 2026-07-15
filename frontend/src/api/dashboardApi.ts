@@ -6,7 +6,18 @@ import type { DashboardSummary } from '../types/vision';
  *   portfolio. Scoped by the server, not the browser — what comes back are
  *   already sums, and a sum can't be re-filtered by area without the rows.
  */
-export function getDashboardSummary(token: string, visionAreaId?: string) {
-  const query = visionAreaId ? `?visionAreaId=${encodeURIComponent(visionAreaId)}` : '';
-  return apiClient<DashboardSummary>(`/dashboard${query}`, { token });
+/** `from`/`to` (yyyy-MM-dd) window the two time-based tiles; omit for the current month. */
+export function getDashboardSummary(token: string, visionAreaId?: string, from?: string, to?: string) {
+  const params = new URLSearchParams();
+  if (visionAreaId) {
+    params.set('visionAreaId', visionAreaId);
+  }
+  if (from) {
+    params.set('from', from);
+  }
+  if (to) {
+    params.set('to', to);
+  }
+  const query = params.toString();
+  return apiClient<DashboardSummary>(`/dashboard${query ? `?${query}` : ''}`, { token });
 }

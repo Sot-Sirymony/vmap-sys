@@ -299,6 +299,8 @@ export type DashboardSummary = {
   blockedTasks: number;
   averageProgress: number;
   tasksDueThisWeek: number;
+  tasksDueInPeriod: number;
+  completedTasksInPeriod: number;
   goalsByStatus: Record<string, number>;
   dreamsByVisionArea: Record<string, number>;
   tasksByStatus: Record<string, number>;
