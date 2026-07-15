@@ -128,6 +128,46 @@ class DashboardServiceTest {
     }
 
     @Test
+    void scopingToOneAreaExcludesEveryOtherAreasRecords() {
+        VisionArea career = visionArea(1L);
+        VisionArea health = VisionArea.builder().id(2L).user(testUser).code("VA-002").name("Health")
+                .priority(Priority.HIGH).status(LifecycleStatus.ACTIVE).build();
+
+        Dream careerDream = dream(1L, career);
+        Dream healthDream = dream(2L, health);
+        Goal careerGoal = goal(10L, careerDream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(40), false);
+        Goal healthGoal = goal(11L, healthDream, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(80), false);
+        VisionStep careerStep = step(20L, careerGoal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        VisionStep healthStep = step(21L, healthGoal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        TaskItem careerTask = task(30L, careerStep, WorkStatus.BLOCKED, BigDecimal.ZERO);
+        TaskItem healthTask = task(31L, healthStep, WorkStatus.BLOCKED, BigDecimal.ZERO);
+
+        when(visionAreaRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(career, health));
+        when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerDream, healthDream));
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerGoal, healthGoal));
+        when(visionStepRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerStep, healthStep));
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerTask, healthTask));
+
+        DashboardSummaryResponse careerOnly = service.buildDashboardSummary(1L);
+
+        // Every number recomputes for the area — a count, an average, a breakdown,
+        // and the attention findings all have to drop the other area's records.
+        assertThat(careerOnly.totalVisionAreas()).isEqualTo(1);
+        assertThat(careerOnly.activeDreams()).isEqualTo(1);
+        assertThat(careerOnly.blockedTasks()).isEqualTo(1);
+        assertThat(careerOnly.averageProgress()).isEqualByComparingTo(BigDecimal.valueOf(40).setScale(2));
+        assertThat(careerOnly.attention().blockedTasksWithoutPartner())
+                .extracting(com.visionmapping.dto.response.TaskItemResponse::id)
+                .containsExactly(30L);
+
+        DashboardSummaryResponse everything = service.buildDashboardSummary(null);
+
+        assertThat(everything.totalVisionAreas()).isEqualTo(2);
+        assertThat(everything.blockedTasks()).isEqualTo(2);
+        assertThat(everything.averageProgress()).isEqualByComparingTo(BigDecimal.valueOf(60).setScale(2));
+    }
+
+    @Test
     void attentionFlagsComplexStepsThatHaveNoTasks() {
         Goal parentGoal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
         VisionStep complexWithoutTasks = step(20L, parentGoal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, true, false);

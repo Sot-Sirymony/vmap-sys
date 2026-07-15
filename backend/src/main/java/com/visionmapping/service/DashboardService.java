@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -75,16 +76,37 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardSummaryResponse buildDashboardSummary() {
+        return buildDashboardSummary(null);
+    }
+
+    /**
+     * @param visionAreaId scope every number to one area, or null for the whole
+     *                     portfolio. Scoping happens here rather than in the
+     *                     browser because what the client receives are already
+     *                     sums — you cannot re-filter a total by area without the
+     *                     rows behind it.
+     */
+    @Transactional(readOnly = true)
+    public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId) {
         Long userId = lookup.userId();
-        List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(userId);
-        List<Dream> dreams = dreamRepository.findByUser_IdAndArchivedFalse(userId);
-        List<Goal> goals = goalRepository.findByUser_IdAndArchivedFalse(userId);
-        List<VisionStep> steps = visionStepRepository.findByUser_IdAndArchivedFalse(userId);
-        List<TaskItem> tasks = taskItemRepository.findByUser_IdAndArchivedFalse(userId);
-        List<Obstacle> obstacles = obstacleRepository.findByUser_IdAndArchivedFalse(userId);
-        List<Partner> partners = partnerRepository.findByUser_IdAndArchivedFalse(userId);
-        List<Review> reviews = reviewRepository.findByUser_IdAndArchivedFalse(userId);
-        List<ProgressLog> progressLogs = progressLogRepository.findByUser_IdAndArchivedFalse(userId);
+        List<VisionArea> areas = scoped(visionAreaRepository.findByUser_IdAndArchivedFalse(userId),
+                VisionArea::getId, visionAreaId);
+        List<Dream> dreams = scoped(dreamRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<Goal> goals = scoped(goalRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<VisionStep> steps = scoped(visionStepRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<TaskItem> tasks = scoped(taskItemRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<Obstacle> obstacles = scoped(obstacleRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<Partner> partners = scoped(partnerRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<Review> reviews = scoped(reviewRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
+        List<ProgressLog> progressLogs = scoped(progressLogRepository.findByUser_IdAndArchivedFalse(userId),
+                DashboardService::areaIdOf, visionAreaId);
         LocalDate today = LocalDate.now(clock);
         LocalDate weekEnd = today.plusDays(7);
         BigDecimal averageProgress = goals.isEmpty()
@@ -169,6 +191,84 @@ public class DashboardService {
                 moonshotGoals,
                 buildAttention(dreams, goals, steps, tasks, partners)
         );
+    }
+
+    /** Keeps only the records belonging to the chosen area; null means keep everything. */
+    private static <T> List<T> scoped(List<T> records, Function<T, Long> areaIdOf, Long visionAreaId) {
+        if (visionAreaId == null) {
+            return records;
+        }
+        return records.stream()
+                .filter(item -> visionAreaId.equals(areaIdOf.apply(item)))
+                .toList();
+    }
+
+    // Which area a record belongs to, walking up the hierarchy. A record that
+    // links to nothing has no area, so it drops out of an area-scoped view —
+    // it genuinely isn't part of that area.
+    private static Long areaIdOf(Dream dream) {
+        return dream.getVisionArea() == null ? null : dream.getVisionArea().getId();
+    }
+
+    private static Long areaIdOf(Goal goal) {
+        return goal.getDream() == null ? null : areaIdOf(goal.getDream());
+    }
+
+    private static Long areaIdOf(VisionStep step) {
+        return step.getGoal() == null ? null : areaIdOf(step.getGoal());
+    }
+
+    private static Long areaIdOf(TaskItem task) {
+        return task.getStep() == null ? null : areaIdOf(task.getStep());
+    }
+
+    private static Long areaIdOf(Obstacle obstacle) {
+        if (obstacle.getRelatedTask() != null) {
+            return areaIdOf(obstacle.getRelatedTask());
+        }
+        if (obstacle.getRelatedStep() != null) {
+            return areaIdOf(obstacle.getRelatedStep());
+        }
+        if (obstacle.getRelatedGoal() != null) {
+            return areaIdOf(obstacle.getRelatedGoal());
+        }
+        if (obstacle.getRelatedDream() != null) {
+            return areaIdOf(obstacle.getRelatedDream());
+        }
+        return null;
+    }
+
+    private static Long areaIdOf(Partner partner) {
+        if (partner.getRelatedVisionArea() != null) {
+            return partner.getRelatedVisionArea().getId();
+        }
+        if (partner.getRelatedTask() != null) {
+            return areaIdOf(partner.getRelatedTask());
+        }
+        if (partner.getRelatedStep() != null) {
+            return areaIdOf(partner.getRelatedStep());
+        }
+        if (partner.getRelatedGoal() != null) {
+            return areaIdOf(partner.getRelatedGoal());
+        }
+        if (partner.getRelatedDream() != null) {
+            return areaIdOf(partner.getRelatedDream());
+        }
+        return null;
+    }
+
+    private static Long areaIdOf(Review review) {
+        if (review.getRelatedVisionArea() != null) {
+            return review.getRelatedVisionArea().getId();
+        }
+        if (review.getRelatedDream() != null) {
+            return areaIdOf(review.getRelatedDream());
+        }
+        return null;
+    }
+
+    private static Long areaIdOf(ProgressLog log) {
+        return log.getRelatedTask() == null ? null : areaIdOf(log.getRelatedTask());
     }
 
     /**

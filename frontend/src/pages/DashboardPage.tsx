@@ -5,6 +5,8 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { getDashboardSummary } from '../api/dashboardApi';
 import { CategoryBreakdownChart } from '../components/dashboard/CategoryBreakdownChart';
 import { ChartTooltipContent } from '../components/dashboard/ChartTooltipContent';
+import { listVisionAreas } from '../api/visionAreaApi';
+import { FilterSelect, optionsFromEntities } from '../components/common/FilterSelect';
 import { AttentionPanel } from '../components/dashboard/AttentionPanel';
 import { DashboardSummary } from '../components/dashboard/DashboardSummary';
 import { EmptyState } from '../components/common/EmptyState';
@@ -28,7 +30,8 @@ import TableRow from '@mui/material/TableRow';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
-import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, WorkStatus } from '../types/vision';
+import { useUrlFilter } from '../hooks/useUrlFilter';
+import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, VisionArea, WorkStatus } from '../types/vision';
 import { neutralFallback } from '../theme';
 import { obstacleTypeLabels, partnerStatusLabels, priorityColors, workStatusColors } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
@@ -85,8 +88,11 @@ const OBSTACLE_TYPE_COLORS: Record<string, string> = {
 export function DashboardPage() {
   const { token } = useAuth();
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
+  const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // In the URL, so a scoped dashboard can be bookmarked and shared.
+  const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
 
   useEffect(() => {
     if (!token) {
@@ -94,13 +100,23 @@ export function DashboardPage() {
     }
 
     setLoading(true);
-    getDashboardSummary(token)
+    getDashboardSummary(token, filterVisionAreaId)
       .then((summaryData) => {
         setSummary(summaryData);
         setError('');
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load dashboard.'))
       .finally(() => setLoading(false));
+  }, [token, filterVisionAreaId]);
+
+  // The dropdown always offers every area, even while the dashboard is scoped to
+  // one — otherwise picking an area would leave you unable to pick a different
+  // one, since the scoped summary only knows about the area you're already in.
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    void listVisionAreas(token).then(setVisionAreas).catch(() => setVisionAreas([]));
   }, [token]);
 
   // Everything below reshapes the single /api/dashboard payload for its
@@ -173,6 +189,15 @@ export function DashboardPage() {
         </Card>
       ) : (
       <>
+      <Card className="filter-bar flex-row">
+        <FilterSelect
+          label="Vision Area"
+          value={filterVisionAreaId}
+          onChange={setFilterVisionAreaId}
+          options={optionsFromEntities(visionAreas, (area) => area.name)}
+          allLabel="All areas"
+        />
+      </Card>
       <DashboardSummary summary={summary} />
       <AttentionPanel attention={summary?.attention} />
       <Card>
