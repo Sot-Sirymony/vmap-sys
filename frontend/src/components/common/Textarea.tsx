@@ -12,5 +12,15 @@ type TextareaProps = {
 };
 
 export function Textarea(props: TextareaProps) {
-  return <TextField variant="outlined" size="small" fullWidth multiline minRows={3} {...props} />;
+  return (
+    <TextField
+      variant="outlined"
+      size="small"
+      fullWidth
+      multiline
+      minRows={3}
+      slotProps={props.autoFocus ? { htmlInput: { 'data-autofocus': true } } : undefined}
+      {...props}
+    />
+  );
 }

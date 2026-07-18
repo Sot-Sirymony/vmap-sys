@@ -23,6 +23,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
+import { QuickAddRow } from '../components/common/QuickAddRow';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
@@ -60,6 +61,7 @@ export function StepsPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [goalId, setGoalId] = useState('');
+  const [quickParentId, setQuickParentId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [sequenceNumber, setSequenceNumber] = useState(1);
@@ -123,6 +125,7 @@ export function StepsPage() {
         setDreams(dreamData);
         setVisionAreas(areaData);
         setGoalId((current) => current || String(goalData[0]?.id ?? ''));
+        setQuickParentId((current) => current || String(goalData[0]?.id ?? ''));
       },
     );
     void listIdealPartnerProfiles(token).then(setProfiles);
@@ -235,6 +238,25 @@ export function StepsPage() {
     setPriority('HIGH');
     setTargetDate('');
     setStatus('NOT_STARTED');
+  }
+
+  // FR-22.1 quick-add: sequence number continues from the goal's last step;
+  // defaults keep BR-16 satisfied.
+  async function handleQuickAdd(title: string) {
+    if (!token || !quickParentId) {
+      return;
+    }
+    const goalSteps = crud.items.filter((step) => String(step.goalId) === quickParentId);
+    const nextSequence = goalSteps.reduce((max, step) => Math.max(max, step.sequenceNumber), 0) + 1;
+    await createStep(token, {
+      goalId: Number(quickParentId),
+      title,
+      sequenceNumber: nextSequence,
+      complex: false,
+      priority: 'MEDIUM',
+      status: 'NOT_STARTED',
+    });
+    await crud.reload();
   }
 
   // Board drag/dropdown move. There is no status PATCH endpoint for steps, so
@@ -402,7 +424,7 @@ export function StepsPage() {
       </label>
       <label>
         Title
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} required />
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
         Sequence
@@ -506,6 +528,16 @@ export function StepsPage() {
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Step view" />
       </div>
+      {crud.items.length > 0 && goals.length > 0 && (
+        <QuickAddRow
+          parentLabel="Goal"
+          parents={goals.map((goal) => ({ value: String(goal.id), label: goal.title }))}
+          parentValue={filterGoalId || quickParentId}
+          onParentChange={setQuickParentId}
+          placeholder="New step title — Enter to add"
+          onAdd={handleQuickAdd}
+        />
+      )}
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
           headline="No steps yet"

@@ -303,7 +303,7 @@ export function DreamsPage() {
       </label>
       <label>
         Title
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} required />
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
         Type

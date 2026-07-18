@@ -211,7 +211,7 @@ export function VisionAreasPage() {
     <>
       <label>
         Name
-        <Input value={name} onChange={(event) => setName(event.target.value)} required />
+        <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus />
       </label>
       <label>
         Priority

@@ -22,6 +22,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
+import { QuickAddRow } from '../components/common/QuickAddRow';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
@@ -91,6 +92,7 @@ export function GoalsPage() {
   // empty. Goals without a target date drop out while a bound is set.
   const [filterTargetFrom, setFilterTargetFrom] = useUrlFilter('targetFrom');
   const [filterTargetTo, setFilterTargetTo] = useUrlFilter('targetTo');
+  const [quickParentId, setQuickParentId] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
   const [bulkApplying, setBulkApplying] = useState(false);
@@ -127,6 +129,7 @@ export function GoalsPage() {
       setDreams(dreamData.filter((dream) => dream.status !== 'ARCHIVED'));
       setVisionAreas(areaData);
       setDreamId((current) => current || String(dreamData[0]?.id ?? ''));
+      setQuickParentId((current) => current || String(dreamData[0]?.id ?? ''));
     });
     void listSteps(token).then((steps) => {
       const counts = new Map<number, number>();
@@ -228,6 +231,21 @@ export function GoalsPage() {
     }
     return true;
   });
+
+  // FR-22.1 quick-add: title + parent only; defaults keep BR-16 satisfied.
+  async function handleQuickAdd(title: string) {
+    if (!token || !quickParentId) {
+      return;
+    }
+    await createGoal(token, {
+      dreamId: Number(quickParentId),
+      title,
+      priority: 'MEDIUM',
+      status: 'NOT_STARTED',
+      moonshot: false,
+    });
+    await crud.reload();
+  }
 
   // Board drag/dropdown move, using the goal status PATCH endpoint.
   async function handleMove(goal: Goal, nextStatus: WorkStatus) {
@@ -343,7 +361,7 @@ export function GoalsPage() {
       </label>
       <label>
         Title
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} required />
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
         Priority
@@ -461,6 +479,16 @@ export function GoalsPage() {
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Goal view" />
       </div>
+      {crud.items.length > 0 && dreams.length > 0 && (
+        <QuickAddRow
+          parentLabel="Dream"
+          parents={dreams.map((dream) => ({ value: String(dream.id), label: dream.title }))}
+          parentValue={filterDreamId || quickParentId}
+          onParentChange={setQuickParentId}
+          placeholder="New goal title — Enter to add"
+          onAdd={handleQuickAdd}
+        />
+      )}
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
           headline="No goals yet"

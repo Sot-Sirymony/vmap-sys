@@ -23,6 +23,7 @@ import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { ProgressBar } from '../components/common/ProgressBar';
+import { QuickAddRow } from '../components/common/QuickAddRow';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -44,7 +45,7 @@ const columns: WorkStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'WAITING', 'BLOCKED
 const blockerCategories: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY', 'DECISION', 'PARTNER', 'MOTIVATION'];
 
 export function TasksBoardPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const filterStepId = searchParams.get('stepId');
@@ -68,9 +69,11 @@ export function TasksBoardPage() {
   // points at it, so the fix is one click away instead of a memory exercise.
   const [profiles, setProfiles] = useState<IdealPartnerProfile[]>([]);
   const [stepId, setStepId] = useState('');
+  const [quickParentId, setQuickParentId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [owner, setOwner] = useState('');
+  // FR-22.2: owner defaults to the signed-in user; still editable.
+  const [owner, setOwner] = useState(user?.fullName ?? '');
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -133,6 +136,7 @@ export function TasksBoardPage() {
     void listSteps(token).then((stepData) => {
       setSteps(stepData);
       setStepId((current) => current || filterStepId || String(stepData[0]?.id ?? ''));
+      setQuickParentId((current) => current || filterStepId || String(stepData[0]?.id ?? ''));
     });
     void listGoals(token).then(setGoals);
     void listDreams(token).then(setDreams);
@@ -140,6 +144,24 @@ export function TasksBoardPage() {
     void listIdealPartnerProfiles(token).then(setProfiles);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // FR-22.1/22.2 quick-add: owner defaults to the signed-in user; the due
+  // date — which no default can supply — is asked inline (BR-16).
+  async function handleQuickAdd(title: string, dueDate?: string) {
+    if (!token || !quickParentId || !dueDate) {
+      return;
+    }
+    await createTask(token, {
+      stepId: Number(quickParentId),
+      title,
+      owner: user?.fullName ?? 'Me',
+      priority: 'MEDIUM',
+      dueDate,
+      status: 'NOT_STARTED',
+      progressPercent: 0,
+    });
+    await crud.reload();
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -208,7 +230,7 @@ export function TasksBoardPage() {
     crud.cancelEdit();
     setTitle('');
     setDescription('');
-    setOwner('');
+    setOwner(user?.fullName ?? '');
     setPriority('HIGH');
     setStartDate('');
     setDueDate('');
@@ -327,6 +349,8 @@ export function TasksBoardPage() {
     },
   ];
 
+  // FR-22.4 field order: identity -> classification -> dates -> details,
+  // with labeled dividers so the 14-field form scans as four short groups.
   const formFields = (
     <>
       <label>
@@ -339,31 +363,12 @@ export function TasksBoardPage() {
       </label>
       <label>
         Title
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} required />
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
+      <div className="field-full form-section">Ownership & priority</div>
       <label>
         Owner
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} required />
-      </label>
-      <label>
-        Due Date
-        <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} required />
-      </label>
-      <label>
-        Start Date
-        <Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-      </label>
-      <label>
-        Progress
-        <Input type="number" min="0" max="100" value={progressPercent} onChange={(event) => setProgressPercent(Number(event.target.value))} required />
-      </label>
-      <label>
-        Estimated Hours
-        <Input type="number" min="0" step="0.5" value={estimatedHours} onChange={(event) => setEstimatedHours(event.target.value)} />
-      </label>
-      <label>
-        Actual Hours
-        <Input type="number" min="0" step="0.5" value={actualHours} onChange={(event) => setActualHours(event.target.value)} />
       </label>
       <label>
         Priority
@@ -405,9 +410,33 @@ export function TasksBoardPage() {
           )}
         </label>
       )}
-      <label className="field-full">
-        Blocker Reason
-        <Textarea value={blockerReason} onChange={(event) => setBlockerReason(event.target.value)} required={status === 'BLOCKED'} />
+      {status === 'BLOCKED' && (
+        <label className="field-full">
+          Blocker Reason
+          <Textarea value={blockerReason} onChange={(event) => setBlockerReason(event.target.value)} required />
+        </label>
+      )}
+      <div className="field-full form-section">Dates</div>
+      <label>
+        Start Date
+        <Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+      </label>
+      <label>
+        Due Date
+        <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} required />
+      </label>
+      <div className="field-full form-section">Details</div>
+      <label>
+        Progress
+        <Input type="number" min="0" max="100" value={progressPercent} onChange={(event) => setProgressPercent(Number(event.target.value))} required />
+      </label>
+      <label>
+        Estimated Hours
+        <Input type="number" min="0" step="0.5" value={estimatedHours} onChange={(event) => setEstimatedHours(event.target.value)} />
+      </label>
+      <label>
+        Actual Hours
+        <Input type="number" min="0" step="0.5" value={actualHours} onChange={(event) => setActualHours(event.target.value)} />
       </label>
       <label className="field-full">
         Next Action
@@ -504,6 +533,17 @@ export function TasksBoardPage() {
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Task view" />
       </div>
+      {crud.items.length > 0 && steps.length > 0 && (
+        <QuickAddRow
+          parentLabel="Step"
+          parents={steps.map((step) => ({ value: String(step.id), label: step.title }))}
+          parentValue={quickParentId}
+          onParentChange={setQuickParentId}
+          placeholder="New task title"
+          withDueDate
+          onAdd={handleQuickAdd}
+        />
+      )}
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
           headline="No tasks yet"

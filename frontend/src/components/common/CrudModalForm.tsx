@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
@@ -59,7 +59,24 @@ export function CrudModalForm({
   children,
 }: CrudModalFormProps) {
   const [creatingInternal, setCreatingInternal] = useState(false);
+  // FR-22.3 "Save & add another": remounting the form after a kept-open save
+  // re-fires the first field's autoFocus for the next entry.
+  const [formKey, setFormKey] = useState(0);
+  const addAnotherRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const creating = creatingProp ?? creatingInternal;
+
+  // After a kept-open save the form remounts; hand focus back to the first
+  // field so the next entry can start typing immediately.
+  useEffect(() => {
+    if (formKey === 0) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      formRef.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [formKey]);
 
   function setCreating(next: boolean) {
     onCreatingChange?.(next);
@@ -78,10 +95,16 @@ export function CrudModalForm({
   }, [autoOpenCreate]);
 
   async function handleCreateSubmit(event: FormEvent) {
+    const keepOpen = addAnotherRef.current;
+    addAnotherRef.current = false;
     const result = onSubmit(event);
     const success = result instanceof Promise ? await result : true;
     if (success) {
-      setCreating(false);
+      if (keepOpen) {
+        setFormKey((key) => key + 1);
+      } else {
+        setCreating(false);
+      }
     }
   }
 
@@ -107,11 +130,14 @@ export function CrudModalForm({
       )}
       {creating && (
         <Modal title={editTitle.replace('Edit', 'Create')} onClose={() => setCreating(false)}>
-          <form className="form-grid" onSubmit={(event) => void handleCreateSubmit(event)}>
+          <form className="form-grid" key={formKey} ref={formRef} onSubmit={(event) => void handleCreateSubmit(event)}>
             {children}
             <div className="field-full row-actions">
               {extraActions}
-              <Button type="submit" disabled={saving}>{saving ? 'Saving...' : createLabel}</Button>
+              <Button type="submit" disabled={saving} onClick={() => { addAnotherRef.current = false; }}>{saving ? 'Saving...' : createLabel}</Button>
+              <Button type="submit" variant="secondary" disabled={saving} onClick={() => { addAnotherRef.current = true; }}>
+                Save & add another
+              </Button>
               <Button type="button" variant="secondary" onClick={() => setCreating(false)}>Cancel</Button>
             </div>
           </form>

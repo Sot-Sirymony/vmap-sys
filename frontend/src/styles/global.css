@@ -557,6 +557,62 @@ a {
   color: var(--text-soft);
 }
 
+/* FR-22.1 list-page quick-add row: parent select + title (+ due date) + Add. */
+.quick-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 10px 18px;
+}
+
+.quick-add-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-meta);
+  font-weight: 600;
+  color: var(--text-label);
+  min-width: 170px;
+}
+
+.quick-add-row .quick-add-title {
+  flex: 1 1 240px;
+}
+
+.quick-add-row button {
+  margin-bottom: 2px;
+}
+
+/* FR-22.4 labeled section divider inside long modal forms. */
+.form-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: var(--font-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.form-section::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* FR-22.4 one required-field standard: any control carrying the required
+   attribute (or MUI's aria-required) gets a quiet "Required" caption — no
+   per-form markup needed. */
+.form-grid > label:has([required], [aria-required='true'])::after {
+  content: 'Required';
+  font-size: var(--font-caption);
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
 /* FR-21.3 dream wizard */
 .wizard-progress {
   margin: 0 0 12px;

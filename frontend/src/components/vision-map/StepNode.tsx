@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { createTask } from '../../api/taskApi';
+import { useAuth } from '../../context/AuthContext';
 import Chip from '@mui/material/Chip';
 import type { TaskItem, VisionStep } from '../../types/vision';
 import { Button } from '../common/Button';
@@ -17,9 +18,11 @@ type StepNodeProps = {
 };
 
 export function StepNode({ step, tasks, token, onDataChange }: StepNodeProps) {
+  const { user } = useAuth();
   const stepTasks = tasks.filter((task) => task.stepId === step.id);
   const [title, setTitle] = useState('');
-  const [owner, setOwner] = useState('');
+  // FR-22.2: owner defaults to the signed-in user; still editable inline.
+  const [owner, setOwner] = useState(user?.fullName ?? '');
   const [dueDate, setDueDate] = useState('');
   const [busy, setBusy] = useState(false);
 

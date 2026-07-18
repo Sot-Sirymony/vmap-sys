@@ -389,7 +389,7 @@ instructions?*
 | FR-19 | Experience baseline & audit program | M | 🔶 Nearly done — static + runtime instruments complete 2026-07-18 (`docs/hci-audit.md`, `docs/uxui-audit/` incl. axe baseline + 58 screenshots); only the human instruments remain: first-use test + SUS (M-1/M-3/M-6, blocked on O-7 participants) | |
 | FR-20 | Design-system foundations (type ramp, states, motion) | M | ✅ Done 2026-07-18 | |
 | FR-21 | Guided onboarding & dream coaching wizard | M | ✅ Done 2026-07-18 | |
-| FR-22 | Low-friction data entry (quick-add, form pass) | M | 📋 Planned | |
+| FR-22 | Low-friction data entry (quick-add, form pass) | M | ✅ Done 2026-07-18 | |
 | FR-23 | Orientation & navigation (breadcrumbs, nav groups) | S | 📋 Planned | |
 | FR-24 | Vision Map as primary workspace | L | 📋 Planned | |
 | FR-25 | Attention & next-action system | M | 📋 Planned | |
@@ -565,7 +565,7 @@ caught and fixed a mount-order bug where the wizard opened before areas
 loaded and Continue stayed disabled. `tsc` clean, 35/35 tests, production
 build green.
 
-### FR-22 Low-Friction Data Entry — 📋 Planned (Effort: M)
+### FR-22 Low-Friction Data Entry — ✅ Done 2026-07-18 (Effort: M)
 
 Cut the modal round-trip cost of repetitive entry. Source: HUCI_V1 B3, B7;
 UX&UI_V1 C6.
@@ -590,6 +590,26 @@ UX&UI_V1 C6.
 2. No quick-add path can produce a record that the full form's validation
    would reject.
 3. Keyboard-only form completion works on every form.
+
+**Shipped (2026-07-18):** `QuickAddRow` (parent select + title, Enter to
+add) on the Goals and Steps pages, and on Tasks with an inline due-date
+field — owner defaults to the signed-in user, priority Medium, status Not
+Started, so no quick-add path violates business rule 5 (BR-16); step
+quick-add continues the goal's sequence numbering. The create form's owner
+field and the Vision Map's task quick-add also default to the signed-in
+user. Form friction pass: first field autofocused in every modal (required
+a `data-autofocus` hand-off in `Modal` because MUI's focus trap overrides
+React autoFocus), Esc/Enter already native, and a **Save & add another**
+submit that keeps the modal open, clears, and refocuses for batch entry.
+The 14-field task form is regrouped per FR-22.4 (identity → ownership &
+priority → dates → details) with labeled section dividers, and blocker
+fields now appear only when status is Blocked. One CSS rule gives every
+required control a quiet "Required" caption — no per-form markup. Verified
+live end-to-end: quick-added a goal/step/task through the real UI
+(defaults confirmed via API) and batch-created two tasks through one
+modal session — which surfaced and fixed two real bugs (empty owner
+default silently blocking submits, and a stale add-another flag after a
+validation-blocked click). `tsc` clean, 35/35 tests, production build.
 
 ### FR-23 Orientation & Navigation — 📋 Planned (Effort: S)
 
