@@ -10,6 +10,7 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -93,6 +94,15 @@ export function DreamDetailPage() {
       {!selectedDream ? (
         <EmptyState>No dream selected.</EmptyState>
       ) : (
+        <>
+        <Breadcrumbs
+          crumbs={[
+            selectedArea
+              ? { label: selectedArea.name, to: `/dreams?visionAreaId=${selectedArea.id}` }
+              : { label: 'Unassigned' },
+            { label: selectedDream.title },
+          ]}
+        />
         <VisionMapTree
           dream={selectedDream}
           visionAreaName={selectedArea?.name ?? 'Unassigned'}
@@ -102,6 +112,7 @@ export function DreamDetailPage() {
           token={token ?? ''}
           onDataChange={load}
         />
+        </>
       )}
     </PageSection>
   );

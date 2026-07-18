@@ -27,6 +27,7 @@ import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useStoredState } from '../hooks/useStoredState';
 import type { LifecycleStatus, Priority, VisionArea, VisionAreaRequest } from '../types/vision';
 import { lifecycleStatusLabels, priorityLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
@@ -69,7 +70,7 @@ export function VisionAreasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-vision-areas', 'list');
   // Count of live dreams per area, for the Dreams column. Loaded here rather than
   // added to the vision-area response, which the shared mapper builds in several
   // places that have no count to hand.
@@ -293,6 +294,7 @@ export function VisionAreasPage() {
         <Card>
           <CardContent>
             <DataTable
+              storageKey="vision-areas"
               rows={filteredAreas}
               columns={columns}
               emptyMessage={hasFilters ? 'No vision areas match these filters.' : 'No vision areas yet.'}

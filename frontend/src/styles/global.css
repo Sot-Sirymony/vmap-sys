@@ -557,6 +557,32 @@ a {
   color: var(--text-soft);
 }
 
+/* FR-23.1 ancestry breadcrumbs — caption line under titles and in cells. */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: var(--font-caption);
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.crumbs a {
+  color: var(--text-soft);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.crumbs-sep {
+  color: var(--text-faint);
+}
+
 /* FR-22.1 list-page quick-add row: parent select + title (+ due date) + Add. */
 .quick-add-row {
   display: flex;

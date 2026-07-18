@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useStoredState } from '../../hooks/useStoredState';
 import Checkbox from '@mui/material/Checkbox';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -72,6 +73,8 @@ type DataTableProps<T> = {
    * number left over from the previous, longer list.
    */
   pageResetKey?: string | number;
+  /** Persist the rows-per-page choice under this key (FR-23.3). */
+  storageKey?: string;
 };
 
 function compare(left: SortValue, right: SortValue) {
@@ -108,11 +111,13 @@ export function DataTable<T extends { id: number }>({
   rowsPerPageOptions = [5, 10, 25, 50],
   defaultRowsPerPage = 10,
   pageResetKey,
+  storageKey,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | undefined>(defaultSortKey);
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultSortDirection);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
+  // FR-23.3: with a storageKey, the rows-per-page choice survives reloads.
+  const [rowsPerPage, setRowsPerPage] = useStoredState(storageKey ? `vms-rows-${storageKey}` : null, defaultRowsPerPage);
 
   useEffect(() => {
     setPage(0);

@@ -17,7 +17,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
-import { navItems } from './nav-items';
+import { navGroups } from './nav-items';
 import { useSidebarState } from './sidebar-context';
 
 const DRAWER_WIDTH = 256;
@@ -117,9 +117,26 @@ function NavUser({ collapsed }: { collapsed: boolean }) {
 function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
   const location = useLocation();
 
+  // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
+  // flat list of eleven entries. Collapsed mode drops the labels and keeps a
+  // subtle divider between groups.
   return (
     <List sx={{ px: 1 }}>
-      {navItems.map((item) => {
+      {navGroups.map((group, groupIndex) => (
+        <li key={group.label} style={{ listStyle: 'none' }}>
+          {collapsed
+            ? groupIndex > 0 && <Divider sx={{ my: 1 }} />
+            : (
+              <Typography
+                component="p"
+                variant="overline"
+                sx={{ px: 1.5, pt: groupIndex === 0 ? 0.5 : 2, pb: 0.5, color: 'text.secondary', letterSpacing: '0.05em' }}
+              >
+                {group.label}
+              </Typography>
+            )}
+          <List disablePadding>
+      {group.items.map((item) => {
         const isActive = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
         const button = (
           <ListItemButton
@@ -151,6 +168,9 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: ()
           </ListItem>
         );
       })}
+          </List>
+        </li>
+      ))}
     </List>
   );
 }

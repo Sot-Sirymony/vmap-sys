@@ -13,6 +13,7 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -34,6 +35,7 @@ import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, IdealPartnerProfile, Priority, TaskItem, VisionArea, VisionStep, VisionStepRequest, WorkStatus } from '../types/vision';
@@ -85,7 +87,7 @@ export function StepsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [autoOpenCreate, setAutoOpenCreate] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-steps', 'list');
   // Ideal partner profiles (FR-15.1): one per step, edited in a small modal.
   const [profiles, setProfiles] = useState<IdealPartnerProfile[]>([]);
   const [profileStep, setProfileStep] = useState<VisionStep | null>(null);
@@ -354,6 +356,18 @@ export function StepsPage() {
     );
   }
 
+  // FR-23.1: each step row shows its ancestry, every segment navigable.
+  function stepCrumbs(step: VisionStep) {
+    const goal = goals.find((item) => item.id === step.goalId);
+    const dream = dreams.find((item) => item.id === goal?.dreamId);
+    const area = visionAreas.find((item) => item.id === dream?.visionAreaId);
+    return [
+      area && { label: area.name, to: `/dreams?visionAreaId=${area.id}` },
+      dream && { label: dream.title, to: `/dreams/${dream.id}` },
+      goal && { label: goal.title, to: `/goals?dreamId=${goal.dreamId}` },
+    ].filter(Boolean) as { label: string; to: string }[];
+  }
+
   const columns: DataTableColumn<VisionStep>[] = [
     { key: 'code', label: 'Code', sortValue: (step) => step.code, render: (step) => step.code },
     {
@@ -364,6 +378,7 @@ export function StepsPage() {
       render: (step) => (
         <>
           {step.title}
+          <Breadcrumbs crumbs={stepCrumbs(step)} />
           {step.complex && taskCountFor(step) === 0 && (
             <div className="coaching-panel step-needs-tasks">
               <strong>Complex step, no tasks yet</strong>
@@ -583,6 +598,7 @@ export function StepsPage() {
       <Card>
         <CardContent>
           <DataTable
+            storageKey="steps"
             rows={filteredSteps}
             columns={columns}
             emptyMessage="No steps match these filters."

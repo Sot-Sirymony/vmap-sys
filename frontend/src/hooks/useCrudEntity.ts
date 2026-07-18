@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '../context/ToastContext';
+import { useStoredState } from './useStoredState';
 
 type UseCrudEntityConfig<T, TRequest> = {
   token: string | null;
@@ -40,7 +41,8 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
+  // FR-23.3: the show-archived choice is remembered per entity per browser.
+  const [showArchived, setShowArchived] = useStoredState(`vms-show-archived-${entityLabel}`, false);
 
   async function reload(includeArchived = showArchived) {
     if (!token) {

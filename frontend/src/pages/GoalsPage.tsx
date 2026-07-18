@@ -13,6 +13,7 @@ import FormControl from '@mui/material/FormControl';
 import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -34,6 +35,7 @@ import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, GoalRequest, Priority, VisionArea, WorkStatus } from '../types/vision';
@@ -97,7 +99,7 @@ export function GoalsPage() {
   const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-goals', 'list');
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
@@ -277,6 +279,16 @@ export function GoalsPage() {
     }
   }
 
+  // FR-23.1: each goal row shows its ancestry, every segment navigable.
+  function goalCrumbs(goal: Goal) {
+    const dream = dreams.find((item) => item.id === goal.dreamId);
+    const area = visionAreas.find((item) => item.id === dream?.visionAreaId);
+    return [
+      area && { label: area.name, to: `/dreams?visionAreaId=${area.id}` },
+      dream && { label: dream.title, to: `/dreams/${dream.id}` },
+    ].filter(Boolean) as { label: string; to: string }[];
+  }
+
   // Shared by the table's action column and the board's cards, so both offer
   // the same row actions.
   function renderGoalActions(goal: Goal) {
@@ -305,16 +317,19 @@ export function GoalsPage() {
       sortValue: (goal) => goal.title,
       sx: { fontWeight: 500 },
       render: (goal) => (
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-          {goal.moonshot && (
-            <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
-              <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} aria-label="Moonshot goal">
-                <Rocket size={16} />
-              </Box>
-            </Tooltip>
-          )}
-          {goal.title}
-        </Box>
+        <>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+            {goal.moonshot && (
+              <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} aria-label="Moonshot goal">
+                  <Rocket size={16} />
+                </Box>
+              </Tooltip>
+            )}
+            {goal.title}
+          </Box>
+          <Breadcrumbs crumbs={goalCrumbs(goal)} />
+        </>
       ),
     },
     {
@@ -539,6 +554,7 @@ export function GoalsPage() {
       <Card>
         <CardContent>
           <DataTable
+            storageKey="goals"
             rows={filteredGoals}
             columns={columns}
             emptyMessage="No goals match these filters."

@@ -390,7 +390,7 @@ instructions?*
 | FR-20 | Design-system foundations (type ramp, states, motion) | M | ✅ Done 2026-07-18 | |
 | FR-21 | Guided onboarding & dream coaching wizard | M | ✅ Done 2026-07-18 | |
 | FR-22 | Low-friction data entry (quick-add, form pass) | M | ✅ Done 2026-07-18 | |
-| FR-23 | Orientation & navigation (breadcrumbs, nav groups) | S | 📋 Planned | |
+| FR-23 | Orientation & navigation (breadcrumbs, nav groups) | S | ✅ Done 2026-07-18 | |
 | FR-24 | Vision Map as primary workspace | L | 📋 Planned | |
 | FR-25 | Attention & next-action system | M | 📋 Planned | |
 | FR-26 | Accessibility compliance (WCAG 2.2 AA) | M | 📋 Planned | |
@@ -611,7 +611,7 @@ modal session — which surfaced and fixed two real bugs (empty owner
 default silently blocking submits, and a stale add-another flag after a
 validation-blocked click). `tsc` clean, 35/35 tests, production build.
 
-### FR-23 Orientation & Navigation — 📋 Planned (Effort: S)
+### FR-23 Orientation & Navigation — ✅ Done 2026-07-18 (Effort: S)
 
 Keep users oriented inside a 5-level hierarchy. Source: HUCI_V1 B5, B6, C2.
 
@@ -631,6 +631,23 @@ Keep users oriented inside a 5-level hierarchy. Source: HUCI_V1 B5, B6, C2.
    one click each via the breadcrumb.
 2. No bookmarked V2.0.0 URL breaks.
 3. A view choice survives navigation away and back, and a page reload.
+
+**Shipped (2026-07-18):** `Breadcrumbs` renders a caption-size clickable
+ancestry line — under every task row (Area › Dream › Goal › Step), step row
+(Area › Dream › Goal), goal row (Area › Dream), and on the Vision Map
+header. Segments navigate to that entity's context (area → its dreams,
+dream → its map, goal → its steps, step → its tasks). The sidebar's eleven
+entries are grouped into **Plan / Execute / Support** sections
+(`navGroups` in nav-items.ts; the flat `navItems` export remains for the
+header's page-label lookup, and collapsed mode shows dividers instead of
+labels). Remembered views via a new `useStoredState` hook: board/list
+choice per page, table rows-per-page (`DataTable storageKey`), and the
+show-archived toggle per entity (`useCrudEntity`) all persist per browser;
+URL filters keep winning as before. All three acceptance criteria verified
+live: sidebar groups render, a Goals board-view choice survived navigation
+and a reload, the first task row exposed 4 ancestry links and the dream
+crumb landed on `/dreams/16` with the tree visible, and a bookmarked
+filtered URL still loads. `tsc` clean, 35/35 tests, production build.
 
 ### FR-24 Vision Map as Primary Workspace — 📋 Planned (Effort: L)
 

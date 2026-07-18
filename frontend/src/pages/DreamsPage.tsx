@@ -30,6 +30,7 @@ import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useStoredState } from '../hooks/useStoredState';
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, VisionArea } from '../types/vision';
 import { dreamStatusLabels, dreamTypeLabels, priorityLabels } from '../utils/enumLabels';
@@ -77,7 +78,7 @@ export function DreamsPage() {
   // form remains for edits and for "skip the guide".
   const [wizardOpen, setWizardOpen] = useState(false);
   const [flatCreateOpen, setFlatCreateOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-dreams', 'list');
 
   // Arrived from a vision area's "Add dream" shortcut or the dashboard's
   // getting-started checklist: pre-select the area and open the wizard, then
@@ -470,6 +471,7 @@ export function DreamsPage() {
         <Card>
           <CardContent>
           <DataTable
+            storageKey="dreams"
             rows={filteredDreams}
             columns={columns}
             emptyMessage={hasFilters ? 'No dreams match these filters.' : 'No dreams yet.'}

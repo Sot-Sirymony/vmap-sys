@@ -13,6 +13,7 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -32,6 +33,7 @@ import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, IdealPartnerProfile, ObstacleType, Priority, TaskItem, TaskItemRequest, VisionArea, VisionStep, WorkStatus } from '../types/vision';
@@ -107,7 +109,7 @@ export function TasksBoardPage() {
     ? columns.filter((column) => column === filterStatus)
     : columns;
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-tasks', 'list');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Arrived from a step's "Add task" shortcut: pre-select that step and open the
@@ -303,8 +305,34 @@ export function TasksBoardPage() {
     return true;
   });
 
+  // FR-23.1 acceptance: from any task row, its step, goal, dream, and area
+  // are each one click away.
+  function taskCrumbs(task: TaskItem) {
+    const step = steps.find((item) => item.id === task.stepId);
+    const goal = goals.find((item) => item.id === step?.goalId);
+    const dream = dreams.find((item) => item.id === goal?.dreamId);
+    const area = visionAreas.find((item) => item.id === dream?.visionAreaId);
+    return [
+      area && { label: area.name, to: `/dreams?visionAreaId=${area.id}` },
+      dream && { label: dream.title, to: `/dreams/${dream.id}` },
+      goal && { label: goal.title, to: `/goals?dreamId=${goal.dreamId}` },
+      step && { label: step.title, to: `/steps?goalId=${step.goalId}` },
+    ].filter(Boolean) as { label: string; to: string }[];
+  }
+
   const taskColumns: DataTableColumn<TaskItem>[] = [
-    { key: 'title', label: 'Task', sortValue: (task) => task.title, sx: { fontWeight: 500 }, render: (task) => task.title },
+    {
+      key: 'title',
+      label: 'Task',
+      sortValue: (task) => task.title,
+      sx: { fontWeight: 500 },
+      render: (task) => (
+        <>
+          {task.title}
+          <Breadcrumbs crumbs={taskCrumbs(task)} />
+        </>
+      ),
+    },
     { key: 'owner', label: 'Owner', sortValue: (task) => task.owner, render: (task) => task.owner },
     { key: 'dueDate', label: 'Due', sortValue: (task) => task.dueDate, render: (task) => task.dueDate },
     {
@@ -563,6 +591,7 @@ export function TasksBoardPage() {
         <Card>
           <CardContent>
             <DataTable
+              storageKey="tasks"
               rows={visibleTasks}
               columns={taskColumns}
               emptyMessage="No tasks match these filters."
