@@ -55,7 +55,7 @@ public class GoalService {
         AppUser user = lookup.currentUser();
         Dream dream = lookup.dream(request.dreamId());
         Goal entity = Goal.builder()
-                .code(nextCode("G", goalRepository.findByUser_Id(user.getId()).size()))
+                .code(nextCode("G", goalRepository.findByUser_Id(user.getId()), Goal::getCode))
                 .user(user)
                 .dream(dream)
                 .title(request.title())

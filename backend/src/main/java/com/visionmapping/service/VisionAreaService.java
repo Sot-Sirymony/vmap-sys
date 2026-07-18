@@ -46,7 +46,7 @@ public class VisionAreaService {
     public VisionAreaResponse createVisionArea(VisionAreaRequest request) {
         AppUser user = lookup.currentUser();
         VisionArea entity = VisionArea.builder()
-                .code(nextCode("VA", visionAreaRepository.findByUser_Id(user.getId()).size()))
+                .code(nextCode("VA", visionAreaRepository.findByUser_Id(user.getId()), VisionArea::getCode))
                 .user(user)
                 .name(request.name())
                 .description(request.description())

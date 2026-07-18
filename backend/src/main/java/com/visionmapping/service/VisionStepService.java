@@ -57,7 +57,7 @@ public class VisionStepService {
         AppUser user = lookup.currentUser();
         Goal goal = lookup.goal(request.goalId());
         VisionStep entity = VisionStep.builder()
-                .code(nextCode("S", visionStepRepository.findByUser_Id(user.getId()).size()))
+                .code(nextCode("S", visionStepRepository.findByUser_Id(user.getId()), VisionStep::getCode))
                 .user(user)
                 .goal(goal)
                 .title(request.title())

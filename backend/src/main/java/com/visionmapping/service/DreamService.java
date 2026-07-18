@@ -48,7 +48,7 @@ public class DreamService {
         AppUser user = lookup.currentUser();
         VisionArea visionArea = lookup.visionArea(request.visionAreaId());
         Dream entity = Dream.builder()
-                .code(nextCode("D", dreamRepository.findByUser_Id(user.getId()).size()))
+                .code(nextCode("D", dreamRepository.findByUser_Id(user.getId()), Dream::getCode))
                 .user(user)
                 .visionArea(visionArea)
                 .title(request.title())

@@ -3,6 +3,7 @@ package com.visionmapping.service.support;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.UserScopedRepository;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Stateless helpers every entity service shares: generating the next display
@@ -22,8 +23,38 @@ public final class ServiceSupport {
                 : repository.findByUser_IdAndArchivedFalse(userId);
     }
 
-    public static String nextCode(String prefix, int currentCount) {
-        return "%s-%03d".formatted(prefix, currentCount + 1);
+    /**
+     * Codes look like "G-007". The next number must come from the highest
+     * existing suffix, not the row count: a permanent delete shrinks the count
+     * while higher codes remain, so a count-based code collides with the
+     * (user_id, code) unique constraint.
+     */
+    public static <T> String nextCode(String prefix, List<T> existing, Function<T, String> codeOf) {
+        int max = 0;
+        for (T item : existing) {
+            max = Math.max(max, codeSuffix(codeOf.apply(item)));
+        }
+        return "%s-%03d".formatted(prefix, max + 1);
+    }
+
+    /**
+     * Numeric suffix of a "G-007"-style code, or 0 when absent. Imported codes
+     * may have non-numeric suffixes; those can never collide with the generated
+     * numeric format, so they count as 0.
+     */
+    private static int codeSuffix(String code) {
+        if (code == null) {
+            return 0;
+        }
+        int dash = code.lastIndexOf('-');
+        if (dash < 0) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(code.substring(dash + 1));
+        } catch (NumberFormatException ignored) {
+            return 0;
+        }
     }
 
     public static boolean isBlank(String value) {

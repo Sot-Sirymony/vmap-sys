@@ -62,7 +62,7 @@ public class TaskItemService {
         AppUser user = lookup.currentUser();
         VisionStep step = lookup.step(request.stepId());
         TaskItem entity = TaskItem.builder()
-                .code(nextCode("T", taskItemRepository.findByUser_Id(user.getId()).size()))
+                .code(nextCode("T", taskItemRepository.findByUser_Id(user.getId()), TaskItem::getCode))
                 .user(user)
                 .step(step)
                 .title(request.title())
