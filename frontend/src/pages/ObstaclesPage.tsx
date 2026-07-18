@@ -28,6 +28,7 @@ import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useSearchParams } from 'react-router-dom';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity, TaskItem, VisionStep } from '../types/vision';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
@@ -51,6 +52,7 @@ export function ObstaclesPage() {
     archive: archiveObstacle,
     permanentlyDelete: permanentlyDeleteObstacle,
     archiveMessage: 'Archived.',
+    undoableArchive: true,
   });
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -63,6 +65,21 @@ export function ObstaclesPage() {
   const [relatedTaskId, setRelatedTaskId] = useState('');
   const [requiredPartnerId, setRequiredPartnerId] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Opened by the command palette / 'n' shortcut (FR-29); param stripped so
+  // refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get('create') !== 'obstacle') {
+      return;
+    }
+    setCreateOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [solution, setSolution] = useState('');

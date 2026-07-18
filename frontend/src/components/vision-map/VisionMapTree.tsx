@@ -10,7 +10,7 @@ import { createStep, updateStep } from '../../api/stepApi';
 import { createTask, updateTask, updateTaskStatus } from '../../api/taskApi';
 import { useAuth } from '../../context/AuthContext';
 import { useStoredState } from '../../hooks/useStoredState';
-import { moonshotTint, moonshotViolet, moonshotVioletDeep } from '../../theme';
+import { moonshotTint, moonshotViolet, moonshotVioletDeep, visionAreaDotColor } from '../../theme';
 import type {
   Dream, DreamRequest, DreamStatus, Goal, GoalRequest, TaskItem, TaskItemRequest,
   VisionStep, VisionStepRequest, WorkStatus,
@@ -357,7 +357,7 @@ export function VisionMapTree({ dream, visionAreaName, goals, steps, tasks, toke
         <div className="map-row" {...rowShellProps(dreamRow)}>
           {chevron(dreamRow)}
           <div className="map-main">
-            <p className="map-area">{visionAreaName}</p>
+            <p className="map-area"><span className="area-dot" style={{ backgroundColor: visionAreaDotColor(dream.visionAreaId) }} aria-hidden="true" /> {visionAreaName}</p>
             <div className="map-line">
               <span className="map-code">{dream.code}</span>
               {titleOrEdit(dreamRow, dream.title)}
@@ -434,7 +434,7 @@ export function VisionMapTree({ dream, visionAreaName, goals, steps, tasks, toke
                                   }
                                   return (
                                     <div className="map-node map-node--task" role="none" key={task.id}>
-                                      <div className="map-row" {...rowShellProps(taskRow)}>
+                                      <div className={`map-row${task.status === 'COMPLETED' ? ' map-row--done' : ''}`} {...rowShellProps(taskRow)}>
                                         <span className="map-chevron map-chevron--spacer" />
                                         <div className="map-main">
                                           <div className="map-line">

@@ -1473,3 +1473,136 @@ button:focus-visible,
     width: 100%;
   }
 }
+
+/* FR-29.1 command palette */
+.palette {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.palette-item--active {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.palette-group {
+  flex-shrink: 0;
+  width: 64px;
+  font-size: var(--font-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+}
+
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-empty {
+  padding: 10px;
+  color: var(--text-soft);
+}
+
+/* FR-29.2 shortcut help */
+.shortcut-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shortcut-table td {
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--font-body-sm);
+}
+
+.shortcut-table kbd {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--background-subtle);
+  font-family: inherit;
+  font-size: var(--font-meta);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* FR-29.5 completed records: quietly done, not shouting */
+.data-table tr.row-done td,
+.map-row--done .map-title {
+  color: var(--text-soft);
+}
+
+.map-row--done .map-title {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* FR-29.5 per-area identity dots */
+.area-dot-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.area-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* FR-29.5 print-friendly pages (weekly reviews especially): content only. */
+@media print {
+  .MuiDrawer-root,
+  .MuiAppBar-root,
+  .filter-bar,
+  .summary-strip,
+  .quick-add-row,
+  .view-toggle-row,
+  .page-heading-actions,
+  .toast-stack,
+  .create-trigger {
+    display: none !important;
+  }
+
+  .page-shell {
+    padding: 0;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}

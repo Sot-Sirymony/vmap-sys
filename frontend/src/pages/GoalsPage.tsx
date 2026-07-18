@@ -42,6 +42,7 @@ import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../compone
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, GoalRequest, Priority, VisionArea, WorkStatus } from '../types/vision';
 import { moonshotViolet } from '../theme';
+import { goalRequest } from '../utils/entityRequests';
 import { priorityLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
@@ -100,6 +101,7 @@ export function GoalsPage() {
   const [quickParentId, setQuickParentId] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
+  const [bulkPriority, setBulkPriority] = useState<Priority>('HIGH');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-goals', 'list');
@@ -123,7 +125,7 @@ export function GoalsPage() {
     next.delete('parent');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!token) {
@@ -265,6 +267,26 @@ export function GoalsPage() {
       await crud.reload();
     } catch (moveError) {
       crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update goal status.');
+    }
+  }
+
+  async function handleBulkPriority() {
+    if (!token || selectedIds.size === 0) {
+      return;
+    }
+    setBulkApplying(true);
+    try {
+      await Promise.all([...selectedIds].map((id) => {
+        const goal = crud.items.find((item) => item.id === id);
+        return goal ? updateGoal(token, goal.id, { ...goalRequest(goal), priority: bulkPriority }) : Promise.resolve();
+      }));
+      await crud.reload();
+      showToast(`Updated ${selectedIds.size} goal${selectedIds.size === 1 ? '' : 's'}.`);
+      setSelectedIds(new Set());
+    } catch (bulkError) {
+      crud.setError(bulkError instanceof Error ? bulkError.message : 'Unable to update selected goals.');
+    } finally {
+      setBulkApplying(false);
     }
   }
 
@@ -602,6 +624,18 @@ export function GoalsPage() {
                   <Button type="button" onClick={() => void handleBulkApply()} disabled={bulkApplying}>
                     {bulkApplying ? 'Applying...' : 'Apply'}
                   </Button>
+                  <label>
+                    Set priority
+                    <FormControl fullWidth size="small">
+                      <Select SelectDisplayProps={{ 'aria-label': 'Set priority' }} value={bulkPriority} onChange={(event) => setBulkPriority(event.target.value as Priority)}>
+                        <MenuItem value="LOW">Low</MenuItem>
+                        <MenuItem value="MEDIUM">Medium</MenuItem>
+                        <MenuItem value="HIGH">High</MenuItem>
+                        <MenuItem value="CRITICAL">Critical</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </label>
+                  <Button type="button" onClick={() => void handleBulkPriority()} disabled={bulkApplying}>Apply</Button>
                   <BulkArchiveAction
                     selectedIds={selectedIds}
                     entityLabel="goal(s)"

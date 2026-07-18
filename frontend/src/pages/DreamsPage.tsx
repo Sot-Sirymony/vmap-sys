@@ -99,7 +99,7 @@ export function DreamsPage() {
     next.delete('parent');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!token) {

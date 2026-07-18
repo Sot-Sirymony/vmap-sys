@@ -396,7 +396,7 @@ instructions?*
 | FR-26 | Accessibility compliance (WCAG 2.2 AA) | M | ✅ Done 2026-07-18 | |
 | FR-27 | List, board, and auth visual refresh | M | ✅ Done 2026-07-18 | |
 | FR-28 | Mobile layouts | L | ✅ Done 2026-07-18 | |
-| FR-29 | Efficiency & delight layer (stretch) | M | 📋 Stretch | |
+| FR-29 | Efficiency & delight layer (stretch) | M | ✅ Done 2026-07-18 | |
 
 ### B-Scope
 
@@ -878,7 +878,7 @@ tasks card list and single-column board with switcher rendered, and a
 sweep of all thirteen pages found zero horizontal-scroll offenders.
 `tsc` clean, 35/35 tests, production build green.
 
-### FR-29 Efficiency & Delight Layer — 📋 Stretch (Effort: M)
+### FR-29 Efficiency & Delight Layer — ✅ Done 2026-07-18 (Effort: M)
 
 For returning daily users; ships only if capacity allows after FR-19…FR-28.
 Source: HUCI_V1 Phase D; UX&UI_V1 Phase D.
@@ -899,6 +899,32 @@ Source: HUCI_V1 Phase D; UX&UI_V1 Phase D.
 1. Every shortcut is discoverable (in-app shortcut list) and never
    conflicts with browser or screen-reader defaults.
 2. Undo restores the exact prior state, including archived children.
+
+**Shipped (2026-07-18):** FR-29.1 — `CommandPalette` on Ctrl/⌘+K: pages,
+create actions, and dreams (jump to map), substring-filtered with full
+keyboard operation. FR-29.2 — global shortcuts (`g` sequences to eight
+pages, `n` = create on the current page, `/` = focus search, `?` = the
+in-app shortcut list satisfying AC-1); single-letter keys fire only
+outside fields and dialogs, and yield to anything that already claimed
+the event (the Vision Map's own keys win). The `?create` URL contract now
+re-fires on in-app navigation and extends to Partners/Obstacles, so the
+palette and `n` work from anywhere. FR-29.3 — archive toasts carry
+**Undo**, enabled deliberately on leaf entities only (tasks, partners,
+obstacles, communication, reviews): backend restore cascades up the
+parent chain but not down to cascade-archived children, so undo on
+parents could not honestly meet AC-2's "exact prior state" — parents keep
+the C-2 confirm + show-archived restore. Verified live: an archived task
+returned with title, due date, and status intact. FR-29.4 — the Tasks
+table gained bulk status (PATCH) and bulk priority (full-update) actions
+beside bulk archive, Goals gained bulk priority, and the Tasks summary
+strip gained two preset chips ("My overdue", "Due this week"). FR-29.5 —
+progress bars animate on the motion tokens, completed rows/tree titles
+render quietly struck, Vision Areas carry fixed-palette identity dots
+(never status hues, per BR-14) in their table and on the map header, and
+a print stylesheet strips chrome for printable Reviews. All verified
+live: palette navigation, `g t`, `/`, `n`, `?`, the undo round-trip, and
+bulk priority on two tasks. `tsc` clean, 35/35 tests, production build
+green. **Resolves O-6: FR-29 ships in V2.1.**
 
 ### B-New Business Rules
 
@@ -945,5 +971,5 @@ touched once.
 |---|---|---|---|
 | O-4 | Task quick-add vs required fields: default due date to a value (e.g., +7 days) or always prompt inline? BR-16 allows either; pick one behavior. | FR-22 build | ✅ Resolved 2026-07-18 — the Vision Map's task quick-add already prompts inline for title + owner + due date (`StepNode.tsx`); FR-22 follows that precedent (inline prompt, no invented default date). |
 | O-5 | Sidebar regrouping (FR-23.2): announce in-app once, or ship silently? Returning users know the flat list. | FR-23 ship | Open |
-| O-6 | Does FR-29 ship in V2.1 or move to V3? Decide after FR-24 lands and remaining capacity is known. | Release cut | Open |
+| O-6 | Does FR-29 ship in V2.1 or move to V3? Decide after FR-24 lands and remaining capacity is known. | Release cut | ✅ Resolved 2026-07-18 — shipped in V2.1 (capacity allowed after FR-20…FR-28 landed). |
 | O-7 | First-use test participants (FR-19.3): who are the 3–5 testers and when? Needs scheduling before build starts. | FR-19 | Open |

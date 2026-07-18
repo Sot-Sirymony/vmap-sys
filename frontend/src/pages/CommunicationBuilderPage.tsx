@@ -68,6 +68,7 @@ export function CommunicationBuilderPage() {
     archive: archiveCommunicationMessage,
     permanentlyDelete: permanentlyDeleteCommunicationMessage,
     restore: restoreCommunicationMessage,
+    undoableArchive: true,
   });
   const [partners, setPartners] = useState<Partner[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);

@@ -197,6 +197,24 @@ export const heatmapLevelColors = ['#e1e1e1', '#dff0df', '#6bbf6c', '#107c10', '
 export const chartBlueRamp = ['#005a9e', '#0078d4', '#2b88d8', '#71afe5', '#c7e0f4', '#deecf9'] as const;
 export const chartPrimary = BLUE_MOVING;
 
+// FR-29.5: per-Vision-Area identity dots. A fixed mini-palette of Fluent
+// hues deliberately distinct from the status and priority palettes (BR-14)
+// — an area's dot never reads as a state. Index by `area.id % length`.
+export const visionAreaDotPalette = [
+  '#0078d4', // blue
+  '#038387', // teal
+  '#8764b8', // purple
+  '#498205', // green (Fluent "forest")
+  '#c239b3', // magenta
+  '#986f0b', // brass
+  '#005b70', // steel
+  '#8e562e', // bronze
+] as const;
+
+export function visionAreaDotColor(areaId: number): string {
+  return visionAreaDotPalette[Math.abs(areaId) % visionAreaDotPalette.length];
+}
+
 /**
  * FR-18.3 — curated accent choices. Each accent ships pre-validated light and
  * dark values (main/hover/pressed on the brand ramp, plus the tint pair used

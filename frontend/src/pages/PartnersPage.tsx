@@ -32,6 +32,7 @@ import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useSearchParams } from 'react-router-dom';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, IdealPartnerProfile, OfferType, Partner, PartnerRequest, PartnerStatus, PartnerSupportType, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { offerTypeLabels, partnerStatusLabels, partnerSupportTypeLabels } from '../utils/enumLabels';
@@ -75,6 +76,7 @@ export function PartnersPage() {
     archive: archivePartner,
     permanentlyDelete: permanentlyDeletePartner,
     restore: restorePartner,
+    undoableArchive: true,
   });
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
@@ -82,6 +84,21 @@ export function PartnersPage() {
   const [steps, setSteps] = useState<VisionStep[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Opened by the command palette / 'n' shortcut (FR-29); param stripped so
+  // refresh doesn't reopen it.
+  useEffect(() => {
+    if (searchParams.get('create') !== 'partner') {
+      return;
+    }
+    setCreateOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [organization, setOrganization] = useState('');

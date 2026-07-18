@@ -41,6 +41,7 @@ import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../compone
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, IdealPartnerProfile, ObstacleType, Priority, TaskItem, TaskItemRequest, VisionArea, VisionStep, WorkStatus } from '../types/vision';
 import { nudgeAfterTaskComplete } from '../utils/completionNudge';
+import { taskRequest } from '../utils/entityRequests';
 import { isOverdue } from '../utils/overdue';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
@@ -67,6 +68,7 @@ export function TasksBoardPage() {
     archive: archiveTask,
     permanentlyDelete: permanentlyDeleteTask,
     restore: restoreTask,
+    undoableArchive: true,
   });
   const [steps, setSteps] = useState<VisionStep[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -116,6 +118,50 @@ export function TasksBoardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-tasks', 'list');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<WorkStatus>('IN_PROGRESS');
+  const [bulkPriority, setBulkPriority] = useState<Priority>('HIGH');
+  const [bulkApplying, setBulkApplying] = useState(false);
+
+  // FR-29.4 bulk edits. Status uses the PATCH endpoint; priority has no
+  // PATCH, so each task is sent back whole with only priority changed.
+  async function applyBulk(kind: 'status' | 'priority') {
+    if (!token || selectedIds.size === 0) {
+      return;
+    }
+    setBulkApplying(true);
+    try {
+      await Promise.all([...selectedIds].map((id) => {
+        if (kind === 'status') {
+          return updateTaskStatus(token, id, bulkStatus);
+        }
+        const task = crud.items.find((item) => item.id === id);
+        return task ? updateTask(token, task.id, { ...taskRequest(task), priority: bulkPriority }) : Promise.resolve();
+      }));
+      await crud.reload();
+      showToast(`Updated ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}.`);
+      setSelectedIds(new Set());
+    } catch (bulkError) {
+      crud.setError(bulkError instanceof Error ? bulkError.message : 'Unable to update selected tasks.');
+    } finally {
+      setBulkApplying(false);
+    }
+  }
+
+  // FR-29.4 preset filters: one tap to the two triage views used daily.
+  function applyMyOverdue() {
+    setFilterOwner(user?.fullName ?? '');
+    if (!filterOverdueOnly) {
+      setFilterOverdueOnly(true);
+    }
+  }
+
+  function applyDueThisWeek() {
+    const today = new Date();
+    const iso = (date: Date) => date.toISOString().slice(0, 10);
+    const end = new Date(today);
+    end.setDate(today.getDate() + 7);
+    setFilterBatch({ dueFrom: iso(today), dueTo: iso(end) });
+  }
 
   // Arrived from a step's "Add task" shortcut: pre-select that step and open the
   // create form, then strip the params so a refresh doesn't reopen it.
@@ -133,7 +179,7 @@ export function TasksBoardPage() {
     next.delete('parent');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!token) {
@@ -533,6 +579,8 @@ export function TasksBoardPage() {
           { key: 'overdue', label: 'overdue', count: crud.items.filter((task) => isOverdue(task.dueDate, task.status)).length, tone: 'critical', active: filterOverdueOnly, onClick: () => setFilterOverdueOnly(!filterOverdueOnly) },
           { key: 'blocked', label: 'blocked', count: crud.items.filter((task) => task.status === 'BLOCKED').length, tone: 'warning', active: filterStatus === 'BLOCKED', onClick: () => setFilterStatus(filterStatus === 'BLOCKED' ? '' : 'BLOCKED') },
           { key: 'completed', label: 'completed', count: crud.items.filter((task) => task.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
+          { key: 'preset-mine', label: '· My overdue', count: crud.items.filter((task) => task.owner === (user?.fullName ?? '') && isOverdue(task.dueDate, task.status)).length, active: Boolean(filterOwner) && filterOverdueOnly, onClick: applyMyOverdue },
+          { key: 'preset-week', label: '· Due this week', count: crud.items.filter((task) => { const d = new Date(`${task.dueDate}T00:00:00`); const now = new Date(); const end = new Date(now); end.setDate(now.getDate() + 7); return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= end && task.status !== 'COMPLETED'; }).length, active: Boolean(filterDueFrom && filterDueTo), onClick: applyDueThisWeek },
         ]}
       />
       <Card className="filter-bar flex-row">
@@ -638,20 +686,43 @@ export function TasksBoardPage() {
               defaultSortKey="priority"
               defaultSortDirection="desc"
               pageResetKey={`${searchTerm}|${filterOwner}|${filterPriority}|${filterStatus}|${filterVisionAreaId}|${filterDreamId}|${filterGoalId}|${filterDueFrom}|${filterDueTo}|${filterOverdueOnly}|${filterStepId ?? ''}`}
-              rowClassName={(task) => (task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : '')}
+              rowClassName={(task) => (task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : task.status === 'COMPLETED' ? 'row-done' : '')}
               selection={{
                 selectedIds,
                 onChange: setSelectedIds,
                 rowLabel: (task) => task.title,
                 actions: (
-                  <BulkArchiveAction
-                    selectedIds={selectedIds}
-                    entityLabel="task(s)"
-                    onArchive={async (ids) => {
-                      await crud.archiveMany(ids);
-                      setSelectedIds(new Set());
-                    }}
-                  />
+                  <>
+                    <label>
+                      Set status
+                      <FormControl fullWidth size="small">
+                        <Select SelectDisplayProps={{ 'aria-label': 'Set status' }} value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as WorkStatus)}>
+                          {columns.map((column) => <MenuItem value={column} key={column}>{workStatusLabels[column]}</MenuItem>)}
+                        </Select>
+                      </FormControl>
+                    </label>
+                    <Button type="button" onClick={() => void applyBulk('status')} disabled={bulkApplying}>Apply</Button>
+                    <label>
+                      Set priority
+                      <FormControl fullWidth size="small">
+                        <Select SelectDisplayProps={{ 'aria-label': 'Set priority' }} value={bulkPriority} onChange={(event) => setBulkPriority(event.target.value as Priority)}>
+                          <MenuItem value="LOW">Low</MenuItem>
+                          <MenuItem value="MEDIUM">Medium</MenuItem>
+                          <MenuItem value="HIGH">High</MenuItem>
+                          <MenuItem value="CRITICAL">Critical</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </label>
+                    <Button type="button" onClick={() => void applyBulk('priority')} disabled={bulkApplying}>Apply</Button>
+                    <BulkArchiveAction
+                      selectedIds={selectedIds}
+                      entityLabel="task(s)"
+                      onArchive={async (ids) => {
+                        await crud.archiveMany(ids);
+                        setSelectedIds(new Set());
+                      }}
+                    />
+                  </>
                 ),
               }}
             />

@@ -13,6 +13,12 @@ type UseCrudEntityConfig<T, TRequest> = {
   permanentlyDelete?: (token: string, id: number) => Promise<void>;
   saveMessage?: string;
   archiveMessage?: string;
+  /**
+   * FR-29.3: offer Undo on the archive toast. Enabled only for leaf entities
+   * (no cascade), where restore provably recreates the exact prior state —
+   * parents with archived children keep the confirm + show-archived flow.
+   */
+  undoableArchive?: boolean;
   restoreMessage?: string;
   deleteMessage?: string;
 };
@@ -33,7 +39,7 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
   const {
     token, entityLabel, list, create, update, archive, restore, permanentlyDelete,
     saveMessage = 'Saved.', archiveMessage = 'Archived.', restoreMessage = 'Restored.',
-    deleteMessage = 'Permanently deleted.',
+    deleteMessage = 'Permanently deleted.', undoableArchive = false,
   } = config;
   const { showToast } = useToast();
   const [items, setItems] = useState<T[]>([]);
@@ -88,6 +94,21 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     }
   }
 
+  async function undoArchive(ids: number[]) {
+    if (!token || !restore) {
+      return;
+    }
+    try {
+      for (const id of ids) {
+        await restore(token, id);
+      }
+      await reload();
+      showToast(restoreMessage);
+    } catch (restoreError) {
+      setError(restoreError instanceof Error ? restoreError.message : `Unable to restore ${entityLabel}.`);
+    }
+  }
+
   async function remove(id: number) {
     if (!token) {
       return;
@@ -95,7 +116,11 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     try {
       await archive(token, id);
       await reload();
-      showToast(archiveMessage);
+      if (undoableArchive) {
+        showToast(archiveMessage, { action: { label: 'Undo', onClick: () => void undoArchive([id]) } });
+      } else {
+        showToast(archiveMessage);
+      }
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : `Unable to archive ${entityLabel}.`);
     }
@@ -108,7 +133,11 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     try {
       await Promise.all(ids.map((id) => archive(token, id)));
       await reload();
-      showToast(`Archived ${ids.length} item${ids.length === 1 ? '' : 's'}.`);
+      if (undoableArchive) {
+        showToast(`Archived ${ids.length} item${ids.length === 1 ? '' : 's'}.`, { action: { label: 'Undo', onClick: () => void undoArchive(ids) } });
+      } else {
+        showToast(`Archived ${ids.length} item${ids.length === 1 ? '' : 's'}.`);
+      }
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : `Unable to archive ${entityLabel}.`);
     }

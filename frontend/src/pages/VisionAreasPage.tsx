@@ -26,6 +26,7 @@ import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
+import { visionAreaDotColor } from '../theme';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import type { LifecycleStatus, Priority, VisionArea, VisionAreaRequest } from '../types/vision';
@@ -61,7 +62,7 @@ export function VisionAreasPage() {
     next.delete('create');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('HIGH');
@@ -181,7 +182,18 @@ export function VisionAreasPage() {
 
   const columns: DataTableColumn<VisionArea>[] = [
     { key: 'code', label: 'Code', sortValue: (area) => area.code, render: (area) => area.code },
-    { key: 'name', label: 'Name', sortValue: (area) => area.name, sx: { fontWeight: 500 }, render: (area) => area.name },
+    {
+      key: 'name',
+      label: 'Name',
+      sortValue: (area) => area.name,
+      sx: { fontWeight: 500 },
+      render: (area) => (
+        <span className="area-dot-label">
+          <span className="area-dot" style={{ backgroundColor: visionAreaDotColor(area.id) }} aria-hidden="true" />
+          {area.name}
+        </span>
+      ),
+    },
     {
       key: 'priority',
       label: 'Priority',

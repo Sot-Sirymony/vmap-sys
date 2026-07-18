@@ -83,6 +83,7 @@ export function ReviewsPage() {
     archive: archiveReview,
     permanentlyDelete: permanentlyDeleteReview,
     restore: restoreReview,
+    undoableArchive: true,
   });
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
