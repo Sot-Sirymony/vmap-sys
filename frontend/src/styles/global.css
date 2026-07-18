@@ -224,10 +224,16 @@ button:focus-visible,
 
 .metric-card,
 .empty-state,
-.kanban-column,
 .auth-panel {
   background: var(--card);
   border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* FR-27.2: the column is a recessed tray; the cards float on it. */
+.kanban-column {
+  background: var(--background-subtle);
+  border: 1px solid var(--border-soft);
   border-radius: 4px;
 }
 
@@ -582,6 +588,24 @@ button:focus-visible,
 .empty-state {
   padding: 18px;
   color: var(--text-soft);
+}
+
+/* FR-27.1 summary strip: vital-sign chips above the table. */
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* FR-27.1 relative dates: "overdue" is the text channel, color is backup. */
+.date-overdue {
+  color: var(--destructive);
+  font-weight: 600;
+}
+
+.date-soon {
+  font-weight: 600;
 }
 
 /* FR-23.1 ancestry breadcrumbs — caption line under titles and in cells. */
@@ -967,10 +991,72 @@ button:focus-visible,
 
 .auth-shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
   padding: 20px;
   background: #17324d;
+}
+
+/* FR-27.3 brand hero. Fixed light tones on the fixed navy panel. */
+.auth-hero {
+  width: min(360px, 100%);
+  color: #e8eef5;
+  display: grid;
+  gap: 14px;
+}
+
+.auth-brand {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-title-panel);
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.auth-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #0078d4;
+  color: #ffffff;
+  font-size: var(--font-body-sm);
+  font-weight: 700;
+}
+
+.auth-tagline {
+  margin: 0;
+  font-size: var(--font-body);
+  color: #b9c8d8;
+}
+
+.auth-funnel {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.auth-funnel-level {
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: rgba(120, 180, 235, 0.18);
+  border: 1px solid rgba(120, 180, 235, 0.35);
+  color: #cfe0f1;
+  font-size: var(--font-meta);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .auth-hero {
+    display: none;
+  }
 }
 
 .auth-panel {

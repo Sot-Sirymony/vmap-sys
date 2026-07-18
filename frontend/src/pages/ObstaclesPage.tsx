@@ -11,6 +11,7 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
+import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -21,6 +22,7 @@ import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
@@ -60,6 +62,7 @@ export function ObstaclesPage() {
   const [relatedStepId, setRelatedStepId] = useState('');
   const [relatedTaskId, setRelatedTaskId] = useState('');
   const [requiredPartnerId, setRequiredPartnerId] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [solution, setSolution] = useState('');
@@ -344,12 +347,19 @@ export function ObstaclesPage() {
   );
 
   return (
-    <PageSection title="Obstacles" subtitle="Track blockers and the support needed to resolve them.">
+    <PageSection
+      title="Obstacles"
+      subtitle="Track blockers and the support needed to resolve them."
+      actions={<Button type="button" onClick={() => setCreateOpen(true)}>Create obstacle</Button>}
+    >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create obstacle"
         editTitle="Edit Obstacle"
         saving={crud.saving}
+        creating={createOpen}
+        onCreatingChange={setCreateOpen}
+        hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
@@ -357,6 +367,14 @@ export function ObstaclesPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      <SummaryStrip
+        chips={[
+          { key: 'total', label: crud.items.length === 1 ? 'obstacle' : 'obstacles', count: crud.items.length },
+          { key: 'open', label: 'open', count: crud.items.filter((obstacle) => obstacle.status === 'OPEN').length, tone: 'warning', active: filterStatus === 'OPEN', onClick: () => setFilterStatus(filterStatus === 'OPEN' ? '' : 'OPEN') },
+          { key: 'critical', label: 'critical', count: crud.items.filter((obstacle) => obstacle.severity === 'CRITICAL').length, tone: 'critical', active: filterSeverity === 'CRITICAL', onClick: () => setFilterSeverity(filterSeverity === 'CRITICAL' ? '' : 'CRITICAL') },
+          { key: 'resolved', label: 'resolved', count: crud.items.filter((obstacle) => obstacle.status === 'RESOLVED').length, tone: 'positive', active: filterStatus === 'RESOLVED', onClick: () => setFilterStatus(filterStatus === 'RESOLVED' ? '' : 'RESOLVED') },
+        ]}
+      />
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
         <FilterSelect

@@ -24,11 +24,13 @@ import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { QuickAddRow } from '../components/common/QuickAddRow';
+import { RelativeDate } from '../components/common/RelativeDate';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
@@ -314,7 +316,7 @@ export function GoalsPage() {
   }
 
   const columns: DataTableColumn<Goal>[] = [
-    { key: 'code', label: 'Code', sortValue: (goal) => goal.code, render: (goal) => goal.code },
+    { key: 'code', label: 'Code', sortValue: (goal) => goal.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (goal) => goal.code },
     {
       key: 'title',
       label: 'Goal',
@@ -438,7 +440,11 @@ export function GoalsPage() {
   );
 
   return (
-    <PageSection title="Goals" subtitle="Define specific results for each dream.">
+    <PageSection
+      title="Goals"
+      subtitle="Define specific results for each dream."
+      actions={<Button type="button" onClick={() => setCreateOpen(true)} disabled={dreams.length === 0}>Create goal</Button>}
+    >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create goal"
@@ -448,6 +454,7 @@ export function GoalsPage() {
         autoOpenCreate={autoOpenCreate}
         creating={createOpen}
         onCreatingChange={setCreateOpen}
+        hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
@@ -455,6 +462,14 @@ export function GoalsPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      <SummaryStrip
+        chips={[
+          { key: 'total', label: crud.items.length === 1 ? 'goal' : 'goals', count: crud.items.length },
+          { key: 'overdue', label: 'overdue', count: crud.items.filter((goal) => isOverdue(goal.targetDate, goal.status)).length, tone: 'critical', active: filterOverdueOnly, onClick: () => setFilterOverdueOnly(!filterOverdueOnly) },
+          { key: 'blocked', label: 'blocked', count: crud.items.filter((goal) => goal.status === 'BLOCKED').length, tone: 'warning', active: filterStatus === 'BLOCKED', onClick: () => setFilterStatus(filterStatus === 'BLOCKED' ? '' : 'BLOCKED') },
+          { key: 'completed', label: 'completed', count: crud.items.filter((goal) => goal.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
+        ]}
+      />
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="goals" />
         <FilterSelect
@@ -547,7 +562,7 @@ export function GoalsPage() {
                 )}
                 {goal.title}
               </strong>
-              <p>{goal.code} · {stepCounts.get(goal.id) ?? 0} step(s){goal.targetDate ? ` · Target ${goal.targetDate}` : ''}</p>
+              <p>{goal.code} · {stepCounts.get(goal.id) ?? 0} step(s){goal.targetDate ? <> · Target <RelativeDate date={goal.targetDate} completed={goal.status === 'COMPLETED'} /></> : ''}</p>
               <div className="inline-meta">
                 <PriorityBadge priority={goal.priority} />
                 <span>{goal.progressPercent}%</span>

@@ -22,6 +22,7 @@ import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { PriorityBadge } from '../common/PriorityBadge';
 import { ProgressBar } from '../common/ProgressBar';
+import { RelativeDate } from '../common/RelativeDate';
 
 type VisionMapTreeProps = {
   dream: Dream;
@@ -441,7 +442,7 @@ export function VisionMapTree({ dream, visionAreaName, goals, steps, tasks, toke
                                             {titleOrEdit(taskRow, task.title)}
                                             <PriorityBadge priority={task.priority} />
                                           </div>
-                                          <p className="map-meta">{task.owner} · Due {task.dueDate}</p>
+                                          <p className="map-meta">{task.owner} · Due <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /></p>
                                           {task.blockerReason && <p className="map-blocker">{task.blockerReason}</p>}
                                         </div>
                                         {statusSelect(taskRow, task.status)}

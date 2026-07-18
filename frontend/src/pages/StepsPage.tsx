@@ -30,6 +30,7 @@ import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
@@ -369,7 +370,7 @@ export function StepsPage() {
   }
 
   const columns: DataTableColumn<VisionStep>[] = [
-    { key: 'code', label: 'Code', sortValue: (step) => step.code, render: (step) => step.code },
+    { key: 'code', label: 'Code', sortValue: (step) => step.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (step) => step.code },
     {
       key: 'title',
       label: 'Step',
@@ -487,7 +488,11 @@ export function StepsPage() {
   );
 
   return (
-    <PageSection title="Steps" subtitle="Break goals into ordered action stages.">
+    <PageSection
+      title="Steps"
+      subtitle="Break goals into ordered action stages."
+      actions={<Button type="button" onClick={() => setCreateOpen(true)} disabled={goals.length === 0}>Create step</Button>}
+    >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create step"
@@ -497,6 +502,7 @@ export function StepsPage() {
         autoOpenCreate={autoOpenCreate}
         creating={createOpen}
         onCreatingChange={setCreateOpen}
+        hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
@@ -504,6 +510,14 @@ export function StepsPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      <SummaryStrip
+        chips={[
+          { key: 'total', label: crud.items.length === 1 ? 'step' : 'steps', count: crud.items.length },
+          { key: 'needs-tasks', label: 'complex without tasks', count: crud.items.filter((step) => step.complex && taskCountFor(step) === 0 && step.status !== 'COMPLETED').length, tone: 'warning', active: filterComplexOnly, onClick: () => setFilterComplexOnly(!filterComplexOnly) },
+          { key: 'blocked', label: 'blocked', count: crud.items.filter((step) => step.status === 'BLOCKED').length, tone: 'warning', active: filterStatus === 'BLOCKED', onClick: () => setFilterStatus(filterStatus === 'BLOCKED' ? '' : 'BLOCKED') },
+          { key: 'completed', label: 'completed', count: crud.items.filter((step) => step.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
+        ]}
+      />
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="steps" />
         <FilterSelect

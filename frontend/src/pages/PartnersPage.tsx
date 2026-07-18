@@ -14,6 +14,7 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
+import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -24,6 +25,7 @@ import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
@@ -79,6 +81,7 @@ export function PartnersPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [steps, setSteps] = useState<VisionStep[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [organization, setOrganization] = useState('');
@@ -241,7 +244,7 @@ export function PartnersPage() {
 
   // Column keys double as the server's sort fields, so they match Partner's JPA property names.
   const columns: DataTableColumn<Partner>[] = [
-    { key: 'code', label: 'Code', sortValue: (partner) => partner.code, render: (partner) => partner.code },
+    { key: 'code', label: 'Code', sortValue: (partner) => partner.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (partner) => partner.code },
     { key: 'name', label: 'Name', sortValue: (partner) => partner.name, sx: { fontWeight: 500 }, render: (partner) => partner.name },
     {
       key: 'supportType',
@@ -374,12 +377,19 @@ export function PartnersPage() {
   );
 
   return (
-    <PageSection title="Partners" subtitle="Track mentors, experts, advisors, and resources.">
+    <PageSection
+      title="Partners"
+      subtitle="Track mentors, experts, advisors, and resources."
+      actions={<Button type="button" onClick={() => setCreateOpen(true)}>Create partner</Button>}
+    >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create partner"
         editTitle="Edit Partner"
         saving={crud.saving}
+        creating={createOpen}
+        onCreatingChange={setCreateOpen}
+        hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
@@ -387,6 +397,14 @@ export function PartnersPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      <SummaryStrip
+        chips={[
+          { key: 'total', label: crud.items.length === 1 ? 'partner' : 'partners', count: crud.items.length },
+          { key: 'to-contact', label: 'to contact', count: crud.items.filter((partner) => partner.status === 'TO_CONTACT').length, tone: 'warning', active: filterStatus === 'TO_CONTACT', onClick: () => setFilterStatus(filterStatus === 'TO_CONTACT' ? '' : 'TO_CONTACT') },
+          { key: 'active', label: 'active', count: crud.items.filter((partner) => partner.status === 'ACTIVE').length, tone: 'positive', active: filterStatus === 'ACTIVE', onClick: () => setFilterStatus(filterStatus === 'ACTIVE' ? '' : 'ACTIVE') },
+          { key: 'waiting', label: 'waiting', count: crud.items.filter((partner) => partner.status === 'WAITING').length, active: filterStatus === 'WAITING', onClick: () => setFilterStatus(filterStatus === 'WAITING' ? '' : 'WAITING') },
+        ]}
+      />
       <Card className="filter-bar flex-row">
         <SearchBar
           value={searchTerm}

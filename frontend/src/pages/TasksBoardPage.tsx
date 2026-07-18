@@ -27,7 +27,9 @@ import { ProgressBar } from '../components/common/ProgressBar';
 import { QuickAddRow } from '../components/common/QuickAddRow';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
+import { RelativeDate } from '../components/common/RelativeDate';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { Textarea } from '../components/common/Textarea';
@@ -359,7 +361,7 @@ export function TasksBoardPage() {
       ),
     },
     { key: 'owner', label: 'Owner', sortValue: (task) => task.owner, render: (task) => task.owner },
-    { key: 'dueDate', label: 'Due', sortValue: (task) => task.dueDate, render: (task) => task.dueDate },
+    { key: 'dueDate', label: 'Due', sortValue: (task) => task.dueDate, render: (task) => <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /> },
     {
       key: 'priority',
       label: 'Priority',
@@ -503,7 +505,11 @@ export function TasksBoardPage() {
   );
 
   return (
-    <PageSection title="Tasks Board" subtitle="Manage executable work by status.">
+    <PageSection
+      title="Tasks Board"
+      subtitle="Manage executable work by status."
+      actions={<Button type="button" onClick={() => setCreateOpen(true)} disabled={steps.length === 0}>Create task</Button>}
+    >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create task"
@@ -513,6 +519,7 @@ export function TasksBoardPage() {
         autoOpenCreate={autoOpenCreate}
         creating={createOpen}
         onCreatingChange={setCreateOpen}
+        hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
@@ -520,6 +527,14 @@ export function TasksBoardPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="cards" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      <SummaryStrip
+        chips={[
+          { key: 'total', label: crud.items.length === 1 ? 'task' : 'tasks', count: crud.items.length },
+          { key: 'overdue', label: 'overdue', count: crud.items.filter((task) => isOverdue(task.dueDate, task.status)).length, tone: 'critical', active: filterOverdueOnly, onClick: () => setFilterOverdueOnly(!filterOverdueOnly) },
+          { key: 'blocked', label: 'blocked', count: crud.items.filter((task) => task.status === 'BLOCKED').length, tone: 'warning', active: filterStatus === 'BLOCKED', onClick: () => setFilterStatus(filterStatus === 'BLOCKED' ? '' : 'BLOCKED') },
+          { key: 'completed', label: 'completed', count: crud.items.filter((task) => task.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
+        ]}
+      />
       <Card className="filter-bar flex-row">
         <label>
           Owner
@@ -654,7 +669,7 @@ export function TasksBoardPage() {
           renderCard={(task) => (
             <>
               <strong>{task.title}</strong>
-              <p>{task.owner} · Due {task.dueDate}</p>
+              <p>{task.owner} · Due <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /></p>
               <div className="inline-meta">
                 <PriorityBadge priority={task.priority} />
                 <span>{task.progressPercent}%</span>

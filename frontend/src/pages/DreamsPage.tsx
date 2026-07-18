@@ -24,7 +24,9 @@ import { PriorityBadge } from '../components/common/PriorityBadge';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
+import { RelativeDate } from '../components/common/RelativeDate';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
@@ -248,7 +250,7 @@ export function DreamsPage() {
   }
 
   const columns: DataTableColumn<Dream>[] = [
-    { key: 'code', label: 'Code', sortValue: (dream) => dream.code, render: (dream) => dream.code },
+    { key: 'code', label: 'Code', sortValue: (dream) => dream.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (dream) => dream.code },
     {
       key: 'title',
       label: 'Dream',
@@ -279,7 +281,7 @@ export function DreamsPage() {
       key: 'targetDate',
       label: 'Target',
       sortValue: (dream) => dream.targetDate,
-      render: (dream) => dream.targetDate ?? '-',
+      render: (dream) => <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} />,
     },
     {
       key: 'actions',
@@ -421,6 +423,14 @@ export function DreamsPage() {
       )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      <SummaryStrip
+        chips={[
+          { key: 'total', label: crud.items.length === 1 ? 'dream' : 'dreams', count: crud.items.length },
+          { key: 'overdue', label: 'overdue', count: crud.items.filter((dream) => isOverdue(dream.targetDate, dream.status)).length, tone: 'critical', active: filterOverdueOnly, onClick: () => setFilterOverdueOnly(!filterOverdueOnly) },
+          { key: 'active', label: 'active', count: crud.items.filter((dream) => dream.status === 'ACTIVE').length, active: filterStatus === 'ACTIVE', onClick: () => setFilterStatus(filterStatus === 'ACTIVE' ? '' : 'ACTIVE') },
+          { key: 'completed', label: 'completed', count: crud.items.filter((dream) => dream.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
+        ]}
+      />
       <Card className="filter-bar flex-row">
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="dreams" />
         <FilterSelect
@@ -515,7 +525,7 @@ export function DreamsPage() {
           renderCard={(dream) => (
             <>
               <strong>{dream.title}</strong>
-              <p>{dream.code} · {goalCounts.get(dream.id) ?? 0} goal(s){dream.targetDate ? ` · Target ${dream.targetDate}` : ''}</p>
+              <p>{dream.code} · {goalCounts.get(dream.id) ?? 0} goal(s){dream.targetDate ? <> · Target <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} /></> : ''}</p>
               <div className="inline-meta">
                 <PriorityBadge priority={dream.priority} />
                 <span>{dreamTypeLabels[dream.dreamType]}</span>

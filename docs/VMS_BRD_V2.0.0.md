@@ -394,7 +394,7 @@ instructions?*
 | FR-24 | Vision Map as primary workspace | L | ✅ Done 2026-07-18 | |
 | FR-25 | Attention & next-action system | M | ✅ Done 2026-07-18 | |
 | FR-26 | Accessibility compliance (WCAG 2.2 AA) | M | ✅ Done 2026-07-18 | |
-| FR-27 | List, board, and auth visual refresh | M | 📋 Planned | |
+| FR-27 | List, board, and auth visual refresh | M | ✅ Done 2026-07-18 | |
 | FR-28 | Mobile layouts | L | 📋 Planned | |
 | FR-29 | Efficiency & delight layer (stretch) | M | 📋 Stretch | |
 
@@ -792,7 +792,7 @@ scripted keyboard-only branch build plus named form controls throughout;
 the human keyboard pass stays folded into FR-19.3's session as planned.
 `tsc` clean, 35/35 tests, production build green.
 
-### FR-27 List, Board, and Auth Visual Refresh — 📋 Planned (Effort: M)
+### FR-27 List, Board, and Auth Visual Refresh — ✅ Done 2026-07-18 (Effort: M)
 
 Apply the FR-20 foundations page by page. Source: UX&UI_V1 C1, C4, C5.
 
@@ -816,6 +816,31 @@ Apply the FR-20 foundations page by page. Source: UX&UI_V1 C1, C4, C5.
 1. M-6 met (≥ 80 % primary-action recognition in the 3-second test).
 2. Before/after screenshot pairs recorded for every refreshed page.
 3. Zero open findings from the FR-18 combination sweep on refreshed pages.
+
+**Shipped (2026-07-18):** FR-27.1 — every list page's create button moved
+into the title row (`PageSection actions`), so each page has one dominant
+title + primary action; a clickable `SummaryStrip` above the table on
+Goals, Steps, Tasks, Dreams, Partners, and Obstacles ("15 tasks ·
+1 overdue · 1 blocked · 2 completed") whose chips toggle the matching URL
+filters (verified live: the overdue chip filtered 10 rows to 1 and set
+`?overdue=true`); dates render as time-to-act via `RelativeDate` ("in 3
+days", "5 days overdue" — the overdue wording doubling as BR-17's text
+channel) in task/dream tables, board cards, and the Vision Map, with the
+exact date in the tooltip; entity codes demoted to caption styling.
+FR-27.2 — kanban columns became recessed trays (`--background-subtle`)
+with cards floating on the Fluent shadow-2; counts and drop highlight
+already existed. FR-27.3 — the auth screens gained the brand block (VM
+mark + Vision Map), the value statement "Turn dreams into scheduled
+work.", and the five-level funnel as a fixed-tone illustration on the
+navy hero (which stays untouched by theming per FR-18's scope note),
+hidden below the md breakpoint. FR-27.4 — anatomy unchanged: filters,
+tables, and boards are where they were, only weighting moved. AC-2:
+after-screenshots for all six refreshed pages + login in light, dark, and
+the worst FR-18 combination live in `docs/uxui-audit/screens/after-fr27/`
+(baseline set is the "before"); AC-3: the worst-combo sweep of refreshed
+pages shows no layout breakage. AC-1 (3-second test) measures with
+FR-19.3's participants at release close. `tsc` clean, 35/35 tests,
+production build green.
 
 ### FR-28 Mobile Layouts — 📋 Planned (Effort: L)
 

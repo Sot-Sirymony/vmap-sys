@@ -244,7 +244,11 @@ export function VisionAreasPage() {
   );
 
   return (
-    <PageSection title="Vision Areas" subtitle="Organize the major areas of life or work.">
+    <PageSection
+      title="Vision Areas"
+      subtitle="Organize the major areas of life or work."
+      actions={<Button type="button" onClick={() => setCreateOpen(true)}>Create vision area</Button>}
+    >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create vision area"
@@ -252,6 +256,7 @@ export function VisionAreasPage() {
         saving={crud.saving}
         creating={createOpen}
         onCreatingChange={setCreateOpen}
+        hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
