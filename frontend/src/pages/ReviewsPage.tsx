@@ -260,6 +260,20 @@ export function ReviewsPage() {
     },
   ];
 
+  const formDreams = relatedVisionAreaId
+    ? dreams.filter((dream) => String(dream.visionAreaId) === relatedVisionAreaId)
+    : dreams;
+
+  function handleVisionAreaChange(nextAreaId: string) {
+    setRelatedVisionAreaId(nextAreaId);
+    if (nextAreaId && relatedDreamId) {
+      const selectedDream = dreams.find((dream) => String(dream.id) === relatedDreamId);
+      if (selectedDream && String(selectedDream.visionAreaId) !== nextAreaId) {
+        setRelatedDreamId('');
+      }
+    }
+  }
+
   const formFields = (
     <>
       <label>
@@ -279,7 +293,7 @@ export function ReviewsPage() {
       <label>
         Vision Area
         <FormControl fullWidth size="small">
-          <Select SelectDisplayProps={{ 'aria-label': "Vision Area" }} displayEmpty value={relatedVisionAreaId} onChange={(event) => setRelatedVisionAreaId(event.target.value)}>
+          <Select SelectDisplayProps={{ 'aria-label': "Vision Area" }} displayEmpty value={relatedVisionAreaId} onChange={(event) => handleVisionAreaChange(event.target.value)}>
             <MenuItem value="">None</MenuItem>
             {visionAreas.map((area) => <MenuItem value={String(area.id)} key={area.id}>{area.name}</MenuItem>)}
           </Select>
@@ -290,7 +304,7 @@ export function ReviewsPage() {
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Dream" }} displayEmpty value={relatedDreamId} onChange={(event) => setRelatedDreamId(event.target.value)}>
             <MenuItem value="">None</MenuItem>
-            {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
+            {formDreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
