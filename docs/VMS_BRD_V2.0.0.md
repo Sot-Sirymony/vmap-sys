@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V2.0.0 |
 | **Version** | 2.0.0 (In progress) |
 | **Date** | 2026-07-11 (progress updated 2026-07-17) |
-| **Status** | Complete — all 11 items shipped and all open items resolved. Addendum A (FR-18 Theme Settings) also ✅ shipped 2026-07-17. |
+| **Status** | Complete — all 11 items shipped and all open items resolved. Addendum A (FR-18 Theme Settings) also ✅ shipped 2026-07-17. Addendum B (2026-07-18) adds the **planned** V2.1 "Ease of Use" improvement program (FR-19 … FR-29) — 📋 not yet started. |
 | **Baseline** | Builds on VMS_BRD_V1.0.0 (all V1 requirements remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -31,7 +31,7 @@ Each item's status is also marked inline in its section heading below.
 
 **Done (11 of 11):** every V2 item is implemented and verified (backend + frontend tests). Migrations: V5 (diligence checklist), V6 (word picture), V7 (goal moonshot), V8 (ideal partner profiles + partner offer type).
 
-**Remaining:** none — V2.0.0 scope is complete. V3 planning can begin (see the VMS_BRD_V3.0.0 review notes: continue numbering at FR-18).
+**Remaining:** none — V2.0.0 scope is complete. Addendum B below plans the V2.1 "Ease of Use" improvement program (FR-19 … FR-29); the next major BRD (V3) continues numbering at FR-30.
 
 Where a requirement below still says **Planned**, that is its original wording and it is not yet implemented; the ✅ marks added to headings show what has shipped.
 
@@ -281,8 +281,9 @@ fixed light/dark pair behind one header toggle; FR-18 grows that into a
 proper appearance-settings capability, built on the theming surface MUI's
 `createTheme` actually exposes.
 
-Requirement numbering continues from V2 (which ended at FR-17), so the next
-major BRD (V3) starts at **FR-19**.
+Requirement numbering continues from V2 (which ended at FR-17). FR-19 … FR-29
+are consumed by Addendum B below, so the next major BRD (V3) starts at
+**FR-30**.
 
 ### Theming building blocks — current state vs. FR-18
 
@@ -354,3 +355,388 @@ the root font size so every rem-based value follows. The breakpoints are the
 theme's `sm 600` / `md 900` in both systems, and the toast stack sits on the
 theme's snackbar z-index tier. Pre-FR-18 light/dark choices migrate from the
 old storage key automatically.
+
+---
+
+## Addendum B (2026-07-18) — V2.1 "Ease of Use": HCI & UX/UI Improvement Program — 📋 Planned
+
+Added after V2.0.0 and FR-18 closed. V2.0.0 completed the feature set; user
+feedback risk is now **usability**, not capability. This addendum turns the
+two study documents at the repository root into BRD scope:
+
+- [HUCI_V1.md](../HUCI_V1.md) — interaction design: flows, navigation cost,
+  input friction, behavioral accessibility. Owns the "how it works" half.
+- [UX&UI_V1.md](../UX&UI_V1.md) — presentation design: layout, typography,
+  visual hierarchy, states, motion. Owns the "how it looks" half.
+
+Those documents hold the research methodology and file-level detail; this
+addendum holds the business requirements, acceptance criteria, and build
+order. Where they conflict, this addendum wins.
+
+**Release framing:** ships as **V2.1.0**, a frontend-focused minor release.
+No schema migrations are expected; any backend work is limited to small
+additive endpoints (noted per requirement). All V1/V2 business rules
+(BR-1 … BR-14) remain in force.
+
+**Guiding question:** *Can a first-time user go from an empty account to one
+Dream with Goals, Steps, and Tasks in under 10 minutes, without
+instructions?*
+
+### Addendum B progress tracker
+
+| Item | Description | Effort | Status | Commit |
+|---|---|---|---|---|
+| FR-19 | Experience baseline & audit program | M | 📋 Planned | |
+| FR-20 | Design-system foundations (type ramp, states, motion) | M | 📋 Planned | |
+| FR-21 | Guided onboarding & dream coaching wizard | M | 📋 Planned | |
+| FR-22 | Low-friction data entry (quick-add, form pass) | M | 📋 Planned | |
+| FR-23 | Orientation & navigation (breadcrumbs, nav groups) | S | 📋 Planned | |
+| FR-24 | Vision Map as primary workspace | L | 📋 Planned | |
+| FR-25 | Attention & next-action system | M | 📋 Planned | |
+| FR-26 | Accessibility compliance (WCAG 2.2 AA) | M | 📋 Planned | |
+| FR-27 | List, board, and auth visual refresh | M | 📋 Planned | |
+| FR-28 | Mobile layouts | L | 📋 Planned | |
+| FR-29 | Efficiency & delight layer (stretch) | M | 📋 Stretch | |
+
+### B-Scope
+
+**In scope:** FR-19 … FR-28; FR-29 as stretch if capacity allows.
+
+**Out of scope for V2.1:** any rebrand or change of design language (Fluent 2
+stays); native mobile apps; multi-user collaboration or notifications;
+per-user preference sync across devices (settings stay per browser until a
+user-preferences API exists); new feature modules (that is V3, FR-30+).
+
+### B-Success metrics
+
+Measured in FR-19 before any change, re-measured at release (HUCI Phases
+A/E; UX&UI Phases A/E).
+
+| # | Metric | Baseline | Target |
+|---|---|---|---|
+| M-1 | Time: empty account → first complete Dream tree (first-use test) | measure | ≤ 10 min |
+| M-2 | Clicks to create 1 goal + 3 steps + 5 tasks | measure | −40 % |
+| M-3 | System Usability Scale (SUS) score | measure | ≥ 75 |
+| M-4 | Lighthouse accessibility, top 6 pages | measure | ≥ 95 |
+| M-5 | Tasks board fully operable by keyboard | No | Yes |
+| M-6 | 3-second test: users name the page's primary action | measure | ≥ 80 % of pages |
+| M-7 | Distinct font size/weight combinations in codebase | measure | ≤ 9 |
+| M-8 | Pages with layout jump during load | measure | 0 |
+
+### FR-19 Experience Baseline & Audit Program — 📋 Planned (Effort: M)
+
+Measure before improving; the audits rank everything that follows.
+
+- FR-19.1 **Heuristic evaluation** of all 15 pages against Nielsen's 10
+  usability heuristics; each violation logged with severity 1–4 in
+  `docs/hci-audit.md` (template in HUCI_V1 §5).
+- FR-19.2 **Cognitive walkthrough** of the CLAUDE.md "Ideal User Flow"
+  (Area → Dream → 4 Goals → Steps → Tasks) recording clicks, page changes,
+  form fields, and errors — the M-2 baseline.
+- FR-19.3 **First-use test** with 3–5 people who have never seen the app
+  (think-aloud, recorded), producing M-1 and the SUS baseline (M-3).
+- FR-19.4 **Accessibility audit**: keyboard-only pass on every page, axe
+  DevTools/Lighthouse on the top 6 pages, contrast check in both themes
+  (M-4 baseline).
+- FR-19.5 **Visual audit**: screenshot inventory of every page in
+  light/dark × comfortable/compact; squint-test hierarchy notes; typography
+  and spacing census (M-6 … M-8 baselines); state walkthrough (loading /
+  empty / error / single-item); sweep of the 4 worst FR-18 setting
+  combinations; chart consistency review. Artifacts in `docs/uxui-audit/`.
+- FR-19.6 The same instruments re-run at release close to verify the
+  B-Success metrics table.
+
+**Acceptance criteria**
+1. `docs/hci-audit.md` and `docs/uxui-audit/` exist with findings ranked by
+   severity, and every B-Success baseline cell is filled in.
+2. Each finding is mapped to an FR in this addendum or explicitly deferred
+   to a V2.2/V3 backlog with a reason.
+
+### FR-20 Design-System Foundations — 📋 Planned (Effort: M)
+
+Codify the system pieces missing from `theme.ts`/`global.css` once, so every
+later requirement is cheap. Source: UX&UI_V1 Phase B.
+
+- FR-20.1 **Type ramp.** A full MUI `typography` scale (page title, section
+  title, card/panel title, body, secondary body, caption for metadata like
+  `T-014` codes) with line heights; all pages swept onto the variants.
+- FR-20.2 **Spacing scale and page template.** The 4px-base scale as named
+  steps; one standard page anatomy (title row with right-aligned primary
+  action → optional summary strip → filter bar → content) hardened in
+  `PageSection` and applied to every list page.
+- FR-20.3 **State kit.** Skeleton loaders that preserve layout shape for
+  tables, cards, and the vision-map tree (spinner only for unknown-shape
+  content); empty states with icon + headline + explanation + one primary
+  action, in full-page and in-panel sizes; error states as a human sentence
+  + retry, with technical detail collapsed.
+- FR-20.4 **Motion tokens.** Three durations (~100 ms hover, ~180 ms
+  open/close, ~250 ms layout) and one easing defined in `:root` and the MUI
+  theme; applied to modal, drawer, kanban drop, and progress-bar fill; a
+  global `prefers-reduced-motion` kill switch.
+- FR-20.5 **Icon rules.** One inline size, one nav/CTA size, one stroke
+  width; `nav-items.ts` is the concept→icon source of truth (a dream is
+  always Sparkles, everywhere).
+
+**Acceptance criteria**
+1. M-7 met (≤ 9 type combinations) and M-8 met (zero load layout jump).
+2. No hardcoded hex color, font size, duration, or z-index outside
+   `theme.ts`/`global.css` (BR-15 check passes).
+3. Reduced-motion users see no non-essential animation.
+
+### FR-21 Guided Onboarding & Dream Coaching Wizard — 📋 Planned (Effort: M)
+
+Solve the empty-start problem: a new user currently faces zeroed stat cards
+and 11 sidebar entries with no path in. Source: HUCI_V1 B1, B2, C3.
+
+- FR-21.1 **Guided empty dashboard.** When counts are zero, the dashboard
+  shows a 3-step "Get started" checklist (Create a Vision Area → Add a Dream
+  → Break it down) with direct action buttons, instead of empty stat cards.
+- FR-21.2 **Actionable empty states.** Every list/panel empty state names
+  its context and offers the create action ("No goals yet — add a goal to
+  *{dream}*"), using the FR-20.3 kit.
+- FR-21.3 **Dream coaching wizard.** Dream creation becomes a short guided
+  flow asking the method's clarifying questions in original wording (What
+  exactly do you want to achieve? Why does it matter? What will success look
+  like? When?), mapping answers onto the existing Dream fields
+  (title, whyImportant, successDefinition, targetDate), then offering to add
+  first goals immediately. The flat form remains available as "skip the
+  guide".
+- FR-21.4 The wizard is styled as friendly coaching (per FR-20 tokens), not
+  as validation errors.
+
+**Acceptance criteria**
+1. A fresh account's dashboard shows the guided checklist; it disappears
+   once real data exists.
+2. A user can complete the wizard into a Dream with ≥ 1 Goal without
+   visiting another page.
+3. All existing Dream validation rules still apply; no schema change.
+
+### FR-22 Low-Friction Data Entry — 📋 Planned (Effort: M)
+
+Cut the modal round-trip cost of repetitive entry. Source: HUCI_V1 B3, B7;
+UX&UI_V1 C6.
+
+- FR-22.1 **Quick-add rows** on Goals and Steps pages and at every level of
+  the Vision Map (generalizing the existing `QuickAddTitle`): type a title,
+  press Enter, entity created with sensible defaults (priority Medium,
+  status Not Started); full form reachable via Edit.
+- FR-22.2 **Quick-add respects required fields (BR-16).** Task quick-add
+  prompts inline for the two required fields defaults cannot supply (owner
+  defaults to the current user; due date asked inline) — it must not create
+  records violating business rule 5.
+- FR-22.3 **Form friction pass.** Every modal form: first field autofocused,
+  Enter submits, Esc cancels, validation inline on blur, and an "Add
+  another" option that keeps the modal open for batch entry.
+- FR-22.4 **Form layout standard.** Consistent field order (identity →
+  classification → dates → details), section dividers on long forms, one
+  required-marker and helper-text style.
+
+**Acceptance criteria**
+1. Creating a goal with 3 steps and 5 tasks meets the M-2 click target.
+2. No quick-add path can produce a record that the full form's validation
+   would reject.
+3. Keyboard-only form completion works on every form.
+
+### FR-23 Orientation & Navigation — 📋 Planned (Effort: S)
+
+Keep users oriented inside a 5-level hierarchy. Source: HUCI_V1 B5, B6, C2.
+
+- FR-23.1 **Breadcrumbs.** Goal/Step/Task detail contexts show the ancestry
+  (`Career › Become a researcher › Learn AI tools`); each segment navigates.
+- FR-23.2 **Sidebar grouping.** The 11 flat entries group into three labeled
+  sections matching the mental model — **Plan** (Dashboard, Vision Areas,
+  Dreams), **Execute** (Goals, Steps, Tasks, Obstacles), **Support**
+  (Partners, Communication, Reviews, Import/Export). All existing routes
+  keep working.
+- FR-23.3 **Remembered views.** Per-page view choices (table/board toggle,
+  page size, show-archived) persist per browser; URL filters keep working
+  as today and win over remembered state when present.
+
+**Acceptance criteria**
+1. From any task row a user can reach its step, goal, dream, and area in
+   one click each via the breadcrumb.
+2. No bookmarked V2.0.0 URL breaks.
+3. A view choice survives navigation away and back, and a page reload.
+
+### FR-24 Vision Map as Primary Workspace — 📋 Planned (Effort: L)
+
+The tree on `DreamDetailPage` is today a viewer; the method's core loop
+(break down, refine, review) should happen in one place. Source: HUCI_V1 C1;
+UX&UI_V1 C3.
+
+- FR-24.1 **Inline editing at every level:** add, rename, and quick-status
+  directly in the tree; expand/collapse state remembered per dream.
+- FR-24.2 **Keyboard navigation:** arrows move between nodes, Enter edits,
+  N creates a child — the tree is fully operable without a pointer.
+- FR-24.3 **Visual depth language:** indentation guides/connector lines,
+  progressively lighter accent tint per level, progress bars aligned in a
+  consistent right rail, quick-add affordance visible on hover/focus.
+- FR-24.4 List pages remain for filtering and bulk work; the map is the
+  default landing surface for a dream.
+
+**Acceptance criteria**
+1. A user can build a complete Goal → Steps → Tasks branch without leaving
+   the map.
+2. Tree operations pass a keyboard-only test with visible focus.
+3. Collapse state persists per dream per browser.
+
+### FR-25 Attention & Next-Action System — 📋 Planned (Effort: M)
+
+Make the system coach forward instead of only confirming actions.
+Source: HUCI_V1 C4; UX&UI_V1 C2. Implements business rule 11 in the UI.
+
+- FR-25.1 **Completion nudges.** When the last child task completes, a
+  non-blocking prompt offers to mark the parent step (and, cascading, goal)
+  completed; dismissible, never automatic.
+- FR-25.2 **Needs-attention feed.** The dashboard `AttentionPanel` grows
+  into a ranked feed: overdue tasks, blocked tasks without a linked partner,
+  complex steps without tasks, moonshot goals with no activity. Each entry
+  deep-links to the fix.
+- FR-25.3 **Dashboard rebalance.** The attention feed is the page's visually
+  dominant element; stat cards second; charts third, restyled to use exactly
+  the shared status/priority palettes with consistent tooltips and
+  empty-data fallbacks.
+- FR-25.4 May require small additive read endpoints (e.g., complex steps
+  without tasks) — additive only, no schema change.
+
+**Acceptance criteria**
+1. Completing the last task of a step surfaces the nudge exactly once, and
+   accepting it applies the existing status rules (BR-8 unchanged).
+2. Every attention item navigates to the screen where it can be resolved.
+3. Dashboard charts use only `statusColors`/`priorityColors` values.
+
+### FR-26 Accessibility Compliance — 📋 Planned (Effort: M)
+
+Target WCAG 2.2 AA across the app. Source: HUCI_V1 §6, B4, C5.
+
+- FR-26.1 Every interactive element keyboard-reachable and operable with a
+  visible focus ring in both themes.
+- FR-26.2 **Keyboard alternative to drag-and-drop** (WCAG 2.5.7): each
+  kanban card offers a move action (menu or M key → choose column); moves
+  announced via an ARIA live region.
+- FR-26.3 **No color-only state** (BR-17): overdue, blocked, and completed
+  carry icon + text alongside color, everywhere including charts (text
+  alternatives or labeled axes).
+- FR-26.4 Contrast ≥ 4.5:1 text / ≥ 3:1 UI components in both themes and
+  all five accents (audit the badge tints).
+- FR-26.5 Forms: programmatic labels, errors linked via `aria-describedby`;
+  modals trap focus, restore it on close, close on Esc.
+- FR-26.6 Toasts and board moves announced through live regions; touch
+  targets ≥ 24×24 px.
+
+**Acceptance criteria**
+1. M-4 (Lighthouse ≥ 95 on top 6 pages) and M-5 (keyboard-only board) met.
+2. Keyboard-only walkthrough completes the full ideal user flow.
+3. Contrast audit shows no AA failure in any mode × accent combination.
+
+### FR-27 List, Board, and Auth Visual Refresh — 📋 Planned (Effort: M)
+
+Apply the FR-20 foundations page by page. Source: UX&UI_V1 C1, C4, C5.
+
+- FR-27.1 **List page template** on Goals, Steps, Tasks list, Dreams,
+  Partners, Obstacles: one dominant title + primary action; a clickable
+  summary strip above the table ("12 active · 3 overdue · 2 blocked" as
+  filter chips); quieter filter bar; rows with status/priority chips,
+  relative due dates ("in 3 days", "5 days overdue"), and entity codes
+  demoted to caption style.
+- FR-27.2 **Tasks board polish:** column headers with counts, standardized
+  card anatomy (title / chips / due-owner footer), drop-target highlight,
+  recessed column background so cards float.
+- FR-27.3 **Auth pages & identity:** login/register get the product name, a
+  one-line value statement in original wording, and a small token-colored
+  illustration of the 5-level funnel; consistent with the accent system.
+- FR-27.4 Element positions stay stable wherever possible — the redesign
+  changes visual weighting, not page anatomy, so returning users are not
+  disoriented.
+
+**Acceptance criteria**
+1. M-6 met (≥ 80 % primary-action recognition in the 3-second test).
+2. Before/after screenshot pairs recorded for every refreshed page.
+3. Zero open findings from the FR-18 combination sweep on refreshed pages.
+
+### FR-28 Mobile Layouts — 📋 Planned (Effort: L)
+
+The responsive groundwork (breakpoints, `use-mobile`, sidebar collapse)
+exists; dense surfaces do not degrade yet. Source: HUCI_V1 C6.
+
+- FR-28.1 Tables collapse to card lists below the `sm` breakpoint, keeping
+  status/priority/due-date glanceable.
+- FR-28.2 The kanban becomes a single column with a status switcher on
+  mobile; card move works by menu (FR-26.2 path).
+- FR-28.3 Sidebar becomes a drawer/bottom navigation on mobile; the Vision
+  Map tree remains usable with horizontal scroll contained.
+- FR-28.4 All touch targets meet the FR-26.6 minimum.
+
+**Acceptance criteria**
+1. The full ideal user flow is completable on a 375 px-wide viewport.
+2. No page requires horizontal body scrolling on mobile.
+
+### FR-29 Efficiency & Delight Layer — 📋 Stretch (Effort: M)
+
+For returning daily users; ships only if capacity allows after FR-19…FR-28.
+Source: HUCI_V1 Phase D; UX&UI_V1 Phase D.
+
+- FR-29.1 Command palette (Ctrl/Cmd+K): jump to pages and entities, create
+  in context.
+- FR-29.2 Global shortcuts (`g d` dashboard, `g t` tasks, `n` new item,
+  `/` focus search).
+- FR-29.3 **Undo via toast** for reversible actions (archive, status
+  change), reserving the confirm dialog for destructive/cascading ones.
+- FR-29.4 Bulk status/priority change on tables (extending bulk archive);
+  saved filter chips ("My overdue", "This week").
+- FR-29.5 Delight pass: progress-bar fill animation with row highlight on
+  update, subtle completed-task styling, per-Vision-Area color dots (from a
+  fixed mini-palette, never the status hues), print-friendly Review pages.
+
+**Acceptance criteria**
+1. Every shortcut is discoverable (in-app shortcut list) and never
+   conflicts with browser or screen-reader defaults.
+2. Undo restores the exact prior state, including archived children.
+
+### B-New Business Rules
+
+| # | Rule |
+|---|---|
+| BR-15 | All colors, type sizes, spacing steps, durations, and z-indexes come from the shared tokens in `theme.ts`/`global.css`. No hardcoded values in components; a review check (grep for hex literals outside the token files) enforces this. |
+| BR-16 | Quick-add and any other shortcut entry path must satisfy the same validation as the full form — no path may create a task without title, owner, due date, priority, and status (business rule 5). |
+| BR-17 | State is never conveyed by color alone: every status/priority/overdue signal pairs color with a text label or icon, in the UI and in charts. |
+| BR-18 | Every pointer interaction (drag-and-drop, hover menus) has a keyboard-operable equivalent. |
+| BR-19 | Motion is decorative-optional: all non-essential animation is disabled under `prefers-reduced-motion`, and no information is conveyed only through motion. |
+
+### B-Priority and Build Order
+
+Interaction and visual work on the same page lands together, so files are
+touched once.
+
+| Order | Work | Why this order | Status |
+|---|---|---|---|
+| 1 | FR-19 (baseline & audits) | Measure first; ranks everything else and may re-order it | 📋 Planned |
+| 2 | FR-20 (foundations) | Every later FR consumes these tokens and kits | 📋 Planned |
+| 3 | FR-21 + FR-22 (onboarding + entry friction) | Biggest first-use wins; mostly independent of page redesigns | 📋 Planned |
+| 4 | FR-23 (orientation) | Small; unblocks the map-first navigation story | 📋 Planned |
+| 5 | FR-24 (vision map workspace) | Largest item; the release's centerpiece | 📋 Planned |
+| 6 | FR-25 (attention system) | Builds on redesigned dashboard slots from FR-20/27 | 📋 Planned |
+| 7 | FR-26 (accessibility) | Runs alongside 3–6 (BR-17/18 apply from the start); final audit here | 📋 Planned |
+| 8 | FR-27 (visual refresh) | Applies foundations page by page, paired with 3–6 | 📋 Planned |
+| 9 | FR-28 (mobile) | Depends on refreshed components | 📋 Planned |
+| 10 | FR-29 (efficiency layer) | Stretch; cut first if capacity runs out | 📋 Stretch |
+
+### B-Non-Functional Notes
+
+- Frontend-only release except small additive read endpoints (FR-25.4); no
+  Flyway migrations expected.
+- Every changed common component keeps or extends its existing tests;
+  keyboard interaction in the board and tree gets new tests.
+- Each phase ends with `npm run build` + `npm run test` green and
+  before/after screenshots for changed pages.
+- Verification artifacts (`docs/hci-audit.md`, `docs/uxui-audit/`) are
+  committed, matching the project's documentation practice.
+
+### B-Open Items
+
+| # | Question | Blocking | Status |
+|---|---|---|---|
+| O-4 | Task quick-add vs required fields: default due date to a value (e.g., +7 days) or always prompt inline? BR-16 allows either; pick one behavior. | FR-22 build | Open |
+| O-5 | Sidebar regrouping (FR-23.2): announce in-app once, or ship silently? Returning users know the flat list. | FR-23 ship | Open |
+| O-6 | Does FR-29 ship in V2.1 or move to V3? Decide after FR-24 lands and remaining capacity is known. | Release cut | Open |
+| O-7 | First-use test participants (FR-19.3): who are the 3–5 testers and when? Needs scheduling before build starts. | FR-19 | Open |
