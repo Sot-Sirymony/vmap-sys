@@ -50,6 +50,7 @@ public class VisionAreaService {
                 .user(user)
                 .name(request.name())
                 .description(request.description())
+                .visionStatement(request.visionStatement())
                 .priority(request.priority())
                 .status(request.status())
                 .build();
@@ -65,6 +66,7 @@ public class VisionAreaService {
         VisionArea entity = lookup.visionArea(id);
         entity.setName(request.name());
         entity.setDescription(request.description());
+        entity.setVisionStatement(request.visionStatement());
         entity.setPriority(request.priority());
         entity.setStatus(request.status());
         return mapper.toResponse(entity);

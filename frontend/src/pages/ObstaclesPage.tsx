@@ -83,6 +83,8 @@ export function ObstaclesPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [solution, setSolution] = useState('');
+  const [rootCause, setRootCause] = useState('');
+  const [creativeAlternatives, setCreativeAlternatives] = useState('');
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
@@ -126,6 +128,8 @@ export function ObstaclesPage() {
       obstacleType,
       severity,
       solution,
+      rootCause,
+      creativeAlternatives,
       requiredPartnerId: optionalNumber(requiredPartnerId),
       status,
     });
@@ -133,6 +137,8 @@ export function ObstaclesPage() {
       setTitle('');
       setDescription('');
       setSolution('');
+      setRootCause('');
+      setCreativeAlternatives('');
     }
     return success;
   }
@@ -147,6 +153,8 @@ export function ObstaclesPage() {
     setTitle(obstacle.title);
     setDescription(obstacle.description ?? '');
     setSolution(obstacle.solution ?? '');
+    setRootCause(obstacle.rootCause ?? '');
+    setCreativeAlternatives(obstacle.creativeAlternatives ?? '');
     setObstacleType(obstacle.obstacleType);
     setSeverity(obstacle.severity);
     setStatus(obstacle.status);
@@ -162,6 +170,8 @@ export function ObstaclesPage() {
     setTitle('');
     setDescription('');
     setSolution('');
+    setRootCause('');
+    setCreativeAlternatives('');
     setObstacleType('KNOWLEDGE');
     setSeverity('MEDIUM');
     setStatus('OPEN');
@@ -186,6 +196,8 @@ export function ObstaclesPage() {
         obstacleType: obstacle.obstacleType,
         severity: obstacle.severity,
         solution: obstacle.solution,
+        rootCause: obstacle.rootCause,
+        creativeAlternatives: obstacle.creativeAlternatives,
         requiredPartnerId: obstacle.requiredPartnerId,
         status: nextStatus,
       });
@@ -276,6 +288,9 @@ export function ObstaclesPage() {
     },
   ];
 
+  // FR-32.4/BR-26: live count for the "at least three" hint, one per line.
+  const alternativeCount = creativeAlternatives.split('\n').filter((line) => line.trim().length > 0).length;
+
   const formFields = (
     <>
       <label>
@@ -359,6 +374,21 @@ export function ObstaclesPage() {
       <label className="field-full">
         Solution
         <Textarea value={solution} onChange={(event) => setSolution(event.target.value)} />
+      </label>
+      <label className="field-full">
+        Root Cause
+        <Textarea value={rootCause} onChange={(event) => setRootCause(event.target.value)} required={status === 'RESOLVED'} />
+        <span className="field-hint">
+          Why this happened, not just how you worked around it — required to mark Resolved (FR-32).
+        </span>
+      </label>
+      <label className="field-full">
+        Creative Alternatives
+        <Textarea value={creativeAlternatives} onChange={(event) => setCreativeAlternatives(event.target.value)} required={status === 'ACCEPTED'} />
+        <span className="field-hint">
+          One alternative per line — at least three required to mark Accepted, so giving up isn't the first option.{' '}
+          {alternativeCount} of 3 listed so far.
+        </span>
       </label>
     </>
   );

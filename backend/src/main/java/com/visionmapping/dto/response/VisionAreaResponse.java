@@ -9,6 +9,7 @@ public record VisionAreaResponse(
         String code,
         String name,
         String description,
+        String visionStatement,
         Priority priority,
         LifecycleStatus status,
         boolean archived,

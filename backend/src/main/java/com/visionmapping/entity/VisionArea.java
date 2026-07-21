@@ -45,6 +45,11 @@ public class VisionArea extends BaseAuditableEntity {
     @Column(length = 2000)
     private String description;
 
+    // FR-33: "what does this area look like when it's going well?" — optional
+    // coaching prompt, never required to save.
+    @Column(name = "vision_statement", length = 3000)
+    private String visionStatement;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private Priority priority;

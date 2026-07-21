@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 public record VisionAreaRequest(
         @NotBlank @Size(max = 160) String name,
         @Size(max = 2000) String description,
+        @Size(max = 3000) String visionStatement,
         @NotNull Priority priority,
         @NotNull LifecycleStatus status
 ) {

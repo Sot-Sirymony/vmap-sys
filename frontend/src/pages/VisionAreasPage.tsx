@@ -12,6 +12,7 @@ import { Button } from '../components/common/Button';
 import { Compass } from 'lucide-react';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { EmptyState } from '../components/common/EmptyState';
+import { VisionAreaWizard } from '../components/forms/VisionAreaWizard';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { FilterSelect, optionsFromLabels } from '../components/common/FilterSelect';
@@ -48,16 +49,19 @@ export function VisionAreasPage() {
     permanentlyDelete: permanentlyDeleteVisionArea,
     restore: restoreVisionArea,
   });
-  const [createOpen, setCreateOpen] = useState(false);
+  // FR-33.2: creation goes through the setup wizard by default; the flat
+  // form remains for edits and for "skip the guide".
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [flatCreateOpen, setFlatCreateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Arrived from the dashboard's getting-started checklist: open the create
-  // form, then strip the param so a refresh doesn't reopen it.
+  // Arrived from the dashboard's getting-started checklist: open the wizard,
+  // then strip the param so a refresh doesn't reopen it.
   useEffect(() => {
     if (searchParams.get('create') !== 'area') {
       return;
     }
-    setCreateOpen(true);
+    setWizardOpen(true);
     const next = new URLSearchParams(searchParams);
     next.delete('create');
     setSearchParams(next, { replace: true });
@@ -65,6 +69,7 @@ export function VisionAreasPage() {
   }, [searchParams]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [visionStatement, setVisionStatement] = useState('');
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [status, setStatus] = useState<LifecycleStatus>('ACTIVE');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -82,25 +87,29 @@ export function VisionAreasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  async function reloadDreamCounts(activeToken: string) {
+    const dreams = await listDreams(activeToken);
+    const counts = new Map<number, number>();
+    for (const dream of dreams) {
+      counts.set(dream.visionAreaId, (counts.get(dream.visionAreaId) ?? 0) + 1);
+    }
+    setDreamCounts(counts);
+  }
+
   useEffect(() => {
     if (!token) {
       return;
     }
-    void listDreams(token).then((dreams) => {
-      const counts = new Map<number, number>();
-      for (const dream of dreams) {
-        counts.set(dream.visionAreaId, (counts.get(dream.visionAreaId) ?? 0) + 1);
-      }
-      setDreamCounts(counts);
-    });
+    void reloadDreamCounts(token);
   }, [token]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const success = await crud.save({ name, description, priority, status });
+    const success = await crud.save({ name, description, visionStatement, priority, status });
     if (success) {
       setName('');
       setDescription('');
+      setVisionStatement('');
     }
     return success;
   }
@@ -109,6 +118,7 @@ export function VisionAreasPage() {
     crud.startEdit(area.id);
     setName(area.name);
     setDescription(area.description ?? '');
+    setVisionStatement(area.visionStatement ?? '');
     setPriority(area.priority);
     setStatus(area.status);
   }
@@ -117,6 +127,7 @@ export function VisionAreasPage() {
     crud.cancelEdit();
     setName('');
     setDescription('');
+    setVisionStatement('');
     setPriority('HIGH');
     setStatus('ACTIVE');
   }
@@ -131,6 +142,7 @@ export function VisionAreasPage() {
       await updateVisionArea(token, area.id, {
         name: area.name,
         description: area.description,
+        visionStatement: area.visionStatement,
         priority: area.priority,
         status: nextStatus,
       });
@@ -249,6 +261,14 @@ export function VisionAreasPage() {
         </FormControl>
       </label>
       <label className="field-full">
+        Vision Statement
+        <Textarea value={visionStatement} onChange={(event) => setVisionStatement(event.target.value)} />
+        <span className="field-hint">
+          What does this area look like when it's going well? Optional, but writing it down first makes the dreams
+          underneath it easier to judge.
+        </span>
+      </label>
+      <label className="field-full">
         Description
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
       </label>
@@ -259,21 +279,37 @@ export function VisionAreasPage() {
     <PageSection
       title="Vision Areas"
       subtitle="Organize the major areas of life or work."
-      actions={<Button type="button" onClick={() => setCreateOpen(true)}>Create vision area</Button>}
+      actions={<Button type="button" onClick={() => setWizardOpen(true)}>Create vision area</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
         createLabel="Create vision area"
         editTitle="Edit Vision Area"
         saving={crud.saving}
-        creating={createOpen}
-        onCreatingChange={setCreateOpen}
+        creating={flatCreateOpen}
+        onCreatingChange={setFlatCreateOpen}
         hideTrigger
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
       >
         {formFields}
       </CrudModalForm>
+      {wizardOpen && (
+        <VisionAreaWizard
+          token={token ?? ''}
+          onClose={() => setWizardOpen(false)}
+          onSkip={() => {
+            setWizardOpen(false);
+            setFlatCreateOpen(true);
+          }}
+          onCreated={() => {
+            void crud.reload();
+            if (token) {
+              void reloadDreamCounts(token);
+            }
+          }}
+        />
+      )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
       <Card className="filter-bar flex-row">
@@ -303,7 +339,7 @@ export function VisionAreasPage() {
         <EmptyState
           headline="No vision areas yet"
           icon={Compass}
-          action={<Button type="button" onClick={() => setCreateOpen(true)}>Create your first vision area</Button>}
+          action={<Button type="button" onClick={() => setWizardOpen(true)}>Create your first vision area</Button>}
         >
           A vision area is a major part of your life or work — like Career, Health, or Family. Everything else builds under it.
         </EmptyState>

@@ -70,6 +70,15 @@ public class Obstacle extends BaseAuditableEntity {
     @Column(length = 3000)
     private String solution;
 
+    // FR-32: diagnostic metadata only — required before Resolved (BR-25).
+    @Column(name = "root_cause", length = 3000)
+    private String rootCause;
+
+    // FR-32: one alternative per line — at least three required before
+    // Accepted (BR-26).
+    @Column(name = "creative_alternatives", length = 3000)
+    private String creativeAlternatives;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "required_partner_id")
     private Partner requiredPartner;

@@ -16,6 +16,8 @@ public record ObstacleResponse(
         ObstacleType obstacleType,
         Severity severity,
         String solution,
+        String rootCause,
+        String creativeAlternatives,
         Long requiredPartnerId,
         ObstacleStatus status,
         boolean archived,

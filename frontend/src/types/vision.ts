@@ -18,6 +18,7 @@ export type VisionArea = {
   code: string;
   name: string;
   description?: string;
+  visionStatement?: string;
   priority: Priority;
   status: LifecycleStatus;
   archived: boolean;
@@ -26,6 +27,7 @@ export type VisionArea = {
 export type VisionAreaRequest = {
   name: string;
   description?: string;
+  visionStatement?: string;
   priority: Priority;
   status: LifecycleStatus;
 };
@@ -259,6 +261,8 @@ export type Obstacle = {
   obstacleType: ObstacleType;
   severity: Severity;
   solution?: string;
+  rootCause?: string;
+  creativeAlternatives?: string;
   requiredPartnerId?: number;
   status: ObstacleStatus;
   archived: boolean;

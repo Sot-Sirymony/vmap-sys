@@ -17,6 +17,8 @@ public record ObstacleRequest(
         @NotNull ObstacleType obstacleType,
         @NotNull Severity severity,
         @Size(max = 3000) String solution,
+        @Size(max = 3000) String rootCause,
+        @Size(max = 3000) String creativeAlternatives,
         Long requiredPartnerId,
         @NotNull ObstacleStatus status
 ) {

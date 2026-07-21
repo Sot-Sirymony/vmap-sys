@@ -80,6 +80,7 @@ class HierarchyImport {
             VisionAreaRequest request = new VisionAreaRequest(
                     reader.requiredText(2, "Name"),
                     reader.textOrNull(3),
+                    null,
                     reader.enumValue(Priority.class, 4, PRIORITY),
                     reader.enumValue(LifecycleStatus.class, 5, STATUS));
             long newId = visionAreaService.createVisionArea(request).id();

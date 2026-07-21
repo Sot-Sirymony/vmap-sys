@@ -29,7 +29,8 @@ public class VisionMappingMapper {
 
     public VisionAreaResponse toResponse(VisionArea entity) {
         return new VisionAreaResponse(entity.getId(), entity.getCode(), entity.getName(), entity.getDescription(),
-                entity.getPriority(), entity.getStatus(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.getVisionStatement(), entity.getPriority(), entity.getStatus(), entity.isArchived(),
+                entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public DreamResponse toResponse(Dream entity) {
@@ -96,7 +97,8 @@ public class VisionMappingMapper {
     public ObstacleResponse toResponse(Obstacle entity) {
         return new ObstacleResponse(entity.getId(), id(entity.getRelatedDream()), id(entity.getRelatedGoal()),
                 id(entity.getRelatedStep()), id(entity.getRelatedTask()), entity.getTitle(), entity.getDescription(),
-                entity.getObstacleType(), entity.getSeverity(), entity.getSolution(), id(entity.getRequiredPartner()),
+                entity.getObstacleType(), entity.getSeverity(), entity.getSolution(), entity.getRootCause(),
+                entity.getCreativeAlternatives(), id(entity.getRequiredPartner()),
                 entity.getStatus(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
