@@ -361,6 +361,14 @@ export function VisionMapTree({ dream, visionAreaName, goals, steps, tasks, toke
             <div className="map-line">
               <span className="map-code">{dream.code}</span>
               {titleOrEdit(dreamRow, dream.title)}
+              {dream.moonshot && (
+                <Chip
+                  size="small"
+                  icon={<Rocket size={14} />}
+                  label="Moonshot"
+                  sx={{ bgcolor: moonshotTint, color: moonshotVioletDeep, fontWeight: 700, '& .MuiChip-icon': { color: moonshotViolet } }}
+                />
+              )}
               <PriorityBadge priority={dream.priority} />
             </div>
             {dream.successDefinition && <p className="map-meta">Success looks like: {dream.successDefinition}</p>}

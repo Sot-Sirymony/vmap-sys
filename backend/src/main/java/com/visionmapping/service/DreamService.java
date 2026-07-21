@@ -59,6 +59,8 @@ public class DreamService {
                 .priority(request.priority())
                 .targetDate(request.targetDate())
                 .status(request.status())
+                .moonshot(request.moonshot())
+                .moonshotVision(request.moonshotVision())
                 .build();
         return mapper.toResponse(dreamRepository.save(entity));
     }
@@ -79,6 +81,8 @@ public class DreamService {
         entity.setPriority(request.priority());
         entity.setTargetDate(request.targetDate());
         entity.setStatus(request.status());
+        entity.setMoonshot(request.moonshot());
+        entity.setMoonshotVision(request.moonshotVision());
         return mapper.toResponse(entity);
     }
 

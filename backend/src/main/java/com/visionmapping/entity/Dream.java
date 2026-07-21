@@ -72,6 +72,13 @@ public class Dream extends BaseAuditableEntity {
     @Column(nullable = false, length = 40)
     private DreamStatus status;
 
+    // FR-31: aspirational metadata only — never touches progress/completion.
+    @Column(nullable = false)
+    private boolean moonshot;
+
+    @Column(name = "moonshot_vision", length = 3000)
+    private String moonshotVision;
+
     @Column(nullable = false)
     private boolean archived;
 }

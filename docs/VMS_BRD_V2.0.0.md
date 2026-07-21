@@ -4,8 +4,8 @@
 |---|---|
 | **Document** | VMS_BRD_V2.0.0 |
 | **Version** | 2.0.0 (In progress) |
-| **Date** | 2026-07-11 (progress updated 2026-07-17) |
-| **Status** | Complete — all 11 items shipped and all open items resolved. Addendum A (FR-18 Theme Settings) also ✅ shipped 2026-07-17. Addendum B (2026-07-18) added the V2.1 "Ease of Use" improvement program (FR-19 … FR-29). Addendum C (2026-07-19) adds the Redis cache performance layer (FR-30) — ✅ core shipped 2026-07-19 (C-3 read-model caches deferred pending O-9). |
+| **Date** | 2026-07-11 (progress updated 2026-07-21) |
+| **Status** | Complete — all 11 items shipped and all open items resolved. Addendum A (FR-18 Theme Settings) also ✅ shipped 2026-07-17. Addendum B (2026-07-18) added the V2.1 "Ease of Use" improvement program (FR-19 … FR-29). Addendum C (2026-07-19) adds the Redis cache performance layer (FR-30) — ✅ core shipped 2026-07-19 (C-3 read-model caches deferred pending O-9). Addendum D (2026-07-21) extends Moonshot from Goal-only to Dream-level (FR-31) — ✅ shipped 2026-07-21. |
 | **Baseline** | Builds on VMS_BRD_V1.0.0 (all V1 requirements remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -1137,3 +1137,114 @@ dashboard cache shows meaningful wins (see O-9).
 | O-8 | Render Key Value plan: free tier (25 MB, ephemeral) or paid (persistent)? Cache data is disposable, so free looks sufficient — confirm eviction policy behavior on the free tier before wiring `render.yaml`. | C-4 | ✅ Resolved 2026-07-19 — free tier wired with explicit `maxmemoryPolicy: allkeys-lru`; ephemerality is fine because BR-21 makes Redis loss a slowdown, not a failure. |
 | O-9 | Do the C-3 read-model caches earn their invalidation surface? Decide from C-2's measured hit rate and latency delta before building C-3. | C-3 | Open — measure the dashboard cache's hit rate in production after the next deploy. |
 | O-10 | Baseline measurements: capture current p50/p95 timings for dashboard and Vision Map reads (seeded realistic account) *before* C-1 starts, so C-4 has a before/after comparison. | C-1 | 🔶 Partially resolved 2026-07-19 — local before/after captured (dashboard 42 ms uncached → 11 ms cached, small dataset); production numbers pending first deploy with the cache enabled. |
+
+---
+
+## Addendum D (2026-07-21) — FR-31 Moonshot Dreams — ✅ Done 2026-07-21
+
+### Why now
+
+FR-14 (V2.0.0) shipped Moonshot only on Goal. In practice the ambition
+question — *"if resources were no limit, what would the ideal result look
+like?"* — applies just as naturally one level up: a whole **Dream** can be
+the ambitious swing (career, health, business), not only one goal beneath it.
+Today a user who wants to flag the Dream itself as a moonshot has no field
+for it and has to fake the signal by marking one of its goals instead, which
+misattributes the ambition to the wrong level of the hierarchy. This addendum
+gives Dream the same capability Goal already has, using the same design.
+
+Requirement numbering continues from Addendum C (which ended at FR-30); this
+addendum is **FR-31**.
+
+### Design decision
+
+Mirror FR-14 exactly, one level up: a Dream gains a `moonshot` boolean and a
+`moonshotVision` free-text field, stored on the same Dream record — *not* a
+paired "achievable" / "moonshot" Dream. The V2.0.0 rationale still holds:
+pairing doubles list noise and splits progress tracking, while a flag keeps
+ambition visible without changing the data model's shape. A Dream's moonshot
+flag is independent of its goals' moonshot flags — a non-moonshot Dream can
+still contain a moonshot Goal, and vice versa; the system never infers one
+from the other.
+
+### FR-31 Moonshot Dream Setting — ✅ Done (Effort: S)
+
+- FR-31.1 A dream can be marked as a **Moonshot**. The create/edit form (and
+  the FR-21 Dream Coaching Wizard) asks the same original prompt used at goal
+  level when the flag is set: *"If resources were no limit, what would the
+  ideal result look like?"* — the answer is stored with the dream as its
+  moonshot vision statement (`moonshotVision`, mirrors `Goal.moonshotVision`).
+- FR-31.2 Moonshot dreams are visually distinct wherever dreams appear
+  (Dreams table, Dream Detail / Vision Map header, dashboard) — same badge
+  treatment already defined for moonshot goals, reused rather than
+  reinvented.
+- FR-31.3 The dashboard's dream analytics distinguish moonshot from standard
+  dreams (count and status breakdown), alongside the existing moonshot-goal
+  count from FR-14.3.
+- FR-31.4 The FR-25.2 "inactive moonshot" attention entry extends to dreams:
+  a moonshot dream still in **Idea** status surfaces alongside inactive
+  moonshot goals, so ambition going stale is caught at either level. This
+  mirrors the Goal rule exactly (moonshot + `NOT_STARTED`) one level up —
+  `IDEA` is a Dream's own "hasn't started" status, not a rollup of its goals.
+- FR-31.5 A moonshot flag on a Dream is aspirational metadata only: it never
+  changes progress calculation, completion rules, archival behavior, or any
+  other business rule — same guarantee BR-11 already makes for Goal.
+
+**Acceptance criteria**
+
+1. User can flag a dream as moonshot at create or edit time (flat form and
+   wizard) and record its ideal-result statement.
+2. Moonshot dreams carry a distinct badge in the Dreams table and on the
+   Vision Map / Dream Detail header.
+3. Dashboard shows how many active dreams are moonshots, separately from the
+   existing moonshot-goal count.
+4. A moonshot dream still in Idea status appears in the dashboard's attention
+   list (extending FR-25.2), the same way an inactive moonshot goal does
+   today.
+5. All existing dream rules (dream status transitions, archive/restore,
+   Excel import/export mapping) behave identically for moonshot dreams.
+
+**Business rule**
+
+| # | Rule |
+|---|---|
+| BR-24 | A moonshot flag never alters progress, completion, or archival behavior for a Dream, and is independent of the moonshot flag on any of its Goals — extends BR-11 from Goal to Dream. |
+
+**Shipped (2026-07-21):** Migration `V9__dream_moonshot.sql` adds `moonshot
+BOOLEAN NOT NULL DEFAULT FALSE` and `moonshot_vision VARCHAR(3000)` to
+`dreams`, mirroring `V7__goal_moonshot.sql`. `Dream` gains `moonshot` /
+`moonshotVision`; `DreamRequest`/`DreamResponse` gain the same two fields as
+`GoalRequest`/`GoalResponse`, and `DreamService` sets them on create and
+update. `DashboardSummaryResponse` gains `moonshotDreams` (count) alongside
+the existing `moonshotGoals`, and `Attention.inactiveMoonshotDreams`
+alongside `inactiveMoonshotGoals`; `DashboardService` computes both the same
+way it does for goals (moonshot dreams count, and moonshot-dreams-still-in-Idea
+for the attention list). The Excel importer's `DreamRequest` construction
+passes `moonshot=false` (the workbook has no moonshot column, matching how
+Goal import already behaves).
+
+Frontend: the existing moonshot Chip/Rocket badge treatment is reused, not
+reinvented — `DreamsPage` (table title cell, board card, moonshot checkbox +
+vision textarea in the create/edit form, "Moonshots only" filter with its own
+`moonshot` URL flag) and `VisionMapTree`'s dream row (the Vision Map header,
+per FR-24) all render the badge from `dream.moonshot`. `dreamRequest()` in
+`entityRequests.ts` now carries the two fields through, so the Vision Map's
+existing inline rename/status-change calls (which spread `dreamRequest(dream)`)
+picked up moonshot support with no code change there. `DashboardSummary`
+shows a second "N of your dreams are moonshots" line under the existing goals
+line; `AttentionPanel` gets a "Moonshot dreams still an idea" finding linking
+to `/dreams?moonshot=true`, alongside the existing goal one.
+
+Verified: backend 19/19 test classes green (new `DashboardServiceTest` cases
+`dashboardCountsMoonshotDreams` and `attentionFlagsInactiveMoonshotDreams`),
+frontend `tsc -b` clean, production build green, 35/35 frontend tests green.
+
+**Design note, resolved during build:** the Dream Coaching Wizard (FR-21.3)
+does **not** ask the moonshot question inline — moonshot stays edit-only on
+the flat Dream form, exactly matching the Goal precedent (no goal wizard
+asks it either). A user marks a dream as a moonshot after creating it via
+"Edit."
+
+**Out of scope for FR-31:** moonshot at Vision Area or Step/Task level (not
+requested; revisit only if the same need surfaces there), and any change to
+how Goal-level moonshot behaves today.

@@ -17,6 +17,8 @@ export const dreamRequest = (dream: Dream): DreamRequest => ({
   priority: dream.priority,
   targetDate: dream.targetDate,
   status: dream.status,
+  moonshot: dream.moonshot,
+  moonshotVision: dream.moonshotVision,
 });
 
 export const goalRequest = (goal: Goal): GoalRequest => ({

@@ -18,6 +18,8 @@ public record DreamResponse(
         Priority priority,
         LocalDate targetDate,
         DreamStatus status,
+        boolean moonshot,
+        String moonshotVision,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

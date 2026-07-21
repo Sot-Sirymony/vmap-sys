@@ -148,6 +148,7 @@ public class DashboardService {
                 topPriorityTasks(data.tasks()),
                 countWeeksWithDiligence(data.reviews(), today),
                 data.goals().stream().filter(Goal::isMoonshot).count(),
+                data.dreams().stream().filter(Dream::isMoonshot).count(),
                 buildAttention(data)
         );
     }
@@ -396,12 +397,21 @@ public class DashboardService {
                 .map(mapper::toResponse)
                 .toList();
 
+        // FR-31.4: same rule one level up — a moonshot dream still at the Idea
+        // stage is ambition going stale, same as an unstarted moonshot goal.
+        List<DreamResponse> inactiveMoonshotDreams = data.dreams().stream()
+                .filter(Dream::isMoonshot)
+                .filter(dream -> dream.getStatus() == DreamStatus.IDEA)
+                .map(mapper::toResponse)
+                .toList();
+
         return new DashboardSummaryResponse.Attention(
                 blockedTasksWithoutPartner,
                 complexStepsWithoutTasks,
                 dreamsWithoutGoals,
                 goalsWithoutSteps,
-                inactiveMoonshotGoals);
+                inactiveMoonshotGoals,
+                inactiveMoonshotDreams);
     }
 
     /**

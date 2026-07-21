@@ -38,6 +38,7 @@ public record DashboardSummaryResponse(
         List<TaskItemResponse> priorityTasks,
         long weeksWithDiligence,
         long moonshotGoals,
+        long moonshotDreams,
         Attention attention
 ) {
 
@@ -64,7 +65,8 @@ public record DashboardSummaryResponse(
             List<VisionStepResponse> complexStepsWithoutTasks,
             List<DreamResponse> dreamsWithoutGoals,
             List<GoalResponse> goalsWithoutSteps,
-            List<GoalResponse> inactiveMoonshotGoals
+            List<GoalResponse> inactiveMoonshotGoals,
+            List<DreamResponse> inactiveMoonshotDreams
     ) {
     }
 }

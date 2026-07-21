@@ -89,6 +89,15 @@ function buildFindings(attention: DashboardAttention, overdueCount: number, visi
       to: scoped('/goals?moonshot=true', visionAreaId),
       action: 'Start or revise',
     },
+    {
+      key: 'moonshot-dream-inactive',
+      icon: Rocket,
+      count: (attention.inactiveMoonshotDreams ?? []).length,
+      title: 'Moonshot dreams still an idea',
+      why: 'A moonshot that never left the idea stage is ambition going stale — promote it to active, or consciously revise it.',
+      to: scoped('/dreams?moonshot=true', visionAreaId),
+      action: 'Start or revise',
+    },
   ];
 
   return findings.filter((finding) => finding.count > 0);

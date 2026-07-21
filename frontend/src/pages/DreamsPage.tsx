@@ -3,13 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, restoreDream, updateDream } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listVisionAreas } from '../api/visionAreaApi';
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Checkbox from '@mui/material/Checkbox';
 import FormControl from '@mui/material/FormControl';
+import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import { Sparkles } from 'lucide-react';
+import { Rocket, Sparkles } from 'lucide-react';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -35,6 +37,8 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, VisionArea } from '../types/vision';
+import { moonshotViolet } from '../theme';
+import { dreamRequest } from '../utils/entityRequests';
 import { dreamStatusLabels, dreamTypeLabels, priorityLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
@@ -66,6 +70,8 @@ export function DreamsPage() {
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<DreamStatus>('ACTIVE');
+  const [moonshot, setMoonshot] = useState(false);
+  const [moonshotVision, setMoonshotVision] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   // In the URL, not component state: the dashboard links straight into a
@@ -75,6 +81,7 @@ export function DreamsPage() {
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
   const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
+  const [filterMoonshotOnly, setFilterMoonshotOnly] = useUrlFlag('moonshot');
   const [searchParams, setSearchParams] = useSearchParams();
   // FR-21.3: creation goes through the coaching wizard by default; the flat
   // form remains for edits and for "skip the guide".
@@ -138,12 +145,16 @@ export function DreamsPage() {
       priority,
       targetDate: targetDate || undefined,
       status,
+      moonshot,
+      moonshotVision: moonshot ? moonshotVision : undefined,
     });
     if (success) {
       setTitle('');
       setDescription('');
       setWhyImportant('');
       setSuccessDefinition('');
+      setMoonshot(false);
+      setMoonshotVision('');
     }
     return success;
   }
@@ -159,6 +170,8 @@ export function DreamsPage() {
     setPriority(dream.priority);
     setTargetDate(dream.targetDate ?? '');
     setStatus(dream.status);
+    setMoonshot(dream.moonshot);
+    setMoonshotVision(dream.moonshotVision ?? '');
   }
 
   function cancelEdit() {
@@ -171,6 +184,8 @@ export function DreamsPage() {
     setPriority('HIGH');
     setTargetDate('');
     setStatus('ACTIVE');
+    setMoonshot(false);
+    setMoonshotVision('');
   }
 
   // Board drag/dropdown move. There is no status PATCH endpoint for dreams, so
@@ -180,17 +195,7 @@ export function DreamsPage() {
       return;
     }
     try {
-      await updateDream(token, dream.id, {
-        visionAreaId: dream.visionAreaId,
-        title: dream.title,
-        description: dream.description,
-        whyImportant: dream.whyImportant,
-        successDefinition: dream.successDefinition,
-        dreamType: dream.dreamType,
-        priority: dream.priority,
-        targetDate: dream.targetDate,
-        status: nextStatus,
-      });
+      await updateDream(token, dream.id, { ...dreamRequest(dream), status: nextStatus });
       await crud.reload();
     } catch (moveError) {
       crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update dream status.');
@@ -221,11 +226,15 @@ export function DreamsPage() {
     if (filterOverdueOnly && !isOverdue(dream.targetDate, dream.status)) {
       return false;
     }
+    if (filterMoonshotOnly && !dream.moonshot) {
+      return false;
+    }
     return matchesSearch(searchTerm, dream.code, dream.title, dream.description, dream.whyImportant, dream.successDefinition);
   });
 
   const hasFilters = Boolean(
-    searchTerm || filterVisionAreaId || filterDreamType || filterPriority || filterStatus || filterOverdueOnly,
+    searchTerm || filterVisionAreaId || filterDreamType || filterPriority || filterStatus
+      || filterOverdueOnly || filterMoonshotOnly,
   );
 
   // Shared by the table's action column and the board's cards, so both offer
@@ -257,7 +266,18 @@ export function DreamsPage() {
       sortValue: (dream) => dream.title,
       sx: { fontWeight: 500 },
       // FR-24.4: the map is a dream's landing surface — its title goes there.
-      render: (dream) => <Link className="table-title-link" to={`/dreams/${dream.id}`}>{dream.title}</Link>,
+      render: (dream) => (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+          {dream.moonshot && (
+            <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
+              <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot dream">
+                <Rocket size={16} />
+              </Box>
+            </Tooltip>
+          )}
+          <Link className="table-title-link" to={`/dreams/${dream.id}`}>{dream.title}</Link>
+        </Box>
+      ),
     },
     {
       key: 'priority',
@@ -373,6 +393,22 @@ export function DreamsPage() {
         <Textarea value={successDefinition} onChange={(event) => setSuccessDefinition(event.target.value)} />
       </label>
       <label className="field-full">
+        <span className="inline-meta">
+          <Checkbox checked={moonshot} onChange={(event) => setMoonshot(event.target.checked)} />
+          Moonshot dream
+        </span>
+      </label>
+      {moonshot && (
+        <label className="field-full">
+          Moonshot vision
+          <Textarea value={moonshotVision} onChange={(event) => setMoonshotVision(event.target.value)} />
+          <span className="field-hint">
+            If resources were no limit, what would the ideal result look like? Aim beyond what feels achievable — this
+            is aspirational only and never changes the dream's progress or completion.
+          </span>
+        </label>
+      )}
+      <label className="field-full">
         Description
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
       </label>
@@ -465,6 +501,10 @@ export function DreamsPage() {
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
           Overdue only
         </label>
+        <label className="checkbox-field">
+          <Checkbox checked={filterMoonshotOnly} onChange={(event) => setFilterMoonshotOnly(event.target.checked)} />
+          Moonshots only
+        </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </Card>
       <div className="view-toggle-row">
@@ -494,7 +534,7 @@ export function DreamsPage() {
             emptyMessage={hasFilters ? 'No dreams match these filters.' : 'No dreams yet.'}
             defaultSortKey="priority"
             defaultSortDirection="desc"
-            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamType}|${filterPriority}|${filterStatus}|${filterOverdueOnly}`}
+            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamType}|${filterPriority}|${filterStatus}|${filterOverdueOnly}|${filterMoonshotOnly}`}
             rowClassName={(dream) => (dream.archived ? 'row-archived' : '')}
             selection={{
               selectedIds,
@@ -524,7 +564,16 @@ export function DreamsPage() {
           cardClassName={(dream) => (isOverdue(dream.targetDate, dream.status) ? 'list-card--overdue' : '')}
           renderCard={(dream) => (
             <>
-              <strong>{dream.title}</strong>
+              <strong>
+                {dream.moonshot && (
+                  <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Moonshot dream">
+                      <Rocket size={16} />
+                    </Box>
+                  </Tooltip>
+                )}
+                {dream.title}
+              </strong>
               <p>{dream.code} · {goalCounts.get(dream.id) ?? 0} goal(s){dream.targetDate ? <> · Target <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} /></> : ''}</p>
               <div className="inline-meta">
                 <PriorityBadge priority={dream.priority} />

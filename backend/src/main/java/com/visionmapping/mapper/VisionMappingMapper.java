@@ -35,8 +35,8 @@ public class VisionMappingMapper {
     public DreamResponse toResponse(Dream entity) {
         return new DreamResponse(entity.getId(), entity.getCode(), entity.getVisionArea().getId(), entity.getTitle(),
                 entity.getDescription(), entity.getWhyImportant(), entity.getSuccessDefinition(), entity.getDreamType(),
-                entity.getPriority(), entity.getTargetDate(), entity.getStatus(), entity.isArchived(), entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getPriority(), entity.getTargetDate(), entity.getStatus(), entity.isMoonshot(),
+                entity.getMoonshotVision(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public GoalResponse toResponse(Goal entity) {

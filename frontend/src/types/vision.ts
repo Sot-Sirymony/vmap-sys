@@ -42,6 +42,8 @@ export type Dream = {
   priority: Priority;
   targetDate?: string;
   status: DreamStatus;
+  moonshot: boolean;
+  moonshotVision?: string;
   archived: boolean;
 };
 
@@ -55,6 +57,8 @@ export type DreamRequest = {
   priority: Priority;
   targetDate?: string;
   status: DreamStatus;
+  moonshot: boolean;
+  moonshotVision?: string;
 };
 
 export type Goal = {
@@ -333,6 +337,7 @@ export type DashboardSummary = {
   priorityTasks: TaskItem[];
   weeksWithDiligence: number;
   moonshotGoals: number;
+  moonshotDreams: number;
   attention: DashboardAttention;
 };
 
@@ -343,4 +348,5 @@ export type DashboardAttention = {
   dreamsWithoutGoals: Dream[];
   goalsWithoutSteps: Goal[];
   inactiveMoonshotGoals: Goal[];
+  inactiveMoonshotDreams: Dream[];
 };

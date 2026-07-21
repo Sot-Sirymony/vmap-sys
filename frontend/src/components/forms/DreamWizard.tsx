@@ -71,6 +71,7 @@ export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, 
         priority,
         targetDate: targetDate || undefined,
         status: 'ACTIVE',
+        moonshot: false,
       });
       setCreatedDream(dream);
       setStep(3);

@@ -393,6 +393,41 @@ class DashboardServiceTest {
     }
 
     @Test
+    void dashboardCountsMoonshotDreams() {
+        VisionArea area = visionArea(1L);
+        Dream moonshotDream = dream(1L, area);
+        moonshotDream.setMoonshot(true);
+        Dream standardDream = dream(2L, area);
+
+        when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(moonshotDream, standardDream));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.moonshotDreams()).isEqualTo(1);
+    }
+
+    @Test
+    void attentionFlagsInactiveMoonshotDreams() {
+        VisionArea area = visionArea(1L);
+        Dream stale = dream(1L, area);
+        stale.setMoonshot(true);
+        stale.setStatus(DreamStatus.IDEA);
+        Dream moving = dream(2L, area);
+        moving.setMoonshot(true);
+        moving.setStatus(DreamStatus.ACTIVE);
+        Dream standardIdea = dream(3L, area);
+        standardIdea.setStatus(DreamStatus.IDEA);
+
+        when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(stale, moving, standardIdea));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.attention().inactiveMoonshotDreams())
+                .extracting(com.visionmapping.dto.response.DreamResponse::id)
+                .containsExactly(1L);
+    }
+
+    @Test
     void dashboardTopPriorityTasksExcludeCompletedAndCapAtFive() {
         VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false),
                 WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);

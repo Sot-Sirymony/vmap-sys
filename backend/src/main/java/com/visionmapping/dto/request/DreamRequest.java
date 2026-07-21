@@ -17,6 +17,8 @@ public record DreamRequest(
         @NotNull DreamType dreamType,
         @NotNull Priority priority,
         LocalDate targetDate,
-        @NotNull DreamStatus status
+        @NotNull DreamStatus status,
+        boolean moonshot,
+        @Size(max = 3000) String moonshotVision
 ) {
 }

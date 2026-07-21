@@ -99,7 +99,9 @@ class HierarchyImport {
                     reader.enumValue(DreamType.class, 6, TYPE),
                     reader.enumValue(Priority.class, 7, PRIORITY),
                     reader.dateOrNull(8),
-                    reader.enumValue(DreamStatus.class, 9, STATUS));
+                    reader.enumValue(DreamStatus.class, 9, STATUS),
+                    false,
+                    null);
             long newId = dreamService.createDream(request).id();
             mapWorkbookId(reader, newDreamIds, newId);
         });

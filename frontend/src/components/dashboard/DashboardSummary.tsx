@@ -127,6 +127,14 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
           </Typography>
         </Box>
       )}
+      {(summary?.moonshotDreams ?? 0) > 0 && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--moonshot-fg)', mt: -1 }}>
+          <Rocket size={14} />
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>
+            {summary?.moonshotDreams} of your dreams {summary?.moonshotDreams === 1 ? 'is a moonshot' : 'are moonshots'}.
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }
