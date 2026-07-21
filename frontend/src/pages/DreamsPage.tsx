@@ -12,6 +12,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { Rocket, Sparkles } from 'lucide-react';
+import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -237,6 +238,15 @@ export function DreamsPage() {
       || filterOverdueOnly || filterMoonshotOnly,
   );
 
+  // FR-23.1-style ancestry: shows which vision area a dream belongs to,
+  // navigable, the same pattern the Tasks board uses under each row's title.
+  function dreamCrumbs(dream: Dream) {
+    const area = visionAreas.find((item) => item.id === dream.visionAreaId);
+    return [
+      area && { label: area.name, to: `/dreams?visionAreaId=${area.id}` },
+    ].filter(Boolean) as { label: string; to: string }[];
+  }
+
   // Shared by the table's action column and the board's cards, so both offer
   // the same row actions.
   function renderDreamActions(dream: Dream) {
@@ -267,16 +277,19 @@ export function DreamsPage() {
       sx: { fontWeight: 500 },
       // FR-24.4: the map is a dream's landing surface — its title goes there.
       render: (dream) => (
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-          {dream.moonshot && (
-            <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
-              <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot dream">
-                <Rocket size={16} />
-              </Box>
-            </Tooltip>
-          )}
-          <Link className="table-title-link" to={`/dreams/${dream.id}`}>{dream.title}</Link>
-        </Box>
+        <>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+            {dream.moonshot && (
+              <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot dream">
+                  <Rocket size={16} />
+                </Box>
+              </Tooltip>
+            )}
+            <Link className="table-title-link" to={`/dreams/${dream.id}`}>{dream.title}</Link>
+          </Box>
+          <Breadcrumbs crumbs={dreamCrumbs(dream)} />
+        </>
       ),
     },
     {
