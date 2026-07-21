@@ -1569,6 +1569,16 @@ button:focus-visible,
   text-decoration-thickness: 1px;
 }
 
+/* Archived rows on the Vision Map: same "frozen record" treatment list pages
+   give an archived row — dimmed, only Restore / Delete permanently apply. */
+.map-row--archived {
+  opacity: 0.6;
+}
+
+.map-title--archived {
+  color: var(--text-soft);
+}
+
 /* FR-29.5 per-area identity dots */
 .area-dot-label {
   display: inline-flex;

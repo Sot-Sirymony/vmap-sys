@@ -14,6 +14,7 @@ import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
+import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { VisionMapTree } from '../components/vision-map/VisionMapTree';
 import { useAuth } from '../context/AuthContext';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
@@ -30,6 +31,9 @@ export function DreamDetailPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Off by default: an archived dream/goal/step/task is a dead end you view to
+  // restore or permanently remove, not part of the working map.
+  const [showArchived, setShowArchived] = useState(false);
 
   async function load() {
     if (!token) {
@@ -39,10 +43,10 @@ export function DreamDetailPage() {
     try {
       const [areaData, dreamData, goalData, stepData, taskData] = await Promise.all([
         listVisionAreas(token),
-        listDreams(token),
-        listGoals(token),
-        listSteps(token),
-        listTasks(token),
+        listDreams(token, showArchived),
+        listGoals(token, showArchived),
+        listSteps(token, showArchived),
+        listTasks(token, showArchived),
       ]);
       setVisionAreas(areaData);
       setDreams(dreamData);
@@ -59,7 +63,8 @@ export function DreamDetailPage() {
 
   useEffect(() => {
     void load();
-  }, [token]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, showArchived]);
 
   const selectedDream = useMemo(() => {
     if (dreamId) {
@@ -74,7 +79,7 @@ export function DreamDetailPage() {
     <PageSection title="Vision Map" subtitle="View one dream from area to executable tasks.">
       {dreams.length > 0 && (
         <Card>
-          <CardContent>
+          <CardContent sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
             <label>
               Dream
               <FormControl fullWidth size="small">
@@ -83,10 +88,11 @@ export function DreamDetailPage() {
                   value={String(selectedDream?.id ?? '')}
                   onChange={(event) => event.target.value && navigate(`/dreams/${event.target.value}`)}
                 >
-                  {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
+                  {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}{dream.archived ? ' (archived)' : ''}</MenuItem>)}
                 </Select>
               </FormControl>
             </label>
+            <ShowArchivedToggle checked={showArchived} onToggle={() => setShowArchived((current) => !current)} />
           </CardContent>
         </Card>
       )}
@@ -112,6 +118,7 @@ export function DreamDetailPage() {
           tasks={tasks}
           token={token ?? ''}
           onDataChange={load}
+          onDreamPermanentlyDeleted={() => navigate('/dreams')}
         />
         </>
       )}
