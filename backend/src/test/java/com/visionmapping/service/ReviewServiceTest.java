@@ -25,7 +25,7 @@ import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.util.UserScope;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,7 +66,7 @@ class ReviewServiceTest {
 
     @Test
     void partialDiligenceChecklistIsRejected() {
-        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDate.now(), null, null,
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
                 true, true, null, null, null, null);
 
@@ -79,10 +79,10 @@ class ReviewServiceTest {
     void fullOrSkippedDiligenceChecklistIsAccepted() {
         when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReviewRequest full = new ReviewRequest(ReviewType.WEEKLY, LocalDate.now(), null, null,
+        ReviewRequest full = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
                 true, false, true, true, false, "Tempo weeks slipped");
-        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDate.now(), null, null,
+        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
                 null, null, null, null, null, null);
 

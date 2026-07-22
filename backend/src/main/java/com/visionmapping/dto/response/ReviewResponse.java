@@ -2,12 +2,12 @@ package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.ReviewType;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record ReviewResponse(
         Long id,
         ReviewType reviewType,
-        LocalDate reviewDate,
+        LocalDateTime reviewDate,
         Long relatedVisionAreaId,
         Long relatedDreamId,
         String summary,

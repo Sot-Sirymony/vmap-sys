@@ -64,6 +64,15 @@ const DILIGENCE_QUESTIONS = [
 
 type DiligenceKey = (typeof DILIGENCE_QUESTIONS)[number]['key'];
 
+// datetime-local input value format, seconds included: "YYYY-MM-DDTHH:mm:ss".
+// Built from local getters (not toISOString, which is UTC) so the picker
+// shows the user's own wall-clock time.
+function nowForDateTimeInput(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
 const EMPTY_DILIGENCE: Record<DiligenceKey, boolean | null> = {
   diligenceClearVision: null,
   diligenceWorkedPlan: null,
@@ -88,7 +97,7 @@ export function ReviewsPage() {
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [reviewType, setReviewType] = useState<ReviewType>('WEEKLY');
-  const [reviewDate, setReviewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [reviewDate, setReviewDate] = useState(nowForDateTimeInput());
   const [relatedVisionAreaId, setRelatedVisionAreaId] = useState('');
   const [relatedDreamId, setRelatedDreamId] = useState('');
   const [summary, setSummary] = useState('');
@@ -180,7 +189,7 @@ export function ReviewsPage() {
   function cancelEdit() {
     crud.cancelEdit();
     setReviewType('WEEKLY');
-    setReviewDate(new Date().toISOString().slice(0, 10));
+    setReviewDate(nowForDateTimeInput());
     setRelatedVisionAreaId('');
     setRelatedDreamId('');
     setSummary('');
@@ -288,7 +297,7 @@ export function ReviewsPage() {
       </label>
       <label>
         Date
-        <Input type="date" value={reviewDate} onChange={(event) => setReviewDate(event.target.value)} required />
+        <Input type="datetime-local" step={1} value={reviewDate} onChange={(event) => setReviewDate(event.target.value)} required />
       </label>
       <label>
         Vision Area

@@ -239,7 +239,7 @@ public class DashboardService {
         return reviews.stream()
                 .filter(review -> review.getReviewType() == ReviewType.WEEKLY)
                 .filter(review -> review.getDiligenceClearVision() != null)
-                .filter(review -> !review.getReviewDate().isBefore(windowStart))
+                .filter(review -> !review.getReviewDate().toLocalDate().isBefore(windowStart))
                 .map(review -> review.getReviewDate().get(weekFields.weekBasedYear()) * 100
                         + review.getReviewDate().get(weekFields.weekOfWeekBasedYear()))
                 .distinct()

@@ -3,11 +3,11 @@ package com.visionmapping.dto.request;
 import com.visionmapping.entity.enums.ReviewType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record ReviewRequest(
         @NotNull ReviewType reviewType,
-        @NotNull LocalDate reviewDate,
+        @NotNull LocalDateTime reviewDate,
         Long relatedVisionAreaId,
         Long relatedDreamId,
         @Size(max = 3000) String summary,
