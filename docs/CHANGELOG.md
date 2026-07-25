@@ -39,6 +39,63 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [4.0.0] — Planned (not started)
+
+Will implement **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
+Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
+numbering continues from v3 (which ended at FR-33).
+
+Moves the system from *activating* to *integrating* — energy as a portfolio,
+cross-area synergy, a searchable insight library, and computed balance signals.
+
+### Scope (buildable now — additive, no new infrastructure)
+- **FR-34** Energy & Asset Portfolio — task energy tag + weekly budget (Stage A),
+  over-commitment coaching (Stage B).
+- **FR-35** Holistic Life Integration — goal synergy links + cross-pollination view.
+- **FR-36** PKM Insight Library — search + contextual resurfacing over lessons that
+  already exist (`Review.lessonsLearned`, `Obstacle.rootCause`/`creativeAlternatives`).
+- **FR-37** Life-Optimization Signals — computed area-starvation signal in the
+  attention feed; augments the Review system, does not replace it.
+
+### Deferred (needs new infrastructure — future BRD)
+Automated agenda generation, predictive push alerts, and fully-automated reviews —
+each requires a scheduler, background jobs, a notification channel, or a calendar
+model the system does not have. Out of v4.0.0 scope by design.
+
+### Migrations (planned)
+- `V13__task_energy_demand.sql`
+- `V14__goal_synergy_link.sql`
+
+No FR built yet; the version does not move until the first requirement ships.
+
+---
+
+## [3.0.0] — 2026-07-21
+
+Implements **[VMS_BRD_V3.0.0](VMS_BRD_V3.0.0.md)** (dated 2026-07-21).
+Builds on BRD v2.0.0 — all v1/v2 requirements remain in force. Requirement
+numbering continues from v2 (which ended at FR-31, Addendum D).
+
+Moves the system from *tracking* to *activating*: obstacles must prove creative
+persistence before they can be closed, and each Vision Area gets a written
+vision statement and a guided setup wizard.
+
+### Shipped
+| Item | Description | Commit |
+|---|---|---|
+| FR-32 | Obstacle Creative Persistence — `rootCause` + `creativeAlternatives`, with Resolved/Accepted status guards (BR-25, BR-26) | `7fe6815` |
+| FR-33 | Vision Area vision statement + guided setup wizard | `7fe6815` |
+
+Both verified with backend tests (8 new `ObstacleServiceTest` cases; suite
+83/83 green), frontend `tsc -b` + build + 35/35 tests green, and live
+end-to-end runs (see the BRD for the full verification log).
+
+### Migrations
+- `V10__obstacle_creative_persistence.sql`
+- `V11__vision_area_vision_statement.sql`
+
+---
+
 ## [2.0.0] — In progress (6 of 11 items shipped)
 
 Implements **[VMS_BRD_V2.0.0](VMS_BRD_V2.0.0.md)** (dated 2026-07-11).
