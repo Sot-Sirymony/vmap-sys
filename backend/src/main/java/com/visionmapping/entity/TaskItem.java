@@ -1,5 +1,6 @@
 package com.visionmapping.entity;
 
+import com.visionmapping.entity.enums.EnergyDemand;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import jakarta.persistence.Column;
@@ -83,6 +84,11 @@ public class TaskItem extends BaseAuditableEntity {
 
     @Column(name = "next_action", length = 2000)
     private String nextAction;
+
+    // FR-34.1: optional energy demand. Nullable — null reads as NEUTRAL (BR-27).
+    @Enumerated(EnumType.STRING)
+    @Column(name = "energy_demand", length = 16)
+    private EnergyDemand energyDemand;
 
     @Column(name = "completed_at")
     private Instant completedAt;

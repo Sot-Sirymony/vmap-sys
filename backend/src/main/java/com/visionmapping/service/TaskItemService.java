@@ -80,6 +80,7 @@ public class TaskItemService {
                 .actualHours(request.actualHours())
                 .blockerReason(request.blockerReason())
                 .nextAction(request.nextAction())
+                .energyDemand(request.energyDemand())
                 .build();
         prepareTask(entity);
         TaskItem saved = taskItemRepository.save(entity);
@@ -110,6 +111,7 @@ public class TaskItemService {
         entity.setActualHours(request.actualHours());
         entity.setBlockerReason(request.blockerReason());
         entity.setNextAction(request.nextAction());
+        entity.setEnergyDemand(request.energyDemand());
         prepareTask(entity);
         progress.recalculateStep(oldStep);
         progress.recalculateStep(entity.getStep());

@@ -21,14 +21,14 @@ import { useAuth } from '../../context/AuthContext';
 import { useStoredState } from '../../hooks/useStoredState';
 import { moonshotTint, moonshotViolet, moonshotVioletDeep, visionAreaDotColor } from '../../theme';
 import type {
-  Dream, DreamRequest, DreamStatus, DreamType, Goal, GoalRequest, ObstacleType, Priority, TaskItem, TaskItemRequest,
-  VisionStep, VisionStepRequest, WorkStatus,
+  Dream, DreamRequest, DreamStatus, DreamType, EnergyDemand, Goal, GoalRequest, ObstacleType, Priority, TaskItem,
+  TaskItemRequest, VisionStep, VisionStepRequest, WorkStatus,
 } from '../../types/vision';
 import { useToast } from '../../context/ToastContext';
 import { dreamRequest, goalRequest, stepRequest, taskRequest } from '../../utils/entityRequests';
 import { nudgeAfterTaskComplete } from '../../utils/completionNudge';
 import { suggestPartnerFor } from '../../utils/partnerSuggestion';
-import { obstacleTypeLabels } from '../../utils/enumLabels';
+import { energyDemandLabels, obstacleTypeLabels } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CrudModalForm } from '../common/CrudModalForm';
@@ -228,6 +228,7 @@ export function VisionMapTree({
   const [taskBlockerReason, setTaskBlockerReason] = useState('');
   const [taskBlockerCategory, setTaskBlockerCategory] = useState<ObstacleType | ''>('');
   const [taskNextAction, setTaskNextAction] = useState('');
+  const [taskEnergyDemand, setTaskEnergyDemand] = useState<EnergyDemand>('NEUTRAL');
   const [taskSaving, setTaskSaving] = useState(false);
 
   // Flat list of visible rows in reading order — the keyboard walks this.
@@ -639,6 +640,7 @@ export function VisionMapTree({
     setTaskBlockerReason(task.blockerReason ?? '');
     setTaskBlockerCategory('');
     setTaskNextAction(task.nextAction ?? '');
+    setTaskEnergyDemand(task.energyDemand ?? 'NEUTRAL');
   }
 
   function cancelTaskEdit() {
@@ -668,6 +670,7 @@ export function VisionMapTree({
         actualHours: taskActualHours ? Number(taskActualHours) : undefined,
         blockerReason: taskBlockerReason || undefined,
         nextAction: taskNextAction,
+        energyDemand: taskEnergyDemand,
       };
       await updateTask(token, editingTaskId, request);
       await onDataChange();
@@ -1145,6 +1148,16 @@ export function VisionMapTree({
           <label>
             Actual Hours
             <Input type="number" min="0" step="0.5" value={taskActualHours} onChange={(event) => setTaskActualHours(event.target.value)} />
+          </label>
+          <label>
+            Energy
+            <FormControl fullWidth size="small">
+              <Select SelectDisplayProps={{ 'aria-label': 'Energy' }} value={taskEnergyDemand} onChange={(event) => setTaskEnergyDemand(event.target.value as EnergyDemand)}>
+                {(Object.keys(energyDemandLabels) as EnergyDemand[]).map((value) => (
+                  <MenuItem value={value} key={value}>{energyDemandLabels[value]}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </label>
           <label className="field-full">
             Next Action

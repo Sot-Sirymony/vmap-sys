@@ -136,9 +136,9 @@ public class ExcelService {
                             .map(item -> List.of(item.id(), item.code(), item.goalId(), item.title(), item.sequenceNumber(), item.complex(), item.priority(), value(item.targetDate()), item.status(), item.progressPercent()))
                             .toList(), headerStyle);
 
-            writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action"),
+            writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action", "Energy"),
                     taskItemService.listTasks(false).stream()
-                            .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction())))
+                            .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction()), value(item.energyDemand())))
                             .toList(), headerStyle);
 
             writeRows(workbook, "Partners", List.of("ID", CODE, "Name", "Role", "Organization", "Email", "Support Type", "Offer Type", STATUS, "Notes"),
@@ -176,6 +176,7 @@ public class ExcelService {
             addDropdown(workbook.getSheet(VISION_AREAS), 4, "LOW,MEDIUM,HIGH,CRITICAL");
             addDropdown(workbook.getSheet(TASKS), 5, "LOW,MEDIUM,HIGH,CRITICAL");
             addDropdown(workbook.getSheet(TASKS), 8, "NOT_STARTED,IN_PROGRESS,WAITING,BLOCKED,COMPLETED,PAUSED");
+            addDropdown(workbook.getSheet(TASKS), 12, "CHARGE,NEUTRAL,DRAIN");
 
             workbook.write(output);
             return output.toByteArray();

@@ -39,12 +39,12 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
-import type { Dream, Goal, IdealPartnerProfile, ObstacleType, Priority, TaskItem, TaskItemRequest, VisionArea, VisionStep, WorkStatus } from '../types/vision';
+import type { Dream, EnergyDemand, Goal, IdealPartnerProfile, ObstacleType, Priority, TaskItem, TaskItemRequest, VisionArea, VisionStep, WorkStatus } from '../types/vision';
 import { nudgeAfterTaskComplete } from '../utils/completionNudge';
 import { taskRequest } from '../utils/entityRequests';
 import { isOverdue } from '../utils/overdue';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
-import { obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
+import { energyDemandLabels, obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 
@@ -94,6 +94,8 @@ export function TasksBoardPage() {
   const [blockerReason, setBlockerReason] = useState('');
   const [blockerCategory, setBlockerCategory] = useState<ObstacleType | ''>('');
   const [nextAction, setNextAction] = useState('');
+  // FR-34.1: optional energy tag; defaults to NEUTRAL for a new task.
+  const [energyDemand, setEnergyDemand] = useState<EnergyDemand>('NEUTRAL');
   // In the URL, not component state: the dashboard links straight into a
   // filtered board, and a filtered board stays shareable and bookmarkable.
   const [filterOwner, setFilterOwner] = useUrlFilter('owner');
@@ -235,6 +237,7 @@ export function TasksBoardPage() {
       actualHours: actualHours ? Number(actualHours) : undefined,
       blockerReason: blockerReason || undefined,
       nextAction,
+      energyDemand,
     });
     if (success) {
       if (token && crud.editingId !== null && status === 'COMPLETED') {
@@ -299,6 +302,7 @@ export function TasksBoardPage() {
     setBlockerReason(task.blockerReason ?? '');
     setBlockerCategory('');
     setNextAction(task.nextAction ?? '');
+    setEnergyDemand(task.energyDemand ?? 'NEUTRAL');
   }
 
   function cancelEdit() {
@@ -316,6 +320,7 @@ export function TasksBoardPage() {
     setBlockerReason('');
     setBlockerCategory('');
     setNextAction('');
+    setEnergyDemand('NEUTRAL');
   }
 
   const stepById = new Map(steps.map((step) => [step.id, step]));
@@ -538,6 +543,16 @@ export function TasksBoardPage() {
       <label>
         Actual Hours
         <Input type="number" min="0" step="0.5" value={actualHours} onChange={(event) => setActualHours(event.target.value)} />
+      </label>
+      <label>
+        Energy
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': 'Energy' }} value={energyDemand} onChange={(event) => setEnergyDemand(event.target.value as EnergyDemand)}>
+            {(Object.keys(energyDemandLabels) as EnergyDemand[]).map((value) => (
+              <MenuItem value={value} key={value}>{energyDemandLabels[value]}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </label>
       <label className="field-full">
         Next Action

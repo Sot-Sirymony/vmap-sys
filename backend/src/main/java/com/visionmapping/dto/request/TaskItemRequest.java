@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.entity.enums.EnergyDemand;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import jakarta.validation.constraints.DecimalMax;
@@ -23,6 +24,8 @@ public record TaskItemRequest(
         BigDecimal estimatedHours,
         BigDecimal actualHours,
         @Size(max = 2000) String blockerReason,
-        @Size(max = 2000) String nextAction
+        @Size(max = 2000) String nextAction,
+        // FR-34.1: optional; null is accepted and read as NEUTRAL (BR-27).
+        EnergyDemand energyDemand
 ) {
 }

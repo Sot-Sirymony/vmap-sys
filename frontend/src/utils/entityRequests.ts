@@ -58,4 +58,5 @@ export const taskRequest = (task: TaskItem): TaskItemRequest => ({
   actualHours: task.actualHours,
   blockerReason: task.blockerReason,
   nextAction: task.nextAction,
+  energyDemand: task.energyDemand,
 });

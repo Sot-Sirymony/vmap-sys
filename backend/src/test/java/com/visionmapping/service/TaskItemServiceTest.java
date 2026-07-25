@@ -213,7 +213,7 @@ class TaskItemServiceTest {
         when(taskItemRepository.findByUser_Id(1L)).thenReturn(List.of());
 
         TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null,
-                LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "   ", null);
+                LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "   ", null, null);
 
         assertThatThrownBy(() -> service.createTask(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -231,7 +231,7 @@ class TaskItemServiceTest {
         when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of());
 
         TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null,
-                LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "Waiting on mentor", null);
+                LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "Waiting on mentor", null, null);
 
         TaskItemResponse response = service.createTask(request);
 
@@ -247,7 +247,7 @@ class TaskItemServiceTest {
         lenient().when(taskItemRepository.findByUser_Id(1L)).thenReturn(List.of());
 
         TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null,
-                LocalDate.now().plusDays(5), WorkStatus.NOT_STARTED, BigDecimal.valueOf(-5), null, null, null, null);
+                LocalDate.now().plusDays(5), WorkStatus.NOT_STARTED, BigDecimal.valueOf(-5), null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createTask(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -262,7 +262,7 @@ class TaskItemServiceTest {
         lenient().when(taskItemRepository.findByUser_Id(1L)).thenReturn(List.of());
 
         TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null,
-                LocalDate.now().plusDays(5), WorkStatus.NOT_STARTED, BigDecimal.valueOf(150), null, null, null, null);
+                LocalDate.now().plusDays(5), WorkStatus.NOT_STARTED, BigDecimal.valueOf(150), null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createTask(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -280,7 +280,7 @@ class TaskItemServiceTest {
         when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of());
 
         TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null,
-                LocalDate.now().plusDays(5), WorkStatus.COMPLETED, BigDecimal.valueOf(40), null, null, null, null);
+                LocalDate.now().plusDays(5), WorkStatus.COMPLETED, BigDecimal.valueOf(40), null, null, null, null, null);
 
         TaskItemResponse response = service.createTask(request);
 

@@ -9,6 +9,7 @@ import { listVisionAreas } from '../api/visionAreaApi';
 import { FilterSelect, optionsFromEntities } from '../components/common/FilterSelect';
 import { AttentionPanel } from '../components/dashboard/AttentionPanel';
 import { DashboardSummary } from '../components/dashboard/DashboardSummary';
+import { EnergyBudgetCard } from '../components/dashboard/EnergyBudgetCard';
 import { GettingStarted } from '../components/dashboard/GettingStarted';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -221,6 +222,7 @@ export function DashboardPage() {
         dueInPeriodLink={`/tasks?dueFrom=${from}&dueTo=${to}${scopeSuffix}`}
         visionAreaId={filterVisionAreaId}
       />
+      <EnergyBudgetCard budget={summary?.energyBudget} />
       <Card>
         <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />
         <CardContent>

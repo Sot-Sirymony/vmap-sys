@@ -16,6 +16,7 @@ import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
+import com.visionmapping.entity.enums.EnergyDemand;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ReviewType;
@@ -35,7 +36,9 @@ import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -149,8 +152,36 @@ public class DashboardService {
                 countWeeksWithDiligence(data.reviews(), today),
                 data.goals().stream().filter(Goal::isMoonshot).count(),
                 data.dreams().stream().filter(Dream::isMoonshot).count(),
-                buildAttention(data)
+                buildAttention(data),
+                buildEnergyBudget(data.tasks(), today)
         );
+    }
+
+    /**
+     * FR-34.2 / BR-28: this calendar week's tasks (Monday–Sunday, by due date),
+     * split by energy demand with CHARGE and DRAIN netted. Null energy reads as
+     * NEUTRAL (BR-27). Computed on read from the already-loaded, area-scoped,
+     * unarchived task list — never stored, so it can't drift from the tasks.
+     */
+    private static DashboardSummaryResponse.EnergyBudget buildEnergyBudget(List<TaskItem> tasks, LocalDate today) {
+        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate weekEnd = weekStart.plusDays(DAYS_PER_WEEK - 1L);
+        long charge = 0;
+        long neutral = 0;
+        long drain = 0;
+        for (TaskItem task : tasks) {
+            LocalDate due = task.getDueDate();
+            if (due == null || due.isBefore(weekStart) || due.isAfter(weekEnd)) {
+                continue;
+            }
+            EnergyDemand demand = task.getEnergyDemand() == null ? EnergyDemand.NEUTRAL : task.getEnergyDemand();
+            switch (demand) {
+                case CHARGE -> charge++;
+                case DRAIN -> drain++;
+                default -> neutral++;
+            }
+        }
+        return new DashboardSummaryResponse.EnergyBudget(charge, neutral, drain, charge - drain);
     }
 
     private ScopedData loadScopedData(Long visionAreaId) {

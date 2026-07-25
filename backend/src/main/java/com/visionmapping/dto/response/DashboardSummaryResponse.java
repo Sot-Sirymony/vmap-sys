@@ -39,11 +39,21 @@ public record DashboardSummaryResponse(
         long weeksWithDiligence,
         long moonshotGoals,
         long moonshotDreams,
-        Attention attention
+        Attention attention,
+        EnergyBudget energyBudget
 ) {
 
     /** Weekly sample of the running average task progress. */
     public record TrendPoint(LocalDate weekEnd, BigDecimal progress) {
+    }
+
+    /**
+     * FR-34.2 / BR-28: the current calendar week's tasks (by due date), split
+     * by energy demand, with CHARGE and DRAIN netted into a balance. Null
+     * energy reads as NEUTRAL. `net` is positive when the week is more
+     * energising than draining, negative when it's a net drain.
+     */
+    public record EnergyBudget(long charge, long neutral, long drain, long net) {
     }
 
     /** Average goal progress for one vision area, pre-sorted lowest first. */

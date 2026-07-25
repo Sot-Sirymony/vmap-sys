@@ -168,7 +168,10 @@ class HierarchyImport {
                     null,
                     null,
                     blockerReason,
-                    reader.textOrNull(11));
+                    reader.textOrNull(11),
+                    // FR-34: energy demand isn't imported from the workbook — it's
+                    // an in-app tag; existing rows read as NEUTRAL (BR-27).
+                    null);
             taskService.createTask(request);
         });
     }

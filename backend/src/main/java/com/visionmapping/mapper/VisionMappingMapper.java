@@ -59,8 +59,8 @@ public class VisionMappingMapper {
         return new TaskItemResponse(entity.getId(), entity.getCode(), entity.getStep().getId(), entity.getTitle(),
                 entity.getDescription(), entity.getOwner(), entity.getPriority(), entity.getStartDate(), entity.getDueDate(),
                 entity.getStatus(), entity.getProgressPercent(), entity.getEstimatedHours(), entity.getActualHours(),
-                entity.getBlockerReason(), entity.getNextAction(), entity.getCompletedAt(), entity.isArchived(),
-                entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.getBlockerReason(), entity.getNextAction(), entity.getEnergyDemand(), entity.getCompletedAt(),
+                entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public PartnerResponse toResponse(Partner entity) {

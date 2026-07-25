@@ -3,6 +3,7 @@ import type {
   CommunicationStatus,
   DreamStatus,
   DreamType,
+  EnergyDemand,
   LifecycleStatus,
   ObstacleStatus,
   ObstacleType,
@@ -35,6 +36,14 @@ export const priorityColors: Record<Priority, string> = {
 
 // Severity shares its levels with Priority but is its own enum on the backend —
 // kept separate so a change to one can't silently redefine the other.
+// FR-34.1: energy demand. The order (CHARGE → NEUTRAL → DRAIN) reads as a
+// scale from energising to depleting, matching how the budget nets them.
+export const energyDemandLabels: Record<EnergyDemand, string> = {
+  CHARGE: 'Charge',
+  NEUTRAL: 'Neutral',
+  DRAIN: 'Drain',
+};
+
 export const severityLabels: Record<Severity, string> = {
   LOW: 'Low',
   MEDIUM: 'Medium',

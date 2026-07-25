@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.entity.enums.EnergyDemand;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ public record TaskItemResponse(
         BigDecimal actualHours,
         String blockerReason,
         String nextAction,
+        EnergyDemand energyDemand,
         Instant completedAt,
         boolean archived,
         Instant createdAt,

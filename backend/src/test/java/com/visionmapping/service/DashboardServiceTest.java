@@ -14,6 +14,7 @@ import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
+import com.visionmapping.entity.enums.EnergyDemand;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
@@ -120,6 +121,13 @@ class DashboardServiceTest {
                 .status(status).progressPercent(progress).build();
     }
 
+    private TaskItem taskWithEnergy(Long id, VisionStep step, LocalDate dueDate, EnergyDemand energyDemand) {
+        return TaskItem.builder().id(id).user(testUser).step(step).code("T-001").title("Task")
+                .owner("Owner").priority(Priority.HIGH).dueDate(dueDate)
+                .status(WorkStatus.NOT_STARTED).progressPercent(BigDecimal.ZERO)
+                .energyDemand(energyDemand).build();
+    }
+
 
 
     private Partner partnerFor(Long id, TaskItem task) {
@@ -191,6 +199,27 @@ class DashboardServiceTest {
         // Only the two records whose date falls inside March are counted.
         assertThat(march.tasksDueInPeriod()).isEqualTo(1);
         assertThat(march.completedTasksInPeriod()).isEqualTo(1);
+    }
+
+    @Test
+    void energyBudgetNetsThisWeeksChargeAgainstDrainAndTreatsNullAsNeutral() {
+        VisionStep parentStep = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false),
+                WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        LocalDate today = LocalDate.now();
+        LocalDate outsideThisWeek = today.plusDays(30);
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(
+                taskWithEnergy(30L, parentStep, today, EnergyDemand.CHARGE),
+                taskWithEnergy(31L, parentStep, today, EnergyDemand.DRAIN),
+                taskWithEnergy(32L, parentStep, today, EnergyDemand.DRAIN),
+                taskWithEnergy(33L, parentStep, today, null),               // null reads as NEUTRAL (BR-27)
+                taskWithEnergy(34L, parentStep, outsideThisWeek, EnergyDemand.CHARGE)));  // excluded — not this week
+
+        DashboardSummaryResponse.EnergyBudget budget = service.buildDashboardSummary().energyBudget();
+
+        assertThat(budget.charge()).isEqualTo(1);
+        assertThat(budget.neutral()).isEqualTo(1);
+        assertThat(budget.drain()).isEqualTo(2);
+        assertThat(budget.net()).isEqualTo(-1);
     }
 
     @Test

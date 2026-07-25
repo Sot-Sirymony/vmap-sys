@@ -1,5 +1,7 @@
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type WorkStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING' | 'BLOCKED' | 'COMPLETED' | 'PAUSED';
+// FR-34.1: how a task affects the user's energy. Optional; absent reads as NEUTRAL.
+export type EnergyDemand = 'CHARGE' | 'NEUTRAL' | 'DRAIN';
 export type LifecycleStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED';
 export type DreamStatus = 'IDEA' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED';
 export type DreamType = 'SHORT_TERM' | 'LONG_TERM' | 'LIFETIME';
@@ -133,6 +135,7 @@ export type TaskItem = {
   actualHours?: number;
   blockerReason?: string;
   nextAction?: string;
+  energyDemand?: EnergyDemand;
   archived: boolean;
 };
 
@@ -150,6 +153,7 @@ export type TaskItemRequest = {
   actualHours?: number;
   blockerReason?: string;
   nextAction?: string;
+  energyDemand?: EnergyDemand;
 };
 
 export type Partner = {
@@ -343,6 +347,15 @@ export type DashboardSummary = {
   moonshotGoals: number;
   moonshotDreams: number;
   attention: DashboardAttention;
+  energyBudget: DashboardEnergyBudget;
+};
+
+/** FR-34.2: this week's tasks by energy demand, CHARGE and DRAIN netted into `net`. */
+export type DashboardEnergyBudget = {
+  charge: number;
+  neutral: number;
+  drain: number;
+  net: number;
 };
 
 /** Places the map has stopped being a map — see DashboardSummaryResponse.Attention. */
