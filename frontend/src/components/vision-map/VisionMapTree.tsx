@@ -19,6 +19,7 @@ import {
 } from '../../api/taskApi';
 import { useAuth } from '../../context/AuthContext';
 import { useStoredState } from '../../hooks/useStoredState';
+import { useEnergyOvercommitNudge } from '../../hooks/useEnergyOvercommitNudge';
 import { moonshotTint, moonshotViolet, moonshotVioletDeep, visionAreaDotColor } from '../../theme';
 import type {
   Dream, DreamRequest, DreamStatus, DreamType, EnergyDemand, Goal, GoalRequest, ObstacleType, Priority, TaskItem,
@@ -112,6 +113,7 @@ export function VisionMapTree({
 }: VisionMapTreeProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const energyNudge = useEnergyOvercommitNudge();
   const filtering = Boolean(priorityFilter || statusFilter);
   // The dream's own progress and quick-add sequencing always read the full,
   // unfiltered set — a view filter narrows what's shown, not what exists.
@@ -679,6 +681,9 @@ export function VisionMapTree({
           token, completedTaskId: editingTaskId, tasks, steps, goals, showToast, onApplied: () => void onDataChange(),
         });
       }
+      // FR-34.4: coaching prompt when this DRAIN task tips its week over the
+      // threshold; never blocks the save.
+      energyNudge.maybeNudge(taskDueDate, taskEnergyDemand, editingTaskId, tasks);
       setEditingTaskId(null);
       return true;
     } catch (saveError) {
@@ -897,6 +902,7 @@ export function VisionMapTree({
     <div>
       {error && <p className="map-error" role="alert">{error}</p>}
       <p className="map-hint">↑↓ move · → ← expand / collapse · Enter rename · N add child</p>
+      {energyNudge.dialog}
 
       {editingDream && (
         <CrudModalForm

@@ -36,6 +36,7 @@ import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
+import { useEnergyOvercommitNudge } from '../hooks/useEnergyOvercommitNudge';
 import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
@@ -55,6 +56,7 @@ export function TasksBoardPage() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const energyNudge = useEnergyOvercommitNudge();
   const [searchParams, setSearchParams] = useSearchParams();
   const filterStepId = searchParams.get('stepId');
   const [autoOpenCreate, setAutoOpenCreate] = useState(false);
@@ -251,6 +253,9 @@ export function TasksBoardPage() {
           onApplied: () => void crud.reload(),
         });
       }
+      // FR-34.4: coaching prompt when this DRAIN task tips its week over the
+      // threshold. Fires whether creating or editing; never blocks the save.
+      energyNudge.maybeNudge(dueDate, energyDemand, crud.editingId, crud.items);
       setTitle('');
       setDescription('');
       setBlockerReason('');
@@ -586,6 +591,7 @@ export function TasksBoardPage() {
       >
         {formFields}
       </CrudModalForm>
+      {energyNudge.dialog}
       {crud.loading && <Loading variant="cards" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
       <SummaryStrip
