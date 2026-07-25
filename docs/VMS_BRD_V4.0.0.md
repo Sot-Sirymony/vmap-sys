@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | ✅ Complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -355,6 +355,103 @@ system; it does not replace it.
 
 ---
 
+## FR-38 In-App Issue & Improvement Reporting *(Effort: S–M)* — ✅ Done 2026-07-25
+
+**Shipped (2026-07-25):** New `issue_reports` table (migration `V15`), entity,
+repository, DTOs, `IssueReportService` + `IssueReportController` exposing
+`POST /api/issue-reports`, `GET /api/issue-reports` (own), `GET
+/api/issue-reports/all` (admin, filterable by type/status/severity), `GET
+/api/issue-reports/{id}`, `PATCH /api/issue-reports/{id}/status` (admin), plus
+archive/restore/permanent-delete. Role enforcement is in the service — admin
+paths throw `AccessDeniedException`, now mapped to **403** by the global handler
+(previously any manual denial would have surfaced as 500). BR-32 enforced: a
+Bug needs a severity, and a Bug moved to `Resolved` needs a resolution note.
+Frontend: a persistent "Report an issue" button in the header opens a modal on
+every authenticated page (auto-capturing the current route + app version), a new
+**Issue Reports** page lists the user's own reports with a details view, and for
+ADMINs a "My reports / All reports" toggle adds a filterable triage queue with a
+status-change modal. Verified: backend 106/106 (10 new `IssueReportServiceTest`
+cases), frontend tsc/build green, 43 tests pass.
+
+Users who hit a bug, a confusing screen, or think of an improvement while using
+the system have **no way to say so from inside the app** today — the only record
+of a problem is outside the product (a message to the developer). This FR adds a
+lightweight, in-product capture so a user can raise an issue *in the moment*,
+tagged with where they were, and an ADMIN can triage the queue. It reuses the
+existing `AppUser`/role model (USER, ADMIN) and adds one additive table; it
+needs **no** scheduler, email, or notification channel — a report is captured
+and listed in-app, staying within the V4.0.0 "no new infrastructure" posture.
+
+- FR-38.1 **Raise a report.** From a persistent "Report an issue" affordance
+  (e.g. a header/footer link available on every authenticated page), a user can
+  submit a report with: `reportType` (Bug, Improvement, Question, Other), a
+  required `title`, a `description`, and — for a Bug — a `severity` (Low,
+  Medium, High, Critical). The form is reachable without leaving the current
+  page.
+- FR-38.2 **Auto-captured context.** On submit, the system records the route the
+  user was on (`contextRoute`), the app version (`appVersion`), and the
+  timestamp — so a bug is reproducible without the user having to describe where
+  they were.
+- FR-38.3 **My reports.** A user can view a list of their own submitted reports
+  with current status, so they can see a bug was received and track its
+  resolution. Reports are never permanently deleted by the user (archive/soft
+  behaviour, consistent with the app-wide delete rule).
+- FR-38.4 **Admin triage.** An ADMIN can view all users' reports, filter by
+  `reportType`/`status`/`severity`, change `status` along the lifecycle, and
+  record a `resolutionNote`. Status lifecycle: **Open → In Review → Planned →
+  In Progress → Resolved → Closed**, plus a terminal **Won't Fix**.
+- FR-38.5 **In-app only (no push).** Notifying a user of a status change relies
+  on them viewing "My reports"; email/web-push notification of resolution is
+  **explicitly out of scope** and belongs to the
+  [Deferred Platform Track](#deferred-platform-track) (needs a notification
+  channel).
+
+**Acceptance criteria**
+
+1. From any authenticated page, a user can open the report form, submit a Bug or
+   Improvement, and see it appear in "My reports" as **Open**.
+2. A submitted report stores the originating route, app version, and creation
+   timestamp automatically, without the user entering them.
+3. A non-admin user sees only their own reports; an ADMIN sees all reports and
+   can change status and add a resolution note.
+4. A Bug report requires a `severity`; a Bug moved to **Resolved** requires a
+   non-blank `resolutionNote`.
+5. No path lets a normal user edit another user's report or view the full queue.
+
+**Business rules**
+
+| # | Rule |
+|---|---|
+| BR-32 | Issue reports are user-scoped for authoring and self-viewing; only an ADMIN may view or triage the full queue or change a report's `status`/`resolutionNote`. `reportType` and `title` are required; `severity` is required when `reportType = Bug`; moving a Bug to `Resolved` requires a non-blank `resolutionNote`. Reports are archived, not hard-deleted (app-wide soft-delete rule). |
+
+**Data model / migration**
+
+- **New table `issue_reports`** (`V15__issue_reports.sql` — the conditional V15
+  obstacle index from FR-36 was never needed, so V15 was free): `id`, `code`
+  (`IR-001`), `user_id` (FK → `app_user`), `report_type`, `title`,
+  `description`, `severity` (nullable; required only for Bug), `context_route`,
+  `app_version`, `status` (default `Open`), `resolution_note` (nullable),
+  `archived`, `created_at`, `updated_at`. Exposed via
+  `POST /api/issue-reports`, `GET /api/issue-reports` (own for USER, all for
+  ADMIN), `GET /api/issue-reports/{id}`, and `PATCH /api/issue-reports/{id}/status`
+  (ADMIN-only). Additive, no changes to existing tables.
+
+**Design decisions**
+
+- **Reuse the role model, add one table.** The existing USER/ADMIN roles already
+  express the "reporter vs. triager" split, so no new auth concept is needed —
+  only endpoint-level authorization and a scoped query, exactly as every other
+  user-scoped resource works today.
+- **Capture context, don't ask for it.** The most valuable part of a bug report —
+  *where* it happened and *which build* — is the part users omit. Recording route
+  and app version automatically makes reports actionable without extra friction.
+- **No notification, by design.** Telling the user "your bug is fixed" needs a
+  delivery channel the system does not have; forcing that in would drag the whole
+  Deferred Platform Track into scope. In-app "My reports" is the honest,
+  buildable slice.
+
+---
+
 ## Deferred Platform Track
 
 Captured so the vision stays whole, but **explicitly out of V4.0.0 scope** — each
@@ -384,6 +481,7 @@ which is precisely why it is deferred rather than scoped.
 | 3 | FR-36 Insight Library | Read-only over data that already exists; no new authoring surface | S–M | ✅ Done |
 | 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ✅ Done |
 | 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M | ✅ Done |
+| 6 | FR-38 In-App Issue & Improvement Reporting | Added post-completion; one additive table + role-scoped CRUD, no new infrastructure | S–M | ✅ Done |
 | — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 
 ---
@@ -397,6 +495,7 @@ which is precisely why it is deferred rather than scoped.
 | BR-29 | A goal synergy link joins two distinct goals of the same user; self-links and duplicate pairs are rejected; links carry no execution semantics. |
 | BR-30 | Insight search and resurfacing are scoped strictly to the authenticated user's own Reviews and Obstacles. |
 | BR-31 | Area-starvation is a computed, read-only signal; it never mutates or persists any entity state. |
+| BR-32 | Issue reports are user-scoped for authoring/self-viewing; only ADMIN may triage the full queue or change status. `reportType`+`title` required; `severity` required for Bug; a Bug moved to `Resolved` requires a `resolutionNote`. Reports are archived, not hard-deleted. |
 
 ## Migrations (new in V4.0.0)
 
@@ -404,13 +503,14 @@ which is precisely why it is deferred rather than scoped.
 |---|---|---|
 | `V13__task_energy_demand.sql` | `energy_demand` on `task_items` | Additive, nullable |
 | `V14__goal_synergy_link.sql` | `goal_synergy_links` table | New table |
-| `V15` *(conditional)* | Index for obstacle resurfacing, only if the query plan needs it | Additive index |
+| `V15__issue_reports.sql` *(FR-38)* | `issue_reports` table for in-app bug/improvement reporting | New table |
 
 ## Non-Functional Notes
 
-- V4.0.0 (FR-34…FR-37) is **additive**: two additive migrations (V13, V14),
-  one optional index (V15), no destructive schema changes, and **no new
-  infrastructure** — the same posture V3.0.0 could truthfully claim.
+- V4.0.0 (FR-34…FR-38) is **additive**: three additive migrations (V13, V14,
+  V15), no destructive schema changes, and **no new infrastructure** — the same
+  posture V3.0.0 could truthfully claim. (The originally-optional V15 obstacle
+  index was never needed; V15 became the FR-38 `issue_reports` table.)
 - New business rules (BR-27…BR-31) get backend test coverage where they carry
   logic (BR-28 aggregation, BR-29 link constraints, BR-31 signal computation),
   matching V1–V3 practice. BR-27/BR-30 are scoping/posture rules verified by

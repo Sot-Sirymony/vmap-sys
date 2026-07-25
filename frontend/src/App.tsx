@@ -24,6 +24,7 @@ const ObstaclesPage = lazy(() => import('./pages/ObstaclesPage').then((m) => ({ 
 const CommunicationBuilderPage = lazy(() => import('./pages/CommunicationBuilderPage').then((m) => ({ default: m.CommunicationBuilderPage })));
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })));
+const IssueReportsPage = lazy(() => import('./pages/IssueReportsPage').then((m) => ({ default: m.IssueReportsPage })));
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage').then((m) => ({ default: m.ImportExportPage })));
 
 export function App() {
@@ -48,6 +49,7 @@ export function App() {
             <Route path="/communication" element={<CommunicationBuilderPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/issue-reports" element={<IssueReportsPage />} />
             <Route path="/import-export" element={<ImportExportPage />} />
           </Route>
         </Route>

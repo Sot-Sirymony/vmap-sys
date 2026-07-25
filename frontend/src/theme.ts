@@ -84,6 +84,12 @@ export const statusColors = {
   FOLLOWED_UP: PURPLE_WAITING,
   REPLIED: BLUE_MOVING,
   CLOSED: GREEN_DONE,
+
+  // IssueReportStatus (FR-38) — OPEN/IN_PROGRESS/RESOLVED/CLOSED reuse the
+  // tokens above; these three are the states unique to the triage lifecycle.
+  IN_REVIEW: PURPLE_WAITING,
+  PLANNED: BLUE_MOVING,
+  WONT_FIX: NEUTRAL_HELD,
 } as const;
 
 export type StatusToken = keyof typeof statusColors;

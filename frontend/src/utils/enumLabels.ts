@@ -5,9 +5,11 @@ import type {
   DreamType,
   EnergyDemand,
   LifecycleStatus,
+  IssueReportStatus,
   ObstacleStatus,
   ObstacleType,
   OfferType,
+  ReportType,
   PartnerStatus,
   PartnerSupportType,
   Priority,
@@ -154,4 +156,22 @@ export const obstacleStatusLabels: Record<ObstacleStatus, string> = {
   IN_PROGRESS: 'In Progress',
   RESOLVED: 'Resolved',
   ACCEPTED: 'Accepted',
+};
+
+// FR-38: in-app issue reporting.
+export const reportTypeLabels: Record<ReportType, string> = {
+  BUG: 'Bug',
+  IMPROVEMENT: 'Improvement',
+  QUESTION: 'Question',
+  OTHER: 'Other',
+};
+
+export const issueReportStatusLabels: Record<IssueReportStatus, string> = {
+  OPEN: 'Open',
+  IN_REVIEW: 'In Review',
+  PLANNED: 'Planned',
+  IN_PROGRESS: 'In Progress',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+  WONT_FIX: "Won't Fix",
 };

@@ -3,6 +3,7 @@ package com.visionmapping.mapper;
 import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
+import com.visionmapping.dto.response.IssueReportResponse;
 import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.dto.response.PartnerResponse;
@@ -11,10 +12,12 @@ import com.visionmapping.dto.response.ReviewResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
+import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.IdealPartnerProfile;
+import com.visionmapping.entity.IssueReport;
 import com.visionmapping.entity.Obstacle;
 import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.ProgressLog;
@@ -100,6 +103,14 @@ public class VisionMappingMapper {
                 entity.getObstacleType(), entity.getSeverity(), entity.getSolution(), entity.getRootCause(),
                 entity.getCreativeAlternatives(), id(entity.getRequiredPartner()),
                 entity.getStatus(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+    }
+
+    public IssueReportResponse toResponse(IssueReport entity) {
+        AppUser reporter = entity.getUser();
+        return new IssueReportResponse(entity.getId(), entity.getCode(), reporter.getId(), reporter.getFullName(),
+                reporter.getEmail(), entity.getReportType(), entity.getTitle(), entity.getDescription(),
+                entity.getSeverity(), entity.getContextRoute(), entity.getAppVersion(), entity.getStatus(),
+                entity.getResolutionNote(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public ProgressLogResponse toResponse(ProgressLog entity) {

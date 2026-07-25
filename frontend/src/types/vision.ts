@@ -305,6 +305,52 @@ export type Obstacle = {
 
 export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived'>;
 
+// FR-38: in-app issue & improvement reporting.
+export type ReportType = 'BUG' | 'IMPROVEMENT' | 'QUESTION' | 'OTHER';
+export type IssueReportStatus =
+  | 'OPEN'
+  | 'IN_REVIEW'
+  | 'PLANNED'
+  | 'IN_PROGRESS'
+  | 'RESOLVED'
+  | 'CLOSED'
+  | 'WONT_FIX';
+
+export type IssueReport = {
+  id: number;
+  code: string;
+  reporterId: number;
+  reporterName: string;
+  reporterEmail: string;
+  reportType: ReportType;
+  title: string;
+  description?: string;
+  severity?: Severity;
+  contextRoute?: string;
+  appVersion?: string;
+  status: IssueReportStatus;
+  resolutionNote?: string;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// What the reporter submits; contextRoute/appVersion are auto-captured (FR-38.2).
+export type IssueReportRequest = {
+  reportType: ReportType;
+  title: string;
+  description?: string;
+  severity?: Severity;
+  contextRoute?: string;
+  appVersion?: string;
+};
+
+// FR-38.4: an admin moving a report along its lifecycle, with a resolution note.
+export type IssueReportStatusUpdateRequest = {
+  status: IssueReportStatus;
+  resolutionNote?: string;
+};
+
 export type ProgressLog = {
   id: number;
   relatedTaskId: number;
