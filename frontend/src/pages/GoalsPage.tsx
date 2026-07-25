@@ -27,6 +27,7 @@ import { QuickAddRow } from '../components/common/QuickAddRow';
 import { RelativeDate } from '../components/common/RelativeDate';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { GoalSynergyDialog } from '../components/common/GoalSynergyDialog';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -104,6 +105,8 @@ export function GoalsPage() {
   const [bulkPriority, setBulkPriority] = useState<Priority>('HIGH');
   const [bulkApplying, setBulkApplying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  // FR-35: the goal whose synergy links are open in the dialog, if any.
+  const [synergyGoal, setSynergyGoal] = useState<Goal | null>(null);
   const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-goals', 'list');
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
@@ -346,6 +349,7 @@ export function GoalsPage() {
         extraActions={[
           { label: 'View steps', onClick: () => navigate(`/steps?goalId=${goal.id}`) },
           { label: 'Add step', onClick: () => navigate(`/steps?create=step&parent=${goal.id}`) },
+          { label: 'Synergy links', onClick: () => setSynergyGoal(goal) },
         ]}
         label="Goal actions"
       />
@@ -497,6 +501,9 @@ export function GoalsPage() {
       >
         {formFields}
       </CrudModalForm>
+      {synergyGoal && token && (
+        <GoalSynergyDialog goal={synergyGoal} goals={crud.items} token={token} onClose={() => setSynergyGoal(null)} />
+      )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
       <SummaryStrip

@@ -3,6 +3,25 @@ export type WorkStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING' | 'BLOCKED' |
 // FR-34.1: how a task affects the user's energy. Optional; absent reads as NEUTRAL.
 export type EnergyDemand = 'CHARGE' | 'NEUTRAL' | 'DRAIN';
 
+// FR-35: a synergy link from one goal's side. crossVisionArea marks a link
+// whose goals sit in different Vision Areas — a cross-pollination candidate.
+export type GoalSynergyLink = {
+  id: number;
+  goalId: number;
+  relatedGoalId: number;
+  relatedGoalCode: string;
+  relatedGoalTitle: string;
+  relatedGoalVisionAreaName: string;
+  crossVisionArea: boolean;
+  note?: string;
+  createdAt: string;
+};
+
+export type GoalSynergyLinkRequest = {
+  relatedGoalId: number;
+  note?: string;
+};
+
 // FR-36: a captured lesson, aggregated read-only from a Review or an Obstacle.
 export type InsightSource = 'REVIEW' | 'OBSTACLE';
 export type InsightKind = 'LESSON_LEARNED' | 'ROOT_CAUSE' | 'CREATIVE_ALTERNATIVES';
