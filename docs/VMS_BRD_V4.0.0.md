@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | In progress. **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals) are ✅ shipped (2026-07-25); **FR-35** (Cross-Pollination) is the last item remaining. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | ✅ Complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -165,7 +165,24 @@ already saved (FR-34.5). Verified: frontend tsc/build green, 43 tests (8 new).
 
 ---
 
-## FR-35 Holistic Life Integration — Cross-Pollination *(Effort: M)*
+## FR-35 Holistic Life Integration — Cross-Pollination *(Effort: M)* — ✅ Done 2026-07-25
+
+**Shipped (2026-07-25):** `GoalSynergyLink` entity + migration `V14`. The FKs
+cascade on goal delete, a `CHECK` blocks self-links, and a composite `UNIQUE`
+enforces pair uniqueness — pairs are normalised in the service (lower goal id
+first) rather than via a `LEAST`/`GREATEST` functional index, since H2 (the test
+DB) doesn't support expression indexes. `GoalSynergyLinkService` (BR-29):
+create/list/delete with guards (no self-link, no duplicate pair, user-scoped);
+links are read from either side and the response is perspective-aware, flagging
+`crossVisionArea`; links to archived goals drop out of the listing without being
+destroyed. Endpoints: `GET/POST /api/goals/{id}/synergy-links`, `DELETE
+/api/goals/synergy-links/{linkId}`. Frontend: a `GoalSynergyDialog` from a
+"Synergy links" goal row action lists linked goals with a Cross-area chip, an
+add form, and per-link remove. The dashboard-level highlight in FR-35.2 was
+treated as an optional enhancement (like FR-37.3) and not built into the
+area-scoped dashboard aggregation; the cross-pollination view lives on the Goals
+page. Verified: backend 96/96 (new `GoalSynergyLinkServiceTest`; V14 runs on H2,
+goal permanent-delete still passes), frontend tsc/build/43 tests green.
 
 Let the user record how a goal in one area **leverages or impacts** a goal in
 another, so competing priorities can be reframed as synergy.
@@ -365,7 +382,7 @@ which is precisely why it is deferred rather than scoped.
 | 1 | FR-34 Stage A (energy tagging + budget view) | Smallest, fully additive, backend-first; the doc's own recommended starting point — establishes the energy data everything else can build on | S | ✅ Done |
 | 2 | FR-37 Life-Optimization Signals | Reuses the existing dashboard/attention surface; no schema change; delivers a visible "balance" win early | M | ✅ Done |
 | 3 | FR-36 Insight Library | Read-only over data that already exists; no new authoring surface | S–M | ✅ Done |
-| 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ⬜ Next |
+| 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ✅ Done |
 | 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M | ✅ Done |
 | — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 

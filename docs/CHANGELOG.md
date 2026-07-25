@@ -9,12 +9,11 @@ change is what opens a new version here — internal work that ships no BRD
 requirement (refactors, tooling, UI polish) goes under *Unreleased* and does not
 move the version.
 
-**Where the version lives:** `frontend/package.json` (`2.0.0-0`) is the single
+**Where the version lives:** `frontend/package.json` (`4.0.0`) is the single
 source of truth for the number shown in the UI — `vite.config.ts` reads it and
 exposes it as `import.meta.env.VITE_APP_VERSION`, which the sidebar footer
-renders. `backend/pom.xml` (`2.0.0-SNAPSHOT`) is kept in step by hand. Both carry
-a prerelease marker because BRD v2.0.0 is still in progress; drop it to a plain
-`2.0.0` when the last item ships.
+renders. `backend/pom.xml` (`4.0.0`) is kept in step by hand. The prerelease
+marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
@@ -39,7 +38,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [4.0.0] — In progress (3 of 4 items shipped)
+## [4.0.0] — 2026-07-25 (4 of 4 items shipped)
 
 Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
 Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
@@ -55,12 +54,9 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-34 Stage B | Over-commitment coaching prompt for draining weeks (FR-34.4/34.5) | `4fb6946` |
 | FR-37 | Area-starvation signal in the attention feed (BR-31) | `8488b55` |
 | FR-36 | PKM Insight Library — search + contextual resurfacing (BR-30) | `cebbf0f` |
+| FR-35 | Goal synergy links / cross-pollination (BR-29) | `b78662f` |
 
-All verified with backend and frontend test suites (backend 91/91, frontend 43/43).
-
-### Pending
-- **FR-35** Holistic Life Integration — goal synergy links + cross-pollination view.
-  One new table + CRUD; the last v4.0.0 item. Next in the build order.
+All verified with backend and frontend test suites (backend 96/96, frontend 43/43).
 
 ### Deferred (needs new infrastructure — future BRD)
 Automated agenda generation, predictive push alerts, and fully-automated reviews —
@@ -68,10 +64,8 @@ each requires a scheduler, background jobs, a notification channel, or a calenda
 model the system does not have. Out of v4.0.0 scope by design.
 
 ### Migrations
-- `V13__task_energy_demand.sql` (shipped, FR-34 Stage A)
-- `V14__goal_synergy_link.sql` (planned, FR-35)
-
-The version tag stays prerelease until FR-35 and FR-36 ship.
+- `V13__task_energy_demand.sql` (FR-34 Stage A)
+- `V14__goal_synergy_link.sql` (FR-35)
 
 ---
 
