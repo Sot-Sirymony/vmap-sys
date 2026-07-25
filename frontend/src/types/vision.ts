@@ -2,6 +2,18 @@ export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type WorkStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'WAITING' | 'BLOCKED' | 'COMPLETED' | 'PAUSED';
 // FR-34.1: how a task affects the user's energy. Optional; absent reads as NEUTRAL.
 export type EnergyDemand = 'CHARGE' | 'NEUTRAL' | 'DRAIN';
+
+// FR-36: a captured lesson, aggregated read-only from a Review or an Obstacle.
+export type InsightSource = 'REVIEW' | 'OBSTACLE';
+export type InsightKind = 'LESSON_LEARNED' | 'ROOT_CAUSE' | 'CREATIVE_ALTERNATIVES';
+export type Insight = {
+  source: InsightSource;
+  kind: InsightKind;
+  sourceId: number;
+  sourceTitle: string;
+  content: string;
+  date?: string;
+};
 export type LifecycleStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED';
 export type DreamStatus = 'IDEA' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED';
 export type DreamType = 'SHORT_TERM' | 'LONG_TERM' | 'LIFETIME';

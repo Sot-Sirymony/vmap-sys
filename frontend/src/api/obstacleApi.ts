@@ -5,6 +5,12 @@ export function listObstacles(token: string, includeArchived = false) {
   return apiClient<Obstacle[]>(`/obstacles?includeArchived=${includeArchived}`, { token });
 }
 
+// FR-36.2: the user's own already-resolved obstacles of the same type, for
+// contextual resurfacing on the obstacle form.
+export function listRelatedObstacles(token: string, id: number) {
+  return apiClient<Obstacle[]>(`/obstacles/${id}/related`, { token });
+}
+
 export function createObstacle(token: string, request: ObstacleRequest) {
   return apiClient<Obstacle>('/obstacles', {
     method: 'POST',

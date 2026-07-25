@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
-import { archiveObstacle, permanentlyDeleteObstacle, createObstacle, listObstacles, restoreObstacle, updateObstacle } from '../api/obstacleApi';
+import { archiveObstacle, permanentlyDeleteObstacle, createObstacle, listObstacles, listRelatedObstacles, restoreObstacle, updateObstacle } from '../api/obstacleApi';
 import { listPartners } from '../api/partnerApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
@@ -64,6 +64,11 @@ export function ObstaclesPage() {
   const [relatedStepId, setRelatedStepId] = useState('');
   const [relatedTaskId, setRelatedTaskId] = useState('');
   const [requiredPartnerId, setRequiredPartnerId] = useState('');
+  // FR-36.2: the user's own already-resolved obstacles of the same type,
+  // resurfaced so a prior root cause is at hand. On edit we ask the server
+  // (the tested /related endpoint); on create there's no id yet, so we derive
+  // from the loaded list by the currently-selected type — either way live.
+  const [relatedObstacles, setRelatedObstacles] = useState<Obstacle[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -176,6 +181,21 @@ export function ObstaclesPage() {
     setSeverity('MEDIUM');
     setStatus('OPEN');
   }
+
+  // FR-36.2: keep the resurfaced list in step with what's being edited/typed.
+  useEffect(() => {
+    if (!token) {
+      setRelatedObstacles([]);
+      return;
+    }
+    if (crud.editingId != null) {
+      listRelatedObstacles(token, crud.editingId).then(setRelatedObstacles).catch(() => setRelatedObstacles([]));
+    } else {
+      setRelatedObstacles(
+        crud.items.filter((item) => item.obstacleType === obstacleType && item.status === 'RESOLVED' && !item.archived),
+      );
+    }
+  }, [token, crud.editingId, obstacleType, crud.items]);
 
   const partnerSuggestion = suggestPartnerFor(obstacleType);
 
@@ -375,6 +395,22 @@ export function ObstaclesPage() {
         Solution
         <Textarea value={solution} onChange={(event) => setSolution(event.target.value)} />
       </label>
+      {relatedObstacles.length > 0 && (
+        <div className="field-full coaching-panel">
+          <strong>
+            You've resolved {relatedObstacles.length} {obstacleTypeLabels[obstacleType].toLowerCase()} obstacle
+            {relatedObstacles.length === 1 ? '' : 's'} before
+          </strong>
+          <p>How you cracked it last time — reuse it instead of relearning it.</p>
+          <ul>
+            {relatedObstacles.slice(0, 3).map((item) => (
+              <li key={item.id}>
+                <span>{item.title}</span>{item.rootCause ?? ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <label className="field-full">
         Root Cause
         <Textarea value={rootCause} onChange={(event) => setRootCause(event.target.value)} required={status === 'RESOLVED'} />

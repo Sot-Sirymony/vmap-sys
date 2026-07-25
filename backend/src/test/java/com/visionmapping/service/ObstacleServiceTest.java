@@ -133,6 +133,23 @@ class ObstacleServiceTest {
     }
 
     @Test
+    void relatedObstaclesReturnsOnlySameTypeResolvedOnes() {
+        Obstacle target = existing(ObstacleStatus.OPEN); // id 10, type TIME
+        Obstacle resolvedSameType = Obstacle.builder().id(20L).user(testUser).title("Old time issue")
+                .obstacleType(ObstacleType.TIME).severity(Severity.MEDIUM).status(ObstacleStatus.RESOLVED).archived(false).build();
+        Obstacle resolvedOtherType = Obstacle.builder().id(21L).user(testUser).title("Money issue")
+                .obstacleType(ObstacleType.MONEY).severity(Severity.MEDIUM).status(ObstacleStatus.RESOLVED).archived(false).build();
+        Obstacle openSameType = Obstacle.builder().id(22L).user(testUser).title("Still open")
+                .obstacleType(ObstacleType.TIME).severity(Severity.MEDIUM).status(ObstacleStatus.OPEN).archived(false).build();
+
+        when(obstacleRepository.findById(10L)).thenReturn(Optional.of(target));
+        when(obstacleRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(java.util.List.of(target, resolvedSameType, resolvedOtherType, openSameType));
+
+        assertThat(service.relatedObstacles(10L)).extracting(ObstacleResponse::id).containsExactly(20L);
+    }
+
+    @Test
     void updatingToResolvedWithoutRootCauseThrows() {
         when(obstacleRepository.findById(10L)).thenReturn(Optional.of(existing(ObstacleStatus.OPEN)));
 

@@ -10,6 +10,7 @@ import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.entity.Obstacle;
 import com.visionmapping.entity.enums.ObstacleStatus;
+import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.ObstacleRepository;
@@ -70,6 +71,24 @@ public class ObstacleService {
     @Transactional(readOnly = true)
     public ObstacleResponse getObstacle(Long id) {
         return mapper.toResponse(lookup.obstacle(id));
+    }
+
+    /**
+     * FR-36.2: contextual resurfacing — the user's own already-resolved
+     * obstacles of the same type, so a prior root cause and its alternatives
+     * are one click away when facing a similar obstacle. Read-only and
+     * user-scoped (BR-30); excludes the obstacle being viewed and archived rows.
+     */
+    @Transactional(readOnly = true)
+    public List<ObstacleResponse> relatedObstacles(Long id) {
+        Obstacle target = lookup.obstacle(id);
+        ObstacleType type = target.getObstacleType();
+        return obstacleRepository.findByUser_IdAndArchivedFalse(lookup.userId()).stream()
+                .filter(obstacle -> !obstacle.getId().equals(id))
+                .filter(obstacle -> obstacle.getObstacleType() == type)
+                .filter(obstacle -> obstacle.getStatus() == ObstacleStatus.RESOLVED)
+                .map(mapper::toResponse)
+                .toList();
     }
 
     public ObstacleResponse updateObstacle(Long id, ObstacleRequest request) {

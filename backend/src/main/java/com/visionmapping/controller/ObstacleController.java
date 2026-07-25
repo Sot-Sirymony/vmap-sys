@@ -43,6 +43,11 @@ public class ObstacleController {
         return service.getObstacle(id);
     }
 
+    @GetMapping("/{id}/related")
+    public List<ObstacleResponse> related(@PathVariable Long id) {
+        return service.relatedObstacles(id);
+    }
+
     @PutMapping("/{id}")
     public ObstacleResponse update(@PathVariable Long id, @Valid @RequestBody ObstacleRequest request) {
         return service.updateObstacle(id, request);

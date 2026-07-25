@@ -23,6 +23,7 @@ const PartnerDetailPage = lazy(() => import('./pages/PartnerDetailPage').then((m
 const ObstaclesPage = lazy(() => import('./pages/ObstaclesPage').then((m) => ({ default: m.ObstaclesPage })));
 const CommunicationBuilderPage = lazy(() => import('./pages/CommunicationBuilderPage').then((m) => ({ default: m.CommunicationBuilderPage })));
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
+const InsightsPage = lazy(() => import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })));
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage').then((m) => ({ default: m.ImportExportPage })));
 
 export function App() {
@@ -46,6 +47,7 @@ export function App() {
             <Route path="/obstacles" element={<ObstaclesPage />} />
             <Route path="/communication" element={<CommunicationBuilderPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
             <Route path="/import-export" element={<ImportExportPage />} />
           </Route>
         </Route>
