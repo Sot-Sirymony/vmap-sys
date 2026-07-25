@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | Draft. Scoped and structured against the shipped system; no FR built yet. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | In progress. **FR-34** (Energy & Asset Portfolio, Stages A + B) and **FR-37** (Life-Optimization Signals) are ✅ shipped (2026-07-25); **FR-35** and **FR-36** remain. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -74,12 +74,22 @@ tasks are executed.
 
 ---
 
-## FR-34 Energy & Asset Portfolio *(lead — build first)*
+## FR-34 Energy & Asset Portfolio *(lead — build first)* — ✅ Done 2026-07-25
 
 Treat energy as a finite asset alongside time. Additive to `TaskItem`; ships in
 two stages so the tagging data exists before any logic depends on it.
 
-### Stage A — Energy tagging & weekly budget view *(Effort: S)*
+### Stage A — Energy tagging & weekly budget view *(Effort: S)* — ✅ Done
+
+**Shipped (2026-07-25):** `EnergyDemand { CHARGE, NEUTRAL, DRAIN }` enum + migration
+`V13__task_energy_demand.sql` (nullable `energy_demand`; null reads as NEUTRAL, no
+backfill). Wired through `TaskItem`, request/response DTOs, mapper, and service —
+diagnostic only, never gates saving or status (BR-27). `DashboardService` computes
+the Monday–Sunday Energy Budget netting CHARGE/DRAIN (BR-28), returned as an
+`EnergyBudget` record; surfaced by an `EnergyBudgetCard` on the dashboard and an
+energy selector on both task authoring surfaces. Excel export gained an Energy
+column + dropdown; import passes null. Verified: backend 86/86 (new BR-28 test),
+frontend tsc/build/35 tests green.
 
 - FR-34.1 **Energy demand tag.** `TaskItem` gains an optional `energyDemand`
   enum: `CHARGE` (energising), `NEUTRAL` (default), `DRAIN` (depleting). It is
@@ -101,7 +111,15 @@ two stages so the tagging data exists before any logic depends on it.
 3. Changing a task's `energyDemand` is never rejected on account of status,
    progress, or any other rule.
 
-### Stage B — Constraint / trade-off coaching *(Effort: M)*
+### Stage B — Constraint / trade-off coaching *(Effort: M)* — ✅ Done
+
+**Shipped (2026-07-25):** After a DRAIN task is saved into a week whose drains
+exceed its charges by `DRAIN_WEEK_THRESHOLD` (3), an `EnergyOvercommitDialog`
+lists that week's other draining tasks as candidates to drop or move. Pure
+threshold logic (`checkDrainOvercommit`) over the same Mon–Sun week as the
+backend budget; a shared `useEnergyOvercommitNudge` hook wires it into both the
+Tasks Board and the Vision Map tree. Coaching, never validation — the task is
+already saved (FR-34.5). Verified: frontend tsc/build green, 43 tests (8 new).
 
 - FR-34.4 **Over-commitment prompt.** When a user adds a new `DRAIN` task to a
   week whose net balance already exceeds a threshold, the system surfaces a
@@ -247,7 +265,17 @@ resurfaced**. No new authoring surface is added.
 
 ---
 
-## FR-37 Life-Optimization Signals *(augments Reviews; Effort: M)*
+## FR-37 Life-Optimization Signals *(augments Reviews; Effort: M)* — ✅ Done 2026-07-25
+
+**Shipped (2026-07-25):** `DashboardService` computes an area-starvation signal in
+`buildAttention` — a Vision Area with an active goal but no task progress in the
+last 14 days *while at least one other area moved* in that window (BR-31). No
+migration, no background job, no stored flag; it naturally yields nothing in an
+area-scoped view. Added `starvedVisionAreas` to the `Attention` DTO; the
+`AttentionPanel` surfaces a "Vision Areas being starved" finding linking to the
+area's dreams (surface, don't nag — FR-37.2). FR-37.3 (weekly Review referencing
+the signals) is the optional "may" clause and was not built. Verified: backend
+88/88 (2 new tests), frontend tsc/build/43 tests green.
 
 The achievable half of the original "Automated Optimization" — computed on
 request, surfaced in the existing attention feed. It **augments** the Review
@@ -319,14 +347,14 @@ which is precisely why it is deferred rather than scoped.
 
 ## Build Order
 
-| Order | Work | Why this order | Effort |
-|---|---|---|---|
-| 1 | FR-34 Stage A (energy tagging + budget view) | Smallest, fully additive, backend-first; the doc's own recommended starting point — establishes the energy data everything else can build on | S |
-| 2 | FR-37 Life-Optimization Signals | Reuses the existing dashboard/attention surface; no schema change; delivers a visible "balance" win early | M |
-| 3 | FR-36 Insight Library | Read-only over data that already exists; no new authoring surface | S–M |
-| 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M |
-| 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M |
-| — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL |
+| Order | Work | Why this order | Effort | Status |
+|---|---|---|---|---|
+| 1 | FR-34 Stage A (energy tagging + budget view) | Smallest, fully additive, backend-first; the doc's own recommended starting point — establishes the energy data everything else can build on | S | ✅ Done |
+| 2 | FR-37 Life-Optimization Signals | Reuses the existing dashboard/attention surface; no schema change; delivers a visible "balance" win early | M | ✅ Done |
+| 3 | FR-36 Insight Library | Read-only over data that already exists; no new authoring surface | S–M | ⬜ Next |
+| 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ⬜ Pending |
+| 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M | ✅ Done |
+| — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 
 ---
 

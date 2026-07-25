@@ -39,34 +39,40 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [4.0.0] — Planned (not started)
+## [4.0.0] — In progress (2 of 4 items shipped)
 
-Will implement **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
+Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
 Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
 numbering continues from v3 (which ended at FR-33).
 
 Moves the system from *activating* to *integrating* — energy as a portfolio,
 cross-area synergy, a searchable insight library, and computed balance signals.
 
-### Scope (buildable now — additive, no new infrastructure)
-- **FR-34** Energy & Asset Portfolio — task energy tag + weekly budget (Stage A),
-  over-commitment coaching (Stage B).
-- **FR-35** Holistic Life Integration — goal synergy links + cross-pollination view.
+### Shipped
+| Item | Description | Commit |
+|---|---|---|
+| FR-34 Stage A | Energy demand tag + weekly Energy Budget (BR-27, BR-28) | `1c5c20b` |
+| FR-34 Stage B | Over-commitment coaching prompt for draining weeks (FR-34.4/34.5) | `4fb6946` |
+| FR-37 | Area-starvation signal in the attention feed (BR-31) | `8488b55` |
+
+All verified with backend and frontend test suites (backend 88/88, frontend 43/43).
+
+### Pending
 - **FR-36** PKM Insight Library — search + contextual resurfacing over lessons that
   already exist (`Review.lessonsLearned`, `Obstacle.rootCause`/`creativeAlternatives`).
-- **FR-37** Life-Optimization Signals — computed area-starvation signal in the
-  attention feed; augments the Review system, does not replace it.
+  Read-only; no new authoring surface. Next in the build order.
+- **FR-35** Holistic Life Integration — goal synergy links + cross-pollination view.
 
 ### Deferred (needs new infrastructure — future BRD)
 Automated agenda generation, predictive push alerts, and fully-automated reviews —
 each requires a scheduler, background jobs, a notification channel, or a calendar
 model the system does not have. Out of v4.0.0 scope by design.
 
-### Migrations (planned)
-- `V13__task_energy_demand.sql`
-- `V14__goal_synergy_link.sql`
+### Migrations
+- `V13__task_energy_demand.sql` (shipped, FR-34 Stage A)
+- `V14__goal_synergy_link.sql` (planned, FR-35)
 
-No FR built yet; the version does not move until the first requirement ships.
+The version tag stays prerelease until FR-35 and FR-36 ship.
 
 ---
 
