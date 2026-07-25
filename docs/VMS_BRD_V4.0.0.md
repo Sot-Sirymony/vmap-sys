@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | In progress. **FR-34** (Energy & Asset Portfolio, Stages A + B) and **FR-37** (Life-Optimization Signals) are ✅ shipped (2026-07-25); **FR-35** and **FR-36** remain. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | In progress. **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals) are ✅ shipped (2026-07-25); **FR-35** (Cross-Pollination) is the last item remaining. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -217,7 +217,20 @@ another, so competing priorities can be reframed as synergy.
 
 ---
 
-## FR-36 PKM — Insight Library *(surface-only; Effort: S–M)*
+## FR-36 PKM — Insight Library *(surface-only; Effort: S–M)* — ✅ Done 2026-07-25
+
+**Shipped (2026-07-25):** No migration — read-only aggregation over existing
+data. `InsightService` + `GET /api/insights?query=` aggregate the user's
+`Review.lessonsLearned` and `Obstacle.rootCause`/`creativeAlternatives`, skip
+blanks, filter case-insensitively, and sort newest-first (BR-30). Contextual
+resurfacing via `ObstacleService.relatedObstacles` + `GET
+/api/obstacles/{id}/related` (the user's other resolved obstacles of the same
+type). Frontend: an `InsightsPage` (new Insights nav item + `/insights` route)
+with debounced search over cards linking back to each source record (FR-36.3),
+and a resurfacing `coaching-panel` in the Obstacle form. No new authoring
+surface was added — only retrieval, per the Origin note. Verified: backend
+91/91 (new `InsightServiceTest` + an `ObstacleServiceTest` case), frontend
+tsc/build/43 tests green.
 
 The insights already exist in the data; this makes them **findable and
 resurfaced**. No new authoring surface is added.
@@ -351,8 +364,8 @@ which is precisely why it is deferred rather than scoped.
 |---|---|---|---|---|
 | 1 | FR-34 Stage A (energy tagging + budget view) | Smallest, fully additive, backend-first; the doc's own recommended starting point — establishes the energy data everything else can build on | S | ✅ Done |
 | 2 | FR-37 Life-Optimization Signals | Reuses the existing dashboard/attention surface; no schema change; delivers a visible "balance" win early | M | ✅ Done |
-| 3 | FR-36 Insight Library | Read-only over data that already exists; no new authoring surface | S–M | ⬜ Next |
-| 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ⬜ Pending |
+| 3 | FR-36 Insight Library | Read-only over data that already exists; no new authoring surface | S–M | ✅ Done |
+| 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ⬜ Next |
 | 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M | ✅ Done |
 | — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 

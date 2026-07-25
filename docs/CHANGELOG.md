@@ -39,7 +39,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [4.0.0] — In progress (2 of 4 items shipped)
+## [4.0.0] — In progress (3 of 4 items shipped)
 
 Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
 Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
@@ -54,14 +54,13 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-34 Stage A | Energy demand tag + weekly Energy Budget (BR-27, BR-28) | `1c5c20b` |
 | FR-34 Stage B | Over-commitment coaching prompt for draining weeks (FR-34.4/34.5) | `4fb6946` |
 | FR-37 | Area-starvation signal in the attention feed (BR-31) | `8488b55` |
+| FR-36 | PKM Insight Library — search + contextual resurfacing (BR-30) | `cebbf0f` |
 
-All verified with backend and frontend test suites (backend 88/88, frontend 43/43).
+All verified with backend and frontend test suites (backend 91/91, frontend 43/43).
 
 ### Pending
-- **FR-36** PKM Insight Library — search + contextual resurfacing over lessons that
-  already exist (`Review.lessonsLearned`, `Obstacle.rootCause`/`creativeAlternatives`).
-  Read-only; no new authoring surface. Next in the build order.
 - **FR-35** Holistic Life Integration — goal synergy links + cross-pollination view.
+  One new table + CRUD; the last v4.0.0 item. Next in the build order.
 
 ### Deferred (needs new infrastructure — future BRD)
 Automated agenda generation, predictive push alerts, and fully-automated reviews —
