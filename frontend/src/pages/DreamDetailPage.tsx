@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
@@ -13,7 +13,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { FilterSelect, optionsFromLabels } from '../components/common/FilterSelect';
+import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Loading } from '../components/common/Loading';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { VisionMapTree } from '../components/vision-map/VisionMapTree';
@@ -27,6 +27,7 @@ export function DreamDetailPage() {
   const { token } = useAuth();
   const { dreamId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -41,6 +42,10 @@ export function DreamDetailPage() {
   // always shows — it's already the one thing the Dream picker above selects).
   // A branch stays visible if it matches directly or leads to a descendant
   // that does, so a filtered view never orphans a matching row.
+  // A Vision Area scope narrows the Dream picker to that area (and keeps the
+  // shown dream inside it). In the URL, so a scoped map can be bookmarked and
+  // shared — the same `visionAreaId` key the Dashboard and Dreams pages use.
+  const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
 
@@ -75,29 +80,66 @@ export function DreamDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, showArchived]);
 
+  // Dreams within the active area scope (all dreams when no area is chosen).
+  const areaDreams = useMemo(() => (
+    filterVisionAreaId
+      ? dreams.filter((dream) => String(dream.visionAreaId) === filterVisionAreaId)
+      : dreams
+  ), [dreams, filterVisionAreaId]);
+
   const selectedDream = useMemo(() => {
     if (dreamId) {
       return dreams.find((dream) => dream.id === Number(dreamId));
     }
-    return dreams[0];
-  }, [dreamId, dreams]);
+    return areaDreams[0] ?? dreams[0];
+  }, [dreamId, dreams, areaDreams]);
+
+  // Keep the shown dream inside the active area scope. If the routed dream
+  // falls outside it (area picked from the filter, or a deep link), jump to
+  // that area's first dream — replace, so it doesn't stack in history. Other
+  // query params (priority, status) are preserved. When the area has no
+  // dreams there's nothing to jump to; the empty state below handles it.
+  useEffect(() => {
+    if (!filterVisionAreaId || dreams.length === 0) {
+      return;
+    }
+    const current = dreamId ? dreams.find((dream) => dream.id === Number(dreamId)) : undefined;
+    if (current && String(current.visionAreaId) === filterVisionAreaId) {
+      return;
+    }
+    const first = areaDreams[0];
+    if (first && first.id !== current?.id) {
+      navigate(`/dreams/${first.id}${location.search}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterVisionAreaId, dreamId, dreams]);
 
   const selectedArea = visionAreas.find((area) => area.id === selectedDream?.visionAreaId);
+  const areaHasNoDreams = Boolean(filterVisionAreaId) && areaDreams.length === 0 && !loading;
 
   return (
     <PageSection title="Vision Map" subtitle="View one dream from area to executable tasks.">
       {dreams.length > 0 && (
         <Card>
           <CardContent sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+            <FilterSelect
+              label="Vision Area"
+              value={filterVisionAreaId}
+              onChange={setFilterVisionAreaId}
+              options={optionsFromEntities(visionAreas, (area) => area.name)}
+              allLabel="All areas"
+            />
             <label>
               Dream
               <FormControl fullWidth size="small">
                 <Select
                   SelectDisplayProps={{ 'aria-label': 'Dream' }}
-                  value={String(selectedDream?.id ?? '')}
-                  onChange={(event) => event.target.value && navigate(`/dreams/${event.target.value}`)}
+                  value={areaDreams.some((dream) => String(dream.id) === String(selectedDream?.id)) ? String(selectedDream?.id ?? '') : ''}
+                  displayEmpty
+                  onChange={(event) => event.target.value && navigate(`/dreams/${event.target.value}${location.search}`)}
                 >
-                  {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}{dream.archived ? ' (archived)' : ''}</MenuItem>)}
+                  {areaDreams.length === 0 && <MenuItem value="" disabled><em>No dreams in this area</em></MenuItem>}
+                  {areaDreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}{dream.archived ? ' (archived)' : ''}</MenuItem>)}
                 </Select>
               </FormControl>
             </label>
@@ -119,9 +161,9 @@ export function DreamDetailPage() {
       )}
       {loading && <Loading variant="tree" />}
       {error && <ErrorMessage message={error} onRetry={() => void load()} />}
-      {!selectedDream ? (
-        <EmptyState>No dream selected.</EmptyState>
-      ) : (
+      {areaHasNoDreams && <EmptyState>No dreams in this vision area yet.</EmptyState>}
+      {!areaHasNoDreams && !selectedDream && <EmptyState>No dream selected.</EmptyState>}
+      {!areaHasNoDreams && selectedDream && (
         <>
         <Breadcrumbs
           crumbs={[
