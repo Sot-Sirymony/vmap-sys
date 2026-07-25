@@ -1,5 +1,5 @@
 import { FormEvent, useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Rocket } from 'lucide-react';
+import { ChevronDown, ChevronRight, Lightbulb, Rocket } from 'lucide-react';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
@@ -1306,6 +1306,9 @@ export function VisionMapTree({
                                     </div>
                                   );
                                 })}
+                                {!filtering && step.complex && tasksForStep(step.id).length === 0 && !step.archived && (
+                                  <MapNudge emphasis>This step is marked complex — break it into tasks so each piece is small enough to do.</MapNudge>
+                                )}
                                 {!step.archived && (
                                   <TaskAddRow
                                     stepId={step.id}
@@ -1320,6 +1323,9 @@ export function VisionMapTree({
                           </div>
                         );
                       })}
+                      {!filtering && allGoalSteps.length === 0 && !goal.archived && (
+                        <MapNudge>No steps yet — what has to happen, in order, to reach this goal?</MapNudge>
+                      )}
                       {!goal.archived && (
                         <TitleAddRow
                           placeholder="New step title"
@@ -1346,6 +1352,9 @@ export function VisionMapTree({
             {filtering && visibleGoals.length === 0 && (
               <p className="map-meta">No goals match these filters.</p>
             )}
+            {!filtering && dreamGoals.length === 0 && !dream.archived && (
+              <MapNudge>Start by breaking this dream into goals — the major results that, together, make it real.</MapNudge>
+            )}
             {!dream.archived && (
               <TitleAddRow
                 placeholder="New goal title"
@@ -1362,6 +1371,21 @@ export function VisionMapTree({
       </div>
     </div>
     </div>
+  );
+}
+
+// Guided-flow coaching prompt (FR guided flow): shown on an empty branch,
+// just above its quick-add row, to name the next method step instead of
+// leaving a dead-end. `emphasis` is the actual call-to-action variant used
+// for a complex step with no tasks (BR-16 #7 — a complex step should have at
+// least one task). Plain descriptive text, matching the existing "No goals
+// match these filters" message that already sits inside a tree group.
+function MapNudge({ children, emphasis = false }: { children: React.ReactNode; emphasis?: boolean }) {
+  return (
+    <p className={`map-nudge${emphasis ? ' map-nudge--strong' : ''}`}>
+      <Lightbulb size={14} aria-hidden="true" />
+      <span>{children}</span>
+    </p>
   );
 }
 

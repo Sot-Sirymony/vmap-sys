@@ -1356,6 +1356,38 @@ button:focus-visible,
   width: 160px;
 }
 
+/* Guided-flow coaching prompt on an empty branch (rendered above its
+   quick-add row). Quiet by default; the --strong variant — a complex step
+   with no tasks (BR-16 #7) — reads as an actual call to act, using the same
+   informational tones as the app's coaching banners. */
+.map-nudge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-size: var(--font-caption);
+  line-height: 1.4;
+  color: var(--text-soft);
+  background: var(--background-subtle);
+}
+
+.map-nudge svg {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.map-nudge--strong {
+  color: var(--info-text);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+}
+
+.map-nudge--strong svg {
+  color: var(--info-strong);
+}
+
 .table-title-link {
   color: inherit;
   text-decoration: none;
