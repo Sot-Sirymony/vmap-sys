@@ -2,6 +2,8 @@ package com.visionmapping.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -11,9 +13,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(
@@ -81,11 +86,28 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password.", request);
     }
 
+    /**
+     * A request to a path with no controller mapping — e.g. the frontend calling
+     * an endpoint a stale backend doesn't have yet. That is "not found", not a
+     * server fault, and must not be swallowed by the catch-all below as a 500.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(
+            NoResourceFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, "No endpoint for " + request.getRequestURI(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(
             Exception exception,
             HttpServletRequest request
     ) {
+        // Log the real cause: the client only ever sees a generic message, so
+        // without this the actual exception (a failed query, a missing table)
+        // would be invisible and impossible to diagnose.
+        log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), exception);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request);
     }
 
