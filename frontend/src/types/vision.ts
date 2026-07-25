@@ -366,4 +366,6 @@ export type DashboardAttention = {
   goalsWithoutSteps: Goal[];
   inactiveMoonshotGoals: Goal[];
   inactiveMoonshotDreams: Dream[];
+  // FR-37.1: areas with an active goal but no recent progress while others moved.
+  starvedVisionAreas: VisionArea[];
 };

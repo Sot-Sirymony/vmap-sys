@@ -7,7 +7,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Ban, CalendarClock, CheckCircle2, GitBranch, Rocket, Sparkles, Target } from 'lucide-react';
+import { Ban, CalendarClock, CheckCircle2, GitBranch, Rocket, Sparkles, Target, TrendingDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardAttention } from '../../types/vision';
 
@@ -79,6 +79,18 @@ function buildFindings(attention: DashboardAttention, overdueCount: number, visi
       why: 'This goal has no path to it yet.',
       to: scoped('/goals', visionAreaId),
       action: 'Add steps',
+    },
+    {
+      key: 'starved-areas',
+      icon: TrendingDown,
+      count: (attention.starvedVisionAreas ?? []).length,
+      title: 'Vision Areas being starved',
+      why: 'Active goals here, but nothing has moved in two weeks while other areas did. Give it attention this week, or pause it on purpose.',
+      // One starved area → straight to its dreams; several → the areas list.
+      to: (attention.starvedVisionAreas ?? []).length === 1
+        ? `/dreams?visionAreaId=${attention.starvedVisionAreas[0].id}`
+        : '/vision-areas',
+      action: 'Give it attention',
     },
     {
       key: 'moonshot-inactive',

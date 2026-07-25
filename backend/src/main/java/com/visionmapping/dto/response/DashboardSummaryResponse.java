@@ -76,7 +76,10 @@ public record DashboardSummaryResponse(
             List<DreamResponse> dreamsWithoutGoals,
             List<GoalResponse> goalsWithoutSteps,
             List<GoalResponse> inactiveMoonshotGoals,
-            List<DreamResponse> inactiveMoonshotDreams
+            List<DreamResponse> inactiveMoonshotDreams,
+            // FR-37.1: areas with an active goal but no progress in the starvation
+            // window while another area moved — being starved of attention.
+            List<VisionAreaResponse> starvedVisionAreas
     ) {
     }
 }

@@ -38,8 +38,10 @@ import com.visionmapping.service.support.ProgressCalculator;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -126,6 +128,12 @@ class DashboardServiceTest {
                 .owner("Owner").priority(Priority.HIGH).dueDate(dueDate)
                 .status(WorkStatus.NOT_STARTED).progressPercent(BigDecimal.ZERO)
                 .energyDemand(energyDemand).build();
+    }
+
+    private ProgressLog progressLog(Long id, TaskItem task, Instant loggedAt) {
+        return ProgressLog.builder().id(id).user(testUser).relatedTask(task)
+                .progressPercentBefore(BigDecimal.ZERO).progressPercentAfter(BigDecimal.TEN)
+                .loggedAt(loggedAt).archived(false).build();
     }
 
 
@@ -220,6 +228,43 @@ class DashboardServiceTest {
         assertThat(budget.neutral()).isEqualTo(1);
         assertThat(budget.drain()).isEqualTo(2);
         assertThat(budget.net()).isEqualTo(-1);
+    }
+
+    @Test
+    void attentionFlagsAnAreaStarvedOfProgressWhileAnotherAreaMoved() {
+        VisionArea career = visionArea(1L);
+        VisionArea health = visionArea(2L);
+        VisionStep careerStep = step(20L, goal(10L, dream(1L, career), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false),
+                WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        Goal healthGoal = goal(11L, dream(2L, health), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+        TaskItem careerTask = task(30L, careerStep, WorkStatus.IN_PROGRESS, BigDecimal.TEN);
+
+        when(visionAreaRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(career, health));
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(careerStep.getGoal(), healthGoal));
+        // Career moved yesterday; Health has an active goal but no recent progress.
+        when(progressLogRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(progressLog(40L, careerTask, Instant.now().minus(1, ChronoUnit.DAYS))));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.attention().starvedVisionAreas()).extracting(area -> area.id()).containsExactly(2L);
+    }
+
+    @Test
+    void attentionFlagsNoStarvationWhenNoAreaMovedAtAll() {
+        VisionArea career = visionArea(1L);
+        VisionArea health = visionArea(2L);
+        Goal careerGoal = goal(10L, dream(1L, career), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+        Goal healthGoal = goal(11L, dream(2L, health), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+
+        when(visionAreaRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(career, health));
+        when(goalRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(careerGoal, healthGoal));
+        // No progress anywhere in the window → a global lull, not an imbalance.
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.attention().starvedVisionAreas()).isEmpty();
     }
 
     @Test

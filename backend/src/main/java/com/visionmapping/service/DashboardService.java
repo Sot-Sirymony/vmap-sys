@@ -5,6 +5,7 @@ import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
+import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
@@ -37,7 +38,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
@@ -65,6 +68,9 @@ public class DashboardService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     private static final int TREND_WEEKS = 12;
+    // FR-37.1: an area with an active goal but no progress in this many days —
+    // while another area did move — is flagged as being starved of attention.
+    private static final int STARVATION_WINDOW_DAYS = 14;
     private static final int DAYS_PER_WEEK = 7;
     private static final int TOP_PRIORITY_TASK_LIMIT = 5;
     private static final int KPI_PROGRESS_SCALE = 2;
@@ -442,7 +448,41 @@ public class DashboardService {
                 dreamsWithoutGoals,
                 goalsWithoutSteps,
                 inactiveMoonshotGoals,
-                inactiveMoonshotDreams);
+                inactiveMoonshotDreams,
+                starvedVisionAreas(data));
+    }
+
+    /**
+     * FR-37.1 (BR-31): areas being starved of attention — an active goal but no
+     * task progress logged in the last {@value #STARVATION_WINDOW_DAYS} days,
+     * *while at least one other area did move* in that window. The "another area
+     * moved" gate is what makes this an imbalance signal rather than a
+     * holiday-lull false alarm. Purely computed and read-only: it never mutates
+     * or persists anything, and it naturally yields nothing in an area-scoped
+     * view (a cross-area comparison needs more than one area).
+     */
+    private List<VisionAreaResponse> starvedVisionAreas(ScopedData data) {
+        Instant cutoff = Instant.now(clock).minus(STARVATION_WINDOW_DAYS, ChronoUnit.DAYS);
+        Set<Long> areasWithRecentProgress = data.progressLogs().stream()
+                .filter(log -> log.getLoggedAt() != null && !log.getLoggedAt().isBefore(cutoff))
+                .map(DashboardService::areaIdOf)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        // No area moved at all → a global lull, not an imbalance. Flag nothing.
+        if (areasWithRecentProgress.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> areasWithActiveGoal = data.goals().stream()
+                .filter(DashboardService::isOpenGoal)
+                .map(DashboardService::areaIdOf)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        return data.areas().stream()
+                .filter(area -> area.getStatus() != LifecycleStatus.ARCHIVED)
+                .filter(area -> areasWithActiveGoal.contains(area.getId()))
+                .filter(area -> !areasWithRecentProgress.contains(area.getId()))
+                .map(mapper::toResponse)
+                .toList();
     }
 
     /**
