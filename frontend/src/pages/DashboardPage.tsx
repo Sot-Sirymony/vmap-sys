@@ -37,8 +37,9 @@ import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, VisionArea, WorkStatus } from '../types/vision';
-import { chartPrimary, heatmapLevelColors, neutralFallback, obstacleTypeColors, partnerPipelineColors } from '../theme';
-import { obstacleTypeLabels, partnerStatusLabels, priorityColors, workStatusColors } from '../utils/enumLabels';
+import { chartPrimary, heatmapLevelColors, neutralFallback, obstacleTypeColors, priorityColor, statusColor } from '../theme';
+import { obstacleTypeLabels, partnerStatusLabels } from '../utils/enumLabels';
+import { useThemeSettings } from '../context/ThemeModeContext';
 import { PageSection } from './PageSection';
 
 const PRIORITY_ORDER: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
@@ -50,8 +51,14 @@ const HEATMAP_WEEKS = 12;
 // meaning (real status information); obstacle types use the blue depth ramp
 // (arbitrary categories); the heatmap ramp encodes intensity. The original
 // rationale for each choice is documented next to the values in theme.ts.
+// FR-39.3 / BR-34: the status and priority hues are now resolved per render
+// rather than frozen at module load, because high contrast changes them (and
+// changes them per mode). A chart fill IS the colour — unlike a badge, whose
+// label text blends with --foreground and so corrects itself — so leaving these
+// static would have made the charts the one place the toggle didn't reach.
+// The partner pipeline still draws each stage in exactly its status colour
+// (FR-25.3, audit V-02), which is why it goes through the same resolver.
 const HEATMAP_LEVEL_COLORS = heatmapLevelColors;
-const PARTNER_STATUS_COLORS: Record<PartnerStatus, string> = partnerPipelineColors;
 const OBSTACLE_TYPE_COLORS: Record<string, string> = obstacleTypeColors;
 
 type DashboardPeriod = 'month' | 'quarter' | 'year';
@@ -91,6 +98,12 @@ function periodRange(period: DashboardPeriod): { from: string; to: string } {
 export function DashboardPage() {
   const { token } = useAuth();
   const navigate = useNavigate();
+  // FR-39.3: chart fills follow the appearance settings, so high contrast
+  // reaches the charts and not only the badges.
+  const { settings: appearance, resolvedMode } = useThemeSettings();
+  const workStatusFill = (status: WorkStatus) => statusColor(status, resolvedMode, appearance.highContrast);
+  const partnerStatusFill = (status: PartnerStatus) => statusColor(status, resolvedMode, appearance.highContrast);
+  const priorityFill = (priority: Priority) => priorityColor(priority, resolvedMode, appearance.highContrast);
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -291,7 +304,7 @@ export function DashboardPage() {
           data={summary?.goalsByStatus ?? {}}
           formatLabel={formatLabel}
           variant="donut"
-          colorForKey={(key) => workStatusColors[key as WorkStatus] ?? neutralFallback}
+          colorForKey={(key) => workStatusFill(key as WorkStatus)}
           linkForKey={(key) => `/goals?status=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
@@ -311,7 +324,7 @@ export function DashboardPage() {
           data={tasksByStatus}
           formatLabel={formatLabel}
           variant="donut"
-          colorForKey={(key) => workStatusColors[key as WorkStatus] ?? neutralFallback}
+          colorForKey={(key) => workStatusFill(key as WorkStatus)}
           linkForKey={(key) => `/tasks?status=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
@@ -320,7 +333,7 @@ export function DashboardPage() {
           data={tasksByPriority}
           formatLabel={formatLabel}
           variant="bar"
-          colorForKey={(key) => priorityColors[key as Priority] ?? neutralFallback}
+          colorForKey={(key) => priorityFill(key as Priority)}
           linkForKey={(key) => `/tasks?priority=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
@@ -374,7 +387,7 @@ export function DashboardPage() {
                         dataKey={status}
                         stackId="pipeline"
                         name={partnerStatusLabels[status]}
-                        fill={PARTNER_STATUS_COLORS[status]}
+                        fill={partnerStatusFill(status)}
                         cursor="pointer"
                         onClick={() => navigate(`/partners?status=${status}`)}
                       />
@@ -392,7 +405,7 @@ export function DashboardPage() {
                     spacing={0.75}
                     sx={{ alignItems: 'center', minHeight: 24, px: 0.5, textDecoration: 'none', '&:hover .MuiTypography-root': { textDecoration: 'underline' } }}
                   >
-                    <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: PARTNER_STATUS_COLORS[status] }} />
+                    <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: partnerStatusFill(status) }} />
                     <Typography variant="caption" color="text.secondary">
                       {partnerStatusLabels[status]} ({partnerCounts[status]})
                     </Typography>

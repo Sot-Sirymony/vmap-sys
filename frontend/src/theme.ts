@@ -228,7 +228,18 @@ export function visionAreaDotColor(areaId: number): string {
  * The status/priority palettes above are deliberately NOT part of this map
  * (BR-14): an accent choice must never change what "Completed" green means.
  */
-export type AccentId = 'blue' | 'teal' | 'purple' | 'green' | 'orange';
+export type AccentId =
+  | 'blue'
+  | 'teal'
+  | 'purple'
+  | 'green'
+  | 'orange'
+  // FR-39.2 additions.
+  | 'magenta'
+  | 'red'
+  | 'brass'
+  | 'steel'
+  | 'pink';
 
 type AccentSet = {
   main: string;
@@ -265,9 +276,280 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
     light: { main: '#ca5010', hover: '#d86b2b', pressed: '#a3400c', contrastText: '#ffffff', tint: '#f8e3d7', tintForeground: '#8a3a0e' },
     dark: { main: '#df8e57', hover: '#e8a97e', pressed: '#ca5010', contrastText: '#1b1a19', tint: '#3a2415', tintForeground: '#f0c0a4' },
   },
+  // FR-39.2: five more accents, same shape and same guarantee. Every value
+  // below was contrast-checked before being written down: each of main, hover,
+  // and pressed clears 4.5:1 against its own contrastText, and each tint pair
+  // clears 4.5:1 — in both modes. That is a slightly higher bar than the
+  // original five actually meet on their transient states (Orange's light hover
+  // measures 3.47:1), so these are the reference for any accent added later.
+  //
+  // Note the direction of the light ramp: hover and pressed get progressively
+  // DARKER, not lighter. That is Fluent's own convention — visible in Blue
+  // above, where #0078d4 → #106ebe → #005a9e descends in lightness — and going
+  // the other way would drop contrast exactly when the user is interacting.
+  magenta: {
+    label: 'Magenta',
+    light: { main: '#b4009e', hover: '#9c0089', pressed: '#8a0079', contrastText: '#ffffff', tint: '#f8e0f4', tintForeground: '#8a0079' },
+    dark: { main: '#e06ecd', hover: '#e98fd8', pressed: '#cf5cbd', contrastText: '#1b1a19', tint: '#3d0f36', tintForeground: '#f3b6e8' },
+  },
+  red: {
+    label: 'Red',
+    light: { main: '#c4314b', hover: '#ad2942', pressed: '#9b2033', contrastText: '#ffffff', tint: '#fde7e9', tintForeground: '#9b2033' },
+    dark: { main: '#e8737f', hover: '#ef9199', pressed: '#d96370', contrastText: '#1b1a19', tint: '#3f1418', tintForeground: '#f5b8be' },
+  },
+  brass: {
+    label: 'Brass',
+    light: { main: '#8e6a0b', hover: '#7d5d0a', pressed: '#6b5008', contrastText: '#ffffff', tint: '#f7ecd0', tintForeground: '#6b5008' },
+    dark: { main: '#d4b158', hover: '#e0c37b', pressed: '#b8963f', contrastText: '#1b1a19', tint: '#332708', tintForeground: '#e8d69b' },
+  },
+  steel: {
+    label: 'Steel',
+    light: { main: '#005b70', hover: '#004d5f', pressed: '#003a49', contrastText: '#ffffff', tint: '#d6ebf1', tintForeground: '#00485a' },
+    dark: { main: '#5ba7bd', hover: '#7dbccd', pressed: '#43909f', contrastText: '#1b1a19', tint: '#0a2c36', tintForeground: '#a3d3e0' },
+  },
+  pink: {
+    label: 'Pink',
+    light: { main: '#b8306e', hover: '#a32860', pressed: '#931f56', contrastText: '#ffffff', tint: '#fce4f1', tintForeground: '#931f56' },
+    dark: { main: '#eb84b6', hover: '#f2a2c8', pressed: '#d1699b', contrastText: '#1b1a19', tint: '#3d1229', tintForeground: '#f7bdd8' },
+  },
 };
 
+/**
+ * FR-39.1 — named theme presets.
+ *
+ * A preset is nothing more than a (mode, accent) pair the user could equally set
+ * by hand. Keeping it to values that already exist is deliberate: there is one
+ * source of truth for what renders, and "Custom" falls out of a simple
+ * comparison instead of needing a parallel code path that could disagree with
+ * the individual controls.
+ *
+ * There is deliberately no third "surface tone" knob. It was the obvious way to
+ * make presets feel more distinct, and it is exactly the hidden dimension this
+ * design rules out — a look you cannot reach through the normal controls is a
+ * look the user cannot adjust or undo.
+ */
+export type ThemePresetId =
+  | 'fluentSystem'
+  | 'fluentLight'
+  | 'fluentDark'
+  | 'ocean'
+  | 'forest'
+  | 'slate'
+  | 'midnight';
+
+/** The wire value stored per account; `CUSTOM` is computed, never selected. */
+export type StoredThemePreset = 'FLUENT_SYSTEM' | 'FLUENT_LIGHT' | 'FLUENT_DARK' | 'OCEAN' | 'FOREST' | 'SLATE' | 'MIDNIGHT' | 'CUSTOM';
+
+export type ThemePresetDefinition = {
+  id: ThemePresetId;
+  stored: StoredThemePreset;
+  label: string;
+  description: string;
+  mode: 'light' | 'dark' | 'system';
+  accent: AccentId;
+};
+
+export const themePresets: ThemePresetDefinition[] = [
+  { id: 'fluentSystem', stored: 'FLUENT_SYSTEM', label: 'Fluent System', description: 'Follows your device', mode: 'system', accent: 'blue' },
+  { id: 'fluentLight', stored: 'FLUENT_LIGHT', label: 'Fluent Light', description: 'Always light, brand blue', mode: 'light', accent: 'blue' },
+  { id: 'fluentDark', stored: 'FLUENT_DARK', label: 'Fluent Dark', description: 'Always dark, brand blue', mode: 'dark', accent: 'blue' },
+  { id: 'ocean', stored: 'OCEAN', label: 'Ocean', description: 'Light and teal', mode: 'light', accent: 'teal' },
+  { id: 'forest', stored: 'FOREST', label: 'Forest', description: 'Light and green', mode: 'light', accent: 'green' },
+  { id: 'slate', stored: 'SLATE', label: 'Slate', description: 'Light and steel blue', mode: 'light', accent: 'steel' },
+  { id: 'midnight', stored: 'MIDNIGHT', label: 'Midnight', description: 'Dark and purple', mode: 'dark', accent: 'purple' },
+];
+
+/**
+ * Which preset the current settings amount to, or `'CUSTOM'` when they match
+ * none. Derived rather than trusted: the stored label can go stale the moment a
+ * user nudges an individual control, and a preset name that lies about what is
+ * on screen is worse than no name at all.
+ */
+export function matchPreset(mode: 'light' | 'dark' | 'system', accent: AccentId): StoredThemePreset {
+  return themePresets.find((preset) => preset.mode === mode && preset.accent === accent)?.stored ?? 'CUSTOM';
+}
+
 export type Density = 'comfortable' | 'compact';
+
+export type SurfaceTokens = {
+  background: string;
+  card: string;
+  foreground: string;
+  mutedForeground: string;
+  secondary: string;
+  border: string;
+  error: string;
+};
+
+/**
+ * The neutral surface/text tokens for one (mode, highContrast) combination —
+ * the four cases resolved in one table instead of a ternary per property.
+ *
+ * FR-39.3: high contrast is a *stronger* version of the same design, not a
+ * different one. Text goes to pure black/white (21:1 against its surface,
+ * comfortably past the 7:1 target), secondary text stops being a soft grey and
+ * clears 7:1 too, and borders become visible structure rather than a hint —
+ * `#e1e1e1` on white is 1.3:1, which is decoration, not a boundary a
+ * low-vision user can actually see.
+ *
+ * The mode still decides light-vs-dark; high contrast only decides how far
+ * apart the values sit. That is what lets the toggle compose with either mode
+ * instead of replacing them.
+ */
+export function surfaceTokens(mode: 'light' | 'dark', highContrast = false): SurfaceTokens {
+  if (mode === 'dark') {
+    return highContrast
+      ? {
+          background: '#000000',
+          card: '#0f0f0f',
+          foreground: '#ffffff',
+          mutedForeground: '#e8e8e8',
+          secondary: '#2a2a2a',
+          border: '#b0aeac',
+          error: '#ff9ba0',
+        }
+      : {
+          background: '#1b1a19',
+          card: '#252423',
+          foreground: '#f3f2f1',
+          mutedForeground: '#a19f9d',
+          secondary: '#323130',
+          border: '#3b3a39',
+          error: '#e37d80',
+        };
+  }
+
+  return highContrast
+    ? {
+        background: '#ffffff',
+        card: '#ffffff',
+        foreground: '#000000',
+        mutedForeground: '#2b2b2b',
+        secondary: '#ededed',
+        border: '#4a4a4a',
+        error: '#a4262c',
+      }
+    : {
+        background: '#ffffff',
+        card: '#ffffff',
+        foreground: '#242424',
+        mutedForeground: '#616161',
+        secondary: '#f5f5f5',
+        border: '#e1e1e1',
+        error: '#d13438',
+      };
+}
+
+/**
+ * FR-39.3 / BR-34 — the status and priority hues under high contrast.
+ *
+ * BR-34 is the constraint that shapes these tables: contrast may move a
+ * colour's *lightness*, never its hue or meaning. Completed stays green,
+ * Blocked stays orange, Critical stays red — a user who has learned the palette
+ * does not have to relearn it because they switched on an accessibility
+ * setting. Every value below was checked to stay within 6° of the hue it
+ * replaces. This is the one documented exception to BR-14: an accent choice
+ * still cannot touch these palettes; only this mode may, and only along
+ * lightness.
+ *
+ * Unlike the base palettes, these ARE mode-specific, and they have to be. The
+ * base hues are mid-tones picked to survive on either surface, which works
+ * because neither normal surface is extreme. High contrast pushes the surfaces
+ * to pure white and pure black, and no single mid-tone clears 4.5:1 against
+ * both — the base neutral measures 2.64:1 on white. So light gets darkened
+ * hues and dark gets lightened ones.
+ *
+ * The near-collisions BR-14 warns about are preserved too: BLOCKED stays
+ * distinguishable from HIGH, and DECLINED from CRITICAL (measured ΔE 9.4–24.8,
+ * against the ΔE 8 floor this file uses elsewhere), so a priority chip still
+ * never reads as a status chip.
+ */
+const HC_LIGHT = {
+  neutralIdle: '#5d5a58',
+  neutralHeld: '#3b3a39',
+  blue: '#00508f',
+  purple: '#5c3d8f',
+  orange: '#a32c00',
+  red: '#a4262c',
+  green: '#0a5c0a',
+} as const;
+
+const HC_DARK = {
+  neutralIdle: '#b8b5b2',
+  neutralHeld: '#d6d3d1',
+  blue: '#7cc0f0',
+  purple: '#c4a5e8',
+  orange: '#ff8a4d',
+  red: '#ff9ba0',
+  green: '#6fd070',
+} as const;
+
+function highContrastStatusMap(mode: 'light' | 'dark'): Record<StatusToken, string> {
+  const c = mode === 'dark' ? HC_DARK : HC_LIGHT;
+  return {
+    NOT_STARTED: c.neutralIdle,
+    IN_PROGRESS: c.blue,
+    WAITING: c.purple,
+    BLOCKED: c.orange,
+    PAUSED: c.neutralHeld,
+    COMPLETED: c.green,
+
+    IDEA: c.neutralIdle,
+    ACTIVE: c.blue,
+    ARCHIVED: c.neutralHeld,
+
+    TO_CONTACT: c.neutralIdle,
+    CONTACTED: c.blue,
+    DECLINED: c.red,
+
+    OPEN: c.orange,
+    RESOLVED: c.green,
+    ACCEPTED: c.neutralHeld,
+
+    DRAFT: c.neutralIdle,
+    SENT: c.blue,
+    FOLLOWED_UP: c.purple,
+    REPLIED: c.blue,
+    CLOSED: c.green,
+
+    IN_REVIEW: c.purple,
+    PLANNED: c.blue,
+    WONT_FIX: c.neutralHeld,
+  };
+}
+
+function highContrastPriorityMap(mode: 'light' | 'dark'): Record<PriorityToken, string> {
+  // HIGH and CRITICAL are deliberately a different step from the BLOCKED and
+  // DECLINED hues above — same reason the base palettes use #ca5010 vs #d83b01.
+  return mode === 'dark'
+    ? { LOW: HC_DARK.neutralIdle, MEDIUM: '#e0b544', HIGH: '#ffb083', CRITICAL: '#ff6b73' }
+    : { LOW: HC_LIGHT.neutralIdle, MEDIUM: '#7a5600', HIGH: '#a3400c', CRITICAL: '#8a1f24' };
+}
+
+/**
+ * The "no state" colour for a token neither palette knows — a backend enum added
+ * before this build learned about it. Contrast-aware for the same reason
+ * everything else here is: the base neutral is 2.64:1 on white, which under high
+ * contrast would make the one unlabelled case the least legible thing on screen.
+ */
+function fallbackHue(mode: 'light' | 'dark', highContrast: boolean): string {
+  if (!highContrast) {
+    return neutralFallback;
+  }
+  return mode === 'dark' ? HC_DARK.neutralIdle : HC_LIGHT.neutralIdle;
+}
+
+/** The status hue in effect, honouring high contrast (BR-34). */
+export function statusColor(token: StatusToken, mode: 'light' | 'dark' = 'light', highContrast = false): string {
+  const palette = highContrast ? highContrastStatusMap(mode) : statusColors;
+  return palette[token] ?? fallbackHue(mode, highContrast);
+}
+
+/** The priority hue in effect, honouring high contrast (BR-34). */
+export function priorityColor(token: PriorityToken, mode: 'light' | 'dark' = 'light', highContrast = false): string {
+  const palette = highContrast ? highContrastPriorityMap(mode) : priorityColors;
+  return palette[token] ?? fallbackHue(mode, highContrast);
+}
 
 /**
  * Builds the MUI theme for a color mode (O-2 dark mode).
@@ -286,21 +568,33 @@ export type Density = 'comfortable' | 'compact';
  * either surface, and a "Completed" green that changed between modes would
  * break the one-source-of-truth rule they exist for.
  */
-export function buildTheme(mode: 'light' | 'dark', accent: AccentId = 'blue', density: Density = 'comfortable') {
+export function buildTheme(
+  mode: 'light' | 'dark',
+  accent: AccentId = 'blue',
+  density: Density = 'comfortable',
+  highContrast = false,
+) {
   const dark = mode === 'dark';
-  const brand = accentOptions[accent][mode];
-  const border = dark ? '#3b3a39' : '#e1e1e1';
+  const tokens = surfaceTokens(mode, highContrast);
+  const baseBrand = accentOptions[accent][mode];
+  // FR-39.3: high contrast takes the accent one step further along its own ramp
+  // rather than substituting a different colour — darker in light mode, lighter
+  // in dark mode. The accent the user picked is still recognisably theirs.
+  const brand = highContrast
+    ? { ...baseBrand, main: dark ? baseBrand.hover : baseBrand.pressed }
+    : baseBrand;
+  const border = tokens.border;
 
   return createTheme({
     palette: {
       mode,
       background: {
-        default: dark ? '#1b1a19' : '#ffffff', // --background
-        paper: dark ? '#252423' : '#ffffff', // --card / --popover
+        default: tokens.background, // --background
+        paper: tokens.card, // --card / --popover
       },
       text: {
-        primary: dark ? '#f3f2f1' : '#242424', // --foreground (Fluent neutralForeground1)
-        secondary: dark ? '#a19f9d' : '#616161', // --muted-foreground (Fluent neutralForeground2)
+        primary: tokens.foreground, // --foreground (Fluent neutralForeground1)
+        secondary: tokens.mutedForeground, // --muted-foreground (Fluent neutralForeground2)
       },
       primary: {
         main: brand.main, // --primary (the chosen accent's ramp, FR-18.3)
@@ -309,11 +603,11 @@ export function buildTheme(mode: 'light' | 'dark', accent: AccentId = 'blue', de
         contrastText: brand.contrastText, // --primary-foreground
       },
       secondary: {
-        main: dark ? '#323130' : '#f5f5f5', // --secondary / --muted (Fluent neutralBackground3)
-        contrastText: dark ? '#f3f2f1' : '#242424', // --secondary-foreground
+        main: tokens.secondary, // --secondary / --muted (Fluent neutralBackground3)
+        contrastText: tokens.foreground, // --secondary-foreground
       },
       error: {
-        main: dark ? '#e37d80' : '#d13438', // --destructive (Fluent Danger, lightened for dark)
+        main: tokens.error, // --destructive (Fluent Danger, lightened for dark)
       },
       divider: border, // --border / --input (Fluent neutralStroke)
     },

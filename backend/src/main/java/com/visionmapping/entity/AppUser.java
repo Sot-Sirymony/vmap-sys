@@ -1,5 +1,10 @@
 package com.visionmapping.entity;
 
+import com.visionmapping.entity.enums.AccentColor;
+import com.visionmapping.entity.enums.FontSize;
+import com.visionmapping.entity.enums.ThemeMode;
+import com.visionmapping.entity.enums.ThemePreset;
+import com.visionmapping.entity.enums.UiDensity;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
 import jakarta.persistence.Column;
@@ -45,4 +50,50 @@ public class AppUser extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private UserStatus status;
+
+    // FR-39.6: appearance preferences live on the account so a chosen look
+    // follows the user across browsers and devices. Every field is non-null
+    // with the same default the frontend has used since FR-18, so a user who
+    // never opens the Appearance settings behaves exactly as before. The
+    // @Builder.Default values matter: AuthService creates users through the
+    // builder, and without them a new user would be saved with nulls against
+    // NOT NULL columns.
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_preset", nullable = false, length = 40)
+    private ThemePreset themePreset = ThemePreset.FLUENT_SYSTEM;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_mode", nullable = false, length = 20)
+    private ThemeMode themeMode = ThemeMode.SYSTEM;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_accent", nullable = false, length = 20)
+    private AccentColor themeAccent = AccentColor.BLUE;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ui_density", nullable = false, length = 20)
+    private UiDensity uiDensity = UiDensity.COMFORTABLE;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "font_size", nullable = false, length = 20)
+    private FontSize fontSize = FontSize.MEDIUM;
+
+    /** FR-39.3: composes with light and dark rather than replacing either. */
+    @Builder.Default
+    @Column(name = "high_contrast", nullable = false)
+    private boolean highContrast = false;
+
+    /**
+     * FR-39.4: asks for less motion than the OS preference, never more — the OS
+     * {@code prefers-reduced-motion} setting still applies on its own (BR-19).
+     */
+    @Builder.Default
+    @Column(name = "reduce_motion", nullable = false)
+    private boolean reduceMotion = false;
 }

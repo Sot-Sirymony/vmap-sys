@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
@@ -47,6 +48,26 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Invalid value for '" + exception.getName() + "'.",
                 request);
+    }
+
+    /**
+     * A request body Jackson can't read — most often an unknown enum constant in
+     * a JSON field, e.g. {"themeAccent":"CHARTREUSE"}. This is the same class of
+     * mistake as the query-param case above, and deserves the same 400 rather
+     * than falling through to the catch-all as an "Unexpected server error".
+     *
+     * <p>BR-33 leans on this: an unrecognised appearance value must be refused
+     * at the boundary rather than stored, and the caller has to be able to tell
+     * "you sent something invalid" apart from "the server broke".
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadableBody(
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request
+    ) {
+        // The raw Jackson message names internal classes and echoes the payload,
+        // so it isn't safe or useful to return verbatim.
+        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed or invalid request body.", request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

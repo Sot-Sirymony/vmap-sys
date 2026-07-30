@@ -1,11 +1,20 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthResponse, AuthState } from '../types/auth';
+import type { AppearancePreferences } from '../types/preferences';
 
 type AuthContextValue = AuthState & {
   isAuthenticated: boolean;
   setSession: (response: AuthResponse, remember?: boolean) => void;
   logout: () => void;
+  /**
+   * FR-39.6: the appearance the login/register response carried, for
+   * ThemeModeProvider to adopt before the first paint. Deliberately NOT
+   * persisted with the session — a stale cached theme is exactly what the GET
+   * fallback in ThemeModeProvider exists to correct, so this is only ever
+   * populated by a sign-in that just happened.
+   */
+  appearance: AppearancePreferences | null;
 };
 
 const STORAGE_KEY = 'visionMappingAuth';
@@ -36,11 +45,15 @@ function readStoredAuth(): AuthState {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(() => readStoredAuth());
+  // FR-39.6: held in memory only, and only for the sign-in that just happened.
+  const [appearance, setAppearance] = useState<AppearancePreferences | null>(null);
 
   const value = useMemo<AuthContextValue>(() => ({
     ...auth,
+    appearance,
     isAuthenticated: Boolean(auth.token),
     setSession: (response, remember = true) => {
+      setAppearance(response.appearance ?? null);
       const nextAuth: AuthState = {
         token: response.token,
         user: {
@@ -62,9 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: () => {
       localStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem(STORAGE_KEY);
+      setAppearance(null);
       setAuth(EMPTY_AUTH);
     },
-  }), [auth]);
+  }), [auth, appearance]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

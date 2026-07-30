@@ -13,7 +13,8 @@ AppUser
 
 ## AppUser
 
-Stores account and authentication ownership.
+Stores account and authentication ownership, plus the user's appearance
+preferences (FR-39.6) so a chosen look follows them across browsers and devices.
 
 Fields:
 - id
@@ -22,8 +23,31 @@ Fields:
 - passwordHash
 - role
 - status
+- themePreset
+- themeMode
+- themeAccent
+- uiDensity
+- fontSize
+- highContrast
+- reduceMotion
 - createdAt
 - updatedAt
+
+The seven appearance columns (`V16`) are `NOT NULL` with defaults equal to the
+frontend's pre-FR-39 defaults — `FLUENT_SYSTEM` / `SYSTEM` / `BLUE` /
+`COMFORTABLE` / `MEDIUM` / `false` / `false`. Existing rows therefore needed no
+backfill, and the read path never has to interpret a NULL.
+
+`themePreset` is derivable from (`themeMode`, `themeAccent`): a preset is a
+bundle of those two knobs, not a third dimension (FR-39.1). It is stored only to
+record which label the user last applied, and the frontend re-derives it on
+render so a stale label can never describe a look that is no longer on screen.
+
+They live on `app_users` rather than in a separate `user_preferences` table
+because a single row per user holding only appearance data would add an entity,
+repository, and join for no present benefit. If preferences later grow beyond
+appearance (notifications, locale, default filters), extracting a table is a
+straightforward migration.
 
 ## VisionArea
 
@@ -184,6 +208,12 @@ Belongs to:
 - Step progress is calculated from child tasks unless manually overridden.
 - Goal progress is calculated from child steps unless manually overridden.
 - Records are scoped to the authenticated user.
+- Appearance preferences are read and written only for the authenticated user;
+  values must be one of the curated enum options, and an unrecognised value is
+  rejected rather than stored (BR-33).
+- High contrast may change the lightness of a status or priority colour to meet
+  its contrast target, never its hue or meaning — Completed stays green, Blocked
+  orange, Critical red (BR-34).
 
 
 

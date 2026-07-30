@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. ✅ **FR-39** (Appearance & Theme Preferences) added and shipped 2026-07-30. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -452,6 +452,169 @@ and listed in-app, staying within the V4.0.0 "no new infrastructure" posture.
 
 ---
 
+## FR-39 Appearance & Theme Preferences *(Effort: M)* — ✅ Done 2026-07-30
+
+**Shipped (2026-07-30):** Backend — migration `V16` adds seven `NOT NULL`
+appearance columns to `app_users` (defaults equal to the pre-FR-39 frontend
+defaults, so no backfill), five new enums (`ThemePreset`, `ThemeMode`,
+`AccentColor`, `UiDensity`, `FontSize`), `AppearancePreferenceService` +
+`AppearancePreferenceController` exposing `GET`/`PUT
+/api/preferences/appearance` (user-scoped, partial updates), and the preferences
+embedded in `AuthResponse` for a correct first paint. Frontend — accents grown
+5 → 10 with contrast-validated light *and* dark ramps, seven named presets with a
+derived `CUSTOM` state, `[data-contrast="high"]` token blocks for both modes plus
+a thicker focus ring, `[data-motion="reduced"]`, mode-aware high-contrast status
+and priority palettes (BR-34), a new `/settings/appearance` page with a live
+preview built from the real badge/progress components, an upgraded header menu,
+and debounced account sync in `ThemeModeProvider` (localStorage demoted to a
+cache). `AuthProvider` now wraps `ThemeModeProvider`, since the theme needs the
+session.
+
+Verified: backend 124/124 (8 `AppearancePreferenceServiceTest` + 7
+`AppearancePreferenceFlowTests` cases), frontend 107/107 (64 new across
+`theme.test.ts`, `appearance-mapping.test.ts`, `ThemeModeContext.test.tsx`,
+`AppearanceSettingsPage.test.tsx`), tsc and build clean.
+
+Two defects were found by the new tests and fixed: an unknown enum in a JSON
+request body returned 500 instead of 400 app-wide (the query-param equivalent was
+already handled, the body case was not), and the appearance loaded from the
+account was being echoed straight back to the server on every sign-in. Two items
+were deliberately left alone and recorded in the CHANGELOG rather than changed as
+a side effect: protected endpoints answer 403 rather than 401 for anonymous
+callers (pre-existing, app-wide), and the five original accents still fall below
+4.5:1 on their hover/pressed states (a recolour this FR does not claim).
+
+Not built as originally written: presets carry **no surface-tone dimension**. It
+was the obvious way to make them feel distinct and it is precisely the hidden
+dimension FR-39.1 forbids — a look unreachable through the normal controls is one
+the user cannot adjust or undo. A `FLUENT_SYSTEM` preset was added instead so a
+fresh account shows a real preset name rather than "Custom".
+
+The app already has an Appearance menu (FR-18: mode, accent, density, text size),
+but it is **five accents wide, browser-bound, and has no accessibility controls**.
+Three gaps follow from that. A user who signs in on a second machine starts over
+from the defaults, because every choice lives in one browser's `localStorage`. A
+user who needs stronger contrast or less motion has no in-app control — the app
+honours the OS `prefers-reduced-motion` setting but offers no override of its own.
+And setting up a look means four separate menu picks with no way to preview the
+result. This FR closes all three: named theme presets, a wider accent set,
+accessibility toggles, a dedicated settings surface with live preview, and
+per-account persistence so appearance follows the user rather than the browser.
+
+It is additive and needs **no new infrastructure** — one additive migration on
+`app_users`, one user-scoped endpoint pair, and frontend work inside the existing
+theme layer, keeping the V4.0.0 posture.
+
+- FR-39.1 **Named theme presets.** A preset applies mode + accent together in one
+  action, so a complete look is one click rather than several menu picks. Presets
+  are an honest bundle of the two existing knobs — never a hidden extra
+  dimension, and specifically **no separate "surface tone"**, which would have
+  been exactly the hidden dimension this rule forbids. Picking a preset and then
+  adjusting any individual control leaves the app in a **Custom** state rather
+  than silently mislabelling it as the preset. Initial set: **Fluent System**
+  (the default — System mode + Blue), **Fluent Light**, **Fluent Dark**,
+  **Ocean**, **Forest**, **Slate**, **Midnight**.
+- FR-39.2 **Wider accent set.** The curated accent list grows from 5 to 10 —
+  adding **Magenta**, **Red**, **Brass**, **Steel**, and **Pink** alongside the
+  existing Blue, Teal, Purple, Green, Orange. Every new accent ships
+  pre-validated light *and* dark ramps (`main`/`hover`/`pressed`/`contrastText`
+  plus the tint pair), exactly like the current five: contrast is never left to
+  the user's judgment.
+- FR-39.3 **High contrast mode.** An independent toggle — not a preset — that
+  raises text and border contrast to a 7:1 target and strengthens focus rings.
+  It composes with Light and Dark rather than replacing them (making it a preset
+  would double every preset in the list).
+- FR-39.4 **Reduce motion.** An in-app toggle that suppresses transitions and
+  animations regardless of the OS setting. The OS `prefers-reduced-motion`
+  preference continues to apply on its own (BR-19); this control lets a user opt
+  in without changing an OS-wide setting, and cannot be used to *re-enable*
+  motion for a user whose OS asked for less.
+- FR-39.5 **Appearance settings page.** A dedicated page (`/settings/appearance`)
+  exposes every control with a **live preview panel** — cards, a table row,
+  status and priority badges, buttons, and a progress bar — so a choice can be
+  judged on real components before it is committed. The header menu remains as
+  the quick-access path and links through to the page.
+- FR-39.6 **Per-account persistence.** Appearance choices are stored on the
+  user's account and follow them across browsers and devices. Preferences are
+  returned with the login/register response so the correct theme is applied on
+  first paint, with no flash of the wrong theme and no second round trip.
+  `localStorage` is retained as a cache — for the pre-login screens, for
+  anonymous visitors, and as the offline fallback if the save request fails.
+
+**Acceptance criteria**
+
+1. Selecting a preset changes mode, accent, and surface tone together in one
+   action; subsequently changing any single control shows the state as
+   **Custom**, not as the preset.
+2. All 10 accents are selectable and each renders legibly in both Light and Dark
+   — no accent produces primary text or a primary button below its contrast
+   target in either mode.
+3. High contrast can be enabled in combination with Light **or** Dark, and
+   raises contrast in both; disabling it returns to the previous appearance
+   exactly.
+4. With Reduce motion enabled, transitions and animations do not play. A user
+   whose OS requests reduced motion still gets reduced motion with the toggle
+   off.
+5. Appearance changes persist across logout/login **and** across browsers for
+   the same account. A user signing in on a fresh browser sees their saved
+   appearance applied on first paint, not the defaults followed by a switch.
+6. The settings page's preview reflects the current selection live, before and
+   without a page reload.
+7. One user's appearance preferences are never readable or writable by another
+   user.
+8. Existing users keep working with no migration action: absent preferences
+   resolve to today's defaults (System mode, Blue, Comfortable, Medium, high
+   contrast off, reduce motion off).
+
+**Business rules**
+
+| # | Rule |
+|---|---|
+| BR-33 | Appearance preferences are strictly user-scoped: a user may read and write only their own. Every stored value must be one of the curated enum options (preset, mode, accent, density, font size) — an unrecognised value resolves to the default rather than being persisted or rendered. A failed save never blocks the UI: the choice applies locally and is retried, so appearance is never a hard dependency on the backend. |
+| BR-34 | High contrast may adjust the **lightness** of a status or priority colour to meet its contrast target, but never its **hue or meaning** — Completed stays green, Blocked stays orange, Critical stays red. This is a bounded, documented exception to BR-14 (accent choice must not change palette semantics): the accent still cannot touch these palettes; only the accessibility mode may, and only along lightness. |
+
+**Data model / migration**
+
+- **Additive columns on `app_users`** (`V16__user_appearance_preferences.sql`):
+  `theme_preset`, `theme_mode`, `accent`, `density`, `font_size`,
+  `high_contrast`, `reduce_motion` — all `NOT NULL` with defaults equal to
+  today's frontend defaults, so existing rows need no backfill and no null
+  handling. Exposed via `GET /api/preferences/appearance` and
+  `PUT /api/preferences/appearance` (both user-scoped), and included in the
+  `AuthResponse` returned by register/login. New enums: `ThemePreset`,
+  `ThemeMode`, `AccentColor`, `Density`, `FontSize`.
+- *Alternative considered:* a separate `user_preferences` table. Rejected for
+  now — a single row per user holding only appearance data would add an entity,
+  repository, and join for no present benefit, and additive columns match the
+  precedent of `V11` and `V13`. If preferences grow beyond appearance
+  (notifications, locale, default filters), extracting the table is a
+  straightforward later migration.
+
+**Design decisions**
+
+- **Presets bundle knobs; they are not a new dimension.** A preset writes the
+  same `mode`/`accent`/surface values a user could set by hand. That keeps one
+  source of truth for what is actually rendered and makes the **Custom** state
+  fall out naturally, instead of maintaining a parallel "preset theme" code path
+  that could disagree with the individual controls.
+- **High contrast and reduce motion are toggles, not presets.** Both are
+  accessibility needs that must hold across *whatever* look the user chose.
+  Folding them into the preset list would multiply the list and force a user who
+  needs contrast to also accept someone else's colour choice.
+- **Preferences ride the auth response.** Fetching them separately after login
+  would paint the default theme first and swap it a moment later — the most
+  visible possible bug in a theming feature. Returning them with the session
+  makes the first paint correct.
+- **`localStorage` stays.** The login and register screens render before any
+  session exists, and the save endpoint can fail. Keeping the browser cache as
+  the fallback layer means appearance degrades to "this browser only" rather than
+  to "reset to defaults".
+- **Reduce motion is one-way.** The toggle can only ask for *less* motion than
+  the OS preference, never more. Letting an in-app switch override a stated OS
+  accessibility preference would be a regression against BR-19.
+
+---
+
 ## Deferred Platform Track
 
 Captured so the vision stays whole, but **explicitly out of V4.0.0 scope** — each
@@ -482,6 +645,7 @@ which is precisely why it is deferred rather than scoped.
 | 4 | FR-35 Cross-Pollination | One new table + CRUD; independent of the above | M | ✅ Done |
 | 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M | ✅ Done |
 | 6 | FR-38 In-App Issue & Improvement Reporting | Added post-completion; one additive table + role-scoped CRUD, no new infrastructure | S–M | ✅ Done |
+| 7 | FR-39 Appearance & Theme Preferences | Added post-completion; extends the existing FR-18 theme layer, one additive migration, no new infrastructure | M | ✅ Done |
 | — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 
 ---
@@ -496,6 +660,8 @@ which is precisely why it is deferred rather than scoped.
 | BR-30 | Insight search and resurfacing are scoped strictly to the authenticated user's own Reviews and Obstacles. |
 | BR-31 | Area-starvation is a computed, read-only signal; it never mutates or persists any entity state. |
 | BR-32 | Issue reports are user-scoped for authoring/self-viewing; only ADMIN may triage the full queue or change status. `reportType`+`title` required; `severity` required for Bug; a Bug moved to `Resolved` requires a `resolutionNote`. Reports are archived, not hard-deleted. |
+| BR-33 | Appearance preferences are strictly user-scoped (read and write own only). Stored values must be curated enum options; an unrecognised value resolves to the default rather than being persisted. A failed save applies locally and retries — appearance never hard-depends on the backend. |
+| BR-34 | High contrast may adjust the lightness of a status/priority colour to meet its contrast target, never its hue or meaning. A bounded, documented exception to BR-14: accent choice still cannot touch these palettes; only the accessibility mode may, and only along lightness. |
 
 ## Migrations (new in V4.0.0)
 
@@ -504,17 +670,24 @@ which is precisely why it is deferred rather than scoped.
 | `V13__task_energy_demand.sql` | `energy_demand` on `task_items` | Additive, nullable |
 | `V14__goal_synergy_link.sql` | `goal_synergy_links` table | New table |
 | `V15__issue_reports.sql` *(FR-38)* | `issue_reports` table for in-app bug/improvement reporting | New table |
+| `V16__user_appearance_preferences.sql` *(FR-39)* | Appearance columns on `app_users` (`theme_preset`, `theme_mode`, `accent`, `density`, `font_size`, `high_contrast`, `reduce_motion`) | Additive, `NOT NULL` with defaults |
 
 ## Non-Functional Notes
 
-- V4.0.0 (FR-34…FR-38) is **additive**: three additive migrations (V13, V14,
-  V15), no destructive schema changes, and **no new infrastructure** — the same
+- V4.0.0 (FR-34…FR-39) is **additive**: four additive migrations (V13, V14, V15,
+  V16), no destructive schema changes, and **no new infrastructure** — the same
   posture V3.0.0 could truthfully claim. (The originally-optional V15 obstacle
   index was never needed; V15 became the FR-38 `issue_reports` table.)
 - New business rules (BR-27…BR-31) get backend test coverage where they carry
   logic (BR-28 aggregation, BR-29 link constraints, BR-31 signal computation),
   matching V1–V3 practice. BR-27/BR-30 are scoping/posture rules verified by
-  existing isolation and optional-field tests.
+  existing isolation and optional-field tests. BR-33 is covered by a preference
+  service test (defaults, enum validation, cross-user scoping); BR-34 is a
+  palette rule verified in the frontend theme tests.
+- FR-39 is the only V4.0.0 requirement with an **accessibility** dimension
+  (high contrast, reduce motion). Its contrast targets are fixed values in the
+  theme layer, not runtime computation, so the accessibility guarantee is
+  reviewable in source rather than dependent on user choices.
 - Everything net-requiring a scheduler, background execution, a notification
   channel, or a calendar model is confined to the [Deferred Platform
   Track](#deferred-platform-track) and is **not** part of V4.0.0.

@@ -69,9 +69,22 @@ Auth response:
   "userId": 1,
   "fullName": "Demo User",
   "email": "demo@example.com",
-  "role": "USER"
+  "role": "USER",
+  "appearance": {
+    "themePreset": "FLUENT_SYSTEM",
+    "themeMode": "SYSTEM",
+    "themeAccent": "BLUE",
+    "uiDensity": "COMFORTABLE",
+    "fontSize": "MEDIUM",
+    "highContrast": false,
+    "reduceMotion": false
+  }
 }
 ```
+
+`appearance` (FR-39.6) is included on both register and login so the client can
+apply the user's saved theme on first paint, instead of rendering the default and
+swapping it once a follow-up request returns.
 
 ## Standard CRUD Pattern
 
@@ -229,6 +242,48 @@ Returns:
 - tasksDueThisWeek
 - goalsByStatus
 - dreamsByVisionArea
+
+### Appearance Preferences
+
+FR-39.6. Neither call takes a user id: the caller is resolved from the token, so
+there is no request that could read or write another user's settings (BR-33).
+
+```text
+GET /preferences/appearance
+PUT /preferences/appearance
+```
+
+`PUT` is a partial update — the Appearance UI changes one control at a time, and
+any field omitted keeps its stored value. An all-null body is a no-op, not a
+reset.
+
+```json
+{
+  "themePreset": "MIDNIGHT",
+  "themeMode": "DARK",
+  "themeAccent": "PURPLE",
+  "uiDensity": "COMPACT",
+  "fontSize": "LARGE",
+  "highContrast": true,
+  "reduceMotion": true
+}
+```
+
+Allowed values:
+
+| Field | Values |
+|---|---|
+| `themePreset` | `FLUENT_SYSTEM`, `FLUENT_LIGHT`, `FLUENT_DARK`, `OCEAN`, `FOREST`, `SLATE`, `MIDNIGHT`, `CUSTOM` |
+| `themeMode` | `LIGHT`, `DARK`, `SYSTEM` |
+| `themeAccent` | `BLUE`, `TEAL`, `PURPLE`, `GREEN`, `ORANGE`, `MAGENTA`, `RED`, `BRASS`, `STEEL`, `PINK` |
+| `uiDensity` | `COMFORTABLE`, `COMPACT` |
+| `fontSize` | `SMALL`, `MEDIUM`, `LARGE` |
+| `highContrast`, `reduceMotion` | `true`, `false` |
+
+A value outside these sets is rejected with **400** rather than stored, so the
+database can only ever hold something the UI can render (BR-33). `CUSTOM` is
+computed from a mode/accent pair that matches no preset — it is a result, not
+something a client needs to select.
 
 ## Excel
 

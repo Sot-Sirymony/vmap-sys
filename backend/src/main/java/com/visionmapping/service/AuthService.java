@@ -60,7 +60,10 @@ public class AuthService {
                 user.getId(),
                 user.getFullName(),
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                // FR-39.6: the theme travels with the session so the first paint
+                // after signing in is already the user's own appearance.
+                AppearancePreferenceService.toResponse(user)
         );
     }
 }

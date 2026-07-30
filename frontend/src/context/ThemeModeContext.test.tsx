@@ -1,0 +1,209 @@
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const getAppearancePreferences = vi.fn();
+const updateAppearancePreferences = vi.fn();
+
+vi.mock('../api/preferencesApi', () => ({
+  getAppearancePreferences: (...args: unknown[]) => getAppearancePreferences(...args),
+  updateAppearancePreferences: (...args: unknown[]) => updateAppearancePreferences(...args),
+}));
+
+const authState: { token: string | null; appearance: unknown } = { token: null, appearance: null };
+vi.mock('./AuthContext', () => ({
+  useAuth: () => authState,
+}));
+
+const { ThemeModeProvider, useThemeSettings } = await import('./ThemeModeContext');
+
+function Probe() {
+  const { settings, preset, update, applyPreset } = useThemeSettings();
+  return (
+    <div>
+      <output data-testid="state">{`${preset}|${settings.mode}|${settings.accent}|${settings.highContrast}|${settings.reduceMotion}`}</output>
+      <button type="button" onClick={() => update({ accent: 'brass' })}>brass</button>
+      <button type="button" onClick={() => update({ highContrast: true })}>contrast</button>
+      <button type="button" onClick={() => update({ reduceMotion: true })}>motion</button>
+      <button type="button" onClick={() => applyPreset('dark', 'purple')}>midnight</button>
+    </div>
+  );
+}
+
+const STORED = {
+  themePreset: 'OCEAN',
+  themeMode: 'LIGHT',
+  themeAccent: 'TEAL',
+  uiDensity: 'COMFORTABLE',
+  fontSize: 'MEDIUM',
+  highContrast: false,
+  reduceMotion: false,
+};
+
+function state() {
+  return screen.getByTestId('state').textContent;
+}
+
+describe('ThemeModeProvider (FR-39)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    localStorage.clear();
+    authState.token = null;
+    authState.appearance = null;
+    getAppearancePreferences.mockReset().mockResolvedValue(STORED);
+    updateAppearancePreferences.mockReset().mockResolvedValue(STORED);
+    document.documentElement.removeAttribute('data-contrast');
+    document.documentElement.removeAttribute('data-motion');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('stamps the accessibility attributes only while they are on', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    // Absent, not "false" — global.css keys off presence, so an always-present
+    // attribute would make the selectors need a value check everywhere.
+    expect(document.documentElement.hasAttribute('data-contrast')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-motion')).toBe(false);
+
+    await user.click(screen.getByText('contrast'));
+    await user.click(screen.getByText('motion'));
+
+    expect(document.documentElement.dataset.contrast).toBe('high');
+    expect(document.documentElement.dataset.motion).toBe('reduced');
+  });
+
+  it('applies a preset as a single change and names it', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('midnight'));
+
+    expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
+  });
+
+  it('reports CUSTOM once an individual control is changed', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('midnight'));
+    await user.click(screen.getByText('brass'));
+
+    expect(state()).toBe('CUSTOM|dark|brass|false|false');
+  });
+
+  it('does not touch the account while nobody is signed in', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('brass'));
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(updateAppearancePreferences).not.toHaveBeenCalled();
+    // It still persists locally, so the login screen keeps the chosen look.
+    expect(localStorage.getItem('vms-theme-settings')).toContain('brass');
+  });
+
+  it('adopts the appearance that came with the session', async () => {
+    authState.token = 'jwt';
+    authState.appearance = STORED;
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+    // It arrived with the login response, so no extra request is needed.
+    expect(getAppearancePreferences).not.toHaveBeenCalled();
+  });
+
+  it('fetches the appearance when the session was restored without it', async () => {
+    authState.token = 'jwt';
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await waitFor(() => expect(getAppearancePreferences).toHaveBeenCalledWith('jwt'));
+    await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+  });
+
+  it('does not echo the loaded values straight back to the server', async () => {
+    authState.token = 'jwt';
+    authState.appearance = STORED;
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(updateAppearancePreferences).not.toHaveBeenCalled();
+  });
+
+  it('saves a change to the account, debounced into one request', async () => {
+    authState.token = 'jwt';
+    authState.appearance = STORED;
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+    await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+
+    await user.click(screen.getByText('brass'));
+    await user.click(screen.getByText('contrast'));
+    await user.click(screen.getByText('motion'));
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(updateAppearancePreferences).toHaveBeenCalledTimes(1);
+    expect(updateAppearancePreferences).toHaveBeenCalledWith('jwt', expect.objectContaining({
+      themeAccent: 'BRASS',
+      highContrast: true,
+      reduceMotion: true,
+    }));
+  });
+
+  /**
+   * BR-33: a failed save must not roll the choice back. Appearance is not
+   * allowed to become a feature that only works when the backend does.
+   */
+  it('keeps the choice applied when saving to the account fails', async () => {
+    authState.token = 'jwt';
+    authState.appearance = STORED;
+    updateAppearancePreferences.mockRejectedValue(new Error('offline'));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+    await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+
+    await user.click(screen.getByText('brass'));
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(state()).toContain('brass');
+    expect(localStorage.getItem('vms-theme-settings')).toContain('brass');
+  });
+
+  /**
+   * The race worth guarding: a restored session fetches the stored appearance,
+   * and a choice made while that request is in flight must not be undone by the
+   * response arriving second.
+   */
+  it('does not let an in-flight load overwrite a change the user just made', async () => {
+    authState.token = 'jwt';
+    let resolveLoad: (value: unknown) => void = () => undefined;
+    getAppearancePreferences.mockReturnValue(new Promise((resolve) => { resolveLoad = resolve; }));
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('brass'));
+    expect(state()).toContain('brass');
+
+    await act(async () => {
+      resolveLoad(STORED);
+    });
+
+    // The user's intent is newer than the server's answer.
+    expect(state()).toContain('brass');
+  });
+});

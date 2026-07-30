@@ -133,6 +133,8 @@ Protected:
 - `/api/obstacles`
 - `/api/progress-logs`
 - `/api/dashboard`
+- `/api/issue-reports`
+- `/api/preferences/appearance`
 - `/api/excel/import`
 - `/api/excel/export`
 

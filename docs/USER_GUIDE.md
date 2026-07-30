@@ -63,6 +63,56 @@ Useful review notes:
 - lessons learned
 - next actions
 
+## Appearance
+
+Open `Appearance` in the sidebar, or click the sun/moon icon in the header for
+the same controls without leaving the page.
+
+Everything here applies immediately and is saved to your account, so the look you
+choose follows you to any browser or device you sign in from.
+
+**Theme** — a preset sets the mode and accent together in one click:
+
+| Preset | What it is |
+|---|---|
+| Fluent System | Follows your device's light/dark setting (the default) |
+| Fluent Light | Always light, brand blue |
+| Fluent Dark | Always dark, brand blue |
+| Ocean | Light and teal |
+| Forest | Light and green |
+| Slate | Light and steel blue |
+| Midnight | Dark and purple |
+
+Change any individual control afterwards and the theme is shown as **Custom** —
+the app won't keep a preset name that no longer describes what you're looking at.
+Pick a preset again to go back to one.
+
+**Mode** — Light, Dark, or System. System follows your device and updates live
+when your device switches.
+
+**Accent** — ten colours. Every one has been checked for readable contrast in
+both light and dark, so no choice can leave text hard to read.
+
+**Density** — Comfortable or Compact. Compact fits more rows on screen without
+hiding anything.
+
+**Text size** — Small, Medium, or Large. This scales all text proportionally,
+which keeps the layout intact — unlike browser zoom.
+
+**High contrast** — stronger text, borders, and focus rings. It works *with*
+Light or Dark rather than replacing your choice. Status and priority colours keep
+their meaning: Completed is still green, Blocked still orange, Critical still red.
+
+**Reduce motion** — turns off animations. If your device already asks for reduced
+motion, that continues to apply whether or not this is switched on.
+
+The **Preview** panel on the settings page shows real badges, buttons, tables,
+and progress bars — not mock-ups — so you can judge a choice before keeping it.
+Use **Reset to defaults** to go back to the shipped appearance.
+
+If a change can't reach your account (you're offline, for example), it still
+applies on the device you're using and a notice explains that it wasn't saved.
+
 ## Excel
 
 Open `Import / Export`.

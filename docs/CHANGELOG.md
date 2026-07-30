@@ -38,7 +38,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [4.0.0] — 2026-07-25 (5 of 5 items shipped)
+## [4.0.0] — 2026-07-25 (6 of 6 items shipped)
 
 Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
 Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
@@ -55,13 +55,42 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-37 | Area-starvation signal in the attention feed (BR-31) | `8488b55` |
 | FR-36 | PKM Insight Library — search + contextual resurfacing (BR-30) | `cebbf0f` |
 | FR-35 | Goal synergy links / cross-pollination (BR-29) | `b78662f` |
-| FR-38 | In-app issue & improvement reporting — header report modal, My/All reports, admin triage (BR-32) | _pending_ |
+| FR-38 | In-app issue & improvement reporting — header report modal, My/All reports, admin triage (BR-32) | `5bf2301` |
+| FR-39 | Appearance & theme preferences — presets, 10 accents, high contrast, reduce motion, settings page with live preview, per-account persistence (BR-33, BR-34) | _pending_ |
 
-All verified with backend and frontend test suites (backend 106/106, frontend 43/43).
+All verified with backend and frontend test suites (backend 124/124, frontend
+107/107).
 
-FR-38 was added to the v4.0.0 BRD after the original four items shipped: an
-additive table and role-scoped CRUD, no new infrastructure, so it stays within
-the v4.0.0 release rather than opening a new version.
+FR-38 and FR-39 were added to the v4.0.0 BRD after the original four items
+shipped. Both are additive with no new infrastructure — FR-38 one table and
+role-scoped CRUD, FR-39 seven columns on `app_users` and one user-scoped endpoint
+pair — so they stay within the v4.0.0 release rather than opening a new version.
+
+### Fixed
+- An unknown enum value in a JSON request body returned **500 "Unexpected server
+  error"** instead of **400**. `GlobalExceptionHandler` already mapped the same
+  mistake in a *query parameter* to 400, but the request-body case
+  (`HttpMessageNotReadableException`) fell through to the catch-all. Found while
+  testing FR-39's enum validation; the fix applies to every `POST`/`PUT` in the
+  app, not just the appearance endpoint.
+- Appearance settings loaded from the account were written straight back to the
+  server on every sign-in — a redundant write on each session start. The
+  "skip the next save" flag was being consumed by the save effect's own mount run
+  before the loaded state landed, so the echo slipped through. Replaced with a
+  comparison against the last-known server payload, which has no ordering
+  dependency and also drops no-op writes when a control is toggled off and back on.
+
+### Known issues
+- Anonymous requests to protected endpoints answer **403**, not **401**:
+  `SecurityConfig` configures no `authenticationEntryPoint`, so Spring's default
+  access-denied handling responds. Pre-existing and app-wide; changing it would
+  affect every endpoint and the frontend's redirect-to-login behaviour, so it was
+  left alone rather than altered as a side effect of FR-39.
+- The five accents added by FR-39 clear 4.5:1 against their own label text in
+  every state (main, hover, pressed, both modes). The five original accents do
+  not on their transient states — Orange's light hover measures 3.47:1. Raising
+  them is a recolour FR-39 does not claim; the theme tests therefore assert 4.5:1
+  at rest and 3:1 on hover/pressed.
 
 ### Deferred (needs new infrastructure — future BRD)
 Automated agenda generation, predictive push alerts, and fully-automated reviews —
@@ -72,6 +101,7 @@ model the system does not have. Out of v4.0.0 scope by design.
 - `V13__task_energy_demand.sql` (FR-34 Stage A)
 - `V14__goal_synergy_link.sql` (FR-35)
 - `V15__issue_reports.sql` (FR-38)
+- `V16__user_appearance_preferences.sql` (FR-39)
 
 ---
 

@@ -1,4 +1,3 @@
-import { priorityColors as priorityPalette, statusColors } from '../theme';
 import type {
   CommunicationStatus,
   DreamStatus,
@@ -25,17 +24,13 @@ export const priorityLabels: Record<Priority, string> = {
   CRITICAL: 'Critical',
 };
 
-// Drawn from the theme's priority palette so the dashboard chart and
-// PriorityBadge can never disagree. Still an escalation ramp (priority is
-// ordinal, so color reads as rising urgency rather than four unrelated hues) —
-// see theme.ts for why each step darkens as well as warms.
-export const priorityColors: Record<Priority, string> = {
-  LOW: priorityPalette.LOW,
-  MEDIUM: priorityPalette.MEDIUM,
-  HIGH: priorityPalette.HIGH,
-  CRITICAL: priorityPalette.CRITICAL,
-};
-
+// FR-39.3 removed the `priorityColors` and `workStatusColors` re-exports that
+// used to live in this file. They were static snapshots of the theme palettes,
+// taken once at module load — which was fine until high contrast made the hues
+// depend on the active mode and contrast setting. A frozen copy would have gone
+// on quietly serving the old values, so the palettes are now reached only through
+// `statusColor()` / `priorityColor()` in theme.ts, which take that state as
+// arguments. This file keeps the *labels*, which genuinely are constant.
 // Severity shares its levels with Priority but is its own enum on the backend —
 // kept separate so a change to one can't silently redefine the other.
 // FR-34.1: energy demand. The order (CHARGE → NEUTRAL → DRAIN) reads as a
@@ -60,19 +55,6 @@ export const workStatusLabels: Record<WorkStatus, string> = {
   BLOCKED: 'Blocked',
   PAUSED: 'Paused',
   COMPLETED: 'Completed',
-};
-
-// Drawn from the theme's status palette so the dashboard chart and StatusBadge
-// can never disagree about what, say, "Completed" green is. Still matches the
-// semantic scheme used for Excel export conditional formatting (completed =
-// green, blocked = orange). See theme.ts for why WAITING is purple, not amber.
-export const workStatusColors: Record<WorkStatus, string> = {
-  NOT_STARTED: statusColors.NOT_STARTED,
-  IN_PROGRESS: statusColors.IN_PROGRESS,
-  WAITING: statusColors.WAITING,
-  BLOCKED: statusColors.BLOCKED,
-  PAUSED: statusColors.PAUSED,
-  COMPLETED: statusColors.COMPLETED,
 };
 
 export const dreamStatusLabels: Record<DreamStatus, string> = {

@@ -10,6 +10,7 @@ import {
   ListChecks,
   MessageSquare,
   MessageSquareWarning,
+  Palette,
   Sparkles,
   TriangleAlert,
   Users,
@@ -57,6 +58,9 @@ export const navGroups: NavGroup[] = [
       { to: '/insights', label: 'Insights', icon: Lightbulb },
       { to: '/issue-reports', label: 'Issue Reports', icon: MessageSquareWarning },
       { to: '/import-export', label: 'Import / Export', icon: FileSpreadsheet },
+      // FR-39.5: the full Appearance surface. Reachable from the sidebar as well
+      // as the header menu, so the header icon isn't the only way to find it.
+      { to: '/settings/appearance', label: 'Appearance', icon: Palette },
     ],
   },
 ];

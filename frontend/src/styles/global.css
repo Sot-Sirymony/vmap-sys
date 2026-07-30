@@ -135,6 +135,101 @@
   --moonshot-fg: #cdbce6;
 }
 
+/*
+ * FR-39.3 — High contrast. An independent toggle, not a theme: it composes with
+ * whichever mode is active, so the two blocks below are "light, stronger" and
+ * "dark, stronger" rather than a third and fourth theme. The attribute is
+ * stamped on <html> by ThemeModeProvider, which also raises the MUI palette via
+ * buildTheme's highContrast argument and steps the accent one notch along its
+ * own ramp — the two must agree.
+ *
+ * What actually changes, and why:
+ *   - Text goes to pure black/white. 21:1 against its surface, well past the
+ *     7:1 target, and it removes the soft-grey secondary text that is the first
+ *     thing to disappear for a low-vision user.
+ *   - Borders become real structure. The default --border of #e1e1e1 on white
+ *     is 1.3:1 — decoration, not a boundary anyone can see. At #4a4a4a it is
+ *     8.6:1.
+ *   - Surfaces flatten to pure white / pure black so every foreground has the
+ *     maximum possible ground to stand on. Card and page stop differing, which
+ *     is why the borders above have to carry the separation instead.
+ *
+ * Specificity does the mode selection: [data-theme="dark"][data-contrast="high"]
+ * is two attributes and so beats the single-attribute light block below it,
+ * whatever the source order.
+ */
+[data-contrast="high"] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --secondary: #ededed;
+  --secondary-foreground: #000000;
+  --muted: #ededed;
+  --muted-foreground: #2b2b2b;
+  --destructive: #a4262c;
+  --border: #4a4a4a;
+  --input: #4a4a4a;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
+  --sidebar-border: #4a4a4a;
+  --page: #ffffff;
+  --background-subtle: #f2f2f2;
+  --border-soft: #767676;
+  --text-label: #000000;
+  --text-soft: #2b2b2b;
+  --text-faint: #2b2b2b;
+  --info-bg: #eef4ff;
+  --info-border: #00378a;
+  --info-text: #00265e;
+  --info-strong: #00378a;
+  --danger-bg: #fdeceb;
+  --hint: #00504a;
+  --moonshot-fg: #4a1173;
+}
+
+[data-theme="dark"][data-contrast="high"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0f0f0f;
+  --card-foreground: #ffffff;
+  --popover: #0f0f0f;
+  --popover-foreground: #ffffff;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #ffffff;
+  --muted: #2a2a2a;
+  --muted-foreground: #e8e8e8;
+  --destructive: #ff9ba0;
+  --border: #b0aeac;
+  --input: #b0aeac;
+  --sidebar: #0f0f0f;
+  --sidebar-foreground: #ffffff;
+  --sidebar-border: #b0aeac;
+  --page: #000000;
+  --background-subtle: #141414;
+  --border-soft: #8a8886;
+  --text-label: #ffffff;
+  --text-soft: #e8e8e8;
+  --text-faint: #e8e8e8;
+  --info-bg: #001a33;
+  --info-border: #7cc0f0;
+  --info-text: #cbe6f9;
+  --info-strong: #7cc0f0;
+  --danger-bg: #2e0b0d;
+  --hint: #7fe0d5;
+  --moonshot-fg: #dcc9f5;
+}
+
+/* The focus ring is the one thing that must never be subtle in high contrast:
+   it is how a keyboard user knows where they are. Thicker and offset further,
+   so it reads against the now-heavier borders instead of merging into them. */
+[data-contrast="high"] :focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
 /* FR-18.4: Compact density tightens the row and card paddings that decide
    how many records fit on screen. Stamped on <html> by ThemeModeProvider,
    which also shrinks the MUI spacing base to match. */
@@ -1152,6 +1247,21 @@ button:focus-visible,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* FR-39.4: the in-app Reduce motion toggle, for a user who wants less motion
+   here without changing an OS-wide setting. Declared as a separate block rather
+   than merged into the media query above, because that is what keeps the
+   relationship one-way: this block can only ever ADD suppression. There is no
+   selector that could switch motion back on, so a user whose OS asked for
+   reduced motion keeps it regardless of this toggle (BR-19). */
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* FR-24: Vision Map working tree. Depth reads through three channels —
