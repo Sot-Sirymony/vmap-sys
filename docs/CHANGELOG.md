@@ -56,7 +56,7 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-36 | PKM Insight Library — search + contextual resurfacing (BR-30) | `cebbf0f` |
 | FR-35 | Goal synergy links / cross-pollination (BR-29) | `b78662f` |
 | FR-38 | In-app issue & improvement reporting — header report modal, My/All reports, admin triage (BR-32) | `5bf2301` |
-| FR-39 | Appearance & theme preferences — presets, 10 accents, high contrast, reduce motion, settings page with live preview, per-account persistence (BR-33, BR-34) | _pending_ |
+| FR-39 | Appearance & theme preferences — presets, 10 accents, high contrast, reduce motion, settings page with live preview, per-account persistence (BR-33, BR-34) | `2ae5df7` |
 
 All verified with backend and frontend test suites (backend 124/124, frontend
 107/107).
