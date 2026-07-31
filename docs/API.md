@@ -76,6 +76,7 @@ Auth response:
     "themeAccent": "BLUE",
     "uiDensity": "COMFORTABLE",
     "fontSize": "MEDIUM",
+    "backgroundTone": "NEUTRAL",
     "highContrast": false,
     "reduceMotion": false
   }
@@ -264,6 +265,7 @@ reset.
   "themeAccent": "PURPLE",
   "uiDensity": "COMPACT",
   "fontSize": "LARGE",
+  "backgroundTone": "WARM",
   "highContrast": true,
   "reduceMotion": true
 }
@@ -278,6 +280,7 @@ Allowed values:
 | `themeAccent` | `BLUE`, `TEAL`, `PURPLE`, `GREEN`, `ORANGE`, `MAGENTA`, `RED`, `BRASS`, `STEEL`, `PINK` |
 | `uiDensity` | `COMFORTABLE`, `COMPACT` |
 | `fontSize` | `SMALL`, `MEDIUM`, `LARGE` |
+| `backgroundTone` | `NEUTRAL`, `WARM`, `COOL`, `SOFT`, `TINTED`, `FLAT` |
 | `highContrast`, `reduceMotion` | `true`, `false` |
 
 A value outside these sets is rejected with **400** rather than stored, so the

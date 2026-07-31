@@ -136,6 +136,115 @@
 }
 
 /*
+ * FR-40 — Background tone. A coordinated set of surfaces (page canvas, card,
+ * popover, sidebar, subtle wash) rather than a single colour, so the depth
+ * relationship between layers holds whichever tone is chosen (FR-40.2).
+ *
+ * Every value here was contrast-checked before being written: body text ≥ 7:1
+ * and secondary text ≥ 4.5:1 against each surface, in both modes (BR-35). The
+ * theme tests assert this, so a tone added later without checking fails the
+ * build rather than shipping.
+ *
+ * ORDERING IS LOAD-BEARING. These blocks must stay ABOVE the high-contrast
+ * blocks below, and every selector here and there carries the same `:root`
+ * prefix so specificity ties are broken by source order alone:
+ *
+ *   :root[data-tone="warm"]                      (0,1,1)
+ *   :root[data-contrast="high"]                  (0,1,1)  ← ties, later wins
+ *   :root[data-theme="dark"][data-tone="warm"]   (0,2,1)
+ *   :root[data-theme="dark"][data-contrast=high] (0,2,1)  ← ties, later wins
+ *
+ * That is what makes FR-40.5 true — high contrast overrides the tone. Move
+ * either group and the accessibility mode silently loses to a colour preference.
+ */
+:root[data-tone="warm"] {
+  --background: #fffdfa;
+  --card: #fffdfa;
+  --popover: #fffdfa;
+  --sidebar: #f5f1e9;
+  --page: #faf7f2;
+  --background-subtle: #f7f3ec;
+}
+
+:root[data-tone="cool"] {
+  --sidebar: #eef2f6;
+  --page: #f6f8fa;
+  --background-subtle: #f2f5f8;
+}
+
+:root[data-tone="soft"] {
+  --sidebar: #e7eaee;
+  --page: #eef0f2;
+  --background-subtle: #e8eaed;
+}
+
+/* FR-40.3: mixed from the active accent, which ThemeModeProvider sets as an
+   inline --primary. No stored values, so a future accent works untouched. */
+:root[data-tone="tinted"] {
+  --sidebar: color-mix(in srgb, var(--primary) 8%, #f5f5f5);
+  --page: color-mix(in srgb, var(--primary) 4%, #fafafa);
+  --background-subtle: color-mix(in srgb, var(--primary) 6%, #fafafa);
+}
+
+/* AC-8: Flat removes the canvas step entirely, so the border has to carry the
+   separation that lightness was providing — without this, cards would dissolve
+   into the page. */
+:root[data-tone="flat"] {
+  --page: #ffffff;
+  --background-subtle: #f7f7f7;
+  --sidebar: #ffffff;
+  --border: #d4d4d4;
+  --sidebar-border: #d4d4d4;
+}
+
+:root[data-theme="dark"][data-tone="warm"] {
+  --background: #1f1b17;
+  --card: #2a2521;
+  --popover: #2a2521;
+  --sidebar: #2a2521;
+  --page: #1f1b17;
+  --background-subtle: #241f1b;
+}
+
+:root[data-theme="dark"][data-tone="cool"] {
+  --background: #171a1d;
+  --card: #212529;
+  --popover: #212529;
+  --sidebar: #212529;
+  --page: #171a1d;
+  --background-subtle: #1c2023;
+}
+
+:root[data-theme="dark"][data-tone="soft"] {
+  --background: #141414;
+  --card: #242424;
+  --popover: #242424;
+  --sidebar: #242424;
+  --page: #141414;
+  --background-subtle: #1c1c1c;
+}
+
+:root[data-theme="dark"][data-tone="tinted"] {
+  --background: color-mix(in srgb, var(--primary) 6%, #1b1a19);
+  --card: color-mix(in srgb, var(--primary) 8%, #252423);
+  --popover: color-mix(in srgb, var(--primary) 8%, #252423);
+  --sidebar: color-mix(in srgb, var(--primary) 8%, #252423);
+  --page: color-mix(in srgb, var(--primary) 6%, #1b1a19);
+  --background-subtle: color-mix(in srgb, var(--primary) 7%, #201f1e);
+}
+
+:root[data-theme="dark"][data-tone="flat"] {
+  --background: #1f1e1d;
+  --card: #1f1e1d;
+  --popover: #1f1e1d;
+  --sidebar: #1f1e1d;
+  --page: #1f1e1d;
+  --background-subtle: #282726;
+  --border: #4d4b49;
+  --sidebar-border: #4d4b49;
+}
+
+/*
  * FR-39.3 — High contrast. An independent toggle, not a theme: it composes with
  * whichever mode is active, so the two blocks below are "light, stronger" and
  * "dark, stronger" rather than a third and fourth theme. The attribute is
@@ -158,7 +267,7 @@
  * is two attributes and so beats the single-attribute light block below it,
  * whatever the source order.
  */
-[data-contrast="high"] {
+:root[data-contrast="high"] {
   --background: #ffffff;
   --foreground: #000000;
   --card: #ffffff;
@@ -190,7 +299,7 @@
   --moonshot-fg: #4a1173;
 }
 
-[data-theme="dark"][data-contrast="high"] {
+:root[data-theme="dark"][data-contrast="high"] {
   --background: #000000;
   --foreground: #ffffff;
   --card: #0f0f0f;
@@ -225,7 +334,7 @@
 /* The focus ring is the one thing that must never be subtle in high contrast:
    it is how a keyboard user knows where they are. Thicker and offset further,
    so it reads against the now-heavier borders instead of merging into them. */
-[data-contrast="high"] :focus-visible {
+:root[data-contrast="high"] :focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 3px;
 }

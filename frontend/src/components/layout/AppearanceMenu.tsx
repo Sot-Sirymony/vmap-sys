@@ -11,7 +11,7 @@ import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { Check, Contrast, Monitor, Moon, Settings2, Sun, Waves } from 'lucide-react';
-import { accentOptions, themePresets, type AccentId, type Density } from '../../theme';
+import { accentOptions, backgroundTones, themePresets, type AccentId, type Density } from '../../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../../context/ThemeModeContext';
 
 const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -161,6 +161,39 @@ export function AppearanceMenu() {
         </Box>
 
         <Divider sx={{ mt: 1 }} />
+        <ListSubheader sx={SUBHEADER_SX}>Background</ListSubheader>
+        {/* FR-40.5: high contrast paints pure white/black surfaces, so the tone
+            has no effect while it is on. Disabling the options states that,
+            instead of letting a click appear to work and change nothing. */}
+        {settings.highContrast && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2, pb: 0.5 }}>
+            Off while high contrast is on
+          </Typography>
+        )}
+        {backgroundTones.map((tone) => (
+          <MenuItem
+            key={tone.id}
+            disabled={settings.highContrast}
+            onClick={() => update({ backgroundTone: tone.id })}
+          >
+            {check(settings.backgroundTone === tone.id)}
+            <Box
+              sx={{
+                width: 16,
+                height: 16,
+                borderRadius: '3px',
+                mr: 1,
+                flexShrink: 0,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: tone.preview[resolvedMode][0],
+              }}
+            />
+            {tone.label}
+          </MenuItem>
+        ))}
+
+        <Divider />
         <ListSubheader sx={SUBHEADER_SX}>Density</ListSubheader>
         {DENSITY_OPTIONS.map((option) => (
           <MenuItem key={option.value} onClick={() => update({ density: option.value })}>

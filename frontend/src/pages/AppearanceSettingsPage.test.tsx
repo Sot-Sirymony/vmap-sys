@@ -28,6 +28,7 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-contrast');
+    document.documentElement.removeAttribute('data-tone');
   });
 
   it('renders exactly one page heading', () => {
@@ -86,6 +87,39 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     await user.click(screen.getByRole('button', { name: 'Pink accent' }));
 
     expect(await screen.findByText(/don't match a preset/i)).toBeInTheDocument();
+  });
+
+  it('offers the six background tones', () => {
+    renderPage();
+
+    expect(screen.getAllByRole('button', { name: /background$/ })).toHaveLength(6);
+    expect(screen.getByRole('button', { name: 'Warm background' })).toBeInTheDocument();
+  });
+
+  it('applies a background tone', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Warm background' }));
+
+    await waitFor(() => expect(document.documentElement.dataset.tone).toBe('warm'));
+  });
+
+  /**
+   * FR-40.5: the control is disabled rather than left live and ignored. A user
+   * who could click Warm, see nothing change, and get no explanation would
+   * reasonably conclude the feature is broken.
+   */
+  it('disables the tone control while high contrast is on, and says why', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('switch', { name: /high contrast/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Warm background' })).toBeDisabled();
+    });
+    expect(screen.getByText(/unavailable while high contrast is on/i)).toBeInTheDocument();
   });
 
   it('resets back to the defaults', async () => {

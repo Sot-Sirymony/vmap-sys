@@ -1,4 +1,4 @@
-import { accentOptions, matchPreset, type AccentId, type Density } from '../theme';
+import { accentOptions, backgroundTones, matchPreset, toneFromStored, type AccentId, type BackgroundToneId, type Density } from '../theme';
 import type {
   AppearancePreferences,
   StoredAccent,
@@ -61,6 +61,19 @@ function accentToWire(accent: AccentId): StoredAccent {
   return accent.toUpperCase() as StoredAccent;
 }
 
+/**
+ * FR-40: tone ids are the same words in a different case, so the pair below is
+ * derived from `backgroundTones` rather than written out — a tone added to the
+ * theme is then translatable automatically instead of silently missing here.
+ */
+function toneFromWire(wire: string, fallback: BackgroundToneId): BackgroundToneId {
+  return backgroundTones.some((tone) => tone.stored === wire) ? toneFromStored(wire) : fallback;
+}
+
+function toneToWire(tone: BackgroundToneId): AppearancePreferences['backgroundTone'] {
+  return backgroundTones.find((entry) => entry.id === tone)?.stored ?? 'NEUTRAL';
+}
+
 /** Wire → frontend settings, with every unrecognised value replaced by `fallback`'s. */
 export function toSettings(wire: AppearancePreferences, fallback: ThemeSettings): ThemeSettings {
   return {
@@ -68,6 +81,7 @@ export function toSettings(wire: AppearancePreferences, fallback: ThemeSettings)
     accent: accentFromWire(wire.themeAccent) ?? fallback.accent,
     density: wire.uiDensity === 'COMPACT' ? 'compact' : 'comfortable',
     fontSize: FONT_SIZE_FROM_WIRE[wire.fontSize] ?? fallback.fontSize,
+    backgroundTone: toneFromWire(wire.backgroundTone, fallback.backgroundTone),
     highContrast: Boolean(wire.highContrast),
     reduceMotion: Boolean(wire.reduceMotion),
   };
@@ -88,6 +102,7 @@ export function toWire(settings: ThemeSettings): AppearancePreferences {
     themeAccent: accentToWire(settings.accent),
     uiDensity: DENSITY_TO_WIRE[settings.density],
     fontSize: FONT_SIZE_TO_WIRE[settings.fontSize],
+    backgroundTone: toneToWire(settings.backgroundTone),
     highContrast: settings.highContrast,
     reduceMotion: settings.reduceMotion,
   };

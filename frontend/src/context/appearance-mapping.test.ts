@@ -8,6 +8,7 @@ const DEFAULTS: ThemeSettings = {
   accent: 'blue',
   density: 'comfortable',
   fontSize: 'medium',
+  backgroundTone: 'neutral',
   highContrast: false,
   reduceMotion: false,
 };
@@ -18,6 +19,7 @@ const STORED: AppearancePreferences = {
   themeAccent: 'PURPLE',
   uiDensity: 'COMPACT',
   fontSize: 'LARGE',
+  backgroundTone: 'WARM',
   highContrast: true,
   reduceMotion: true,
 };
@@ -29,6 +31,7 @@ describe('appearance mapping (FR-39.6)', () => {
       accent: 'purple',
       density: 'compact',
       fontSize: 'large',
+      backgroundTone: 'warm',
       highContrast: true,
       reduceMotion: true,
     });
@@ -81,6 +84,19 @@ describe('appearance mapping (FR-39.6)', () => {
     );
     expect(settings.highContrast).toBe(false);
     expect(settings.reduceMotion).toBe(false);
+  });
+
+  /** FR-40: an unknown tone falls back rather than reaching the theme (BR-33). */
+  it('falls back to the default for a tone it does not know', () => {
+    const settings = toSettings({ ...STORED, backgroundTone: 'CHARCOAL' as never }, DEFAULTS);
+    expect(settings.backgroundTone).toBe(DEFAULTS.backgroundTone);
+  });
+
+  it('round-trips every tone through the wire format', () => {
+    for (const stored of ['NEUTRAL', 'WARM', 'COOL', 'SOFT', 'TINTED', 'FLAT'] as const) {
+      const settings = toSettings({ ...STORED, backgroundTone: stored }, DEFAULTS);
+      expect(toWire(settings).backgroundTone).toBe(stored);
+    }
   });
 
   it('sends the backend’s own enum spelling', () => {

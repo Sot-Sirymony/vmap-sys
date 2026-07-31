@@ -1,0 +1,11 @@
+-- FR-40: the background tone — which coordinated set of surface values the app
+-- paints its page canvas, cards, popovers, and sidebar with.
+--
+-- Additive and NOT NULL with a default of 'NEUTRAL', which is defined as exactly
+-- the surface values the app shipped before FR-40 (BR-35 / AC-3). Existing rows
+-- therefore keep the look they already had, with no backfill and no visible
+-- change for anyone who never opens the control.
+--
+-- 'TINTED' stores no colour of its own: it is derived at render time from the
+-- user's accent (FR-40.3), so adding an accent later needs no change here.
+ALTER TABLE app_users ADD COLUMN background_tone VARCHAR(20) NOT NULL DEFAULT 'NEUTRAL';

@@ -10,6 +10,7 @@ import com.visionmapping.dto.request.AppearancePreferencesRequest;
 import com.visionmapping.dto.response.AppearancePreferencesResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.enums.AccentColor;
+import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -53,6 +54,43 @@ class AppearancePreferenceServiceTest {
                 .build();
     }
 
+    /**
+     * Builds a partial request by naming only the fields a test cares about.
+     *
+     * <p>The alternative — constructing the record positionally — means a row of
+     * eight nulls at every call site, which says nothing about intent and has to
+     * be re-counted by hand each time a preference is added. This keeps the tests
+     * about behaviour rather than about argument order.
+     */
+    private static final class Changes {
+        private ThemePreset preset;
+        private ThemeMode mode;
+        private AccentColor accent;
+        private UiDensity density;
+        private FontSize fontSize;
+        private BackgroundTone tone;
+        private Boolean highContrast;
+        private Boolean reduceMotion;
+
+        static Changes none() {
+            return new Changes();
+        }
+
+        Changes preset(ThemePreset value) { this.preset = value; return this; }
+        Changes mode(ThemeMode value) { this.mode = value; return this; }
+        Changes accent(AccentColor value) { this.accent = value; return this; }
+        Changes density(UiDensity value) { this.density = value; return this; }
+        Changes fontSize(FontSize value) { this.fontSize = value; return this; }
+        Changes tone(BackgroundTone value) { this.tone = value; return this; }
+        Changes highContrast(Boolean value) { this.highContrast = value; return this; }
+        Changes reduceMotion(Boolean value) { this.reduceMotion = value; return this; }
+
+        AppearancePreferencesRequest build() {
+            return new AppearancePreferencesRequest(
+                    preset, mode, accent, density, fontSize, tone, highContrast, reduceMotion);
+        }
+    }
+
     @Test
     void newUserGetsTheDocumentedDefaults() {
         when(userScope.currentUser()).thenReturn(user());
@@ -64,6 +102,10 @@ class AppearancePreferenceServiceTest {
         assertThat(response.themeAccent()).isEqualTo(AccentColor.BLUE);
         assertThat(response.uiDensity()).isEqualTo(UiDensity.COMFORTABLE);
         assertThat(response.fontSize()).isEqualTo(FontSize.MEDIUM);
+        // FR-40 AC-3: NEUTRAL is defined as the surfaces that shipped before
+        // FR-40, so defaulting to it is a no-op for anyone who never opens the
+        // control.
+        assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.NEUTRAL);
         assertThat(response.highContrast()).isFalse();
         assertThat(response.reduceMotion()).isFalse();
     }
@@ -80,6 +122,7 @@ class AppearancePreferenceServiceTest {
         stored.setThemeAccent(null);
         stored.setUiDensity(null);
         stored.setFontSize(null);
+        stored.setBackgroundTone(null);
         when(userScope.currentUser()).thenReturn(stored);
 
         AppearancePreferencesResponse response = service.getMyPreferences();
@@ -89,6 +132,7 @@ class AppearancePreferenceServiceTest {
         assertThat(response.themeAccent()).isEqualTo(AccentColor.BLUE);
         assertThat(response.uiDensity()).isEqualTo(UiDensity.COMFORTABLE);
         assertThat(response.fontSize()).isEqualTo(FontSize.MEDIUM);
+        assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.NEUTRAL);
     }
 
     @Test
@@ -97,23 +141,69 @@ class AppearancePreferenceServiceTest {
         when(userScope.currentUser()).thenReturn(stored);
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
 
-        AppearancePreferencesResponse response = service.updateMyPreferences(new AppearancePreferencesRequest(
-                ThemePreset.MIDNIGHT,
-                ThemeMode.DARK,
-                AccentColor.PURPLE,
-                UiDensity.COMPACT,
-                FontSize.LARGE,
-                true,
-                true));
+        AppearancePreferencesResponse response = service.updateMyPreferences(Changes.none()
+                .preset(ThemePreset.MIDNIGHT)
+                .mode(ThemeMode.DARK)
+                .accent(AccentColor.PURPLE)
+                .density(UiDensity.COMPACT)
+                .fontSize(FontSize.LARGE)
+                .tone(BackgroundTone.WARM)
+                .highContrast(true)
+                .reduceMotion(true)
+                .build());
 
         assertThat(response.themePreset()).isEqualTo(ThemePreset.MIDNIGHT);
         assertThat(response.themeMode()).isEqualTo(ThemeMode.DARK);
         assertThat(response.themeAccent()).isEqualTo(AccentColor.PURPLE);
         assertThat(response.uiDensity()).isEqualTo(UiDensity.COMPACT);
         assertThat(response.fontSize()).isEqualTo(FontSize.LARGE);
+        assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.WARM);
         assertThat(response.highContrast()).isTrue();
         assertThat(response.reduceMotion()).isTrue();
         assertThat(stored.getThemeAccent()).isEqualTo(AccentColor.PURPLE);
+    }
+
+    /**
+     * FR-40.4: tone is an independent axis, so changing it must not disturb the
+     * preset, mode, or accent the user already chose.
+     */
+    @Test
+    void changingToneLeavesTheRestOfTheThemeAlone() {
+        AppUser stored = user();
+        stored.setThemePreset(ThemePreset.OCEAN);
+        stored.setThemeMode(ThemeMode.LIGHT);
+        stored.setThemeAccent(AccentColor.TEAL);
+        when(userScope.currentUser()).thenReturn(stored);
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
+
+        AppearancePreferencesResponse response =
+                service.updateMyPreferences(Changes.none().tone(BackgroundTone.SOFT).build());
+
+        assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.SOFT);
+        assertThat(response.themePreset()).isEqualTo(ThemePreset.OCEAN);
+        assertThat(response.themeMode()).isEqualTo(ThemeMode.LIGHT);
+        assertThat(response.themeAccent()).isEqualTo(AccentColor.TEAL);
+    }
+
+    /**
+     * FR-40.5: high contrast overrides the tone when rendering, but must not
+     * erase it — turning high contrast off has to restore the chosen tone
+     * exactly, which only works if the stored value survived untouched.
+     */
+    @Test
+    void highContrastDoesNotOverwriteTheStoredTone() {
+        AppUser stored = user();
+        stored.setBackgroundTone(BackgroundTone.WARM);
+        when(userScope.currentUser()).thenReturn(stored);
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
+
+        AppearancePreferencesResponse on =
+                service.updateMyPreferences(Changes.none().highContrast(true).build());
+        assertThat(on.backgroundTone()).isEqualTo(BackgroundTone.WARM);
+
+        AppearancePreferencesResponse off =
+                service.updateMyPreferences(Changes.none().highContrast(false).build());
+        assertThat(off.backgroundTone()).isEqualTo(BackgroundTone.WARM);
     }
 
     /**
@@ -129,8 +219,7 @@ class AppearancePreferenceServiceTest {
         when(userScope.currentUser()).thenReturn(stored);
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
 
-        AppearancePreferencesResponse response = service.updateMyPreferences(new AppearancePreferencesRequest(
-                null, ThemeMode.LIGHT, null, null, null, null, null));
+        AppearancePreferencesResponse response = service.updateMyPreferences(Changes.none().mode(ThemeMode.LIGHT).build());
 
         assertThat(response.themeMode()).isEqualTo(ThemeMode.LIGHT);
         assertThat(response.themeAccent()).isEqualTo(AccentColor.TEAL);
@@ -148,7 +237,7 @@ class AppearancePreferenceServiceTest {
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
 
         AppearancePreferencesResponse response = service.updateMyPreferences(
-                new AppearancePreferencesRequest(null, null, null, null, null, null, null));
+                Changes.none().build());
 
         assertThat(response.themeAccent()).isEqualTo(AccentColor.BRASS);
         assertThat(response.uiDensity()).isEqualTo(UiDensity.COMPACT);
@@ -168,7 +257,7 @@ class AppearancePreferenceServiceTest {
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
 
         AppearancePreferencesResponse response = service.updateMyPreferences(
-                new AppearancePreferencesRequest(null, null, null, null, null, null, false));
+                Changes.none().reduceMotion(false).build());
 
         assertThat(response.reduceMotion()).isFalse();
     }
@@ -183,8 +272,7 @@ class AppearancePreferenceServiceTest {
         when(userScope.currentUser()).thenReturn(me);
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
 
-        service.updateMyPreferences(new AppearancePreferencesRequest(
-                null, ThemeMode.DARK, null, null, null, null, null));
+        service.updateMyPreferences(Changes.none().mode(ThemeMode.DARK).build());
 
         verify(appUserRepository).save(me);
         verify(appUserRepository, never()).findById(any());
@@ -198,12 +286,12 @@ class AppearancePreferenceServiceTest {
         when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
 
         AppearancePreferencesResponse light = service.updateMyPreferences(
-                new AppearancePreferencesRequest(null, ThemeMode.LIGHT, null, null, null, true, null));
+                Changes.none().mode(ThemeMode.LIGHT).highContrast(true).build());
         assertThat(light.themeMode()).isEqualTo(ThemeMode.LIGHT);
         assertThat(light.highContrast()).isTrue();
 
         AppearancePreferencesResponse dark = service.updateMyPreferences(
-                new AppearancePreferencesRequest(null, ThemeMode.DARK, null, null, null, null, null));
+                Changes.none().mode(ThemeMode.DARK).build());
         assertThat(dark.themeMode()).isEqualTo(ThemeMode.DARK);
         assertThat(dark.highContrast()).isTrue();
     }

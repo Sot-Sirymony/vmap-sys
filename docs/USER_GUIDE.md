@@ -93,6 +93,22 @@ when your device switches.
 **Accent** — ten colours. Every one has been checked for readable contrast in
 both light and dark, so no choice can leave text hard to read.
 
+**Background** — changes the page, cards, and sidebar together:
+
+| Tone | What it looks like |
+|---|---|
+| Neutral | The default |
+| Warm | A softer, cream-tinted canvas |
+| Cool | A slight blue cast |
+| Soft | A greyer canvas, so cards stand out more |
+| Tinted | Follows whichever accent you picked |
+| Flat | No canvas step — borders separate the cards instead |
+
+Every tone is checked to keep text readable, so none of them can make the app
+hard to read. This control is switched off while High contrast is on, because
+that mode deliberately uses pure white or black — turn High contrast off and your
+chosen tone comes straight back.
+
 **Density** — Comfortable or Compact. Compact fits more rows on screen without
 hiding anything.
 

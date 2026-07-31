@@ -4,6 +4,7 @@ import com.visionmapping.dto.request.AppearancePreferencesRequest;
 import com.visionmapping.dto.response.AppearancePreferencesResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.enums.AccentColor;
+import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -61,6 +62,9 @@ public class AppearancePreferenceService {
         if (request.fontSize() != null) {
             user.setFontSize(request.fontSize());
         }
+        if (request.backgroundTone() != null) {
+            user.setBackgroundTone(request.backgroundTone());
+        }
         if (request.highContrast() != null) {
             user.setHighContrast(request.highContrast());
         }
@@ -86,6 +90,7 @@ public class AppearancePreferenceService {
                 user.getThemeAccent() == null ? AccentColor.BLUE : user.getThemeAccent(),
                 user.getUiDensity() == null ? UiDensity.COMFORTABLE : user.getUiDensity(),
                 user.getFontSize() == null ? FontSize.MEDIUM : user.getFontSize(),
+                user.getBackgroundTone() == null ? BackgroundTone.NEUTRAL : user.getBackgroundTone(),
                 user.isHighContrast(),
                 user.isReduceMotion()
         );

@@ -57,6 +57,7 @@ class AppearancePreferenceFlowTests {
                 .andExpect(jsonPath(ACCENT).value("BLUE"))
                 .andExpect(jsonPath("$.uiDensity").value("COMFORTABLE"))
                 .andExpect(jsonPath(FONT_SIZE).value("MEDIUM"))
+                .andExpect(jsonPath("$.backgroundTone").value("NEUTRAL"))
                 .andExpect(jsonPath("$.highContrast").value(false))
                 .andExpect(jsonPath("$.reduceMotion").value(false));
     }
@@ -76,6 +77,7 @@ class AppearancePreferenceFlowTests {
         body.put("themeAccent", "PURPLE");
         body.put("uiDensity", "COMPACT");
         body.put("fontSize", "LARGE");
+        body.put("backgroundTone", "WARM");
         body.put("highContrast", true);
         body.put("reduceMotion", true);
 
@@ -90,6 +92,7 @@ class AppearancePreferenceFlowTests {
                 .andExpect(jsonPath(ACCENT).value("PURPLE"))
                 .andExpect(jsonPath("$.uiDensity").value("COMPACT"))
                 .andExpect(jsonPath(FONT_SIZE).value("LARGE"))
+                .andExpect(jsonPath("$.backgroundTone").value("WARM"))
                 .andExpect(jsonPath("$.highContrast").value(true))
                 .andExpect(jsonPath("$.reduceMotion").value(true));
     }

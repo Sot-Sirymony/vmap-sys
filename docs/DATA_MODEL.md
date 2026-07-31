@@ -28,10 +28,16 @@ Fields:
 - themeAccent
 - uiDensity
 - fontSize
+- backgroundTone
 - highContrast
 - reduceMotion
 - createdAt
 - updatedAt
+
+`backgroundTone` (`V17`, FR-40) selects a coordinated set of surfaces — page
+canvas, cards, popovers, sidebar. `NEUTRAL` is defined as exactly the values that
+shipped before FR-40, so defaulting to it changes nothing for existing users, and
+`TINTED` stores no colour of its own: it is mixed from the accent at render time.
 
 The seven appearance columns (`V16`) are `NOT NULL` with defaults equal to the
 frontend's pre-FR-39 defaults — `FLUENT_SYSTEM` / `SYSTEM` / `BLUE` /
@@ -214,6 +220,9 @@ Belongs to:
 - High contrast may change the lightness of a status or priority colour to meet
   its contrast target, never its hue or meaning — Completed stays green, Blocked
   orange, Critical red (BR-34).
+- A background tone must be one of the curated options and must keep body text at
+  7:1 and secondary text at 4.5:1 against every surface it paints. High contrast
+  overrides the tone and disables its control (BR-35).
 
 
 

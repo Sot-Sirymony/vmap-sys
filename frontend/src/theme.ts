@@ -371,6 +371,129 @@ export function matchPreset(mode: 'light' | 'dark' | 'system', accent: AccentId)
 
 export type Density = 'comfortable' | 'compact';
 
+/**
+ * FR-40 — background tones.
+ *
+ * A tone is a coordinated *set* of surfaces (FR-40.2), not one colour: page
+ * canvas, card, the subtle wash used for archived rows, and the sidebar all move
+ * together, so the depth relationship between them survives whichever tone is
+ * picked.
+ *
+ * Curated rather than a colour picker, deliberately (BR-35). The background is
+ * what every piece of text in the product sits on, so an arbitrary value would
+ * downgrade "no appearance choice can make text unreadable" into a runtime check
+ * the user is able to fail. Every pair below was measured before being written
+ * down: body text ≥ 7:1 and secondary text ≥ 4.5:1 against each surface, in both
+ * modes.
+ *
+ * `tinted` carries no values (FR-40.3) — it is mixed from the active accent in
+ * CSS, so the ten accents don't become twenty more colours to hand-validate and
+ * a future accent works with no change here.
+ */
+export type BackgroundToneId = 'neutral' | 'warm' | 'cool' | 'soft' | 'tinted' | 'flat';
+
+export type BackgroundToneDefinition = {
+  id: BackgroundToneId;
+  /** Backend enum name. */
+  stored: 'NEUTRAL' | 'WARM' | 'COOL' | 'SOFT' | 'TINTED' | 'FLAT';
+  label: string;
+  description: string;
+  /** Swatch pair for the picker: [canvas, card]. `tinted` resolves at render time. */
+  preview: { light: [string, string]; dark: [string, string] };
+};
+
+export const backgroundTones: BackgroundToneDefinition[] = [
+  {
+    id: 'neutral',
+    stored: 'NEUTRAL',
+    label: 'Neutral',
+    description: 'The default',
+    preview: { light: ['#fafafa', '#ffffff'], dark: ['#1b1a19', '#252423'] },
+  },
+  {
+    id: 'warm',
+    stored: 'WARM',
+    label: 'Warm',
+    description: 'Softer, cream-tinted',
+    preview: { light: ['#faf7f2', '#fffdfa'], dark: ['#1f1b17', '#2a2521'] },
+  },
+  {
+    id: 'cool',
+    stored: 'COOL',
+    label: 'Cool',
+    description: 'Slight blue cast',
+    preview: { light: ['#f6f8fa', '#ffffff'], dark: ['#171a1d', '#212529'] },
+  },
+  {
+    id: 'soft',
+    stored: 'SOFT',
+    label: 'Soft',
+    description: 'More separation',
+    preview: { light: ['#eef0f2', '#ffffff'], dark: ['#141414', '#242424'] },
+  },
+  {
+    id: 'tinted',
+    stored: 'TINTED',
+    label: 'Tinted',
+    description: 'Follows your accent',
+    // Resolved from the accent at render time; these stand in for the swatch.
+    preview: { light: ['#f7fafd', '#ffffff'], dark: ['#16191c', '#202427'] },
+  },
+  {
+    id: 'flat',
+    stored: 'FLAT',
+    label: 'Flat',
+    description: 'No canvas step',
+    preview: { light: ['#ffffff', '#ffffff'], dark: ['#1f1e1d', '#1f1e1d'] },
+  },
+];
+
+export function toneFromStored(stored: string): BackgroundToneId {
+  return backgroundTones.find((tone) => tone.stored === stored)?.id ?? 'neutral';
+}
+
+/**
+ * The surface values a tone contributes, for the MUI palette.
+ *
+ * These have to exist in the theme as well as in `global.css`: MUI paints
+ * `Paper`, `Card`, and `Dialog` from `palette.background`, so if only the
+ * stylesheet knew about tones, every MUI surface would stay neutral while the
+ * CSS-styled ones shifted — the same disagreement the accent handling avoids.
+ *
+ * `tinted` returns a `color-mix()` referencing the inline `--primary`, which is
+ * a valid CSS colour and resolves in the browser exactly as the stylesheet's
+ * version does (FR-40.3). `neutral` returns null so callers keep the base
+ * values untouched, which is what makes it a true no-op (AC-3).
+ */
+export function toneSurfaces(
+  mode: 'light' | 'dark',
+  tone: BackgroundToneId,
+): { background: string; card: string; border?: string } | null {
+  const dark = mode === 'dark';
+  switch (tone) {
+    case 'warm':
+      return dark ? { background: '#1f1b17', card: '#2a2521' } : { background: '#fffdfa', card: '#fffdfa' };
+    case 'cool':
+      return dark ? { background: '#171a1d', card: '#212529' } : { background: '#ffffff', card: '#ffffff' };
+    case 'soft':
+      return dark ? { background: '#141414', card: '#242424' } : { background: '#ffffff', card: '#ffffff' };
+    case 'tinted':
+      return dark
+        ? {
+            background: 'color-mix(in srgb, var(--primary) 6%, #1b1a19)',
+            card: 'color-mix(in srgb, var(--primary) 8%, #252423)',
+          }
+        : { background: '#ffffff', card: '#ffffff' };
+    case 'flat':
+      // AC-8: with no lightness step left, the border carries the separation.
+      return dark
+        ? { background: '#1f1e1d', card: '#1f1e1d', border: '#4d4b49' }
+        : { background: '#ffffff', card: '#ffffff', border: '#d4d4d4' };
+    default:
+      return null;
+  }
+}
+
 export type SurfaceTokens = {
   background: string;
   card: string;
@@ -573,8 +696,14 @@ export function buildTheme(
   accent: AccentId = 'blue',
   density: Density = 'comfortable',
   highContrast = false,
+  tone: BackgroundToneId = 'neutral',
 ) {
   const dark = mode === 'dark';
+  // FR-40.5: high contrast outranks the tone. Applying the tone only when it is
+  // off is what keeps that true here as well as in the stylesheet — and because
+  // the tone is never written to the stored settings by this, turning high
+  // contrast back off restores the user's choice untouched.
+  const toned = highContrast ? null : toneSurfaces(mode, tone);
   const tokens = surfaceTokens(mode, highContrast);
   const baseBrand = accentOptions[accent][mode];
   // FR-39.3: high contrast takes the accent one step further along its own ramp
@@ -583,14 +712,14 @@ export function buildTheme(
   const brand = highContrast
     ? { ...baseBrand, main: dark ? baseBrand.hover : baseBrand.pressed }
     : baseBrand;
-  const border = tokens.border;
+  const border = toned?.border ?? tokens.border;
 
   return createTheme({
     palette: {
       mode,
       background: {
-        default: tokens.background, // --background
-        paper: tokens.card, // --card / --popover
+        default: toned?.background ?? tokens.background, // --background
+        paper: toned?.card ?? tokens.card, // --card / --popover
       },
       text: {
         primary: tokens.foreground, // --foreground (Fluent neutralForeground1)

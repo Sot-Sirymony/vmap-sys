@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. ✅ **FR-39** (Appearance & Theme Preferences) added and shipped 2026-07-30. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. ✅ **FR-39** (Appearance & Theme Preferences) added and shipped 2026-07-30. ✅ **FR-40** (Background Tone) added and shipped 2026-07-31. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -615,6 +615,127 @@ theme layer, keeping the V4.0.0 posture.
 
 ---
 
+## FR-40 Background Tone *(Effort: S–M)* — ✅ Done 2026-07-31
+
+**Shipped (2026-07-31):** Backend — `V17` adds one `background_tone` column to
+`app_users` (`NOT NULL DEFAULT 'NEUTRAL'`), a `BackgroundTone` enum, and the
+field on the existing appearance DTOs; the FR-39.6 partial-update contract meant
+no new endpoint and no controller change. Frontend — six tones as coordinated
+surface sets in `global.css` and `theme.ts`, `Tinted` derived from the accent via
+`color-mix` so it stores nothing, `Flat` compensating for its missing canvas step
+with a stronger border, plus controls in the header menu and on the settings
+page (disabled with a stated reason while high contrast is on).
+
+Verified: backend 126/126, frontend 127/127, tsc and build clean. Every tone's
+contrast was measured before the values were committed and is asserted in
+`theme.test.ts`, so a tone added later without checking fails the build.
+
+One implementation note worth recording: FR-40.5 is enforced twice, in the MUI
+theme and in the stylesheet, because both paint surfaces. In CSS it depends on
+selector ordering — the tone blocks sit above the high-contrast blocks and every
+selector in both groups carries a `:root` prefix so ties break by source order.
+That ordering is load-bearing and commented as such; moving either group would
+let a colour preference silently outrank the accessibility mode.
+
+FR-39 gave the user control of the *accent* — the colour the app uses to point at
+things — but the surfaces underneath it are still fixed. Light mode is a white
+canvas and dark mode a near-black one, and neither can be adjusted. For a user
+who works in the app for hours, the canvas is the largest coloured area on
+screen and the one most worth being able to soften: a slightly warm page reads
+very differently from a stark white one, and some users want more separation
+between the page and the cards on it than the current one-step `#fafafa` gives.
+
+This FR adds a **background tone**: a coordinated set of surface values applied
+across the page canvas, cards, popovers, and sidebar. It is additive — one
+column, one enum, and one more control on a settings page that already exists.
+
+- FR-40.1 **Curated tones, not a colour picker.** Six named tones per mode, each
+  shipping pre-validated values, exactly as accents do (FR-39.2). A free-form
+  colour field was considered and rejected: the guarantee that no appearance
+  choice can make text unreadable is the most valuable property of this whole
+  feature area, and an arbitrary hex turns that guarantee into a runtime check
+  the user can fail. Initial set: **Neutral** (today's values, the default),
+  **Warm**, **Cool**, **Soft** (a greyer canvas, more page-to-card separation),
+  **Tinted** (derived from the chosen accent), **Flat** (no canvas step — borders
+  carry all separation).
+- FR-40.2 **A tone is a set, not a single colour.** Choosing one moves `--page`,
+  `--card`, `--background`, `--popover`, `--sidebar`, and `--background-subtle`
+  together, so the depth relationship between surfaces is preserved rather than
+  one layer drifting away from the others.
+- FR-40.3 **Tinted derives from the accent.** The Tinted tone mixes the active
+  accent into the surface at a low percentage rather than storing its own values.
+  Ten accents across two modes would otherwise mean twenty more hand-validated
+  colours; deriving it keeps the count at zero and means a future accent works
+  automatically.
+- FR-40.4 **An independent axis, not part of a preset.** Tone sits alongside
+  density, text size, and the accessibility toggles — controls a preset does not
+  set either. Presets stay (mode, accent) pairs. This keeps every existing
+  preset label valid instead of pushing current users to **Custom**, and because
+  tone is a visible control it is not the hidden dimension FR-39.1 rules out.
+- FR-40.5 **High contrast overrides it, visibly.** When high contrast is on, the
+  surfaces go to pure white or pure black regardless of tone, because maximum
+  separation is the entire point of that mode. The tone control is **disabled
+  with a stated reason** rather than left enabled and quietly ignored — a control
+  that appears to accept input it discards is worse than one that explains
+  itself.
+- FR-40.6 **Persisted with the rest of the appearance.** Stored on the account
+  and returned with the auth response, travelling the same path FR-39.6 built.
+
+**Acceptance criteria**
+
+1. Selecting a tone changes the page, card, popover, and sidebar surfaces
+   together, and the change is visible immediately without a reload.
+2. Every tone keeps body text at ≥ 7:1 and secondary text at ≥ 4.5:1 against the
+   surface it actually renders on, in both light and dark mode.
+3. The Neutral tone produces exactly the values shipped before FR-40, so a user
+   who never touches the control sees no change whatsoever.
+4. The Tinted tone visibly follows the accent: changing accent changes the
+   canvas, with no per-accent values stored.
+5. With high contrast on, surfaces are pure white/black whatever the tone, and
+   the tone control is disabled with a visible explanation. Turning high contrast
+   off restores the chosen tone exactly.
+6. Tone persists across logout/login and across browsers for the same account,
+   and is applied on first paint.
+7. Existing users default to `NEUTRAL` with no migration action.
+8. Tones that reduce the page-to-card difference (Flat) keep cards
+   distinguishable through borders, so no surface boundary is lost.
+
+**Business rules**
+
+| # | Rule |
+|---|---|
+| BR-35 | A background tone may only be one of the curated options, and every option must hold body text at ≥ 7:1 and secondary text at ≥ 4.5:1 against the surface it renders on, in both modes. High contrast overrides the tone entirely (pure white/black surfaces) and the tone control is disabled while it is active — the accessibility mode always outranks an aesthetic preference. |
+
+**Data model / migration**
+
+- **Additive column on `app_users`** (`V17__user_background_tone.sql`):
+  `background_tone VARCHAR(20) NOT NULL DEFAULT 'NEUTRAL'`. New enum
+  `BackgroundTone` (`NEUTRAL`, `WARM`, `COOL`, `SOFT`, `TINTED`, `FLAT`). Carried
+  on the existing `GET`/`PUT /api/preferences/appearance` payload and in
+  `AuthResponse` — the partial-update contract from FR-39.6 means no new endpoint
+  and no controller change.
+
+**Design decisions**
+
+- **Curated beats configurable here.** The instinct is that more freedom is
+  better, but a background is not a decoration: it is what every piece of text in
+  the product sits on. A picker would move the app from "no choice can break
+  readability" to "most choices are fine" — a strictly weaker promise, and the
+  one users cannot verify for themselves.
+- **Derive Tinted rather than enumerate it.** Storing accent × mode surface
+  values would add twenty values to keep in step with any future accent. Mixing
+  at render time reuses the mechanism `TintedChip` already relies on.
+- **Disable, don't ignore.** Leaving the tone control live under high contrast
+  would let a user pick Warm, see nothing change, and reasonably conclude the
+  feature is broken. Disabling it with a reason costs one sentence of UI and
+  removes that whole class of confusion.
+- **Keep it off the presets.** Adding tone to the preset definition would
+  reclassify existing users' saved appearance as Custom the moment they upgrade,
+  for no benefit. Density and text size already sit outside presets; tone
+  follows the established line.
+
+---
+
 ## Deferred Platform Track
 
 Captured so the vision stays whole, but **explicitly out of V4.0.0 scope** — each
@@ -646,6 +767,7 @@ which is precisely why it is deferred rather than scoped.
 | 5 | FR-34 Stage B (constraint coaching) | Depends on Stage A's data and benefits from the balance view landing first | M | ✅ Done |
 | 6 | FR-38 In-App Issue & Improvement Reporting | Added post-completion; one additive table + role-scoped CRUD, no new infrastructure | S–M | ✅ Done |
 | 7 | FR-39 Appearance & Theme Preferences | Added post-completion; extends the existing FR-18 theme layer, one additive migration, no new infrastructure | M | ✅ Done |
+| 8 | FR-40 Background Tone | Depends on FR-39's surface tokens, settings page, and persistence path already being in place | S–M | ✅ Done |
 | — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 
 ---
@@ -662,6 +784,7 @@ which is precisely why it is deferred rather than scoped.
 | BR-32 | Issue reports are user-scoped for authoring/self-viewing; only ADMIN may triage the full queue or change status. `reportType`+`title` required; `severity` required for Bug; a Bug moved to `Resolved` requires a `resolutionNote`. Reports are archived, not hard-deleted. |
 | BR-33 | Appearance preferences are strictly user-scoped (read and write own only). Stored values must be curated enum options; an unrecognised value resolves to the default rather than being persisted. A failed save applies locally and retries — appearance never hard-depends on the backend. |
 | BR-34 | High contrast may adjust the lightness of a status/priority colour to meet its contrast target, never its hue or meaning. A bounded, documented exception to BR-14: accent choice still cannot touch these palettes; only the accessibility mode may, and only along lightness. |
+| BR-35 | A background tone must be one of the curated options, and every option holds body text at ≥ 7:1 and secondary text at ≥ 4.5:1 against the surface it renders on, in both modes. High contrast overrides the tone entirely and disables its control — the accessibility mode outranks an aesthetic preference. |
 
 ## Migrations (new in V4.0.0)
 
@@ -671,23 +794,28 @@ which is precisely why it is deferred rather than scoped.
 | `V14__goal_synergy_link.sql` | `goal_synergy_links` table | New table |
 | `V15__issue_reports.sql` *(FR-38)* | `issue_reports` table for in-app bug/improvement reporting | New table |
 | `V16__user_appearance_preferences.sql` *(FR-39)* | Appearance columns on `app_users` (`theme_preset`, `theme_mode`, `accent`, `density`, `font_size`, `high_contrast`, `reduce_motion`) | Additive, `NOT NULL` with defaults |
+| `V17__user_background_tone.sql` *(FR-40)* | `background_tone` on `app_users` | Additive, `NOT NULL` default `NEUTRAL` |
 
 ## Non-Functional Notes
 
-- V4.0.0 (FR-34…FR-39) is **additive**: four additive migrations (V13, V14, V15,
-  V16), no destructive schema changes, and **no new infrastructure** — the same
-  posture V3.0.0 could truthfully claim. (The originally-optional V15 obstacle
-  index was never needed; V15 became the FR-38 `issue_reports` table.)
+- V4.0.0 (FR-34…FR-40) is **additive**: five additive migrations (V13, V14, V15,
+  V16, V17), no destructive schema changes, and **no new infrastructure** — the
+  same posture V3.0.0 could truthfully claim. (The originally-optional V15
+  obstacle index was never needed; V15 became the FR-38 `issue_reports` table.)
 - New business rules (BR-27…BR-31) get backend test coverage where they carry
   logic (BR-28 aggregation, BR-29 link constraints, BR-31 signal computation),
   matching V1–V3 practice. BR-27/BR-30 are scoping/posture rules verified by
   existing isolation and optional-field tests. BR-33 is covered by a preference
   service test (defaults, enum validation, cross-user scoping); BR-34 is a
-  palette rule verified in the frontend theme tests.
-- FR-39 is the only V4.0.0 requirement with an **accessibility** dimension
-  (high contrast, reduce motion). Its contrast targets are fixed values in the
-  theme layer, not runtime computation, so the accessibility guarantee is
-  reviewable in source rather than dependent on user choices.
+  palette rule verified in the frontend theme tests. BR-35 is likewise a palette
+  rule: each tone's contrast ratios are asserted in the theme tests, so a tone
+  added later without checking fails the build rather than shipping.
+- FR-39 and FR-40 are the V4.0.0 requirements with an **accessibility**
+  dimension (high contrast, reduce motion, and the surfaces text renders on).
+  Their contrast targets are fixed values in the theme layer, not runtime
+  computation, so the guarantee is reviewable in source rather than dependent on
+  user choices. FR-40 keeps it that way deliberately by curating tones instead of
+  offering a colour picker.
 - Everything net-requiring a scheduler, background execution, a notification
   channel, or a calendar model is confined to the [Deferred Platform
   Track](#deferred-platform-track) and is **not** part of V4.0.0.

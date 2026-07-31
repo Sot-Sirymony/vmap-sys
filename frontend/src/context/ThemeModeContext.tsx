@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { accentOptions, buildTheme, matchPreset, type AccentId, type Density, type StoredThemePreset } from '../theme';
+import { accentOptions, buildTheme, matchPreset, type AccentId, type BackgroundToneId, type Density, type StoredThemePreset } from '../theme';
 import { getAppearancePreferences, updateAppearancePreferences } from '../api/preferencesApi';
 import { toSettings, toWire } from './appearance-mapping';
 import { useAuth } from './AuthContext';
@@ -15,6 +15,8 @@ export type ThemeSettings = {
   accent: AccentId;
   density: Density;
   fontSize: FontSize;
+  /** FR-40 — which coordinated set of surfaces the app paints. */
+  backgroundTone: BackgroundToneId;
   /** FR-39.3 — composes with light and dark rather than replacing them. */
   highContrast: boolean;
   /** FR-39.4 — asks for less motion than the OS preference, never more. */
@@ -30,9 +32,13 @@ const DEFAULT_SETTINGS: ThemeSettings = {
   accent: 'blue',
   density: 'comfortable',
   fontSize: 'medium',
+  backgroundTone: 'neutral',
   highContrast: false,
   reduceMotion: false,
 };
+
+/** Tone ids this build understands, for validating what comes out of storage. */
+const KNOWN_TONES = new Set<BackgroundToneId>(['neutral', 'warm', 'cool', 'soft', 'tinted', 'flat']);
 
 /** How long to wait before saving, so dragging through swatches sends one request. */
 const SAVE_DEBOUNCE_MS = 600;
@@ -75,6 +81,7 @@ function initialSettings(): ThemeSettings {
         accent: parsed.accent && parsed.accent in accentOptions ? parsed.accent : DEFAULT_SETTINGS.accent,
         density: parsed.density === 'compact' ? 'compact' : 'comfortable',
         fontSize: parsed.fontSize === 'small' || parsed.fontSize === 'large' ? parsed.fontSize : 'medium',
+        backgroundTone: parsed.backgroundTone && KNOWN_TONES.has(parsed.backgroundTone) ? parsed.backgroundTone : 'neutral',
         highContrast: parsed.highContrast === true,
         reduceMotion: parsed.reduceMotion === true,
       };
@@ -218,6 +225,13 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     } else {
       delete root.dataset.motion;
     }
+    // FR-40: absent when neutral, so the default costs no selector work and an
+    // absent attribute unambiguously means "the surfaces that shipped before".
+    if (settings.backgroundTone === 'neutral') {
+      delete root.dataset.tone;
+    } else {
+      root.dataset.tone = settings.backgroundTone;
+    }
     // The accent's CSS variables (FR-18.3). Inline custom properties win over
     // both the :root defaults and the [data-theme="dark"] block, so the
     // chosen ramp applies in either mode.
@@ -280,8 +294,8 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   }, [settings, token]);
 
   const theme = useMemo(
-    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast),
-    [resolvedMode, settings.accent, settings.density, settings.highContrast],
+    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone),
+    [resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone],
   );
 
   const update = useCallback((changes: Partial<ThemeSettings>) => {

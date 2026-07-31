@@ -1,6 +1,7 @@
 package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.AccentColor;
+import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -22,6 +23,7 @@ public record AppearancePreferencesResponse(
         AccentColor themeAccent,
         UiDensity uiDensity,
         FontSize fontSize,
+        BackgroundTone backgroundTone,
         boolean highContrast,
         boolean reduceMotion
 ) {

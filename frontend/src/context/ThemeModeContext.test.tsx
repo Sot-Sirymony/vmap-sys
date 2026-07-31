@@ -25,6 +25,8 @@ function Probe() {
       <button type="button" onClick={() => update({ accent: 'brass' })}>brass</button>
       <button type="button" onClick={() => update({ highContrast: true })}>contrast</button>
       <button type="button" onClick={() => update({ reduceMotion: true })}>motion</button>
+      <button type="button" onClick={() => update({ backgroundTone: 'warm' })}>warm</button>
+      <button type="button" onClick={() => update({ backgroundTone: 'neutral' })}>neutraltone</button>
       <button type="button" onClick={() => applyPreset('dark', 'purple')}>midnight</button>
     </div>
   );
@@ -36,6 +38,7 @@ const STORED = {
   themeAccent: 'TEAL',
   uiDensity: 'COMFORTABLE',
   fontSize: 'MEDIUM',
+  backgroundTone: 'NEUTRAL',
   highContrast: false,
   reduceMotion: false,
 };
@@ -54,6 +57,7 @@ describe('ThemeModeProvider (FR-39)', () => {
     updateAppearancePreferences.mockReset().mockResolvedValue(STORED);
     document.documentElement.removeAttribute('data-contrast');
     document.documentElement.removeAttribute('data-motion');
+    document.documentElement.removeAttribute('data-tone');
   });
 
   afterEach(() => {
@@ -74,6 +78,35 @@ describe('ThemeModeProvider (FR-39)', () => {
 
     expect(document.documentElement.dataset.contrast).toBe('high');
     expect(document.documentElement.dataset.motion).toBe('reduced');
+  });
+
+  /**
+   * FR-40: the attribute is absent on Neutral, so the default costs no selector
+   * work and its absence unambiguously means "the surfaces that shipped before".
+   */
+  it('stamps data-tone only when the tone is not Neutral', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    expect(document.documentElement.hasAttribute('data-tone')).toBe(false);
+
+    await user.click(screen.getByText('warm'));
+    expect(document.documentElement.dataset.tone).toBe('warm');
+
+    await user.click(screen.getByText('neutraltone'));
+    expect(document.documentElement.hasAttribute('data-tone')).toBe(false);
+  });
+
+  /** FR-40.4: tone is its own axis — changing it must not disturb the preset. */
+  it('leaves the preset alone when only the tone changes', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('midnight'));
+    expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
+
+    await user.click(screen.getByText('warm'));
+    expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
   });
 
   it('applies a preset as a single change and names it', async () => {

@@ -38,7 +38,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [4.0.0] — 2026-07-25 (6 of 6 items shipped)
+## [4.0.0] — 2026-07-25 (7 of 7 items shipped)
 
 Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
 Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
@@ -57,14 +57,16 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-35 | Goal synergy links / cross-pollination (BR-29) | `b78662f` |
 | FR-38 | In-app issue & improvement reporting — header report modal, My/All reports, admin triage (BR-32) | `5bf2301` |
 | FR-39 | Appearance & theme preferences — presets, 10 accents, high contrast, reduce motion, settings page with live preview, per-account persistence (BR-33, BR-34) | `2ae5df7` |
+| FR-40 | Background tone — six curated surface sets, accent-derived Tinted, overridden by high contrast (BR-35) | _pending_ |
 
-All verified with backend and frontend test suites (backend 124/124, frontend
-107/107).
+All verified with backend and frontend test suites (backend 126/126, frontend
+127/127).
 
-FR-38 and FR-39 were added to the v4.0.0 BRD after the original four items
-shipped. Both are additive with no new infrastructure — FR-38 one table and
+FR-38, FR-39, and FR-40 were added to the v4.0.0 BRD after the original four
+items shipped. All are additive with no new infrastructure — FR-38 one table and
 role-scoped CRUD, FR-39 seven columns on `app_users` and one user-scoped endpoint
-pair — so they stay within the v4.0.0 release rather than opening a new version.
+pair, FR-40 one more column on the same endpoint — so they stay within the v4.0.0
+release rather than opening a new version.
 
 ### Fixed
 - An unknown enum value in a JSON request body returned **500 "Unexpected server
@@ -102,6 +104,7 @@ model the system does not have. Out of v4.0.0 scope by design.
 - `V14__goal_synergy_link.sql` (FR-35)
 - `V15__issue_reports.sql` (FR-38)
 - `V16__user_appearance_preferences.sql` (FR-39)
+- `V17__user_background_tone.sql` (FR-40)
 
 ---
 

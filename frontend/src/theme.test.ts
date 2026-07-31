@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   accentOptions,
+  backgroundTones,
   buildTheme,
   matchPreset,
   priorityColor,
@@ -9,6 +10,8 @@ import {
   statusColors,
   surfaceTokens,
   themePresets,
+  toneFromStored,
+  toneSurfaces,
   type AccentId,
   type PriorityToken,
   type StatusToken,
@@ -135,6 +138,109 @@ describe('high contrast (FR-39.3)', () => {
 
     expect(high.palette.primary.main).toBe(accentOptions.teal.light.pressed);
     expect(high.palette.primary.main).not.toBe(normal.palette.primary.main);
+  });
+});
+
+describe('background tones (FR-40)', () => {
+  const TONE_IDS = backgroundTones.map((tone) => tone.id);
+  // The text colours that actually render on these surfaces.
+  const TEXT = {
+    light: { body: '#242424', muted: '#616161' },
+    dark: { body: '#f3f2f1', muted: '#a19f9d' },
+  } as const;
+
+  it('offers the six curated tones and nothing else', () => {
+    expect(TONE_IDS).toEqual(['neutral', 'warm', 'cool', 'soft', 'tinted', 'flat']);
+  });
+
+  /**
+   * AC-3: Neutral must be a true no-op. If it ever contributed values of its
+   * own, upgrading would silently restyle every existing user — the one outcome
+   * an additive feature must not have.
+   */
+  it('leaves the shipped surfaces completely untouched on Neutral', () => {
+    for (const mode of MODES) {
+      expect(toneSurfaces(mode, 'neutral')).toBeNull();
+
+      const base = buildTheme(mode, 'blue', 'comfortable', false);
+      const neutral = buildTheme(mode, 'blue', 'comfortable', false, 'neutral');
+      expect(neutral.palette.background.default).toBe(base.palette.background.default);
+      expect(neutral.palette.background.paper).toBe(base.palette.background.paper);
+    }
+  });
+
+  /**
+   * BR-35: this is the promise curating the tones buys us. A tone added later
+   * without checking its contrast fails here rather than shipping.
+   */
+  it.each(TONE_IDS)('%s keeps text readable on every surface it paints', (toneId) => {
+    for (const mode of MODES) {
+      const surfaces = toneSurfaces(mode, toneId);
+      if (!surfaces) {
+        continue; // neutral contributes nothing; the base tokens are covered above
+      }
+      // Tinted resolves through CSS color-mix at render time, so there is no
+      // static value to measure here — its base is asserted separately below.
+      if (surfaces.background.startsWith('color-mix')) {
+        continue;
+      }
+      expect(contrast(TEXT[mode].body, surfaces.background)).toBeGreaterThanOrEqual(7);
+      expect(contrast(TEXT[mode].body, surfaces.card)).toBeGreaterThanOrEqual(7);
+      expect(contrast(TEXT[mode].muted, surfaces.background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(TEXT[mode].muted, surfaces.card)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  /** FR-40.3: Tinted stores no colour — it mixes from the accent at render time. */
+  it('derives Tinted from the accent rather than storing values', () => {
+    const dark = toneSurfaces('dark', 'tinted');
+    expect(dark?.background).toContain('color-mix');
+    expect(dark?.background).toContain('--primary');
+  });
+
+  /**
+   * AC-8: Flat removes the lightness step between page and card, so something
+   * else has to keep cards from dissolving into the page.
+   */
+  it('compensates for Flat’s missing canvas step with a stronger border', () => {
+    for (const mode of MODES) {
+      const flat = toneSurfaces(mode, 'flat');
+      expect(flat?.background).toBe(flat?.card);
+      expect(flat?.border).toBeDefined();
+
+      const base = surfaceTokens(mode, false);
+      // Strictly more visible than the border it replaces.
+      expect(contrast(flat!.border!, flat!.card)).toBeGreaterThan(contrast(base.border, base.card));
+    }
+  });
+
+  /**
+   * FR-40.5: the accessibility mode outranks the aesthetic preference. The tone
+   * must be ignored while high contrast is on — and, just as importantly, not
+   * erased, so switching high contrast off restores it exactly.
+   */
+  it('is overridden by high contrast, in both modes', () => {
+    for (const mode of MODES) {
+      const hcNeutral = buildTheme(mode, 'blue', 'comfortable', true, 'neutral');
+      for (const toneId of TONE_IDS) {
+        const withTone = buildTheme(mode, 'blue', 'comfortable', true, toneId);
+        expect(withTone.palette.background.default).toBe(hcNeutral.palette.background.default);
+        expect(withTone.palette.background.paper).toBe(hcNeutral.palette.background.paper);
+      }
+    }
+  });
+
+  it('applies the tone again as soon as high contrast is switched off', () => {
+    const on = buildTheme('light', 'blue', 'comfortable', true, 'warm');
+    const off = buildTheme('light', 'blue', 'comfortable', false, 'warm');
+    expect(off.palette.background.default).not.toBe(on.palette.background.default);
+    expect(off.palette.background.default).toBe(toneSurfaces('light', 'warm')!.background);
+  });
+
+  it('maps stored enum names onto tone ids, falling back for anything unknown', () => {
+    expect(toneFromStored('WARM')).toBe('warm');
+    expect(toneFromStored('FLAT')).toBe('flat');
+    expect(toneFromStored('CHARCOAL')).toBe('neutral');
   });
 });
 

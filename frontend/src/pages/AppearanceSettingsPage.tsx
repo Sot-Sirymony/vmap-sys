@@ -15,7 +15,7 @@ import { PageSection } from './PageSection';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PriorityBadge } from '../components/common/PriorityBadge';
-import { accentOptions, themePresets, type AccentId } from '../theme';
+import { accentOptions, backgroundTones, themePresets, type AccentId } from '../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../context/ThemeModeContext';
 import type { Density } from '../theme';
 
@@ -174,6 +174,59 @@ export function AppearanceSettingsPage() {
                         outlineOffset: 2,
                       }}
                     />
+                  </Tooltip>
+                );
+              })}
+            </Box>
+          </SettingGroup>
+
+          <SettingGroup
+            title="Background"
+            hint={
+              settings.highContrast
+                ? 'Unavailable while high contrast is on — it uses pure white or black surfaces.'
+                : 'Changes the page, cards, and sidebar together.'
+            }
+          >
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {backgroundTones.map((tone) => {
+                const selected = settings.backgroundTone === tone.id;
+                const [canvas, card] = tone.preview[resolvedMode];
+                return (
+                  <Tooltip key={tone.id} title={tone.description}>
+                    {/* The span keeps the tooltip working on a disabled control —
+                        MUI can't attach a listener to a disabled button. */}
+                    <span>
+                      <Box
+                        component="button"
+                        type="button"
+                        disabled={settings.highContrast}
+                        onClick={() => update({ backgroundTone: tone.id })}
+                        aria-label={`${tone.label} background`}
+                        aria-pressed={selected}
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'stretch',
+                          gap: 0.5,
+                          width: 78,
+                          p: 0.75,
+                          borderRadius: 1,
+                          cursor: settings.highContrast ? 'not-allowed' : 'pointer',
+                          opacity: settings.highContrast ? 0.5 : 1,
+                          bgcolor: 'transparent',
+                          border: '2px solid',
+                          borderColor: selected ? 'primary.main' : 'divider',
+                        }}
+                      >
+                        {/* A miniature of the real thing: canvas with a card on
+                            it, so Flat's lack of a step is visible up front. */}
+                        <Box sx={{ height: 34, borderRadius: '3px', bgcolor: canvas, border: '1px solid', borderColor: 'divider', p: 0.5 }}>
+                          <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: card, border: '1px solid', borderColor: 'divider' }} />
+                        </Box>
+                        <Typography variant="caption" noWrap>{tone.label}</Typography>
+                      </Box>
+                    </span>
                   </Tooltip>
                 );
               })}
