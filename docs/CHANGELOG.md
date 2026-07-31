@@ -82,7 +82,24 @@ release rather than opening a new version.
   comparison against the last-known server payload, which has no ordering
   dependency and also drops no-op writes when a control is toggled off and back on.
 
+- FR-40's Cool, Soft, Tinted, and Flat tones did nothing in **light mode** —
+  they returned `#ffffff`, byte-identical to Neutral. Each tone's canvas colour
+  was written only to the `--page` CSS variable, which has a single consumer
+  (`:root`) that `CssBaseline` paints over when it sets `body` from
+  `palette.background.default`. The canvas the user sees comes from the MUI
+  theme, so the values now live there. Dark mode was unaffected, which is why it
+  looked half-working. Found by manual testing against a real database; the
+  existing tests had checked that each tone *had* values and that their contrast
+  was sound, but never that they reached the screen — an assertion to that effect
+  was added.
+
 ### Known issues
+- The light-mode page canvas has always rendered `#ffffff`, not the `#fafafa`
+  that `--page` specifies, because nothing paints `--page`. Cards therefore do
+  not stand out from the page in light mode. Pre-existing and cosmetic; FR-40
+  deliberately did not correct it, since AC-3 requires the Neutral tone to be
+  byte-identical to what shipped. It also means Flat and Neutral look nearly
+  alike in light mode — there is no canvas step for Flat to remove.
 - Anonymous requests to protected endpoints answer **403**, not **401**:
   `SecurityConfig` configures no `authenticationEntryPoint`, so Spring's default
   access-denied handling responds. Pre-existing and app-wide; changing it would

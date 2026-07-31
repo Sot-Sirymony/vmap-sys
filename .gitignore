@@ -34,3 +34,6 @@ Thumbs.db
 # Data import/export working files (per CLAUDE.md: don't commit workbook exports/backups)
 data/export/
 data/backup/
+
+# Local DB credentials (never commit)
+docs/local_db.md

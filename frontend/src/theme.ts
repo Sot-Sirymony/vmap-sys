@@ -455,6 +455,19 @@ export function toneFromStored(stored: string): BackgroundToneId {
 /**
  * The surface values a tone contributes, for the MUI palette.
  *
+ * `background` is the **page canvas** and `card` the surface that sits on it.
+ * That mapping is the whole point and is easy to get wrong: `CssBaseline` paints
+ * `body` from `palette.background.default`, and `body` covers the `<html>`
+ * background that `--page` sets. So the canvas the user actually sees comes from
+ * here, not from the stylesheet — `var(--page)` has exactly one consumer
+ * (`:root`) and it is painted over.
+ *
+ * The first version of this function returned `#ffffff` for the light variants
+ * of cool/soft/tinted/flat, putting their real canvas colour only in `--page`.
+ * The result was four tones that were byte-identical to Neutral in light mode
+ * and did nothing at all. If you change these values, check them against what
+ * `body` ends up with, not against the CSS.
+ *
  * These have to exist in the theme as well as in `global.css`: MUI paints
  * `Paper`, `Card`, and `Dialog` from `palette.background`, so if only the
  * stylesheet knew about tones, every MUI surface would stay neutral while the
@@ -472,18 +485,18 @@ export function toneSurfaces(
   const dark = mode === 'dark';
   switch (tone) {
     case 'warm':
-      return dark ? { background: '#1f1b17', card: '#2a2521' } : { background: '#fffdfa', card: '#fffdfa' };
+      return dark ? { background: '#1f1b17', card: '#2a2521' } : { background: '#faf7f2', card: '#fffdfa' };
     case 'cool':
-      return dark ? { background: '#171a1d', card: '#212529' } : { background: '#ffffff', card: '#ffffff' };
+      return dark ? { background: '#171a1d', card: '#212529' } : { background: '#f6f8fa', card: '#ffffff' };
     case 'soft':
-      return dark ? { background: '#141414', card: '#242424' } : { background: '#ffffff', card: '#ffffff' };
+      return dark ? { background: '#141414', card: '#242424' } : { background: '#eef0f2', card: '#ffffff' };
     case 'tinted':
       return dark
         ? {
             background: 'color-mix(in srgb, var(--primary) 6%, #1b1a19)',
             card: 'color-mix(in srgb, var(--primary) 8%, #252423)',
           }
-        : { background: '#ffffff', card: '#ffffff' };
+        : { background: 'color-mix(in srgb, var(--primary) 4%, #fafafa)', card: '#ffffff' };
     case 'flat':
       // AC-8: with no lightness step left, the border carries the separation.
       return dark

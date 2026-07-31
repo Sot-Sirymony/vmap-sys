@@ -191,6 +191,56 @@ describe('background tones (FR-40)', () => {
     }
   });
 
+  /**
+   * The test this file was missing, and the bug it would have caught.
+   *
+   * Every earlier assertion checked that a tone *had* values, not that those
+   * values ever reach the screen. They didn't: the light variants of cool, soft,
+   * tinted, and flat returned plain white for `background`, putting their real
+   * canvas colour only in the `--page` CSS variable — which `CssBaseline` paints
+   * over when it sets `body` from `palette.background.default`. Four of the six
+   * tones did nothing whatsoever in light mode and every test still passed.
+   *
+   * So this asserts the user-visible property directly: picking a tone must
+   * change the canvas. Flat is the one legitimate exception — it is *defined* as
+   * having no canvas step in light mode, and earns its keep through the border,
+   * which is asserted separately below.
+   */
+  it.each(TONE_IDS.filter((id) => id !== 'neutral'))('%s actually changes the canvas', (toneId) => {
+    for (const mode of MODES) {
+      const neutral = buildTheme(mode, 'blue', 'comfortable', false, 'neutral');
+      const toned = buildTheme(mode, 'blue', 'comfortable', false, toneId);
+
+      const changedCanvas = toned.palette.background.default !== neutral.palette.background.default;
+      const changedCard = toned.palette.background.paper !== neutral.palette.background.paper;
+      const changedBorder = toned.palette.divider !== neutral.palette.divider;
+
+      expect(changedCanvas || changedCard || changedBorder).toBe(true);
+    }
+  });
+
+  /**
+   * The canvas and the card are different things; a tone must not conflate them.
+   *
+   * Two exclusions, for opposite reasons. Flat *is* the absence of a step by
+   * definition — the border replaces it, asserted below. Neutral is excluded
+   * because it has never had one either: in light mode the app has always
+   * painted `body` white while `--page` claimed `#fafafa`, since nothing renders
+   * `--page`. That is a pre-existing cosmetic quirk, and AC-3 forbids FR-40 from
+   * "fixing" it, because doing so would restyle every existing user.
+   */
+  it('keeps a visible step between canvas and card', () => {
+    for (const mode of MODES) {
+      for (const toneId of TONE_IDS) {
+        if (toneId === 'flat' || toneId === 'neutral') {
+          continue;
+        }
+        const theme = buildTheme(mode, 'blue', 'comfortable', false, toneId);
+        expect(theme.palette.background.default).not.toBe(theme.palette.background.paper);
+      }
+    }
+  });
+
   /** FR-40.3: Tinted stores no colour — it mixes from the accent at render time. */
   it('derives Tinted from the accent rather than storing values', () => {
     const dark = toneSurfaces('dark', 'tinted');
