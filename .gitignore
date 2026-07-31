@@ -35,5 +35,8 @@ Thumbs.db
 data/export/
 data/backup/
 
-# Local DB credentials (never commit)
-docs/local_db.md
+# Local DB credentials (never commit).
+# Matched by filename rather than by path, so the file stays ignored if it is
+# moved or copied to another folder.
+local_db.md
+**/local_db.md
