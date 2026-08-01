@@ -27,7 +27,7 @@
   --secondary: #f5f5f5;
   --secondary-foreground: #242424;
   --muted: #f5f5f5;
-  --muted-foreground: #616161;
+  --muted-foreground: #454F5B;  /* grey-700 (FR-44) */
   --accent: #deecf9;
   --accent-foreground: #005a9e;
   --destructive: #d13438;
@@ -45,16 +45,16 @@
   --sidebar-ring: #0078d4;
   /* Semantic tones used by the page CSS below, so dark mode is a variable
      swap rather than a second stylesheet. */
-  --page: #fafafa;               /* page canvas, one step under cards */
-  --background-subtle: #fafafa;  /* archived rows */
+  --page: #F9FAFB;               /* page canvas, one step under cards — grey-100 (FR-44) */
+  --background-subtle: #F9FAFB;  /* archived rows — grey-100 */
   --border-soft: #F4F6F8;        /* table row separators — grey-200 */
   /* FR-43: the neutral text steps come from the grey ramp (700/600/600) rather
      than three separately-chosen slate values, so they relate to each other and
      to the borders. All three clear 4.5:1 on white; grey-600 measures 4.88:1,
      which is exactly what a tertiary text colour should be. */
   --text-label: #454F5B;         /* form/filter labels — grey-700 */
-  --text-soft: #637381;          /* tertiary text on cards — grey-600 */
-  --text-faint: #637381;         /* codes, empty-state hints — grey-600, 4.88:1 (FR-26.4) */
+  --text-soft: #454F5B;          /* tertiary text — grey-700, 7.29:1 worst case (FR-44) */
+  --text-faint: #454F5B;         /* codes, empty-state hints — grey-700 (FR-26.4/FR-44) */
   /* FR-43: informational banners now use the info ramp's documented roles —
      lighter as the wash, light as the rule, darker as the text (10.81:1). */
   --info-bg: #CAFDF5;            /* informational banners / coaching panels */
@@ -177,9 +177,9 @@
 }
 
 :root[data-tone="cool"] {
-  --sidebar: #eef2f6;
-  --page: #f6f8fa;
-  --background-subtle: #f2f5f8;
+  --sidebar: #E7EEF6;
+  --page: #EDF3F9;
+  --background-subtle: #E9F0F7;
 }
 
 :root[data-tone="soft"] {
@@ -192,8 +192,8 @@
    inline --primary. No stored values, so a future accent works untouched. */
 :root[data-tone="tinted"] {
   --sidebar: color-mix(in srgb, var(--primary) 8%, #f5f5f5);
-  --page: color-mix(in srgb, var(--primary) 4%, #fafafa);
-  --background-subtle: color-mix(in srgb, var(--primary) 6%, #fafafa);
+  --page: color-mix(in srgb, var(--primary) 4%, #F9FAFB);
+  --background-subtle: color-mix(in srgb, var(--primary) 6%, #F9FAFB);
 }
 
 /* AC-8: Flat removes the canvas step entirely, so the border has to carry the

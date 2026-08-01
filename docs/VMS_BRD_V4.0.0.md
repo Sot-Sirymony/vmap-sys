@@ -687,8 +687,12 @@ column, one enum, and one more control on a settings page that already exists.
    together, and the change is visible immediately without a reload.
 2. Every tone keeps body text at ≥ 7:1 and secondary text at ≥ 4.5:1 against the
    surface it actually renders on, in both light and dark mode.
-3. The Neutral tone produces exactly the values shipped before FR-40, so a user
-   who never touches the control sees no change whatsoever.
+3. The Neutral tone contributes no values of its own and defers entirely to the
+   base tokens. *(Originally worded as "produces exactly the values shipped
+   before FR-40". That was superseded deliberately: the light canvas rendered
+   white while `--page` claimed `#fafafa`, and holding Neutral byte-identical
+   would have meant preserving that bug. The canvas now sits at grey-100 — see
+   the CHANGELOG entry for the correction.)*
 4. The Tinted tone visibly follows the accent: changing accent changes the
    canvas, with no per-accent values stored.
 5. With high contrast on, surfaces are pure white/black whatever the tone, and

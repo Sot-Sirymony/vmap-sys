@@ -322,9 +322,17 @@ describe('categorical pie palette (FR-41)', () => {
 describe('background tones (FR-40)', () => {
   const TONE_IDS = backgroundTones.map((tone) => tone.id);
   // The text colours that actually render on these surfaces.
+  /**
+   * Derived from the theme, never hardcoded. An earlier version of this file
+   * pinned `#616161` for light muted text; when FR-43 moved that token to the
+   * grey ramp the test kept asserting against a colour the app no longer
+   * rendered, and it went on passing while Cool (4.37:1) and Soft (4.27:1)
+   * actually failed. Reading the real values is what makes this test able to
+   * fail.
+   */
   const TEXT = {
-    light: { body: '#242424', muted: '#616161' },
-    dark: { body: '#f3f2f1', muted: '#a19f9d' },
+    light: { body: surfaceTokens('light').foreground, muted: surfaceTokens('light').mutedForeground },
+    dark: { body: surfaceTokens('dark').foreground, muted: surfaceTokens('dark').mutedForeground },
   } as const;
 
   it('offers the six curated tones and nothing else', () => {
@@ -332,11 +340,15 @@ describe('background tones (FR-40)', () => {
   });
 
   /**
-   * AC-3: Neutral must be a true no-op. If it ever contributed values of its
-   * own, upgrading would silently restyle every existing user — the one outcome
-   * an additive feature must not have.
+   * Neutral contributes nothing of its own — it defers entirely to the base
+   * tokens, so there is exactly one place the default surfaces are defined.
+   *
+   * This once also guaranteed byte-identical output to the pre-FR-40 app
+   * (FR-40 AC-3). FR-44 deliberately broke that by giving the light canvas the
+   * grey-100 value it always claimed to have; the invariant that remains is the
+   * one worth keeping.
    */
-  it('leaves the shipped surfaces completely untouched on Neutral', () => {
+  it('defers entirely to the base tokens on Neutral', () => {
     for (const mode of MODES) {
       expect(toneSurfaces(mode, 'neutral')).toBeNull();
 
@@ -400,23 +412,34 @@ describe('background tones (FR-40)', () => {
   /**
    * The canvas and the card are different things; a tone must not conflate them.
    *
-   * Two exclusions, for opposite reasons. Flat *is* the absence of a step by
-   * definition — the border replaces it, asserted below. Neutral is excluded
-   * because it has never had one either: in light mode the app has always
-   * painted `body` white while `--page` claimed `#fafafa`, since nothing renders
-   * `--page`. That is a pre-existing cosmetic quirk, and AC-3 forbids FR-40 from
-   * "fixing" it, because doing so would restyle every existing user.
+   * One exclusion: Flat *is* the absence of a step by definition — the border
+   * replaces it, asserted below. Neutral used to be excluded too, because the
+   * light canvas rendered white despite `--page` claiming `#fafafa`; FR-44 moved
+   * the canvas to where it is actually painted, so Neutral now has a real step
+   * and is held to the same rule as the rest.
    */
   it('keeps a visible step between canvas and card', () => {
     for (const mode of MODES) {
       for (const toneId of TONE_IDS) {
-        if (toneId === 'flat' || toneId === 'neutral') {
+        if (toneId === 'flat') {
           continue;
         }
         const theme = buildTheme(mode, 'blue', 'comfortable', false, toneId);
         expect(theme.palette.background.default).not.toBe(theme.palette.background.paper);
       }
     }
+  });
+
+  /**
+   * FR-44, and the bug this fixes: in light mode the canvas rendered pure white
+   * while `--page` claimed `#fafafa`, because nothing paints `--page` —
+   * CssBaseline sets `body` from `palette.background.default`. Cards therefore
+   * never stood out from the page, and Flat had no step to remove.
+   */
+  it('gives the light canvas a real step below the card', () => {
+    const theme = buildTheme('light');
+    expect(theme.palette.background.default).toBe(grey[100]);
+    expect(theme.palette.background.default).not.toBe(theme.palette.background.paper);
   });
 
   /** FR-40.3: Tinted stores no colour — it mixes from the accent at render time. */

@@ -108,6 +108,21 @@ release rather than opening a new version.
   `ErrorResponse` shape, so a denial from the filter chain now looks like one
   from a controller.
 
+- The light-mode page canvas rendered pure white while `--page` claimed
+  `#fafafa`, so cards never stood out from the page and the Flat tone had no
+  canvas step to remove — it looked identical to Neutral. Nothing paints
+  `--page`: `CssBaseline` sets `body` from `palette.background.default`, so the
+  canvas now lives there, at grey-100. This deliberately supersedes FR-40's AC-3
+  (Neutral byte-identical to what shipped): the guarantee was preserving a bug.
+- Secondary text was grey-600, which measures 4.88:1 on white and fell **below**
+  the 4.5:1 floor as soon as a background tone tinted the canvas — 4.37:1 on
+  Cool and 4.27:1 on Soft. Page subtitles render directly on the canvas, not
+  inside a card, so this was real rather than theoretical. Moved to grey-700,
+  worst case 7.29:1. Found while fixing the canvas above; the tone contrast test
+  had hardcoded `#616161` for muted text and so kept passing after FR-43 moved
+  that token to the grey ramp — it now reads the value from `surfaceTokens`, so
+  the same drift cannot recur.
+
 ### Known issues
 - `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
   Both predate FR-42's font packages; a `react-router` bump could change routing
@@ -119,12 +134,6 @@ release rather than opening a new version.
 - FR-43 does not define the `--palette-*` CSS variables named in the source
   tables. The values are wired through the existing token names instead; two
   naming systems for one set of colours is the drift BR-15 exists to prevent.
-- The light-mode page canvas has always rendered `#ffffff`, not the `#fafafa`
-  that `--page` specifies, because nothing paints `--page`. Cards therefore do
-  not stand out from the page in light mode. Pre-existing and cosmetic; FR-40
-  deliberately did not correct it, since AC-3 requires the Neutral tone to be
-  byte-identical to what shipped. It also means Flat and Neutral look nearly
-  alike in light mode — there is no canvas step for Flat to remove.
 - The five accents added by FR-39 clear 4.5:1 against their own label text in
   every state (main, hover, pressed, both modes). The five original accents do
   not on their transient states — Orange's light hover measures 3.47:1. Raising

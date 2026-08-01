@@ -674,7 +674,7 @@ export function toneSurfaces(
     case 'warm':
       return dark ? { background: '#1f1b17', card: '#2a2521' } : { background: '#faf7f2', card: '#fffdfa' };
     case 'cool':
-      return dark ? { background: '#171a1d', card: '#212529' } : { background: '#f6f8fa', card: '#ffffff' };
+      return dark ? { background: '#171a1d', card: '#212529' } : { background: '#EDF3F9', card: '#ffffff' };
     case 'soft':
       return dark ? { background: '#141414', card: '#242424' } : { background: '#eef0f2', card: '#ffffff' };
     case 'tinted':
@@ -683,7 +683,7 @@ export function toneSurfaces(
             background: 'color-mix(in srgb, var(--primary) 6%, #1b1a19)',
             card: 'color-mix(in srgb, var(--primary) 8%, #252423)',
           }
-        : { background: 'color-mix(in srgb, var(--primary) 4%, #fafafa)', card: '#ffffff' };
+        : { background: 'color-mix(in srgb, var(--primary) 4%, #F9FAFB)', card: '#ffffff' };
     case 'flat':
       // AC-8: with no lightness step left, the border carries the separation.
       return dark
@@ -758,10 +758,21 @@ export function surfaceTokens(mode: 'light' | 'dark', highContrast = false): Sur
         // secondary, 300 for borders, 200 for recessed panels. Same roles, one
         // ramp, so the greys relate to each other instead of coincidentally
         // sitting near each other.
-        background: '#ffffff',
+        // FR-44: the page canvas is grey-100, not white. It always *claimed* to
+        // be #fafafa via the --page variable, but nothing painted --page:
+        // CssBaseline sets body from palette.background.default, and that was
+        // white, so cards never stood out from the page in light mode. The
+        // canvas belongs here, where it is actually rendered.
+        background: grey[100],
         card: '#ffffff',
         foreground: grey[800],
-        mutedForeground: grey[600],
+        // FR-44: grey-700, not grey-600. Secondary text sits on the page canvas
+        // as well as on cards (a page subtitle is not inside a card), and
+        // grey-600 measures only 4.88:1 on white — it drops under 4.5:1 the
+        // moment a background tone tints the canvas, failing on Cool (4.37) and
+        // Soft (4.27). grey-700 holds 7.29:1 in the worst case while keeping a
+        // clear step below the grey-800 body text.
+        mutedForeground: grey[700],
         secondary: grey[200],
         border: grey[300],
         error: palette.error.dark,
