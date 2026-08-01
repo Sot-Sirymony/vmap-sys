@@ -7,7 +7,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { ChartTooltipContent } from './ChartTooltipContent';
-import { chartBlueRamp, chartPrimary, pieLabelColor } from '../../theme';
+import { CATEGORICAL_PIE_SLOTS, categoricalPieColor, chartBlueRamp, chartPrimary, pieLabelColor } from '../../theme';
 import { useThemeSettings } from '../../context/ThemeModeContext';
 
 // A single-hue depth ramp off Fluent's Communication Blue — pressed to light
@@ -19,6 +19,13 @@ import { useThemeSettings } from '../../context/ThemeModeContext';
 // 2-4 categories — the pale end of the ramp is a fallback for the rare
 // 5th/6th slot, not what a typical 3-category chart should lead with.
 const DEFAULT_DONUT_COLORS = [...chartBlueRamp];
+
+/**
+ * The key the rolled-up tail carries. Charts that fold their tail get one slice
+ * standing for several categories, so `linkForKey` should send it to the
+ * unfiltered list.
+ */
+export const OTHER_CATEGORY_KEY = 'OTHER_CATEGORIES';
 
 type CategoryBreakdownChartProps = {
   title: string;
@@ -32,6 +39,12 @@ type CategoryBreakdownChartProps = {
    * category. Only pass it when a filter reproduces the segment exactly.
    */
   linkForKey?: (key: string) => string;
+  /**
+   * What to call the rolled-up tail once the categories outrun the palette —
+   * "Other areas", "Other types". Only meaningful for the pie variant, which is
+   * the one that assigns its own fills from the categorical palette.
+   */
+  otherLabel?: string;
 };
 
 type Slice = { category: string; count: number; key: string; fill: string };
@@ -140,14 +153,64 @@ export function CategoryBreakdownChart({
   variant = 'bar',
   colorForKey,
   linkForKey,
+  otherLabel = 'Other',
 }: CategoryBreakdownChartProps) {
   const navigate = useNavigate();
-  const chartData = Object.entries(data).map(([key, count], index) => ({
-    category: formatLabel(key),
-    count,
-    key,
-    fill: colorForKey ? colorForKey(key) : DEFAULT_DONUT_COLORS[index % DEFAULT_DONUT_COLORS.length],
-  }));
+  const { settings, resolvedMode } = useThemeSettings();
+
+  const entries = Object.entries(data);
+
+  // The pie assigns its own fills, because it is the variant bound by the
+  // categorical palette's fixed number of slots. Once the categories outrun the
+  // slots, the smallest are rolled into a single "Other" slice — reaching for
+  // one more colour would mean repeating one, and two slices of a pie sharing a
+  // fill is a claim that they are the same category.
+  //
+  // Size decides *which* categories keep their own slice, but the slices are
+  // then laid out and coloured in the order the data arrived, not by rank. A
+  // colour has to follow the category, not its position in the ranking:
+  // this dashboard filters by vision area and by period, and if colour tracked
+  // rank then narrowing the period would repaint every slice as the counts
+  // reshuffled.
+  const pieData = (() => {
+    if (variant !== 'pie') {
+      return [];
+    }
+    const overflows = entries.length > CATEGORICAL_PIE_SLOTS;
+    const named = overflows
+      ? new Set(
+        [...entries]
+          .sort(([, first], [, second]) => second - first)
+          .slice(0, CATEGORICAL_PIE_SLOTS - 1)
+          .map(([key]) => key),
+      )
+      : new Set(entries.map(([key]) => key));
+
+    const slices = entries
+      .filter(([key]) => named.has(key))
+      .map(([key, count]) => ({ key, category: formatLabel(key), count }));
+
+    if (overflows) {
+      const tail = entries
+        .filter(([key]) => !named.has(key))
+        .reduce((sum, [, count]) => sum + count, 0);
+      slices.push({ key: OTHER_CATEGORY_KEY, category: otherLabel, count: tail });
+    }
+
+    return slices.map((slice, index) => ({
+      ...slice,
+      fill: categoricalPieColor(index, resolvedMode, settings.highContrast),
+    }));
+  })();
+
+  const chartData = variant === 'pie'
+    ? pieData
+    : entries.map(([key, count], index) => ({
+      category: formatLabel(key),
+      count,
+      key,
+      fill: colorForKey ? colorForKey(key) : DEFAULT_DONUT_COLORS[index % DEFAULT_DONUT_COLORS.length],
+    }));
 
   // Percentages are computed here, not taken from the data, so a pie always sums
   // to 100% of what it is actually showing.

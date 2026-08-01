@@ -243,8 +243,8 @@ export const partnerPipelineColors = {
  *
  * Every value was searched rather than picked, against four simultaneous
  * constraints: the label clears 4.5:1 on its slice, the slice clears 3:1 on its
- * own card, no two slices are closer than ΔE 12 (and stay apart under simulated
- * deuteranopia), and none is within ΔE 12 of a status or priority hue.
+ * own card, no two slices collapse into each other under simulated colour
+ * vision deficiency, and none is within ΔE 12 of a status or priority hue.
  *
  * Two of those constraints are worth knowing about, because they explain why
  * this looks deeper than a typical marketing palette:
@@ -253,27 +253,59 @@ export const partnerPipelineColors = {
  *   - Gold and coral collapse into each other for a deuteranope. Lighter corals
  *     measured ΔE 4.8 against this gold, so the coral is a deep brick — the same
  *     problem the status palette solved by moving WAITING off the warm ramp.
+ *
+ * Slot 0 used to be a green, and that was the bug this palette shipped with: the
+ * separation floor was measured as CIELAB ΔE against a crude deuteranopia
+ * matrix, which is far more forgiving than what people actually see. Re-measured
+ * in OKLab against Machado–Oliveira–Fernandes 2009, green↔gold came out at ΔE
+ * 5.4 for a protanope and only 12.6 for full colour vision — two slices of the
+ * same pie that nobody could reliably tell apart. In dark mode the mint was
+ * worse still, colliding with both the gold and the sky. Green is the hue that
+ * cannot coexist with a gold under CVD, so slot 0 is now a magenta, and every
+ * pair in every one of the four variants clears protan/deutan ΔE 8 and the
+ * normal-vision floor of 15. `theme.test.ts` enforces exactly that.
+ *
+ * Slot order is fixed and identical across the four variants, so a category
+ * keeps its identity when the user switches mode or turns on high contrast.
  */
 export const categoricalPieColors = {
-  light: ['#1a7f4b', '#8a6d00', '#2e6b9e', '#6e1b16'],
-  dark: ['#7fd4a6', '#eed492', '#8cc3e8', '#e57a63'],
+  light: ['#ae3078', '#8a6d00', '#2e6b9e', '#6e1b16'],
+  dark: ['#d254ae', '#eed492', '#8cc3e8', '#e57a63'],
   // FR-39.3: the accessibility mode reaches charts too. Pushed to the extremes
   // of each hue so the slices separate maximally against pure white / black.
-  highContrastLight: ['#0b5a0b', '#5c4600', '#123a5c', '#5c1410'],
-  highContrastDark: ['#a4d7a6', '#f0dfae', '#b8dcf2', '#f2a08d'],
+  // These two carried collisions of their own that the old ΔE floor missed —
+  // gold↔brick at ΔE 13.1 in light, sky↔gold at 11.3 in dark — so they are
+  // re-stepped rather than merely re-seeded.
+  highContrastLight: ['#a02a94', '#644e08', '#123a5c', '#5c1410'],
+  highContrastDark: ['#eeb4f8', '#ccd62c', '#0098e8', '#fa5e00'],
 } as const;
+
+/**
+ * How many categories the pie palette can name. A chart with more categories
+ * than this must roll the tail into an "Other" slice rather than reach for a
+ * fifth colour — see `CategoryBreakdownChart`.
+ */
+export const CATEGORICAL_PIE_SLOTS = categoricalPieColors.light.length;
 
 /** The label colour that sits on a slice — white in light mode, near-black in dark. */
 export const pieLabelColor = { light: '#ffffff', dark: '#1b1a19' } as const;
 
 /**
  * The pie palette for the active mode, honouring high contrast. Index by
- * position; it cycles if a chart ever has more than four categories.
+ * position.
+ *
+ * It deliberately does NOT cycle. Wrapping used to be the documented behaviour,
+ * and it meant a sixth vision area was painted the same colour as the first —
+ * and at exactly five categories the repeat landed on the slice adjacent to it,
+ * so with `stroke="none"` the two merged into one wedge with no boundary. A
+ * repeated fill is a false identity claim, so an out-of-range slot returns the
+ * last colour and callers are expected never to ask: `CATEGORICAL_PIE_SLOTS`
+ * is the cap, and charts fold anything beyond it into a single "Other" slice.
  */
 export function categoricalPieColor(index: number, mode: 'light' | 'dark' = 'light', highContrast = false): string {
   const highContrastKey = mode === 'dark' ? 'highContrastDark' : 'highContrastLight';
   const palette = categoricalPieColors[highContrast ? highContrastKey : mode];
-  return palette[Math.abs(index) % palette.length];
+  return palette[Math.min(Math.abs(index), palette.length - 1)];
 }
 
 // FR-41 removed `obstacleTypeColors`, the blue depth ramp the obstacle chart

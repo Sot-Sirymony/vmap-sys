@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { Compass } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { getDashboardSummary } from '../api/dashboardApi';
-import { CategoryBreakdownChart } from '../components/dashboard/CategoryBreakdownChart';
+import { CategoryBreakdownChart, OTHER_CATEGORY_KEY } from '../components/dashboard/CategoryBreakdownChart';
 import { ChartTooltipContent } from '../components/dashboard/ChartTooltipContent';
 import { listVisionAreas } from '../api/visionAreaApi';
 import { FilterSelect, optionsFromEntities } from '../components/common/FilterSelect';
@@ -37,14 +37,12 @@ import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, VisionArea, WorkStatus } from '../types/vision';
-import { categoricalPieColor, chartPrimary, heatmapLevelColors, priorityColor, statusColor } from '../theme';
+import { chartPrimary, heatmapLevelColors, priorityColor, statusColor } from '../theme';
 import { obstacleTypeLabels, partnerStatusLabels } from '../utils/enumLabels';
 import { useThemeSettings } from '../context/ThemeModeContext';
 import { PageSection } from './PageSection';
 
 const PRIORITY_ORDER: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-const TOP_OBSTACLE_TYPE_COUNT = 4;
-const OTHER_OBSTACLE_TYPES_KEY = 'OTHER_TYPES';
 const PARTNER_STATUS_ORDER: PartnerStatus[] = ['TO_CONTACT', 'CONTACTED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'];
 const HEATMAP_WEEKS = 12;
 // Chart palettes live in theme.ts (BR-15). Pipeline stages keep per-hue
@@ -103,9 +101,6 @@ export function DashboardPage() {
   const workStatusFill = (status: WorkStatus) => statusColor(status, resolvedMode, appearance.highContrast);
   const partnerStatusFill = (status: PartnerStatus) => statusColor(status, resolvedMode, appearance.highContrast);
   const priorityFill = (priority: Priority) => priorityColor(priority, resolvedMode, appearance.highContrast);
-  // FR-41: the categorical pie palette, indexed by position. Follows mode and
-  // high contrast like every other chart fill.
-  const pieFill = (index: number) => categoricalPieColor(index, resolvedMode, appearance.highContrast);
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,14 +153,7 @@ export function DashboardPage() {
     return counts;
   }, {});
 
-  const sortedObstacleTypes = Object.entries(summary?.activeObstaclesByType ?? {}).sort(([, first], [, second]) => second - first);
-  const topObstaclesByType = Object.fromEntries(sortedObstacleTypes.slice(0, TOP_OBSTACLE_TYPE_COUNT));
-  const remainingObstacleCount = sortedObstacleTypes
-    .slice(TOP_OBSTACLE_TYPE_COUNT)
-    .reduce((sum, [, count]) => sum + count, 0);
-  if (remainingObstacleCount > 0) {
-    topObstaclesByType[OTHER_OBSTACLE_TYPES_KEY] = remainingObstacleCount;
-  }
+  const obstaclesByType = summary?.activeObstaclesByType ?? {};
 
   const partnerCounts = PARTNER_STATUS_ORDER.reduce<Record<string, number>>((counts, status) => {
     counts[status] = summary?.partnersByStatus?.[status] ?? 0;
@@ -315,12 +303,15 @@ export function DashboardPage() {
           data={summary?.dreamsByVisionArea ?? {}}
           variant="pie"
           // FR-41: Vision Areas are categories with no inherent meaning, so the
-          // four-hue pie palette is safe here — a green slice means "this area",
+          // categorical pie palette is safe here — a slice means "this area",
           // not "Completed". Status and priority charts stay on their own
-          // palettes for exactly that reason (BR-14).
-          colorForKey={(name) => pieFill(Object.keys(summary?.dreamsByVisionArea ?? {}).indexOf(name))}
+          // palettes for exactly that reason (BR-14). The chart assigns the
+          // fills itself and rolls the smallest areas into "Other areas" once
+          // they outrun the palette, so no two areas can share a colour.
+          otherLabel="Other areas"
           // The payload keys this chart by area *name*, so the drill-down maps
-          // it back to the area's id before linking.
+          // it back to the area's id before linking. The rolled-up slice spans
+          // several areas, so it opens the unfiltered list.
           linkForKey={(name) => {
             const area = visionAreas.find((candidate) => candidate.name === name);
             return area ? `/dreams?visionAreaId=${area.id}` : '/dreams';
@@ -347,13 +338,16 @@ export function DashboardPage() {
         <CategoryBreakdownChart
           title="Top obstacles"
           description="What's actually blocking active work right now — click a slice to open those obstacles"
-          data={topObstaclesByType}
-          formatLabel={(key) => (key === OTHER_OBSTACLE_TYPES_KEY ? 'Other types' : obstacleTypeLabels[key as keyof typeof obstacleTypeLabels])}
+          data={obstaclesByType}
+          formatLabel={(key) => obstacleTypeLabels[key as keyof typeof obstacleTypeLabels]}
           variant="pie"
-          // Obstacle types are likewise non-semantic categories (FR-41).
-          colorForKey={(key) => pieFill(Object.keys(topObstaclesByType).indexOf(key))}
+          // Obstacle types are likewise non-semantic categories (FR-41). The
+          // chart ranks them and folds the tail; it used to keep the top four
+          // and then add a fifth "Other" slice, which wrapped the palette and
+          // painted that slice the same colour as the biggest type.
+          otherLabel="Other types"
           // The rollup bucket spans several types, so it links to the plain list.
-          linkForKey={(key) => (key === OTHER_OBSTACLE_TYPES_KEY ? '/obstacles' : `/obstacles?type=${key}`)}
+          linkForKey={(key) => (key === OTHER_CATEGORY_KEY ? '/obstacles' : `/obstacles?type=${key}`)}
         />
         <Card>
           <CardHeader title="Vision Area progress" subheader="Average goal progress per area — lowest first is what needs attention" />

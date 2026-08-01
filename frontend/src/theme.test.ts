@@ -4,6 +4,8 @@ import {
   backgroundTones,
   buildTheme,
   categoricalPieColor,
+  categoricalPieColors,
+  CATEGORICAL_PIE_SLOTS,
   grey,
   palette,
   pieLabelColor,
@@ -296,6 +298,59 @@ describe('categorical pie palette (FR-41)', () => {
     priorityColors.HIGH,
   ];
 
+  /**
+   * Machado–Oliveira–Fernandes 2009 at severity 1.0 — the model the accepted
+   * ΔE thresholds are calibrated against.
+   *
+   * The rough matrix this file used before was the reason a green and a gold
+   * shipped in the same pie: it scored that pair at ΔE 7.3 against a floor of 8,
+   * which reads as "borderline", while the real measurement is 5.4 for a
+   * protanope and 12.6 for full colour vision. The simulation model is part of
+   * the standard, not an implementation detail.
+   */
+  const MACHADO = {
+    protan: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+    deutan: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  } as const;
+
+  const toLinear = (hex: string) => {
+    const int = parseInt(hex.slice(1), 16);
+    return [(int >> 16) & 255, (int >> 8) & 255, int & 255].map((value) => {
+      const scaled = value / 255;
+      return scaled <= 0.04045 ? scaled / 12.92 : Math.pow((scaled + 0.055) / 1.055, 2.4);
+    });
+  };
+
+  /** OKLab, the space the ΔE thresholds below are expressed in (×100). */
+  function oklab([r, g, b]: number[]): number[] {
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [
+      0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+    ];
+  }
+
+  function cvdDistance(first: string, second: string, kind?: keyof typeof MACHADO): number {
+    const project = (hex: string) => {
+      const [r, g, b] = toLinear(hex);
+      if (!kind) {
+        return oklab([r, g, b]);
+      }
+      const matrix = MACHADO[kind];
+      const clamp = (value: number) => Math.max(0, Math.min(1, value));
+      return oklab([
+        clamp(matrix[0][0] * r + matrix[0][1] * g + matrix[0][2] * b),
+        clamp(matrix[1][0] * r + matrix[1][1] * g + matrix[1][2] * b),
+        clamp(matrix[2][0] * r + matrix[2][1] * g + matrix[2][2] * b),
+      ]);
+    };
+    const [p, q] = [project(first), project(second)];
+    return 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  }
+
   /** Rough deuteranopia simulation — enough to catch two hues collapsing into one. */
   function deuteranope(hex: string): string {
     const int = parseInt(hex.slice(1), 16);
@@ -333,13 +388,13 @@ describe('categorical pie palette (FR-41)', () => {
    * white text at any size — the reference palette's #F2D56F measures 1.45:1.
    */
   it.each(CASES)('label stays readable on every slice ($mode, highContrast=$hc)', ({ mode, hc, label }) => {
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < CATEGORICAL_PIE_SLOTS; i += 1) {
       expect(contrast(categoricalPieColor(i, mode, hc), label)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
   it.each(CASES)('every slice is visible against the card ($mode, highContrast=$hc)', ({ mode, hc, card }) => {
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < CATEGORICAL_PIE_SLOTS; i += 1) {
       expect(contrast(categoricalPieColor(i, mode, hc), card)).toBeGreaterThanOrEqual(3);
     }
   });
@@ -352,8 +407,8 @@ describe('categorical pie palette (FR-41)', () => {
    * and the tooltip carries the counts.
    */
   it.each(CASES)('slices stay distinguishable from each other ($mode, highContrast=$hc)', ({ mode, hc }) => {
-    for (let i = 0; i < 4; i += 1) {
-      for (let j = i + 1; j < 4; j += 1) {
+    for (let i = 0; i < CATEGORICAL_PIE_SLOTS; i += 1) {
+      for (let j = i + 1; j < CATEGORICAL_PIE_SLOTS; j += 1) {
         const a = categoricalPieColor(i, mode, hc);
         const b = categoricalPieColor(j, mode, hc);
         expect(deltaE(a, b)).toBeGreaterThanOrEqual(12);
@@ -363,12 +418,44 @@ describe('categorical pie palette (FR-41)', () => {
   });
 
   /**
+   * The check that actually catches a colliding pair. Every slice of a pie can
+   * be compared against every other — they share a centre and the legend puts
+   * their swatches side by side — so this is an all-pairs test, not an
+   * adjacent-pairs one. The floors are the standard ones: ΔE 8 under simulated
+   * protanopia and deuteranopia, and 15 for unimpaired vision, measured in
+   * OKLab. The palette that shipped before failed both on green↔gold.
+   */
+  it.each(CASES)('no two slices collapse under colour vision deficiency ($mode, highContrast=$hc)', ({ mode, hc }) => {
+    for (let i = 0; i < CATEGORICAL_PIE_SLOTS; i += 1) {
+      for (let j = i + 1; j < CATEGORICAL_PIE_SLOTS; j += 1) {
+        const a = categoricalPieColor(i, mode, hc);
+        const b = categoricalPieColor(j, mode, hc);
+        const detail = `${a} vs ${b} (${mode}, highContrast=${hc})`;
+        expect(cvdDistance(a, b, 'protan'), detail).toBeGreaterThanOrEqual(8);
+        expect(cvdDistance(a, b, 'deutan'), detail).toBeGreaterThanOrEqual(8);
+        expect(cvdDistance(a, b), detail).toBeGreaterThanOrEqual(15);
+      }
+    }
+  });
+
+  /**
+   * Slot order is the identity mechanism: slot 2 must be "the same category" in
+   * light, dark, and either high-contrast variant, or a category changes colour
+   * when the user flips a display setting.
+   */
+  it('keeps every variant the same length', () => {
+    for (const palette of Object.values(categoricalPieColors)) {
+      expect(palette).toHaveLength(CATEGORICAL_PIE_SLOTS);
+    }
+  });
+
+  /**
    * BR-14, and the reason this palette is confined to non-semantic charts: a
    * slice meaning "Health" must never be mistakable for one meaning "Completed".
    */
   it('never collides with a status or priority hue', () => {
     for (const mode of MODES) {
-      for (let i = 0; i < 4; i += 1) {
+      for (let i = 0; i < CATEGORICAL_PIE_SLOTS; i += 1) {
         const slice = categoricalPieColor(i, mode, false);
         for (const semantic of SEMANTIC) {
           expect(deltaE(slice, semantic)).toBeGreaterThanOrEqual(12);
@@ -377,9 +464,30 @@ describe('categorical pie palette (FR-41)', () => {
     }
   });
 
-  it('cycles rather than running out if a chart has more than four categories', () => {
-    expect(categoricalPieColor(4, 'light')).toBe(categoricalPieColor(0, 'light'));
-    expect(categoricalPieColor(5, 'dark')).toBe(categoricalPieColor(1, 'dark'));
+  /**
+   * This is the regression. The palette used to wrap, so a fifth category was
+   * painted in the first category's colour — and because a pie's last slice
+   * touches its first, at exactly five categories the repeat landed next to its
+   * twin and the two merged into a single wedge. Charts now cap their slices at
+   * `CATEGORICAL_PIE_SLOTS` and roll the tail into one "Other" slice, so the
+   * palette must never hand back a colour it has already used.
+   */
+  it('never repeats a colour, so two categories cannot share one', () => {
+    for (const { mode, hc } of CASES) {
+      const used = new Set<string>();
+      for (let i = 0; i < CATEGORICAL_PIE_SLOTS; i += 1) {
+        used.add(categoricalPieColor(i, mode, hc));
+      }
+      expect(used.size, `${mode} highContrast=${hc}`).toBe(CATEGORICAL_PIE_SLOTS);
+    }
+  });
+
+  it('does not wrap back to the first colour past the last slot', () => {
+    for (const { mode, hc } of CASES) {
+      const first = categoricalPieColor(0, mode, hc);
+      expect(categoricalPieColor(CATEGORICAL_PIE_SLOTS, mode, hc)).not.toBe(first);
+      expect(categoricalPieColor(CATEGORICAL_PIE_SLOTS + 1, mode, hc)).not.toBe(first);
+    }
   });
 });
 
