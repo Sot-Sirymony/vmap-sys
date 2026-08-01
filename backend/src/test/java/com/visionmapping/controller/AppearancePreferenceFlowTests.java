@@ -139,15 +139,12 @@ class AppearancePreferenceFlowTests {
      * under {@code anyRequest().authenticated()} rather than needing its own
      * matcher.
      *
-     * <p>403 rather than 401 is the app's existing behaviour for every protected
-     * endpoint: SecurityConfig configures no {@code authenticationEntryPoint},
-     * so Spring's default access-denied handling answers an anonymous request.
-     * Asserted as-is here — making it a 401 is a sensible change but an app-wide
-     * one, not FR-39's to make.
+     * <p>401, since there are no credentials to judge. The app answered 403 here
+     * until an {@code authenticationEntryPoint} was configured.
      */
     @Test
     void anonymousCallersAreRejected() throws Exception {
-        mockMvc.perform(get(PATH)).andExpect(status().isForbidden());
+        mockMvc.perform(get(PATH)).andExpect(status().isUnauthorized());
     }
 
     /**

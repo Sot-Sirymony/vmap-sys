@@ -96,6 +96,18 @@ release rather than opening a new version.
   was sound, but never that they reached the screen — an assertion to that effect
   was added.
 
+- Anonymous requests to protected endpoints answered **403** instead of **401**.
+  `SecurityConfig` configured no `authenticationEntryPoint`, so Spring's default
+  access-denied handling replied to callers who had presented no credentials at
+  all — claiming the caller was known and merely lacked a permission. A
+  `RestAuthenticationEntryPoint` (401) and `RestAccessDeniedHandler` (403) are
+  now both registered; both are required, because configuring only one makes
+  Spring fall back to it for the other case and collapses the two answers into
+  one. The genuine 403 path is unchanged: an authenticated non-admin hitting
+  admin-only triage still gets 403. Both handlers emit the standard
+  `ErrorResponse` shape, so a denial from the filter chain now looks like one
+  from a controller.
+
 ### Known issues
 - `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
   Both predate FR-42's font packages; a `react-router` bump could change routing
@@ -113,11 +125,6 @@ release rather than opening a new version.
   deliberately did not correct it, since AC-3 requires the Neutral tone to be
   byte-identical to what shipped. It also means Flat and Neutral look nearly
   alike in light mode — there is no canvas step for Flat to remove.
-- Anonymous requests to protected endpoints answer **403**, not **401**:
-  `SecurityConfig` configures no `authenticationEntryPoint`, so Spring's default
-  access-denied handling responds. Pre-existing and app-wide; changing it would
-  affect every endpoint and the frontend's redirect-to-login behaviour, so it was
-  left alone rather than altered as a side effect of FR-39.
 - The five accents added by FR-39 clear 4.5:1 against their own label text in
   every state (main, hover, pressed, both modes). The five original accents do
   not on their transient states — Orange's light hover measures 3.47:1. Raising

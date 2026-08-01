@@ -12,6 +12,16 @@ Protected endpoints require:
 Authorization: Bearer <token>
 ```
 
+Auth failures are distinguished:
+
+| Status | Meaning |
+|---|---|
+| **401** Unauthorized | No token, or a malformed/expired/tampered one — authenticate and retry |
+| **403** Forbidden | Authenticated, but lacking the role for this action (e.g. admin-only issue triage) |
+
+Both return the standard error body (`timestamp`, `status`, `error`, `message`,
+`path`).
+
 ## Public
 
 ### Health

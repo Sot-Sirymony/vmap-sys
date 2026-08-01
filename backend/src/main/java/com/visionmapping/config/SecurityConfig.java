@@ -2,6 +2,8 @@ package com.visionmapping.config;
 
 import com.visionmapping.security.AppUserDetailsService;
 import com.visionmapping.security.JwtAuthenticationFilter;
+import com.visionmapping.security.RestAccessDeniedHandler;
+import com.visionmapping.security.RestAuthenticationEntryPoint;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,14 +31,20 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
     private final List<String> corsAllowedOrigins;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             AppUserDetailsService appUserDetailsService,
+            RestAuthenticationEntryPoint authenticationEntryPoint,
+            RestAccessDeniedHandler accessDeniedHandler,
             @Value("${app.cors.allowed-origins}") String corsAllowedOrigins) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.appUserDetailsService = appUserDetailsService;
+        this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
         this.corsAllowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
@@ -53,6 +61,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/api/auth/register", "/api/auth/login").permitAll()
                         .anyRequest().authenticated()
+                )
+                // Without these, Spring's default handling answers an anonymous
+                // request with 403, which claims the caller is known and lacks a
+                // permission. Both must be set: configuring only one makes Spring
+                // fall back to it for the other case too, collapsing "sign in
+                // again" and "you lack the role" into a single indistinguishable
+                // answer.
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

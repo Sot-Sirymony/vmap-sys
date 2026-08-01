@@ -31,17 +31,24 @@ class AuthAndTaskFlowTests {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * 401, not 403. The distinction is the point: 403 would claim the caller is
+     * known and merely lacks a permission, when in fact there are no credentials
+     * at all. Only 401 tells a client to authenticate and retry.
+     */
     @Test
     void protectedEndpointRejectsAnonymousRequest() throws Exception {
         mockMvc.perform(get("/api/tasks"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Authentication required."));
     }
 
     @Test
     void malformedJwtIsRejectedCleanlyInsteadOfCausingServerError() throws Exception {
         mockMvc.perform(get("/api/tasks")
                         .header("Authorization", "Bearer not-a-valid-jwt-token"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -53,7 +60,7 @@ class AuthAndTaskFlowTests {
 
         mockMvc.perform(get("/api/tasks")
                         .header("Authorization", "Bearer " + tamperedToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

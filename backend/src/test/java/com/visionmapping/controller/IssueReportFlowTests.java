@@ -46,12 +46,25 @@ class IssueReportFlowTests {
                 .andExpect(jsonPath("$[0].status").value("OPEN"));
     }
 
+    /**
+     * 403, and deliberately not 401: this caller *is* authenticated, they simply
+     * lack the ADMIN role. Anonymous callers get 401 instead — the two answers
+     * mean different things and a client acts differently on each, so this test
+     * and {@code protectedEndpointRejectsAnonymousRequest} guard the pair.
+     */
     @Test
     void nonAdminGettingTheWholeQueueIsForbiddenNotAServerError() throws Exception {
         String token = registerAndToken("issue-forbidden");
 
         mockMvc.perform(get("/api/issue-reports/all").header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
+    }
+
+    /** The same endpoint, with no credentials at all, is a 401 rather than a 403. */
+    @Test
+    void anonymousCallerGetsUnauthorizedRatherThanForbidden() throws Exception {
+        mockMvc.perform(get("/api/issue-reports/all"))
+                .andExpect(status().isUnauthorized());
     }
 
     /** A call to an endpoint the backend doesn't have must read as 404, not a 500 "Unexpected server error". */
