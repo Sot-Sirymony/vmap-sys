@@ -76,6 +76,7 @@ Auth response:
     "themeAccent": "BLUE",
     "uiDensity": "COMFORTABLE",
     "fontSize": "MEDIUM",
+    "fontFamily": "SYSTEM",
     "backgroundTone": "NEUTRAL",
     "highContrast": false,
     "reduceMotion": false
@@ -265,6 +266,7 @@ reset.
   "themeAccent": "PURPLE",
   "uiDensity": "COMPACT",
   "fontSize": "LARGE",
+  "fontFamily": "INTER",
   "backgroundTone": "WARM",
   "highContrast": true,
   "reduceMotion": true
@@ -280,6 +282,7 @@ Allowed values:
 | `themeAccent` | `BLUE`, `TEAL`, `PURPLE`, `GREEN`, `ORANGE`, `MAGENTA`, `RED`, `BRASS`, `STEEL`, `PINK` |
 | `uiDensity` | `COMFORTABLE`, `COMPACT` |
 | `fontSize` | `SMALL`, `MEDIUM`, `LARGE` |
+| `fontFamily` | `SYSTEM`, `PUBLIC_SANS`, `INTER`, `DM_SANS`, `NUNITO_SANS` |
 | `backgroundTone` | `NEUTRAL`, `WARM`, `COOL`, `SOFT`, `TINTED`, `FLAT` |
 | `highContrast`, `reduceMotion` | `true`, `false` |
 

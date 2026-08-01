@@ -3,6 +3,11 @@ import {
   accentOptions,
   backgroundTones,
   buildTheme,
+  categoricalPieColor,
+  grey,
+  palette,
+  pieLabelColor,
+  semanticTints,
   matchPreset,
   priorityColor,
   priorityColors,
@@ -36,10 +41,14 @@ const ACCENT_IDS = Object.keys(accentOptions) as AccentId[];
 const MODES = ['light', 'dark'] as const;
 
 describe('accent palette (FR-39.2)', () => {
-  it('offers the ten curated accents', () => {
-    expect(ACCENT_IDS).toHaveLength(10);
+  it('offers the twelve curated accents', () => {
+    expect(ACCENT_IDS).toHaveLength(12);
     expect(ACCENT_IDS).toEqual(
-      expect.arrayContaining(['blue', 'teal', 'purple', 'green', 'orange', 'magenta', 'red', 'brass', 'steel', 'pink']),
+      expect.arrayContaining([
+        'blue', 'teal', 'purple', 'green', 'orange', 'magenta', 'red', 'brass', 'steel', 'pink',
+        // FR-43, derived from the supplied primary/secondary ramps.
+        'vermilion', 'violet',
+      ]),
     );
   });
 
@@ -138,6 +147,175 @@ describe('high contrast (FR-39.3)', () => {
 
     expect(high.palette.primary.main).toBe(accentOptions.teal.light.pressed);
     expect(high.palette.primary.main).not.toBe(normal.palette.primary.main);
+  });
+});
+
+describe('semantic palette and grey ramp (FR-43)', () => {
+  const FAMILIES = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
+
+  it('gives every family the five documented shades', () => {
+    for (const family of FAMILIES) {
+      expect(Object.keys(palette[family])).toEqual(['lighter', 'light', 'main', 'dark', 'darker']);
+    }
+  });
+
+  /**
+   * The role contract, and the reason it is written down rather than assumed.
+   *
+   * `main` reads as the obvious button colour and is not one: measured against
+   * white text it lands at 1.90:1 (warning) through 3.67:1 (primary). The pairing
+   * that works — and the one `semanticTints` uses — is `lighter` as the surface
+   * with `darker` as the text on it.
+   */
+  it.each(FAMILIES)('%s pairs lighter with darker to stay readable', (family) => {
+    expect(contrast(palette[family].darker, palette[family].lighter)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('confirms main is a fill, not a text colour — the trap this contract exists for', () => {
+    // Documents the measurement rather than asserting a target: if a future
+    // change makes these legible on white, the roles can be revisited.
+    for (const family of ['success', 'warning', 'info'] as const) {
+      expect(contrast(palette[family].main, '#ffffff')).toBeLessThan(4.5);
+    }
+  });
+
+  it('wires the tiles to the lighter/darker pair, not to main', () => {
+    expect(semanticTints.positive).toEqual({ bg: palette.success.lighter, fg: palette.success.darker });
+    expect(semanticTints.warning).toEqual({ bg: palette.warning.lighter, fg: palette.warning.darker });
+    expect(semanticTints.critical).toEqual({ bg: palette.error.lighter, fg: palette.error.darker });
+    for (const tint of Object.values(semanticTints)) {
+      expect(contrast(tint.fg, tint.bg)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  /** The ramp splits at 600: below it is surface, at and above it is text. */
+  it('keeps the grey ramp monotonic and splits surface from text at 600', () => {
+    const steps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
+    for (let i = 1; i < steps.length; i += 1) {
+      expect(luminance(grey[steps[i]])).toBeLessThan(luminance(grey[steps[i - 1]]));
+    }
+    expect(contrast(grey[600], '#ffffff')).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(grey[500], '#ffffff')).toBeLessThan(4.5);
+  });
+
+  /**
+   * FR-43 keeps the supplied red out of the default path. The app already spends
+   * red on Critical, Declined, and destructive actions, so brand red is offered
+   * as a choice rather than imposed as the default.
+   */
+  it('does not make the supplied red the default accent', () => {
+    const defaultTheme = buildTheme('light');
+    expect(defaultTheme.palette.primary.main).toBe(accentOptions.blue.light.main);
+    expect(defaultTheme.palette.primary.main).not.toBe(palette.primary.main);
+  });
+
+  it('offers the supplied ramps as selectable accents that meet the accent contract', () => {
+    for (const id of ['vermilion', 'violet'] as const) {
+      for (const mode of MODES) {
+        const set = accentOptions[id][mode];
+        expect(contrast(set.main, set.contrastText)).toBeGreaterThanOrEqual(4.5);
+        expect(contrast(set.tintForeground, set.tint)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+});
+
+describe('categorical pie palette (FR-41)', () => {
+  const SEMANTIC = [
+    statusColors.COMPLETED,
+    statusColors.BLOCKED,
+    statusColors.DECLINED,
+    statusColors.IN_PROGRESS,
+    statusColors.WAITING,
+    priorityColors.CRITICAL,
+    priorityColors.MEDIUM,
+    priorityColors.HIGH,
+  ];
+
+  /** Rough deuteranopia simulation — enough to catch two hues collapsing into one. */
+  function deuteranope(hex: string): string {
+    const int = parseInt(hex.slice(1), 16);
+    const [r, g, b] = [((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255];
+    const channel = (v: number) => ('0' + Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16)).slice(-2);
+    return `#${channel(0.625 * r + 0.375 * g)}${channel(0.7 * r + 0.3 * g)}${channel(0.3 * g + 0.7 * b)}`;
+  }
+
+  function deltaE(a: string, b: string): number {
+    const toLab = (hex: string) => {
+      const int = parseInt(hex.slice(1), 16);
+      const [r, g, bl] = [((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255].map((v) =>
+        v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4),
+      );
+      const x = (r * 0.4124 + g * 0.3576 + bl * 0.1805) / 0.95047;
+      const y = r * 0.2126 + g * 0.7152 + bl * 0.0722;
+      const z = (r * 0.0193 + g * 0.1192 + bl * 0.9505) / 1.08883;
+      const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+      return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+    };
+    const [p, q] = [toLab(a), toLab(b)];
+    return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  }
+
+  const CASES = [
+    { mode: 'light' as const, hc: false, card: '#ffffff', label: pieLabelColor.light },
+    { mode: 'dark' as const, hc: false, card: '#252423', label: pieLabelColor.dark },
+    { mode: 'light' as const, hc: true, card: '#ffffff', label: pieLabelColor.light },
+    { mode: 'dark' as const, hc: true, card: '#0f0f0f', label: pieLabelColor.dark },
+  ];
+
+  /**
+   * The percentage is drawn *on* the slice, which is the whole reason this
+   * palette is darker than a typical marketing one. A bright gold cannot carry
+   * white text at any size — the reference palette's #F2D56F measures 1.45:1.
+   */
+  it.each(CASES)('label stays readable on every slice ($mode, highContrast=$hc)', ({ mode, hc, label }) => {
+    for (let i = 0; i < 4; i += 1) {
+      expect(contrast(categoricalPieColor(i, mode, hc), label)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it.each(CASES)('every slice is visible against the card ($mode, highContrast=$hc)', ({ mode, hc, card }) => {
+    for (let i = 0; i < 4; i += 1) {
+      expect(contrast(categoricalPieColor(i, mode, hc), card)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  /**
+   * Adjacent slices touch, so telling them apart is the chart's basic job — and
+   * warm hues are exactly where that fails for a colourblind viewer. The
+   * deuteranopia floor is 8, the band this file already documents as acceptable
+   * when colour is not the only encoding; here the legend names every category
+   * and the tooltip carries the counts.
+   */
+  it.each(CASES)('slices stay distinguishable from each other ($mode, highContrast=$hc)', ({ mode, hc }) => {
+    for (let i = 0; i < 4; i += 1) {
+      for (let j = i + 1; j < 4; j += 1) {
+        const a = categoricalPieColor(i, mode, hc);
+        const b = categoricalPieColor(j, mode, hc);
+        expect(deltaE(a, b)).toBeGreaterThanOrEqual(12);
+        expect(deltaE(deuteranope(a), deuteranope(b))).toBeGreaterThanOrEqual(8);
+      }
+    }
+  });
+
+  /**
+   * BR-14, and the reason this palette is confined to non-semantic charts: a
+   * slice meaning "Health" must never be mistakable for one meaning "Completed".
+   */
+  it('never collides with a status or priority hue', () => {
+    for (const mode of MODES) {
+      for (let i = 0; i < 4; i += 1) {
+        const slice = categoricalPieColor(i, mode, false);
+        for (const semantic of SEMANTIC) {
+          expect(deltaE(slice, semantic)).toBeGreaterThanOrEqual(12);
+        }
+      }
+    }
+  });
+
+  it('cycles rather than running out if a chart has more than four categories', () => {
+    expect(categoricalPieColor(4, 'light')).toBe(categoricalPieColor(0, 'light'));
+    expect(categoricalPieColor(5, 'dark')).toBe(categoricalPieColor(1, 'dark'));
   });
 });
 

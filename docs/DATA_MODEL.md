@@ -28,11 +28,15 @@ Fields:
 - themeAccent
 - uiDensity
 - fontSize
+- fontFamily
 - backgroundTone
 - highContrast
 - reduceMotion
 - createdAt
 - updatedAt
+
+`fontFamily` (`V18`, FR-42) selects the typeface. `SYSTEM` is the platform's own
+UI face and loads nothing, so it is both the default and the zero-cost option.
 
 `backgroundTone` (`V17`, FR-40) selects a coordinated set of surfaces — page
 canvas, cards, popovers, sidebar. `NEUTRAL` is defined as exactly the values that

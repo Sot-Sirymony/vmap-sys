@@ -9,6 +9,7 @@ const DEFAULTS: ThemeSettings = {
   density: 'comfortable',
   fontSize: 'medium',
   backgroundTone: 'neutral',
+  fontFamily: 'system',
   highContrast: false,
   reduceMotion: false,
 };
@@ -20,6 +21,7 @@ const STORED: AppearancePreferences = {
   uiDensity: 'COMPACT',
   fontSize: 'LARGE',
   backgroundTone: 'WARM',
+  fontFamily: 'INTER',
   highContrast: true,
   reduceMotion: true,
 };
@@ -32,6 +34,7 @@ describe('appearance mapping (FR-39.6)', () => {
       density: 'compact',
       fontSize: 'large',
       backgroundTone: 'warm',
+      fontFamily: 'inter',
       highContrast: true,
       reduceMotion: true,
     });
@@ -96,6 +99,19 @@ describe('appearance mapping (FR-39.6)', () => {
     for (const stored of ['NEUTRAL', 'WARM', 'COOL', 'SOFT', 'TINTED', 'FLAT'] as const) {
       const settings = toSettings({ ...STORED, backgroundTone: stored }, DEFAULTS);
       expect(toWire(settings).backgroundTone).toBe(stored);
+    }
+  });
+
+  /** FR-42: an unknown font falls back rather than reaching the theme (BR-33). */
+  it('falls back to the default for a font it does not know', () => {
+    const settings = toSettings({ ...STORED, fontFamily: 'COMIC_SANS' as never }, DEFAULTS);
+    expect(settings.fontFamily).toBe(DEFAULTS.fontFamily);
+  });
+
+  it('round-trips every font through the wire format', () => {
+    for (const stored of ['SYSTEM', 'PUBLIC_SANS', 'INTER', 'DM_SANS', 'NUNITO_SANS'] as const) {
+      const settings = toSettings({ ...STORED, fontFamily: stored }, DEFAULTS);
+      expect(toWire(settings).fontFamily).toBe(stored);
     }
   });
 

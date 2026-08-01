@@ -90,7 +90,7 @@ Pick a preset again to go back to one.
 **Mode** — Light, Dark, or System. System follows your device and updates live
 when your device switches.
 
-**Accent** — ten colours. Every one has been checked for readable contrast in
+**Accent** — twelve colours. Every one has been checked for readable contrast in
 both light and dark, so no choice can leave text hard to read.
 
 **Background** — changes the page, cards, and sidebar together:
@@ -108,6 +108,12 @@ Every tone is checked to keep text readable, so none of them can make the app
 hard to read. This control is switched off while High contrast is on, because
 that mode deliberately uses pure white or black — turn High contrast off and your
 chosen tone comes straight back.
+
+**Font** — the default is your device's own font and appears instantly. Public
+Sans, Inter, DM Sans, and Nunito Sans download once, the first time you pick
+them, and are stored with the app rather than fetched from the internet — so they
+keep working offline. Each option is shown in its own typeface, so you can see
+what you are choosing.
 
 **Density** — Comfortable or Compact. Compact fits more rows on screen without
 hiding anything.

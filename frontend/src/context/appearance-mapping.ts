@@ -1,4 +1,4 @@
-import { accentOptions, backgroundTones, matchPreset, toneFromStored, type AccentId, type BackgroundToneId, type Density } from '../theme';
+import { accentOptions, backgroundTones, fontFamilies, fontFamilyFromStored, matchPreset, toneFromStored, type AccentId, type BackgroundToneId, type Density, type FontFamilyId } from '../theme';
 import type {
   AppearancePreferences,
   StoredAccent,
@@ -74,6 +74,15 @@ function toneToWire(tone: BackgroundToneId): AppearancePreferences['backgroundTo
   return backgroundTones.find((entry) => entry.id === tone)?.stored ?? 'NEUTRAL';
 }
 
+/** FR-42: same derive-from-the-registry approach as the tones. */
+function fontFromWire(wire: string, fallback: FontFamilyId): FontFamilyId {
+  return fontFamilies.some((font) => font.stored === wire) ? fontFamilyFromStored(wire) : fallback;
+}
+
+function fontToWire(font: FontFamilyId): AppearancePreferences['fontFamily'] {
+  return fontFamilies.find((entry) => entry.id === font)?.stored ?? 'SYSTEM';
+}
+
 /** Wire → frontend settings, with every unrecognised value replaced by `fallback`'s. */
 export function toSettings(wire: AppearancePreferences, fallback: ThemeSettings): ThemeSettings {
   return {
@@ -82,6 +91,7 @@ export function toSettings(wire: AppearancePreferences, fallback: ThemeSettings)
     density: wire.uiDensity === 'COMPACT' ? 'compact' : 'comfortable',
     fontSize: FONT_SIZE_FROM_WIRE[wire.fontSize] ?? fallback.fontSize,
     backgroundTone: toneFromWire(wire.backgroundTone, fallback.backgroundTone),
+    fontFamily: fontFromWire(wire.fontFamily, fallback.fontFamily),
     highContrast: Boolean(wire.highContrast),
     reduceMotion: Boolean(wire.reduceMotion),
   };
@@ -103,6 +113,7 @@ export function toWire(settings: ThemeSettings): AppearancePreferences {
     uiDensity: DENSITY_TO_WIRE[settings.density],
     fontSize: FONT_SIZE_TO_WIRE[settings.fontSize],
     backgroundTone: toneToWire(settings.backgroundTone),
+    fontFamily: fontToWire(settings.fontFamily),
     highContrast: settings.highContrast,
     reduceMotion: settings.reduceMotion,
   };

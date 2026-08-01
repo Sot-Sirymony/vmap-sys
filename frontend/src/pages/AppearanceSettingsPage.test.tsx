@@ -39,14 +39,16 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     expect(headings[0]).toHaveTextContent('Appearance');
   });
 
-  it('offers every preset and all ten accents', () => {
+  it('offers every preset and all twelve accents', () => {
     renderPage();
 
     expect(screen.getByText('Fluent System')).toBeInTheDocument();
     expect(screen.getByText('Midnight')).toBeInTheDocument();
     expect(screen.getByText('Ocean')).toBeInTheDocument();
     // The accents are swatches, so they're found by their accessible names.
-    expect(screen.getAllByRole('button', { name: /accent$/ })).toHaveLength(10);
+    expect(screen.getAllByRole('button', { name: /accent$/ })).toHaveLength(12);
+    expect(screen.getByRole('button', { name: 'Vermilion accent' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Violet accent' })).toBeInTheDocument();
   });
 
   it('shows the live preview with real badge components', () => {

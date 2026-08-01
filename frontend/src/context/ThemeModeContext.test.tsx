@@ -39,6 +39,7 @@ const STORED = {
   uiDensity: 'COMFORTABLE',
   fontSize: 'MEDIUM',
   backgroundTone: 'NEUTRAL',
+  fontFamily: 'SYSTEM',
   highContrast: false,
   reduceMotion: false,
 };

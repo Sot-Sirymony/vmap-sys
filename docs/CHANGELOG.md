@@ -38,7 +38,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [4.0.0] — 2026-07-25 (7 of 7 items shipped)
+## [4.0.0] — 2026-07-25 (10 of 10 items shipped)
 
 Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).
 Builds on BRD v3.0.0 — all v1–v3 requirements remain in force. Requirement
@@ -58,9 +58,12 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-38 | In-app issue & improvement reporting — header report modal, My/All reports, admin triage (BR-32) | `5bf2301` |
 | FR-39 | Appearance & theme preferences — presets, 10 accents, high contrast, reduce motion, settings page with live preview, per-account persistence (BR-33, BR-34) | `2ae5df7` |
 | FR-40 | Background tone — six curated surface sets, accent-derived Tinted, overridden by high contrast (BR-35) | `4077e17` |
+| FR-41 | Categorical pie charts — solid pie with on-slice labels for the two non-semantic dashboard charts | _pending_ |
+| FR-42 | Font family — system default plus four self-hosted faces, fetched on demand (BR-36) | _pending_ |
+| FR-43 | Semantic palette & grey ramp — five-shade families, ten-step greys, two new accents (BR-37) | _pending_ |
 
-All verified with backend and frontend test suites (backend 126/126, frontend
-127/127).
+All verified with backend and frontend test suites (backend 127/127, frontend
+177/177).
 
 FR-38, FR-39, and FR-40 were added to the v4.0.0 BRD after the original four
 items shipped. All are additive with no new infrastructure — FR-38 one table and
@@ -94,6 +97,16 @@ release rather than opening a new version.
   was added.
 
 ### Known issues
+- `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
+  Both predate FR-42's font packages; a `react-router` bump could change routing
+  behaviour, so it is left for its own change rather than folded into a feature.
+- Nine values from the FR-43 palette are defined but not yet referenced: the four
+  semantic `main` shades (icon/fill colours nothing currently renders) and grey
+  50/100/400/500/900. They were added as a complete ramp rather than trimmed to
+  present usage, so the roles stay coherent.
+- FR-43 does not define the `--palette-*` CSS variables named in the source
+  tables. The values are wired through the existing token names instead; two
+  naming systems for one set of colours is the drift BR-15 exists to prevent.
 - The light-mode page canvas has always rendered `#ffffff`, not the `#fafafa`
   that `--page` specifies, because nothing paints `--page`. Cards therefore do
   not stand out from the page in light mode. Pre-existing and cosmetic; FR-40
@@ -122,6 +135,7 @@ model the system does not have. Out of v4.0.0 scope by design.
 - `V15__issue_reports.sql` (FR-38)
 - `V16__user_appearance_preferences.sql` (FR-39)
 - `V17__user_background_tone.sql` (FR-40)
+- `V18__user_font_family.sql` (FR-42)
 
 ---
 

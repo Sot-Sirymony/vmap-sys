@@ -15,7 +15,7 @@ import { PageSection } from './PageSection';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PriorityBadge } from '../components/common/PriorityBadge';
-import { accentOptions, backgroundTones, themePresets, type AccentId } from '../theme';
+import { accentOptions, backgroundTones, fontFamilies, fontStack, themePresets, type AccentId } from '../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../context/ThemeModeContext';
 import type { Density } from '../theme';
 
@@ -244,6 +244,43 @@ export function AppearanceSettingsPage() {
                 <ToggleButton key={value} value={value} sx={{ textTransform: 'none' }}>{label}</ToggleButton>
               ))}
             </ToggleButtonGroup>
+          </SettingGroup>
+
+          <SettingGroup
+            title="Font"
+            hint="The default is your device's own font and loads instantly. The others download once, the first time you pick them."
+          >
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+              {fontFamilies.map((font) => {
+                const selected = settings.fontFamily === font.id;
+                return (
+                  <Card
+                    key={font.id}
+                    component="button"
+                    type="button"
+                    onClick={() => update({ fontFamily: font.id })}
+                    aria-pressed={selected}
+                    aria-label={`${font.label} font`}
+                    sx={{
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      p: 1.25,
+                      borderColor: selected ? 'primary.main' : 'divider',
+                      borderWidth: selected ? 2 : 1,
+                    }}
+                  >
+                    {/* Set in the font itself, so the sample is the decision
+                        rather than a description of it. */}
+                    <Typography sx={{ fontFamily: fontStack(font.id), fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.3 }}>
+                      {font.label}
+                    </Typography>
+                    <Typography sx={{ fontFamily: fontStack(font.id), fontSize: '0.8rem' }} color="text.secondary">
+                      {font.description}
+                    </Typography>
+                  </Card>
+                );
+              })}
+            </Box>
           </SettingGroup>
 
           <SettingGroup title="Text size" hint="Scales all text proportionally, unlike browser zoom.">

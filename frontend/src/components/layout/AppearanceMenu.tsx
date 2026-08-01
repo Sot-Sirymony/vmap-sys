@@ -11,7 +11,7 @@ import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { Check, Contrast, Monitor, Moon, Settings2, Sun, Waves } from 'lucide-react';
-import { accentOptions, backgroundTones, themePresets, type AccentId, type Density } from '../../theme';
+import { accentOptions, backgroundTones, fontFamilies, fontStack, themePresets, type AccentId, type Density } from '../../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../../context/ThemeModeContext';
 
 const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -199,6 +199,16 @@ export function AppearanceMenu() {
           <MenuItem key={option.value} onClick={() => update({ density: option.value })}>
             {check(settings.density === option.value)}
             {option.label}
+          </MenuItem>
+        ))}
+
+        <Divider />
+        <ListSubheader sx={SUBHEADER_SX}>Font</ListSubheader>
+        {fontFamilies.map((font) => (
+          <MenuItem key={font.id} onClick={() => update({ fontFamily: font.id })}>
+            {check(settings.fontFamily === font.id)}
+            {/* Rendered in its own face, so the list previews itself. */}
+            <Typography variant="body2" sx={{ fontFamily: fontStack(font.id) }}>{font.label}</Typography>
           </MenuItem>
         ))}
 

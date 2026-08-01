@@ -26,6 +26,8 @@ export type StoredDensity = 'COMFORTABLE' | 'COMPACT';
 
 export type StoredFontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 
+export type StoredFontFamily = 'SYSTEM' | 'PUBLIC_SANS' | 'INTER' | 'DM_SANS' | 'NUNITO_SANS';
+
 export type StoredBackgroundTone = 'NEUTRAL' | 'WARM' | 'COOL' | 'SOFT' | 'TINTED' | 'FLAT';
 
 export type StoredPreset =
@@ -44,6 +46,7 @@ export type AppearancePreferences = {
   themeAccent: StoredAccent;
   uiDensity: StoredDensity;
   fontSize: StoredFontSize;
+  fontFamily: StoredFontFamily;
   backgroundTone: StoredBackgroundTone;
   highContrast: boolean;
   reduceMotion: boolean;

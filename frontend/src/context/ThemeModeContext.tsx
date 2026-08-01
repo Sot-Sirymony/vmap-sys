@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { accentOptions, buildTheme, matchPreset, type AccentId, type BackgroundToneId, type Density, type StoredThemePreset } from '../theme';
+import { accentOptions, buildTheme, fontStack, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type StoredThemePreset } from '../theme';
+import { loadFont } from '../fonts';
 import { getAppearancePreferences, updateAppearancePreferences } from '../api/preferencesApi';
 import { toSettings, toWire } from './appearance-mapping';
 import { useAuth } from './AuthContext';
@@ -17,6 +18,8 @@ export type ThemeSettings = {
   fontSize: FontSize;
   /** FR-40 — which coordinated set of surfaces the app paints. */
   backgroundTone: BackgroundToneId;
+  /** FR-42 — the typeface. `system` loads nothing. */
+  fontFamily: FontFamilyId;
   /** FR-39.3 — composes with light and dark rather than replacing them. */
   highContrast: boolean;
   /** FR-39.4 — asks for less motion than the OS preference, never more. */
@@ -33,12 +36,16 @@ const DEFAULT_SETTINGS: ThemeSettings = {
   density: 'comfortable',
   fontSize: 'medium',
   backgroundTone: 'neutral',
+  fontFamily: 'system',
   highContrast: false,
   reduceMotion: false,
 };
 
 /** Tone ids this build understands, for validating what comes out of storage. */
 const KNOWN_TONES = new Set<BackgroundToneId>(['neutral', 'warm', 'cool', 'soft', 'tinted', 'flat']);
+
+/** Fonts this build understands, for validating what comes out of storage. */
+const KNOWN_FONTS = new Set<FontFamilyId>(['system', 'publicSans', 'inter', 'dmSans', 'nunitoSans']);
 
 /** How long to wait before saving, so dragging through swatches sends one request. */
 const SAVE_DEBOUNCE_MS = 600;
@@ -82,6 +89,7 @@ function initialSettings(): ThemeSettings {
         density: parsed.density === 'compact' ? 'compact' : 'comfortable',
         fontSize: parsed.fontSize === 'small' || parsed.fontSize === 'large' ? parsed.fontSize : 'medium',
         backgroundTone: parsed.backgroundTone && KNOWN_TONES.has(parsed.backgroundTone) ? parsed.backgroundTone : 'neutral',
+        fontFamily: parsed.fontFamily && KNOWN_FONTS.has(parsed.fontFamily) ? parsed.fontFamily : 'system',
         highContrast: parsed.highContrast === true,
         reduceMotion: parsed.reduceMotion === true,
       };
@@ -240,6 +248,12 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     // darker in light mode, lighter in dark — matching what buildTheme does for
     // the MUI palette. Both must agree or a button and its CSS-styled sibling
     // would disagree about the same accent.
+    // FR-42: the face is applied as a CSS variable that global.css's unlayered
+    // :root rule reads, and buildTheme sets the same stack on the MUI theme.
+    // Set unconditionally (including for `system`) so switching back restores
+    // the default rather than leaving the previous font in place.
+    root.style.setProperty('--font-family', fontStack(settings.fontFamily));
+
     const accent = accentOptions[settings.accent][resolvedMode];
     const accentStrong = resolvedMode === 'dark' ? accent.hover : accent.pressed;
     const accentMain = settings.highContrast ? accentStrong : accent.main;
@@ -254,6 +268,14 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--sidebar-accent-foreground', accent.tintForeground);
     root.style.setProperty('--sidebar-ring', accentMain);
   }, [settings, resolvedMode]);
+
+  // FR-42.2: fetch the font files only once a font is actually chosen. The
+  // stack already names the face, so the browser applies it the moment the
+  // @font-face rules arrive; until then it renders the system fallback rather
+  // than blocking on the download.
+  useEffect(() => {
+    void loadFont(settings.fontFamily);
+  }, [settings.fontFamily]);
 
   // FR-39.6: persist to the account, debounced so dragging through swatches
   // sends one request rather than one per swatch.
@@ -294,8 +316,8 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   }, [settings, token]);
 
   const theme = useMemo(
-    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone),
-    [resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone],
+    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily),
+    [resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily],
   );
 
   const update = useCallback((changes: Partial<ThemeSettings>) => {

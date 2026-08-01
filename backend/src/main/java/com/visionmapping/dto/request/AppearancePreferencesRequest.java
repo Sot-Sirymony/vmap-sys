@@ -2,6 +2,7 @@ package com.visionmapping.dto.request;
 
 import com.visionmapping.entity.enums.AccentColor;
 import com.visionmapping.entity.enums.BackgroundTone;
+import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -26,6 +27,7 @@ public record AppearancePreferencesRequest(
         AccentColor themeAccent,
         UiDensity uiDensity,
         FontSize fontSize,
+        FontFamily fontFamily,
         BackgroundTone backgroundTone,
         Boolean highContrast,
         Boolean reduceMotion

@@ -11,6 +11,7 @@ import com.visionmapping.dto.response.AppearancePreferencesResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.enums.AccentColor;
 import com.visionmapping.entity.enums.BackgroundTone;
+import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -68,6 +69,7 @@ class AppearancePreferenceServiceTest {
         private AccentColor accent;
         private UiDensity density;
         private FontSize fontSize;
+        private FontFamily fontFamily;
         private BackgroundTone tone;
         private Boolean highContrast;
         private Boolean reduceMotion;
@@ -81,13 +83,14 @@ class AppearancePreferenceServiceTest {
         Changes accent(AccentColor value) { this.accent = value; return this; }
         Changes density(UiDensity value) { this.density = value; return this; }
         Changes fontSize(FontSize value) { this.fontSize = value; return this; }
+        Changes fontFamily(FontFamily value) { this.fontFamily = value; return this; }
         Changes tone(BackgroundTone value) { this.tone = value; return this; }
         Changes highContrast(Boolean value) { this.highContrast = value; return this; }
         Changes reduceMotion(Boolean value) { this.reduceMotion = value; return this; }
 
         AppearancePreferencesRequest build() {
             return new AppearancePreferencesRequest(
-                    preset, mode, accent, density, fontSize, tone, highContrast, reduceMotion);
+                    preset, mode, accent, density, fontSize, fontFamily, tone, highContrast, reduceMotion);
         }
     }
 
@@ -106,6 +109,8 @@ class AppearancePreferenceServiceTest {
         // FR-40, so defaulting to it is a no-op for anyone who never opens the
         // control.
         assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.NEUTRAL);
+        // FR-42: the platform's own UI face, so the default downloads nothing.
+        assertThat(response.fontFamily()).isEqualTo(FontFamily.SYSTEM);
         assertThat(response.highContrast()).isFalse();
         assertThat(response.reduceMotion()).isFalse();
     }
@@ -123,6 +128,7 @@ class AppearancePreferenceServiceTest {
         stored.setUiDensity(null);
         stored.setFontSize(null);
         stored.setBackgroundTone(null);
+        stored.setFontFamily(null);
         when(userScope.currentUser()).thenReturn(stored);
 
         AppearancePreferencesResponse response = service.getMyPreferences();
@@ -133,6 +139,7 @@ class AppearancePreferenceServiceTest {
         assertThat(response.uiDensity()).isEqualTo(UiDensity.COMFORTABLE);
         assertThat(response.fontSize()).isEqualTo(FontSize.MEDIUM);
         assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.NEUTRAL);
+        assertThat(response.fontFamily()).isEqualTo(FontFamily.SYSTEM);
     }
 
     @Test
@@ -148,6 +155,7 @@ class AppearancePreferenceServiceTest {
                 .density(UiDensity.COMPACT)
                 .fontSize(FontSize.LARGE)
                 .tone(BackgroundTone.WARM)
+                .fontFamily(FontFamily.INTER)
                 .highContrast(true)
                 .reduceMotion(true)
                 .build());
@@ -158,6 +166,7 @@ class AppearancePreferenceServiceTest {
         assertThat(response.uiDensity()).isEqualTo(UiDensity.COMPACT);
         assertThat(response.fontSize()).isEqualTo(FontSize.LARGE);
         assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.WARM);
+        assertThat(response.fontFamily()).isEqualTo(FontFamily.INTER);
         assertThat(response.highContrast()).isTrue();
         assertThat(response.reduceMotion()).isTrue();
         assertThat(stored.getThemeAccent()).isEqualTo(AccentColor.PURPLE);
@@ -183,6 +192,26 @@ class AppearancePreferenceServiceTest {
         assertThat(response.themePreset()).isEqualTo(ThemePreset.OCEAN);
         assertThat(response.themeMode()).isEqualTo(ThemeMode.LIGHT);
         assertThat(response.themeAccent()).isEqualTo(AccentColor.TEAL);
+    }
+
+    /**
+     * FR-42: the typeface is its own axis — picking one must not disturb the
+     * size ramp, the tone, or anything else the user already chose.
+     */
+    @Test
+    void changingFontFamilyLeavesTheRestAlone() {
+        AppUser stored = user();
+        stored.setFontSize(FontSize.LARGE);
+        stored.setBackgroundTone(BackgroundTone.COOL);
+        when(userScope.currentUser()).thenReturn(stored);
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
+
+        AppearancePreferencesResponse response =
+                service.updateMyPreferences(Changes.none().fontFamily(FontFamily.DM_SANS).build());
+
+        assertThat(response.fontFamily()).isEqualTo(FontFamily.DM_SANS);
+        assertThat(response.fontSize()).isEqualTo(FontSize.LARGE);
+        assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.COOL);
     }
 
     /**

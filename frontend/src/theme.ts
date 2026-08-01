@@ -142,6 +142,47 @@ export const neutralFallback = NEUTRAL_IDLE;
  * FR-25/FR-27 work, not this file's.
  */
 
+/**
+ * FR-43 — the five-shade semantic palette and the grey ramp.
+ *
+ * Each family runs lighter → light → main → dark → darker, and the shades are
+ * NOT interchangeable. This is the part that is easy to get wrong: `main` is an
+ * *icon and fill* colour, not a button colour. Measured against white text, the
+ * mains land at 1.90:1 (warning), 2.28:1 (success), 2.37:1 (info) and 3.17:1
+ * (error) — every one of them illegible. Even `dark` is not universally safe:
+ * success-dark is 4.22:1 and warning-dark 4.00:1, both short of 4.5:1.
+ *
+ * So the roles are fixed, and `semanticTints` below encodes them:
+ *   lighter → tint background
+ *   main    → icon, chart fill, the coloured dot
+ *   darker  → the text sitting on the tint
+ *
+ * The grey ramp splits at 600: 50–500 are surfaces, borders and dividers
+ * (grey-300 is 1.29:1 on white — a boundary, not text), while 600–900 carry
+ * text (grey-600 is 4.88:1, exactly a secondary-text colour).
+ */
+export const palette = {
+  primary: { lighter: '#FFE3D5', light: '#FFC1AC', main: '#FF3030', dark: '#B71833', darker: '#7A0930' },
+  secondary: { lighter: '#EFD8FF', light: '#C884FF', main: '#8E33FF', dark: '#5119B7', darker: '#27097A' },
+  info: { lighter: '#CAFDF5', light: '#61F3F3', main: '#00B8D9', dark: '#006C9C', darker: '#003768' },
+  success: { lighter: '#D3FCD2', light: '#77ED8B', main: '#22C55E', dark: '#118D57', darker: '#065E49' },
+  warning: { lighter: '#FFF5CC', light: '#FFD666', main: '#FFAB00', dark: '#B76E00', darker: '#7A4100' },
+  error: { lighter: '#FFE9D5', light: '#FFAC82', main: '#FF5630', dark: '#B71D18', darker: '#7A0916' },
+} as const;
+
+export const grey = {
+  50: '#FCFDFD',
+  100: '#F9FAFB',
+  200: '#F4F6F8',
+  300: '#DFE3E8',
+  400: '#C4CDD5',
+  500: '#919EAB',
+  600: '#637381',
+  700: '#454F5B',
+  800: '#1C252E',
+  900: '#141A21',
+} as const;
+
 // Fluent neutrals shared by tiles, icons, and chart fallbacks.
 export const fluentNeutrals = {
   fg2: '#616161', // neutralForeground2 — secondary text
@@ -150,13 +191,21 @@ export const fluentNeutrals = {
   bg3: '#f5f5f5', // recessed panels
 } as const;
 
-// Semantic tile tints (Fluent Success/Warning/Danger tint+foreground pairs)
-// used by dashboard stat tiles and the attention panel.
+/**
+ * Semantic tile tints used by the dashboard stat tiles and the attention panel.
+ *
+ * FR-43 re-points these at the palette above, using each family's documented
+ * roles: `lighter` as the wash and `darker` as the text on it. The previous
+ * pairs put a `main`-weight hue on a pale tint (e.g. #d83b01 on #fdece3, 4.1:1);
+ * every pair below clears 6.8:1, because the text now comes from the end of the
+ * ramp meant to carry it.
+ */
 export const semanticTints = {
-  neutral: { bg: '#f5f5f5', fg: '#616161' },
-  positive: { bg: '#dff6dd', fg: '#107c10' },
-  warning: { bg: '#fdece3', fg: '#d83b01' },
-  critical: { bg: '#fde7e9', fg: '#d13438' },
+  neutral: { bg: grey[200], fg: grey[700] },
+  positive: { bg: palette.success.lighter, fg: palette.success.darker },
+  warning: { bg: palette.warning.lighter, fg: palette.warning.darker },
+  critical: { bg: palette.error.lighter, fg: palette.error.darker },
+  info: { bg: palette.info.lighter, fg: palette.info.darker },
 } as const;
 
 // Moonshot marker (FR-14). Audit note: violet is not a Fluent token and the
@@ -179,18 +228,59 @@ export const partnerPipelineColors = {
   COMPLETED: statusColors.COMPLETED,
 } as const;
 
-export const obstacleTypeColors: Record<string, string> = {
-  KNOWLEDGE: '#004578',
-  SKILL: '#005a9e',
-  TIME: '#0063b1',
-  MONEY: '#106ebe',
-  MOTIVATION: '#0078d4',
-  PARTNER: '#2b88d8',
-  SYSTEM: '#4ba0e1',
-  DECISION: '#71afe5',
-  OTHER: '#8a8886',
-  OTHER_TYPES: '#e1e1e1',
-};
+/**
+ * FR-41 — the categorical pie palette.
+ *
+ * Four distinct hues for charts whose categories carry **no** inherent meaning
+ * (Vision Areas, obstacle types). It is deliberately NOT used for status or
+ * priority charts: those encode meaning in colour, and BR-14 forbids a slice
+ * that could read as "Completed" when it means "Health".
+ *
+ * Mode-specific, because the labels sit *on* the slices. Light mode uses white
+ * labels, so the slices must be dark enough to carry them; dark mode uses near
+ * black labels, so the slices must be light. A single palette cannot do both —
+ * the same reason the accents ship two ramps.
+ *
+ * Every value was searched rather than picked, against four simultaneous
+ * constraints: the label clears 4.5:1 on its slice, the slice clears 3:1 on its
+ * own card, no two slices are closer than ΔE 12 (and stay apart under simulated
+ * deuteranopia), and none is within ΔE 12 of a status or priority hue.
+ *
+ * Two of those constraints are worth knowing about, because they explain why
+ * this looks deeper than a typical marketing palette:
+ *   - White-on-slice is expensive. A bright gold cannot carry white text at any
+ *     size (#F2D56F measures 1.45:1), so the gold here is a dark ochre.
+ *   - Gold and coral collapse into each other for a deuteranope. Lighter corals
+ *     measured ΔE 4.8 against this gold, so the coral is a deep brick — the same
+ *     problem the status palette solved by moving WAITING off the warm ramp.
+ */
+export const categoricalPieColors = {
+  light: ['#1a7f4b', '#8a6d00', '#2e6b9e', '#6e1b16'],
+  dark: ['#7fd4a6', '#eed492', '#8cc3e8', '#e57a63'],
+  // FR-39.3: the accessibility mode reaches charts too. Pushed to the extremes
+  // of each hue so the slices separate maximally against pure white / black.
+  highContrastLight: ['#0b5a0b', '#5c4600', '#123a5c', '#5c1410'],
+  highContrastDark: ['#a4d7a6', '#f0dfae', '#b8dcf2', '#f2a08d'],
+} as const;
+
+/** The label colour that sits on a slice — white in light mode, near-black in dark. */
+export const pieLabelColor = { light: '#ffffff', dark: '#1b1a19' } as const;
+
+/**
+ * The pie palette for the active mode, honouring high contrast. Index by
+ * position; it cycles if a chart ever has more than four categories.
+ */
+export function categoricalPieColor(index: number, mode: 'light' | 'dark' = 'light', highContrast = false): string {
+  const highContrastKey = mode === 'dark' ? 'highContrastDark' : 'highContrastLight';
+  const palette = categoricalPieColors[highContrast ? highContrastKey : mode];
+  return palette[Math.abs(index) % palette.length];
+}
+
+// FR-41 removed `obstacleTypeColors`, the blue depth ramp the obstacle chart
+// used to index by type. It was a static map, so it would have quietly bypassed
+// the mode/high-contrast resolvers every other chart fill now goes through —
+// the same trap the dead enum palettes fell into. Obstacle types are
+// non-semantic categories, so they use `categoricalPieColor` instead.
 
 // Review heatmap intensity ramp (FR-25.3): neutral stroke for "none", then
 // the Fluent green family up to the same Success green the status palette
@@ -239,7 +329,10 @@ export type AccentId =
   | 'red'
   | 'brass'
   | 'steel'
-  | 'pink';
+  | 'pink'
+  // FR-43 additions, derived from the supplied primary/secondary ramps.
+  | 'vermilion'
+  | 'violet';
 
 type AccentSet = {
   main: string;
@@ -307,6 +400,25 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
     light: { main: '#005b70', hover: '#004d5f', pressed: '#003a49', contrastText: '#ffffff', tint: '#d6ebf1', tintForeground: '#00485a' },
     dark: { main: '#5ba7bd', hover: '#7dbccd', pressed: '#43909f', contrastText: '#1b1a19', tint: '#0a2c36', tintForeground: '#a3d3e0' },
   },
+  // FR-43: the supplied primary and secondary ramps, offered as accents rather
+  // than as the app's default primary. The reference's #FF3030 measures 3.67:1
+  // against white text, so it cannot be a button colour; light mode therefore
+  // takes `main` from the dark end of the ramp and dark mode from the light end
+  // — the same construction every accent above uses.
+  //
+  // Vermilion is deliberately opt-in, never the default: the app already spends
+  // red on Critical, Declined, and destructive actions, and a red Save button
+  // beside a red Delete button is a hazard whatever the measured ΔE says.
+  vermilion: {
+    label: 'Vermilion',
+    light: { main: '#B71833', hover: '#9c142c', pressed: '#7A0930', contrastText: '#ffffff', tint: '#FFE3D5', tintForeground: '#7A0930' },
+    dark: { main: '#FFC1AC', hover: '#FFE3D5', pressed: '#FF8A7A', contrastText: '#1b1a19', tint: '#4a1220', tintForeground: '#FFC1AC' },
+  },
+  violet: {
+    label: 'Violet',
+    light: { main: '#8E33FF', hover: '#7522e0', pressed: '#5119B7', contrastText: '#ffffff', tint: '#EFD8FF', tintForeground: '#27097A' },
+    dark: { main: '#C884FF', hover: '#EFD8FF', pressed: '#A85CFF', contrastText: '#1b1a19', tint: '#27097A', tintForeground: '#EFD8FF' },
+  },
   pink: {
     label: 'Pink',
     light: { main: '#b8306e', hover: '#a32860', pressed: '#931f56', contrastText: '#ffffff', tint: '#fce4f1', tintForeground: '#931f56' },
@@ -370,6 +482,81 @@ export function matchPreset(mode: 'light' | 'dark' | 'system', accent: AccentId)
 }
 
 export type Density = 'comfortable' | 'compact';
+
+/**
+ * FR-42 — the typeface choices.
+ *
+ * `system` is the default and is not a web font: it is the platform's own UI
+ * face, which renders instantly and downloads nothing. It stays the default
+ * deliberately — a font that costs a network request should be something a user
+ * opts into, not something everyone pays for.
+ *
+ * Every stack ends in the same system fallback chain, so a font that fails to
+ * load (offline, blocked, or a stale cache) degrades to the default face rather
+ * than to an unstyled serif.
+ *
+ * All four are variable fonts, which is why one file per family covers every
+ * weight the app uses.
+ */
+export type FontFamilyId = 'system' | 'publicSans' | 'inter' | 'dmSans' | 'nunitoSans';
+
+/** The tail every stack shares — Fluent's face first, then each platform's own. */
+const SYSTEM_STACK = '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif';
+
+export type FontFamilyDefinition = {
+  id: FontFamilyId;
+  /** Backend enum name. */
+  stored: 'SYSTEM' | 'PUBLIC_SANS' | 'INTER' | 'DM_SANS' | 'NUNITO_SANS';
+  label: string;
+  description: string;
+  stack: string;
+};
+
+export const fontFamilies: FontFamilyDefinition[] = [
+  {
+    id: 'system',
+    stored: 'SYSTEM',
+    label: 'System default',
+    description: 'Matches your device — loads instantly',
+    stack: SYSTEM_STACK,
+  },
+  {
+    id: 'publicSans',
+    stored: 'PUBLIC_SANS',
+    label: 'Public Sans',
+    description: 'Neutral and highly legible',
+    stack: `"Public Sans Variable", ${SYSTEM_STACK}`,
+  },
+  {
+    id: 'inter',
+    stored: 'INTER',
+    label: 'Inter',
+    description: 'Designed for screens',
+    stack: `"Inter Variable", ${SYSTEM_STACK}`,
+  },
+  {
+    id: 'dmSans',
+    stored: 'DM_SANS',
+    label: 'DM Sans',
+    description: 'Geometric and low-contrast',
+    stack: `"DM Sans Variable", ${SYSTEM_STACK}`,
+  },
+  {
+    id: 'nunitoSans',
+    stored: 'NUNITO_SANS',
+    label: 'Nunito Sans',
+    description: 'Rounded and friendly',
+    stack: `"Nunito Sans Variable", ${SYSTEM_STACK}`,
+  },
+];
+
+export function fontFamilyFromStored(stored: string): FontFamilyId {
+  return fontFamilies.find((font) => font.stored === stored)?.id ?? 'system';
+}
+
+export function fontStack(id: FontFamilyId): string {
+  return fontFamilies.find((font) => font.id === id)?.stack ?? SYSTEM_STACK;
+}
 
 /**
  * FR-40 — background tones.
@@ -563,16 +750,21 @@ export function surfaceTokens(mode: 'light' | 'dark', highContrast = false): Sur
         mutedForeground: '#2b2b2b',
         secondary: '#ededed',
         border: '#4a4a4a',
-        error: '#a4262c',
+        error: palette.error.darker,
       }
     : {
+        // FR-43: the neutral steps now come from the grey ramp rather than
+        // being individually chosen Fluent values — 800 for body text, 600 for
+        // secondary, 300 for borders, 200 for recessed panels. Same roles, one
+        // ramp, so the greys relate to each other instead of coincidentally
+        // sitting near each other.
         background: '#ffffff',
         card: '#ffffff',
-        foreground: '#242424',
-        mutedForeground: '#616161',
-        secondary: '#f5f5f5',
-        border: '#e1e1e1',
-        error: '#d13438',
+        foreground: grey[800],
+        mutedForeground: grey[600],
+        secondary: grey[200],
+        border: grey[300],
+        error: palette.error.dark,
       };
 }
 
@@ -710,6 +902,7 @@ export function buildTheme(
   density: Density = 'comfortable',
   highContrast = false,
   tone: BackgroundToneId = 'neutral',
+  font: FontFamilyId = 'system',
 ) {
   const dark = mode === 'dark';
   // FR-40.5: high contrast outranks the tone. Applying the tone only when it is
@@ -797,7 +990,11 @@ export function buildTheme(
     // card/column title, body1 = default text, body2 = secondary/dense text
     // (tables), caption = metadata (codes, dates, hints).
     typography: {
-      fontFamily: '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif',
+      // FR-42: must match the --font-family variable ThemeModeProvider sets on
+      // :root. global.css's unlayered rule is what actually renders text, so if
+      // these two disagree, MUI components and plain elements use different
+      // faces.
+      fontFamily: fontStack(font),
       h1: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3 },
       h2: { fontSize: '1.25rem', fontWeight: 600, lineHeight: 1.35 },
       h3: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },

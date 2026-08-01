@@ -9,7 +9,11 @@
 :root {
   color: var(--foreground);
   background: var(--page);
-  font-family: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  /* FR-42: the face is a variable so ThemeModeProvider can swap it. This
+     unlayered rule is what actually renders text — it beats the layered
+     Tailwind `font-sans` class regardless of source order — so the default
+     below has to stay in step with theme.ts's SYSTEM_STACK. */
+  font-family: var(--font-family, "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --background: #ffffff;
@@ -43,15 +47,21 @@
      swap rather than a second stylesheet. */
   --page: #fafafa;               /* page canvas, one step under cards */
   --background-subtle: #fafafa;  /* archived rows */
-  --border-soft: #f0f0f0;        /* table row separators */
-  --text-label: #475569;         /* form/filter labels */
-  --text-soft: #64748b;          /* tertiary text on cards */
-  --text-faint: #64707d;         /* codes, empty-state hints — 4.5:1 floor (FR-26.4) */
-  --info-bg: #eff6ff;            /* informational banners / coaching panels */
-  --info-border: #bfdbfe;
-  --info-text: #1e3a8a;
-  --info-strong: #1d4ed8;
-  --danger-bg: #fdf3f3;          /* overdue row wash */
+  --border-soft: #F4F6F8;        /* table row separators — grey-200 */
+  /* FR-43: the neutral text steps come from the grey ramp (700/600/600) rather
+     than three separately-chosen slate values, so they relate to each other and
+     to the borders. All three clear 4.5:1 on white; grey-600 measures 4.88:1,
+     which is exactly what a tertiary text colour should be. */
+  --text-label: #454F5B;         /* form/filter labels — grey-700 */
+  --text-soft: #637381;          /* tertiary text on cards — grey-600 */
+  --text-faint: #637381;         /* codes, empty-state hints — grey-600, 4.88:1 (FR-26.4) */
+  /* FR-43: informational banners now use the info ramp's documented roles —
+     lighter as the wash, light as the rule, darker as the text (10.81:1). */
+  --info-bg: #CAFDF5;            /* informational banners / coaching panels */
+  --info-border: #61F3F3;
+  --info-text: #003768;
+  --info-strong: #006C9C;
+  --danger-bg: #FFE9D5;          /* overdue row wash — error.lighter */
   --hint: #0d7d70;               /* field hints */
   --moonshot-fg: #6b21a8;        /* moonshot text; light-legible violet */
   /* FR-18.4 density defaults (Comfortable); the compact overrides live on

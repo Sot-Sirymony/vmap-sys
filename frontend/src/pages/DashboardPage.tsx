@@ -37,7 +37,7 @@ import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, VisionArea, WorkStatus } from '../types/vision';
-import { chartPrimary, heatmapLevelColors, neutralFallback, obstacleTypeColors, priorityColor, statusColor } from '../theme';
+import { categoricalPieColor, chartPrimary, heatmapLevelColors, priorityColor, statusColor } from '../theme';
 import { obstacleTypeLabels, partnerStatusLabels } from '../utils/enumLabels';
 import { useThemeSettings } from '../context/ThemeModeContext';
 import { PageSection } from './PageSection';
@@ -59,7 +59,6 @@ const HEATMAP_WEEKS = 12;
 // The partner pipeline still draws each stage in exactly its status colour
 // (FR-25.3, audit V-02), which is why it goes through the same resolver.
 const HEATMAP_LEVEL_COLORS = heatmapLevelColors;
-const OBSTACLE_TYPE_COLORS: Record<string, string> = obstacleTypeColors;
 
 type DashboardPeriod = 'month' | 'quarter' | 'year';
 
@@ -104,6 +103,9 @@ export function DashboardPage() {
   const workStatusFill = (status: WorkStatus) => statusColor(status, resolvedMode, appearance.highContrast);
   const partnerStatusFill = (status: PartnerStatus) => statusColor(status, resolvedMode, appearance.highContrast);
   const priorityFill = (priority: Priority) => priorityColor(priority, resolvedMode, appearance.highContrast);
+  // FR-41: the categorical pie palette, indexed by position. Follows mode and
+  // high contrast like every other chart fill.
+  const pieFill = (index: number) => categoricalPieColor(index, resolvedMode, appearance.highContrast);
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -311,6 +313,12 @@ export function DashboardPage() {
           title="Dreams by vision area"
           description="Where active dreams are concentrated — click a slice to open those dreams"
           data={summary?.dreamsByVisionArea ?? {}}
+          variant="pie"
+          // FR-41: Vision Areas are categories with no inherent meaning, so the
+          // four-hue pie palette is safe here — a green slice means "this area",
+          // not "Completed". Status and priority charts stay on their own
+          // palettes for exactly that reason (BR-14).
+          colorForKey={(name) => pieFill(Object.keys(summary?.dreamsByVisionArea ?? {}).indexOf(name))}
           // The payload keys this chart by area *name*, so the drill-down maps
           // it back to the area's id before linking.
           linkForKey={(name) => {
@@ -341,8 +349,9 @@ export function DashboardPage() {
           description="What's actually blocking active work right now — click a slice to open those obstacles"
           data={topObstaclesByType}
           formatLabel={(key) => (key === OTHER_OBSTACLE_TYPES_KEY ? 'Other types' : obstacleTypeLabels[key as keyof typeof obstacleTypeLabels])}
-          variant="donut"
-          colorForKey={(key) => OBSTACLE_TYPE_COLORS[key] ?? neutralFallback}
+          variant="pie"
+          // Obstacle types are likewise non-semantic categories (FR-41).
+          colorForKey={(key) => pieFill(Object.keys(topObstaclesByType).indexOf(key))}
           // The rollup bucket spans several types, so it links to the plain list.
           linkForKey={(key) => (key === OTHER_OBSTACLE_TYPES_KEY ? '/obstacles' : `/obstacles?type=${key}`)}
         />

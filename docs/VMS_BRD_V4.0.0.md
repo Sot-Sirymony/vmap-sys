@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V4.0.0 |
 | **Version** | 4.0.0 (Draft for review — not started) |
 | **Date** | 2026-07-25 |
-| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. ✅ **FR-39** (Appearance & Theme Preferences) added and shipped 2026-07-30. ✅ **FR-40** (Background Tone) added and shipped 2026-07-31. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
+| **Status** | ✅ Original scope complete (2026-07-25). All four now-track requirements shipped — **FR-34** (Energy & Asset Portfolio, Stages A + B), **FR-35** (Cross-Pollination), **FR-36** (PKM Insight Library), and **FR-37** (Life-Optimization Signals). ✅ **FR-38** (In-App Issue & Improvement Reporting) added and shipped 2026-07-25. ✅ **FR-39** (Appearance & Theme Preferences) added and shipped 2026-07-30. ✅ **FR-40** (Background Tone) added and shipped 2026-07-31. ✅ **FR-41** (Categorical pie charts), ✅ **FR-42** (Font Family) and ✅ **FR-43** (Semantic Palette & Grey Ramp) added and shipped 2026-07-31/08-01. The Deferred Platform Track (scheduler / notifications / calendar) remains out of scope by design. Supersedes the earlier V4.0.0 "Life OS Upgrade Roadmap" draft, which described a strategic direction but was not buildable as written (no acceptance criteria, no business rules, no data model, and several features silently assumed a scheduling/notification platform the system does not have). |
 | **Baseline** | Builds on VMS_BRD_V3.0.0 (all V1–V3 requirements, FR-1…FR-33, remain in force) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott) — used as conceptual reference only; all product wording, questions, and templates are original |
 
@@ -736,6 +736,125 @@ column, one enum, and one more control on a settings page that already exists.
 
 ---
 
+## FR-42 Font Family *(Effort: S–M)* — ✅ Done 2026-08-01
+
+**Shipped (2026-08-01):** `V18` adds `font_family` to `app_users` (`NOT NULL
+DEFAULT 'SYSTEM'`), with a `FontFamily` enum carried on the existing appearance
+endpoint. Frontend adds a font registry, a lazy loader, and controls in both the
+header menu and the settings page — each option rendered in its own face, so the
+list previews itself. Verified: backend 127/127, frontend 177/177.
+
+The app renders in the platform's own UI face and offers no choice. This FR adds
+four typefaces alongside it.
+
+- FR-42.1 **The system face stays the default.** Segoe UI Variable / SF Pro /
+  Roboto, unchanged. It renders instantly and downloads nothing, so it remains
+  what a user gets unless they ask for something else.
+- FR-42.2 **Self-hosted, fetched on demand.** The four faces (Public Sans, Inter,
+  DM Sans, Nunito Sans) ship with the app rather than coming from a font CDN, and
+  each is imported only when a user selects it. A CDN link was rejected: it would
+  be the app's first third-party request, would send every user's IP to a font
+  host, and would break offline and on restricted networks.
+- FR-42.3 **Every stack falls back to the system face.** A font that fails to
+  arrive degrades to the default rather than to an unstyled serif, and a failed
+  load never surfaces as an error.
+- FR-42.4 **One shared size ramp.** All faces use the existing six-size ramp
+  (FR-20.1); no per-font size correction.
+- FR-42.5 **Persisted with the rest of the appearance**, via FR-39.6's path.
+
+**Acceptance criteria**
+
+1. A user on the default downloads no font file and issues no font request.
+2. Selecting a font applies it to both MUI components and plain elements.
+3. A font is fetched at most once, however often it is selected.
+4. Existing users default to `SYSTEM` with no migration action and no visible change.
+5. No request leaves the app's own origin for a font.
+
+**Business rules**
+
+| # | Rule |
+|---|---|
+| BR-36 | Font files are served from the application's own origin; no third-party font host may be contacted. A font is loaded only once selected, and a failed load falls back to the system face rather than erroring. |
+
+**Data model / migration**
+
+- `V18__user_font_family.sql`: `font_family VARCHAR(20) NOT NULL DEFAULT 'SYSTEM'`
+  on `app_users`. Enum `FontFamily` (`SYSTEM`, `PUBLIC_SANS`, `INTER`, `DM_SANS`,
+  `NUNITO_SANS`), carried on the existing appearance payload.
+
+**Design decisions**
+
+- **Self-hosting over a CDN.** The convenience of a `<link>` is real, but it
+  trades away offline support, adds a third-party dependency to an app that had
+  none, and hands user IPs to a font host. Verified in the build: the entry CSS
+  contains zero `@font-face` rules and the main bundle did not grow.
+- **The default must cost nothing.** Bundling all four upfront would make every
+  user pay for typefaces most will never choose. A test asserts the system
+  default triggers no import, because that is the property the whole arrangement
+  exists for.
+
+---
+
+## FR-43 Semantic Palette & Grey Ramp *(Effort: M)* — ✅ Done 2026-08-01
+
+**Shipped (2026-08-01):** A five-shade semantic palette (primary, secondary,
+info, success, warning, error) and a ten-step grey ramp added to `theme.ts`, with
+the grey ramp driving the neutral tokens and the semantic families driving the
+tile tints and banners. The supplied primary and secondary ramps are offered as
+two new accents — Vermilion and Violet — taking the accent count to twelve.
+Verified: frontend 177/177.
+
+The app's neutrals were individually-chosen Fluent values that happened to sit
+near each other, and its semantic tints paired a mid-weight hue with a pale wash.
+This FR replaces both with structured ramps.
+
+- FR-43.1 **Shade roles are fixed, not interchangeable.** `lighter` is a tint
+  background, `main` an icon or fill colour, `dark`/`darker` the text. This is
+  the crux: measured against white text the mains land between 1.90:1 (warning)
+  and 3.67:1 (primary), so `main` cannot be a button colour.
+- FR-43.2 **The grey ramp splits at 600.** 50–500 are surfaces, borders and
+  dividers; 600–900 carry text. `grey-600` measures 4.88:1 on white, exactly a
+  secondary-text colour.
+- FR-43.3 **Semantic tints use the lighter/darker pair.** Every pair clears
+  6.9:1, against roughly 4.1:1 for the values they replace.
+- FR-43.4 **The supplied red is not the default primary.** It is offered as the
+  Vermilion accent. The app already spends red on Critical, Declined, and
+  destructive actions, and a brand red beside a danger red on the same screen is
+  a hazard whatever the measured separation says.
+- FR-43.5 **Page and card surfaces are left to FR-40.** The grey ramp has
+  tempting surface values, but those tokens are governed by the background tone;
+  repointing them would break FR-40's guarantee that Neutral changes nothing.
+
+**Acceptance criteria**
+
+1. Every semantic family exposes all five shades, and `lighter` paired with
+   `darker` clears 4.5:1 in each.
+2. The grey ramp is monotonic, and the 600 split holds: `grey-600` clears 4.5:1
+   on white, `grey-500` does not.
+3. The default accent remains blue; the supplied red is reachable only by
+   choosing it.
+4. Both new accents satisfy the existing accent contract in both modes.
+
+**Business rules**
+
+| # | Rule |
+|---|---|
+| BR-37 | A semantic shade may only be used in its documented role — `lighter` as a surface, `main` as a fill or icon, `dark`/`darker` as text on that surface. `main` is never a text or button background colour; measured against white it falls between 1.90:1 and 3.67:1. |
+
+**Design decisions**
+
+- **Roles written down and tested.** A test asserts that `success.main`,
+  `warning.main`, and `info.main` are *illegible* on white, so a later change
+  cannot quietly promote them to button colours.
+- **Brand red kept off the default path.** Offered, not imposed (FR-43.4).
+- **No parallel `--palette-*` CSS variables.** The supplied tables name CSS
+  variables; the values are instead wired through the existing token names. Two
+  naming systems for the same colours is the drift BR-15 exists to prevent. If
+  components ever need them in plain CSS, they can be generated from the same
+  source rather than hand-maintained.
+
+---
+
 ## Deferred Platform Track
 
 Captured so the vision stays whole, but **explicitly out of V4.0.0 scope** — each
@@ -768,6 +887,9 @@ which is precisely why it is deferred rather than scoped.
 | 6 | FR-38 In-App Issue & Improvement Reporting | Added post-completion; one additive table + role-scoped CRUD, no new infrastructure | S–M | ✅ Done |
 | 7 | FR-39 Appearance & Theme Preferences | Added post-completion; extends the existing FR-18 theme layer, one additive migration, no new infrastructure | M | ✅ Done |
 | 8 | FR-40 Background Tone | Depends on FR-39's surface tokens, settings page, and persistence path already being in place | S–M | ✅ Done |
+| 9 | FR-41 Categorical Pie Charts | Restyles the two non-semantic dashboard charts; no schema change | S | ✅ Done |
+| 10 | FR-42 Font Family | One additive migration, reuses the FR-39.6 persistence path | S–M | ✅ Done |
+| 11 | FR-43 Semantic Palette & Grey Ramp | Frontend-only; replaces ad-hoc neutrals and tints with structured ramps | M | ✅ Done |
 | — | Deferred Platform Track | Separate future BRD; needs NFR groundwork first | XL | Deferred |
 
 ---
@@ -784,6 +906,8 @@ which is precisely why it is deferred rather than scoped.
 | BR-32 | Issue reports are user-scoped for authoring/self-viewing; only ADMIN may triage the full queue or change status. `reportType`+`title` required; `severity` required for Bug; a Bug moved to `Resolved` requires a `resolutionNote`. Reports are archived, not hard-deleted. |
 | BR-33 | Appearance preferences are strictly user-scoped (read and write own only). Stored values must be curated enum options; an unrecognised value resolves to the default rather than being persisted. A failed save applies locally and retries — appearance never hard-depends on the backend. |
 | BR-34 | High contrast may adjust the lightness of a status/priority colour to meet its contrast target, never its hue or meaning. A bounded, documented exception to BR-14: accent choice still cannot touch these palettes; only the accessibility mode may, and only along lightness. |
+| BR-36 | Font files are served from the application's own origin; no third-party font host may be contacted. A font loads only once selected, and a failed load falls back to the system face. |
+| BR-37 | A semantic shade may only be used in its documented role — `lighter` as a surface, `main` as a fill or icon, `dark`/`darker` as text. `main` is never a text or button background colour. |
 | BR-35 | A background tone must be one of the curated options, and every option holds body text at ≥ 7:1 and secondary text at ≥ 4.5:1 against the surface it renders on, in both modes. High contrast overrides the tone entirely and disables its control — the accessibility mode outranks an aesthetic preference. |
 
 ## Migrations (new in V4.0.0)
@@ -795,11 +919,12 @@ which is precisely why it is deferred rather than scoped.
 | `V15__issue_reports.sql` *(FR-38)* | `issue_reports` table for in-app bug/improvement reporting | New table |
 | `V16__user_appearance_preferences.sql` *(FR-39)* | Appearance columns on `app_users` (`theme_preset`, `theme_mode`, `accent`, `density`, `font_size`, `high_contrast`, `reduce_motion`) | Additive, `NOT NULL` with defaults |
 | `V17__user_background_tone.sql` *(FR-40)* | `background_tone` on `app_users` | Additive, `NOT NULL` default `NEUTRAL` |
+| `V18__user_font_family.sql` *(FR-42)* | `font_family` on `app_users` | Additive, `NOT NULL` default `SYSTEM` |
 
 ## Non-Functional Notes
 
-- V4.0.0 (FR-34…FR-40) is **additive**: five additive migrations (V13, V14, V15,
-  V16, V17), no destructive schema changes, and **no new infrastructure** — the
+- V4.0.0 (FR-34…FR-43) is **additive**: six additive migrations (V13, V14, V15,
+  V16, V17, V18), no destructive schema changes, and **no new infrastructure** — the
   same posture V3.0.0 could truthfully claim. (The originally-optional V15
   obstacle index was never needed; V15 became the FR-38 `issue_reports` table.)
 - New business rules (BR-27…BR-31) get backend test coverage where they carry

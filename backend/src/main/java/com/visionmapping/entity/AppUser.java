@@ -2,6 +2,7 @@ package com.visionmapping.entity;
 
 import com.visionmapping.entity.enums.AccentColor;
 import com.visionmapping.entity.enums.BackgroundTone;
+import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -84,6 +85,16 @@ public class AppUser extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "font_size", nullable = false, length = 20)
     private FontSize fontSize = FontSize.MEDIUM;
+
+    /**
+     * FR-42: the typeface. SYSTEM is the platform's own UI face and loads
+     * nothing, so this default costs existing users neither a request nor a
+     * visible change.
+     */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "font_family", nullable = false, length = 20)
+    private FontFamily fontFamily = FontFamily.SYSTEM;
 
     /**
      * FR-40: which surface set the app paints. NEUTRAL is defined as the values
