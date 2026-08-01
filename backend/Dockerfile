@@ -23,13 +23,14 @@ EXPOSE 8080
 # default heap is only 25% of RAM while G1 and 1MB thread stacks spend far more
 # native memory than this instance can spare.
 #
-#   MaxRAMPercentage=50   256MB of heap — double the 128MB the 25% default gave
-#                         it, which is what the GC was thrashing against, while
-#                         still leaving ~256MB for everything the heap does not
-#                         cover. Going higher is tempting and wrong: at 70% the
-#                         heap alone is 360MB and the metaspace cap below would
-#                         put the total over the instance before stacks and code
-#                         cache are counted.
+#   MaxRAMPercentage=40   ~205MB of heap. The 25% default (128MB) was what the
+#                         GC thrashed against; 50% was the opposite mistake — it
+#                         let the app boot, but 256MB of heap plus the metaspace
+#                         cap left under 100MB for code cache, stacks, direct
+#                         buffers and the JVM itself, and Render killed it with
+#                         "used over 512Mi" on the first request. Every cap here
+#                         has to sum to less than the instance, not just look
+#                         reasonable on its own.
 #   UseSerialGC           G1 reserves region tables and per-thread structures
 #                         that are pure overhead below ~1GB with one CPU. Serial
 #                         is the usual recommendation at this size and frees
@@ -38,8 +39,17 @@ EXPOSE 8080
 #                         Redis + Flyway + Apache POI), and metaspace is
 #                         unbounded by default, so it is capped rather than
 #                         allowed to grow into the kill threshold.
-#   Xss512k               ~50 Tomcat/Hikari threads at the 1MB default is ~50MB
-#                         of stacks; half that is still ample for this app.
+#   ReservedCodeCacheSize with C1 only the JIT needs a fraction of the 240MB it
+#                         reserves by default. Reserved address space is not
+#                         resident memory, but the cap keeps what it commits
+#                         predictable.
+#   MaxDirectMemorySize   Lettuce talks to Redis over Netty, which allocates
+#                         off-heap ByteBuffers. Unbounded, that is invisible to
+#                         every heap setting above and lands straight in the
+#                         container's total.
+#   Xss512k               stacks are per thread, so this pairs with the Tomcat
+#                         thread cap in application.yml: 20 request threads at
+#                         512k instead of the default 200 at 1MB.
 #   TieredStopAtLevel=1   C1 only. Cuts JIT compilation work and memory during
 #                         the cold start we were losing to. This trades some
 #                         peak throughput — drop this flag first if the API ever
@@ -49,7 +59,7 @@ EXPOSE 8080
 # Kept in an env var so the values can be changed from the Render dashboard (or
 # render.yaml) to retune a struggling instance without waiting on an image
 # rebuild — which matters when the thing you are debugging is a boot failure.
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=50 -XX:+UseSerialGC -XX:MaxMetaspaceSize=160m -Xss512k -XX:TieredStopAtLevel=1"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=40 -XX:+UseSerialGC -XX:MaxMetaspaceSize=144m -XX:ReservedCodeCacheSize=64m -XX:MaxDirectMemorySize=32m -Xss512k -XX:TieredStopAtLevel=1"
 
 # `exec` so the JVM replaces the shell and stays PID 1: without it the shell
 # holds PID 1 and the JVM never receives Render's SIGTERM, turning every deploy

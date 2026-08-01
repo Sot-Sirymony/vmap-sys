@@ -66,6 +66,13 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    # Sized for the instance rather than for throughput. Hikari defaults to ten
+    # connections, which 0.5 of a CPU cannot use concurrently and which cost
+    # memory on both sides — the database is a 256MB plan. Five is comfortably
+    # more than the capped Tomcat thread pool will ask for at once.
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
   jpa:
     hibernate:
       ddl-auto: validate
@@ -77,6 +84,24 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+# Bounded for the 512MB / 0.5-CPU Render instance. The container was killed with
+# "used over 512Mi" on the first request after startup, and these defaults are a
+# large part of why: Tomcat allows 200 request threads, so the stack space alone
+# could outgrow the heap, and half a CPU cannot service 200 concurrent requests
+# anyway — the queue is the honest place to hold them. Hikari's default of ten
+# connections is likewise more than this instance or the 256MB database needs.
+#
+# These are a resource ceiling, not a tuning preference. Raise them together
+# with the instance size, not on their own.
+server:
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 4
+    # Requests beyond the thread pool wait here rather than being refused.
+    accept-count: 100
+    max-connections: 200
 
 ---
 spring:
