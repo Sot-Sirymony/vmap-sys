@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { ChevronsUpDown, LogOut } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router';
 import Drawer from '@mui/material/Drawer';
 import Toolbar from '@mui/material/Toolbar';
 import List from '@mui/material/List';

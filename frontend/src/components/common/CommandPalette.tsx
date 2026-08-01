@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import Dialog from '@mui/material/Dialog';
 import { CornerDownLeft } from 'lucide-react';
 import { listDreams } from '../../api/dreamApi';

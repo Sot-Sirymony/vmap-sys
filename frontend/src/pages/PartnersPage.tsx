@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listIdealPartnerProfiles } from '../api/idealPartnerProfileApi';
 import { listGoals } from '../api/goalApi';
@@ -32,7 +32,7 @@ import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, IdealPartnerProfile, OfferType, Partner, PartnerRequest, PartnerStatus, PartnerSupportType, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { offerTypeLabels, partnerStatusLabels, partnerSupportTypeLabels } from '../utils/enumLabels';

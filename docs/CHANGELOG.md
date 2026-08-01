@@ -152,10 +152,24 @@ release rather than opening a new version.
   and so does a variable left behind after a shade is renamed. The guard was
   verified by injecting a wrong value and confirming it fails.
 
+- Three high-severity advisories cleared; `npm audit` now reports **0
+  vulnerabilities**. `postcss` was a transitive dependency of Vite and took a
+  patch bump (8.5.16 → 8.5.25). `react-router` needed more: the fix lands in
+  8.3.0, and `react-router-dom` — what the app depended on — is retired at 7.18.2,
+  the package having consolidated into `react-router` for v8. So this is a
+  migration rather than a version bump: the dependency was replaced and the
+  import specifier updated across 33 files. No application code changed; the app
+  uses only the classic component APIs (`BrowserRouter`, `Routes`, `Route`,
+  `Link`, `NavLink`, `Navigate`, `Outlet` and the hooks), all of which v8 still
+  exports.
+
+  Worth recording for context: the advisory is an **RSC Mode CSRF bypass**, and
+  this app has no RSC mode — no `createBrowserRouter`, no `RouterProvider`, no
+  route actions. It was therefore not exploitable here. The upgrade was done
+  anyway, because "not currently reachable" degrades quietly the moment someone
+  adopts data routers.
+
 ### Known issues
-- `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
-  Both predate FR-42's font packages; a `react-router` bump could change routing
-  behaviour, so it is left for its own change rather than folded into a feature.
 - Three values from the FR-43 palette remain defined but unreferenced: `error.main`
   (the app needs the darker, button-capable shade for its destructive colour, so
   the mid-tone fill has no caller), grey-50 and grey-900. No home was invented for

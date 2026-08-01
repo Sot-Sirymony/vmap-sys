@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Flag, Rocket } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
 import { listSteps } from '../api/stepApi';

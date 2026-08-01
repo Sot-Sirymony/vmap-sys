@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { CheckCircle2, Compass, ListChecks, Sparkles } from 'lucide-react';
 import Box from '@mui/material/Box';
 import MuiButton from '@mui/material/Button';

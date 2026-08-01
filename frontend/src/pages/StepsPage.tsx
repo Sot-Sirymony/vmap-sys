@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ListChecks } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { archiveIdealPartnerProfile, createIdealPartnerProfile, listIdealPartnerProfiles, updateIdealPartnerProfile } from '../api/idealPartnerProfileApi';

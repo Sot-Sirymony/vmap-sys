@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { listCommunicationMessages } from '../api/communicationApi';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';

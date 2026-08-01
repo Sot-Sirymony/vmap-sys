@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router';
 import Box from '@mui/material/Box';
 import { GlobalShortcuts } from './GlobalShortcuts';
 import { Header } from './Header';
