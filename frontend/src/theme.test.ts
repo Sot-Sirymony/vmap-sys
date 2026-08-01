@@ -209,6 +209,51 @@ describe('semantic palette and grey ramp (FR-43)', () => {
     expect(defaultTheme.palette.primary.main).not.toBe(palette.primary.main);
   });
 
+  /**
+   * FR-45: the semantic families are wired into MUI's own slots, so
+   * `<Alert severity="success">` and `<Chip color="warning">` draw from this
+   * palette instead of MUI's stock colours. Before this they were defined and
+   * referenced by nothing.
+   */
+  it.each(['success', 'warning', 'info'] as const)('wires %s into the MUI palette', (family) => {
+    const theme = buildTheme('light');
+    expect(theme.palette[family].main).toBe(palette[family].main);
+    expect(theme.palette[family].light).toBe(palette[family].light);
+    expect(theme.palette[family].dark).toBe(palette[family].dark);
+  });
+
+  /**
+   * The trap this guards: MUI picks `contrastText` automatically from a
+   * threshold, and for these mains it would choose white — 1.90:1 on warning.
+   * Setting it explicitly is what keeps a filled chip readable.
+   */
+  it.each(['success', 'warning', 'info', 'error'] as const)('keeps a filled %s surface readable', (family) => {
+    for (const mode of MODES) {
+      const theme = buildTheme(mode);
+      const slot = theme.palette[family];
+      expect(contrast(slot.main, slot.contrastText)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('exposes the grey ramp through MUI’s standard slot', () => {
+    const theme = buildTheme('light');
+    for (const step of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const) {
+      expect(theme.palette.grey[step]).toBe(grey[step]);
+    }
+  });
+
+  /**
+   * Disabled text is exempt from the 4.5:1 rule (WCAG 1.4.3) and should read as
+   * unavailable — so this asserts it is deliberately *below* the body-text bar
+   * rather than accidentally near it.
+   */
+  it('uses the low end of the ramp for disabled states', () => {
+    const light = buildTheme('light');
+    expect(light.palette.text.disabled).toBe(grey[500]);
+    expect(contrast(grey[500], '#ffffff')).toBeLessThan(4.5);
+    expect(light.palette.action.disabledBackground).toBe(grey[400]);
+  });
+
   it('offers the supplied ramps as selectable accents that meet the accent contract', () => {
     for (const id of ['vermilion', 'violet'] as const) {
       for (const mode of MODES) {

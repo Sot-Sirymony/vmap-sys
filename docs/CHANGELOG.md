@@ -123,14 +123,25 @@ release rather than opening a new version.
   that token to the grey ramp — it now reads the value from `surfaceTokens`, so
   the same drift cannot recur.
 
+- The FR-43 palette was largely inert: nine values were defined and referenced by
+  nothing. `success`, `warning` and `info` are now wired into MUI's own palette
+  slots, so `<Alert severity="success">` and `<Chip color="warning">` draw from
+  this app's palette instead of MUI's stock colours; the grey ramp is exposed
+  through `palette.grey`; and grey-400/500 back the disabled states. `contrastText`
+  is set explicitly on each: MUI derives it from a threshold and would have chosen
+  white, which measures 1.90:1 on the warning fill. Nine unused values down to
+  three.
+
 ### Known issues
 - `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
   Both predate FR-42's font packages; a `react-router` bump could change routing
   behaviour, so it is left for its own change rather than folded into a feature.
-- Nine values from the FR-43 palette are defined but not yet referenced: the four
-  semantic `main` shades (icon/fill colours nothing currently renders) and grey
-  50/100/400/500/900. They were added as a complete ramp rather than trimmed to
-  present usage, so the roles stay coherent.
+- Three values from the FR-43 palette remain defined but unreferenced: `error.main`
+  (the app needs the darker, button-capable shade for its destructive colour, so
+  the mid-tone fill has no caller), grey-50 and grey-900. No home was invented for
+  them — the row hover that grey-50 might have taken already uses grey-200, and
+  switching it would make hover *less* visible, not more. They stay as part of a
+  coherent ramp.
 - FR-43 does not define the `--palette-*` CSS variables named in the source
   tables. The values are wired through the existing token names instead; two
   naming systems for one set of colours is the drift BR-15 exists to prevent.

@@ -481,6 +481,13 @@ export function matchPreset(mode: 'light' | 'dark' | 'system', accent: AccentId)
   return themePresets.find((preset) => preset.mode === mode && preset.accent === accent)?.stored ?? 'CUSTOM';
 }
 
+/**
+ * The text colour MUI puts on a filled `success` / `warning` / `info` / `error`
+ * surface. grey-800, not white: those mains are fills and measure 1.90:1 to
+ * 3.17:1 against white, so MUI's automatic pick would produce unreadable chips.
+ */
+const PALETTE_CONTRAST_TEXT = grey[800];
+
 export type Density = 'comfortable' | 'compact';
 
 /**
@@ -939,8 +946,13 @@ export function buildTheme(
         paper: toned?.card ?? tokens.card, // --card / --popover
       },
       text: {
-        primary: tokens.foreground, // --foreground (Fluent neutralForeground1)
-        secondary: tokens.mutedForeground, // --muted-foreground (Fluent neutralForeground2)
+        primary: tokens.foreground, // --foreground
+        secondary: tokens.mutedForeground, // --muted-foreground
+        // FR-45: grey-500. Disabled text is explicitly exempt from the 4.5:1
+        // rule (WCAG 1.4.3), and looking disabled is the point — it measures
+        // 2.73:1 on white, which reads as unavailable rather than as low-quality
+        // body text.
+        disabled: dark ? grey[600] : grey[500],
       },
       primary: {
         main: brand.main, // --primary (the chosen accent's ramp, FR-18.3)
@@ -953,9 +965,52 @@ export function buildTheme(
         contrastText: tokens.foreground, // --secondary-foreground
       },
       error: {
-        main: tokens.error, // --destructive (Fluent Danger, lightened for dark)
+        main: tokens.error, // --destructive
+        light: palette.error.light,
+        dark: palette.error.darker,
+        // Unlike success/warning/info, `error.main` here is the ramp's *dark*
+        // shade in light mode — a proper button colour that carries white text
+        // at 6.56:1. Dark mode uses a lightened shade, which needs the dark text
+        // instead. Same split as the accents.
+        contrastText: dark ? PALETTE_CONTRAST_TEXT : '#ffffff',
       },
-      divider: border, // --border / --input (Fluent neutralStroke)
+      // FR-45: MUI's own semantic slots, which the theme previously left unset —
+      // so `<Alert severity="success">` and `<Chip color="warning">` fell back to
+      // MUI's stock colours rather than this app's palette.
+      //
+      // contrastText is set explicitly rather than left to MUI's automatic
+      // threshold. These mains are fills, not text backgrounds: measured against
+      // white they run 1.90:1 (warning) to 3.17:1 (error), so a filled variant
+      // with white text would be unreadable. grey-800 clears 4.90:1 on the worst
+      // of them.
+      success: {
+        main: palette.success.main,
+        light: palette.success.light,
+        dark: palette.success.dark,
+        contrastText: PALETTE_CONTRAST_TEXT,
+      },
+      warning: {
+        main: palette.warning.main,
+        light: palette.warning.light,
+        dark: palette.warning.dark,
+        contrastText: PALETTE_CONTRAST_TEXT,
+      },
+      info: {
+        main: palette.info.main,
+        light: palette.info.light,
+        dark: palette.info.dark,
+        contrastText: PALETTE_CONTRAST_TEXT,
+      },
+      // The ramp in MUI's standard slot, so components that reach for
+      // `palette.grey[n]` get this app's greys instead of MUI's defaults.
+      grey,
+      // FR-45: grey-400/500 are the ramp's "unavailable" steps. MUI paints
+      // disabled controls and their fills from here.
+      action: {
+        disabled: dark ? grey[600] : grey[500],
+        disabledBackground: dark ? '#2d2c2b' : grey[400],
+      },
+      divider: border, // --border / --input
     },
     shape: {
       borderRadius: 4, // --radius: Fluent's 4px corner radius
