@@ -132,6 +132,16 @@ release rather than opening a new version.
   white, which measures 1.90:1 on the warning fill. Nine unused values down to
   three.
 
+- The five original accents (Blue, Teal, Purple, Green, Orange) dropped below
+  4.5:1 on their hover and pressed states — six failures across four of them,
+  worst 3.34:1 on Purple's light hover. The cause was direction: their
+  light-mode hovers were *lighter* than their mains, so contrast fell exactly
+  when a user pressed the button. Hover and pressed now darken progressively,
+  matching Fluent's own convention and the seven accents added later. Every
+  `main` is byte-identical, so no brand colour moved. The theme test asserted
+  only 3:1 on transient states to accommodate this; it now asserts 4.5:1
+  uniformly, plus a new assertion on the direction of the ramp.
+
 ### Known issues
 - `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
   Both predate FR-42's font packages; a `react-router` bump could change routing
@@ -145,11 +155,6 @@ release rather than opening a new version.
 - FR-43 does not define the `--palette-*` CSS variables named in the source
   tables. The values are wired through the existing token names instead; two
   naming systems for one set of colours is the drift BR-15 exists to prevent.
-- The five accents added by FR-39 clear 4.5:1 against their own label text in
-  every state (main, hover, pressed, both modes). The five original accents do
-  not on their transient states — Orange's light hover measures 3.47:1. Raising
-  them is a recolour FR-39 does not claim; the theme tests therefore assert 4.5:1
-  at rest and 3:1 on hover/pressed.
 
 ### Deferred (needs new infrastructure — future BRD)
 Automated agenda generation, predictive push alerts, and fully-automated reviews —

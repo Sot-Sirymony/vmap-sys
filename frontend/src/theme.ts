@@ -346,35 +346,33 @@ type AccentSet = {
 export const accentOptions: Record<AccentId, { label: string; light: AccentSet; dark: AccentSet }> = {
   blue: {
     label: 'Blue',
-    light: { main: '#0078d4', hover: '#106ebe', pressed: '#005a9e', contrastText: '#ffffff', tint: '#deecf9', tintForeground: '#005a9e' },
-    dark: { main: '#4ba0e1', hover: '#71afe5', pressed: '#2b88d8', contrastText: '#1b1a19', tint: '#0e3a5c', tintForeground: '#9ec9ec' },
+    light: { main: '#0078d4', hover: '#006abb', pressed: '#005a9f', contrastText: '#ffffff', tint: '#deecf9', tintForeground: '#005a9e' },
+    dark: { main: '#4ba0e1', hover: '#6bb1e6', pressed: '#408ac1', contrastText: '#1b1a19', tint: '#0e3a5c', tintForeground: '#9ec9ec' },
   },
   teal: {
     label: 'Teal',
-    light: { main: '#038387', hover: '#159195', pressed: '#026d70', contrastText: '#ffffff', tint: '#d5f0f0', tintForeground: '#026d70' },
-    dark: { main: '#58c2c6', hover: '#7ad4d8', pressed: '#31a8ad', contrastText: '#1b1a19', tint: '#0c3536', tintForeground: '#9be0e2' },
+    light: { main: '#038387', hover: '#037377', pressed: '#026265', contrastText: '#ffffff', tint: '#d5f0f0', tintForeground: '#026d70' },
+    dark: { main: '#58c2c6', hover: '#76cdd0', pressed: '#419093', contrastText: '#1b1a19', tint: '#0c3536', tintForeground: '#9be0e2' },
   },
   purple: {
     label: 'Purple',
-    light: { main: '#8764b8', hover: '#9d7fc6', pressed: '#6b4fa0', contrastText: '#ffffff', tint: '#ece5f6', tintForeground: '#5a4180' },
-    dark: { main: '#a68ccc', hover: '#bda7d9', pressed: '#8764b8', contrastText: '#1b1a19', tint: '#2b2140', tintForeground: '#cdbce6' },
+    light: { main: '#8764b8', hover: '#7758a2', pressed: '#654b8a', contrastText: '#ffffff', tint: '#ece5f6', tintForeground: '#5a4180' },
+    dark: { main: '#a68ccc', hover: '#b6a1d5', pressed: '#927bb4', contrastText: '#1b1a19', tint: '#2b2140', tintForeground: '#cdbce6' },
   },
   green: {
     label: 'Green',
-    light: { main: '#107c10', hover: '#2d8f2d', pressed: '#0b5a0b', contrastText: '#ffffff', tint: '#dff0df', tintForeground: '#0b5a0b' },
-    dark: { main: '#6bbf6c', hover: '#8ccf8d', pressed: '#4aa74c', contrastText: '#1b1a19', tint: '#16301c', tintForeground: '#a4d7a6' },
+    light: { main: '#107c10', hover: '#0e6d0e', pressed: '#0c5d0c', contrastText: '#ffffff', tint: '#dff0df', tintForeground: '#0b5a0b' },
+    dark: { main: '#6bbf6c', hover: '#86cb86', pressed: '#539554', contrastText: '#1b1a19', tint: '#16301c', tintForeground: '#a4d7a6' },
   },
   orange: {
     label: 'Orange',
-    light: { main: '#ca5010', hover: '#d86b2b', pressed: '#a3400c', contrastText: '#ffffff', tint: '#f8e3d7', tintForeground: '#8a3a0e' },
-    dark: { main: '#df8e57', hover: '#e8a97e', pressed: '#ca5010', contrastText: '#1b1a19', tint: '#3a2415', tintForeground: '#f0c0a4' },
+    light: { main: '#ca5010', hover: '#b2460e', pressed: '#983c0c', contrastText: '#ffffff', tint: '#f8e3d7', tintForeground: '#8a3a0e' },
+    dark: { main: '#df8e57', hover: '#e5a275', pressed: '#b77447', contrastText: '#1b1a19', tint: '#3a2415', tintForeground: '#f0c0a4' },
   },
   // FR-39.2: five more accents, same shape and same guarantee. Every value
   // below was contrast-checked before being written down: each of main, hover,
   // and pressed clears 4.5:1 against its own contrastText, and each tint pair
-  // clears 4.5:1 — in both modes. That is a slightly higher bar than the
-  // original five actually meet on their transient states (Orange's light hover
-  // measures 3.47:1), so these are the reference for any accent added later.
+  // clears 4.5:1 — in both modes.
   //
   // Note the direction of the light ramp: hover and pressed get progressively
   // DARKER, not lighter. That is Fluent's own convention — visible in Blue

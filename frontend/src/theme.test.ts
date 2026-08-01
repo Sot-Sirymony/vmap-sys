@@ -63,14 +63,33 @@ describe('accent palette (FR-39.2)', () => {
     }
   });
 
+  /**
+   * The transient states are held to the same 4.5:1 bar as the resting one: a
+   * button whose label goes illegible the moment you hover it is a real failure.
+   *
+   * This asserted only 3:1 until FR-46, because the five original accents could
+   * not meet 4.5 — their light-mode hovers were *lighter* than their mains, so
+   * contrast dropped exactly when the user interacted. Six such states across
+   * teal, purple, green and orange were corrected; the bar is now uniform.
+   */
   it.each(ACCENT_IDS)('%s stays readable while being hovered and pressed', (accentId) => {
     for (const mode of MODES) {
       const set = accentOptions[accentId][mode];
-      // A button whose text goes illegible mid-interaction is a real failure, so
-      // the transient states are held to the same bar as the resting one.
-      expect(contrast(set.hover, set.contrastText)).toBeGreaterThanOrEqual(3);
-      expect(contrast(set.pressed, set.contrastText)).toBeGreaterThanOrEqual(3);
+      expect(contrast(set.hover, set.contrastText)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(set.pressed, set.contrastText)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  /**
+   * Direction, not just contrast: in light mode each step must get darker, which
+   * is Fluent's convention and the reason the corrected values hold up. A
+   * lighter hover is what produced the original failures.
+   */
+  it.each(ACCENT_IDS)('%s darkens through hover and pressed in light mode', (accentId) => {
+    const set = accentOptions[accentId].light;
+    const onWhite = (hex: string) => contrast(hex, '#ffffff');
+    expect(onWhite(set.hover)).toBeGreaterThan(onWhite(set.main));
+    expect(onWhite(set.pressed)).toBeGreaterThan(onWhite(set.hover));
   });
 
   it('gives every accent a distinct main colour, so the swatches mean something', () => {
