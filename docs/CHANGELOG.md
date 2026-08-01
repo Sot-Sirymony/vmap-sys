@@ -58,9 +58,9 @@ cross-area synergy, a searchable insight library, and computed balance signals.
 | FR-38 | In-app issue & improvement reporting — header report modal, My/All reports, admin triage (BR-32) | `5bf2301` |
 | FR-39 | Appearance & theme preferences — presets, 10 accents, high contrast, reduce motion, settings page with live preview, per-account persistence (BR-33, BR-34) | `2ae5df7` |
 | FR-40 | Background tone — six curated surface sets, accent-derived Tinted, overridden by high contrast (BR-35) | `4077e17` |
-| FR-41 | Categorical pie charts — solid pie with on-slice labels for the two non-semantic dashboard charts | _pending_ |
-| FR-42 | Font family — system default plus four self-hosted faces, fetched on demand (BR-36) | _pending_ |
-| FR-43 | Semantic palette & grey ramp — five-shade families, ten-step greys, two new accents (BR-37) | _pending_ |
+| FR-41 | Categorical pie charts — solid pie with on-slice labels for the two non-semantic dashboard charts | `e033ac5` |
+| FR-42 | Font family — system default plus four self-hosted faces, fetched on demand (BR-36) | `e033ac5` |
+| FR-43 | Semantic palette & grey ramp — five-shade families, ten-step greys, two new accents (BR-37) | `e033ac5` |
 
 All verified with backend and frontend test suites (backend 127/127, frontend
 177/177).
