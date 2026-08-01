@@ -851,11 +851,13 @@ This FR replaces both with structured ramps.
   `warning.main`, and `info.main` are *illegible* on white, so a later change
   cannot quietly promote them to button colours.
 - **Brand red kept off the default path.** Offered, not imposed (FR-43.4).
-- **No parallel `--palette-*` CSS variables.** The supplied tables name CSS
-  variables; the values are instead wired through the existing token names. Two
-  naming systems for the same colours is the drift BR-15 exists to prevent. If
-  components ever need them in plain CSS, they can be generated from the same
-  source rather than hand-maintained.
+- **`--palette-*` CSS variables, guarded rather than omitted.** The supplied
+  tables name CSS variables. These were initially left out because two
+  hand-maintained copies of the same colours is the drift BR-15 exists to
+  prevent — then added once the drift was made impossible: a test parses
+  `global.css` and compares every `--palette-*` declaration against `theme.ts` in
+  both directions. The rule that matters is not "never duplicate" but "never let
+  two copies disagree", and a test enforces that better than an absence does.
 
 ---
 

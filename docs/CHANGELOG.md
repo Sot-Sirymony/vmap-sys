@@ -142,6 +142,16 @@ release rather than opening a new version.
   only 3:1 on transient states to accommodate this; it now asserts 4.5:1
   uniformly, plus a new assertion on the direction of the ramp.
 
+- The `--palette-*` CSS variables named in the FR-43 source tables did not
+  exist; the values were reachable only from `theme.ts`. All 40 are now declared
+  in `global.css` (30 semantic shades, 10 greys), so plain CSS and components
+  ported from a design that names those variables can use them. The objection to
+  duplicating them — drift between two hand-maintained copies, which BR-15 exists
+  to prevent — is answered by a test that parses the stylesheet and compares
+  every declaration against `theme.ts` in both directions: a changed value fails,
+  and so does a variable left behind after a shade is renamed. The guard was
+  verified by injecting a wrong value and confirming it fails.
+
 ### Known issues
 - `npm audit` reports 3 high-severity advisories in `postcss` and `react-router`.
   Both predate FR-42's font packages; a `react-router` bump could change routing
@@ -152,9 +162,6 @@ release rather than opening a new version.
   them — the row hover that grey-50 might have taken already uses grey-200, and
   switching it would make hover *less* visible, not more. They stay as part of a
   coherent ramp.
-- FR-43 does not define the `--palette-*` CSS variables named in the source
-  tables. The values are wired through the existing token names instead; two
-  naming systems for one set of colours is the drift BR-15 exists to prevent.
 
 ### Deferred (needs new infrastructure — future BRD)
 Automated agenda generation, predictive push alerts, and fully-automated reviews —

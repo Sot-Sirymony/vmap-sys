@@ -64,6 +64,59 @@
   --danger-bg: #FFE9D5;          /* overdue row wash — error.lighter */
   --hint: #0d7d70;               /* field hints */
   --moonshot-fg: #6b21a8;        /* moonshot text; light-legible violet */
+  /* FR-47 — the palette as plain CSS variables, for styles that cannot reach
+     into theme.ts (hand-written CSS, and components ported from a design that
+     names these variables directly).
+
+     GENERATED FROM theme.ts, NOT MAINTAINED BY HAND. A test parses this block
+     and asserts every value matches the `palette` and `grey` exports, so the two
+     cannot drift — which was the reason for not duplicating them until now.
+     Change a colour in theme.ts and update here, or the suite fails.
+
+     Shade roles are the same as in theme.ts and are not interchangeable:
+     `lighter` is a tint background, `main` an icon or fill, `dark`/`darker` the
+     text that sits on it. `main` is not a button colour — measured against white
+     these run 1.90:1 to 3.67:1. */
+  --palette-primary-lighter: #FFE3D5;
+  --palette-primary-light: #FFC1AC;
+  --palette-primary-main: #FF3030;
+  --palette-primary-dark: #B71833;
+  --palette-primary-darker: #7A0930;
+  --palette-secondary-lighter: #EFD8FF;
+  --palette-secondary-light: #C884FF;
+  --palette-secondary-main: #8E33FF;
+  --palette-secondary-dark: #5119B7;
+  --palette-secondary-darker: #27097A;
+  --palette-info-lighter: #CAFDF5;
+  --palette-info-light: #61F3F3;
+  --palette-info-main: #00B8D9;
+  --palette-info-dark: #006C9C;
+  --palette-info-darker: #003768;
+  --palette-success-lighter: #D3FCD2;
+  --palette-success-light: #77ED8B;
+  --palette-success-main: #22C55E;
+  --palette-success-dark: #118D57;
+  --palette-success-darker: #065E49;
+  --palette-warning-lighter: #FFF5CC;
+  --palette-warning-light: #FFD666;
+  --palette-warning-main: #FFAB00;
+  --palette-warning-dark: #B76E00;
+  --palette-warning-darker: #7A4100;
+  --palette-error-lighter: #FFE9D5;
+  --palette-error-light: #FFAC82;
+  --palette-error-main: #FF5630;
+  --palette-error-dark: #B71D18;
+  --palette-error-darker: #7A0916;
+  --palette-grey-50: #FCFDFD;
+  --palette-grey-100: #F9FAFB;
+  --palette-grey-200: #F4F6F8;
+  --palette-grey-300: #DFE3E8;
+  --palette-grey-400: #C4CDD5;
+  --palette-grey-500: #919EAB;
+  --palette-grey-600: #637381;
+  --palette-grey-700: #454F5B;
+  --palette-grey-800: #1C252E;
+  --palette-grey-900: #141A21;
   /* FR-18.4 density defaults (Comfortable); the compact overrides live on
      [data-density="compact"] below. MUI spacing scales via the theme. */
   --cell-pad-y: 12px;
