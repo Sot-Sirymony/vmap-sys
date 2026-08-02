@@ -8,6 +8,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.PasswordResetTokenRepository;
 import com.visionmapping.service.mail.PasswordResetMailer;
+import com.visionmapping.service.support.PasswordResetRateLimiter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -56,6 +57,7 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetMailer mailer;
+    private final PasswordResetRateLimiter rateLimiter;
     private final SecureRandom secureRandom = new SecureRandom();
 
     /** Long enough to find the mail, short enough that a leaked inbox ages out. */
@@ -73,8 +75,14 @@ public class PasswordResetService {
      * <p>Returns void rather than any indication of what happened. The caller
      * cannot report more than it knows, which is the point.
      */
-    public void requestReset(ForgotPasswordRequest request) {
+    public void requestReset(ForgotPasswordRequest request, String clientIp) {
         String email = request.email().trim().toLowerCase();
+
+        // Before the lookup, and unconditionally. Limiting only addresses that
+        // have accounts would answer differently for registered and unregistered
+        // ones — exactly the disclosure the 204-either-way response prevents.
+        rateLimiter.check(email, clientIp);
+
         Optional<AppUser> found = appUserRepository.findByEmail(email);
 
         if (found.isEmpty()) {

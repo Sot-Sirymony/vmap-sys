@@ -1,5 +1,6 @@
 package com.visionmapping.service.mail;
 
+import com.visionmapping.config.AsyncConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,6 +40,16 @@ public class PasswordResetMailer {
     @Value("${app.mail.from:no-reply@visionmapping.app}")
     private String from;
 
+    /**
+     * Runs off the request thread. Sending is an SMTP round trip, and doing it
+     * inline would make /api/auth/forgot-password measurably slower for an
+     * address that has an account than for one that does not — a membership
+     * oracle that defeats the point of answering 204 either way.
+     *
+     * Nothing waits on the result, which is why every failure below is handled
+     * here rather than thrown: there is no caller left to catch it.
+     */
+    @Async(AsyncConfig.MAIL_EXECUTOR)
     public void sendResetLink(String email, String fullName, String resetLink, long ttlMinutes) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (mailHost.isBlank() || sender == null) {

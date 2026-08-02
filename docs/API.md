@@ -71,6 +71,20 @@ passwords. The UI wording must not claim more than the API does.
 Issuing a link retires any the same user still has outstanding, so asking twice
 never leaves two working links alive in two inboxes.
 
+**Rate limited.** Three requests per address per 15 minutes, and twenty per
+client IP per hour, both checked *before* the account lookup so neither can
+reveal which addresses are registered. Exceeding either answers `429` with a
+message. The per-address limit stops the endpoint being used to flood one
+inbox; the per-IP limit stops one caller working through a list of addresses.
+
+Limits are held in memory, so they are per instance rather than per cluster —
+correct for the current single-instance deployment, but behind multiple replicas
+the effective limit multiplies and this should move to Redis.
+
+**Sending is asynchronous.** The SMTP round trip runs on a separate executor so
+it cannot make the response measurably slower for an address that has an account
+than for one that does not.
+
 ### Reset password
 
 ```text

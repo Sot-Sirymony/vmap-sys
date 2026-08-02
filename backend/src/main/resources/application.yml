@@ -35,6 +35,15 @@ app:
     # The frontend route that redeems the link, not an API path — the user lands
     # on a form, and that form calls /api/auth/reset-password.
     reset-url: ${PASSWORD_RESET_URL:http://127.0.0.1:5173/reset-password}
+    # Two limits doing different jobs: per-address stops the endpoint being used
+    # to flood one inbox, per-IP stops one caller working through a list of
+    # addresses. Both are checked before the account lookup, so neither can
+    # reveal which addresses are registered.
+    rate-limit:
+      per-email: ${PASSWORD_RESET_LIMIT_PER_EMAIL:3}
+      per-email-window-minutes: ${PASSWORD_RESET_LIMIT_EMAIL_WINDOW:15}
+      per-ip: ${PASSWORD_RESET_LIMIT_PER_IP:20}
+      per-ip-window-minutes: ${PASSWORD_RESET_LIMIT_IP_WINDOW:60}
   mail:
     from: ${MAIL_FROM:no-reply@visionmapping.app}
 

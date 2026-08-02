@@ -20,6 +20,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.PasswordResetTokenRepository;
 import com.visionmapping.service.mail.PasswordResetMailer;
+import com.visionmapping.service.support.PasswordResetRateLimiter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -47,6 +48,7 @@ class PasswordResetServiceTest {
     private static final String OLD_PASSWORD = "OriginalPass123";
     private static final String NEW_PASSWORD = "ReplacementPass456";
     private static final long TTL_MINUTES = 30;
+    private static final String CLIENT_IP = "203.0.113.7";
 
     @Mock
     private AppUserRepository appUserRepository;
@@ -54,6 +56,8 @@ class PasswordResetServiceTest {
     private PasswordResetTokenRepository tokenRepository;
     @Mock
     private PasswordResetMailer mailer;
+    @Mock
+    private PasswordResetRateLimiter rateLimiter;
 
     private PasswordEncoder passwordEncoder;
     private PasswordResetService service;
@@ -62,7 +66,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer);
+        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter);
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
@@ -83,7 +87,7 @@ class PasswordResetServiceTest {
         when(appUserRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         when(tokenRepository.findByUserAndUsedAtIsNull(user)).thenReturn(List.of());
 
-        service.requestReset(new ForgotPasswordRequest(EMAIL));
+        service.requestReset(new ForgotPasswordRequest(EMAIL), CLIENT_IP);
 
         ArgumentCaptor<String> link = ArgumentCaptor.forClass(String.class);
         verify(mailer).sendResetLink(eqEmail(), anyString(), link.capture(), anyLong());
@@ -101,7 +105,7 @@ class PasswordResetServiceTest {
     void unknownAddressIsSilent() {
         when(appUserRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
 
-        service.requestReset(new ForgotPasswordRequest("nobody@example.com"));
+        service.requestReset(new ForgotPasswordRequest("nobody@example.com"), CLIENT_IP);
 
         verifyNoInteractions(mailer);
         verify(tokenRepository, never()).save(any());
@@ -113,7 +117,7 @@ class PasswordResetServiceTest {
         when(appUserRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         when(tokenRepository.findByUserAndUsedAtIsNull(user)).thenReturn(List.of());
 
-        service.requestReset(new ForgotPasswordRequest("  PAT@Example.COM  "));
+        service.requestReset(new ForgotPasswordRequest("  PAT@Example.COM  "), CLIENT_IP);
 
         verify(appUserRepository).findByEmail(EMAIL);
     }
@@ -132,7 +136,7 @@ class PasswordResetServiceTest {
         when(appUserRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         when(tokenRepository.findByUserAndUsedAtIsNull(user)).thenReturn(List.of(previous));
 
-        service.requestReset(new ForgotPasswordRequest(EMAIL));
+        service.requestReset(new ForgotPasswordRequest(EMAIL), CLIENT_IP);
 
         assertThat(previous.getUsedAt()).isNotNull();
         verify(tokenRepository).saveAll(List.of(previous));
@@ -148,7 +152,7 @@ class PasswordResetServiceTest {
         when(appUserRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         when(tokenRepository.findByUserAndUsedAtIsNull(user)).thenReturn(List.of());
 
-        service.requestReset(new ForgotPasswordRequest(EMAIL));
+        service.requestReset(new ForgotPasswordRequest(EMAIL), CLIENT_IP);
 
         ArgumentCaptor<String> link = ArgumentCaptor.forClass(String.class);
         verify(mailer).sendResetLink(anyString(), anyString(), link.capture(), anyLong());

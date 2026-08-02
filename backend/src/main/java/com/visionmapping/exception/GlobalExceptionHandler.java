@@ -91,6 +91,18 @@ public class GlobalExceptionHandler {
      * report). It's a legitimate request from an authenticated user who simply
      * lacks the role — 403, not a 500.
      */
+    /**
+     * A rate limit, not a rejection of what was sent — the same request may well
+     * succeed later, which is what 429 tells the client and 400 would not.
+     */
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(
+            TooManyRequestsException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException exception,
