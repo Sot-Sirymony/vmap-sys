@@ -4,7 +4,6 @@ import { register } from '../api/authApi';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
-import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 
 export function RegisterPage() {
@@ -13,7 +12,6 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { setSession } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(event: FormEvent) {
@@ -21,9 +19,17 @@ export function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      const response = await register({ fullName, email, password });
-      setSession(response);
-      navigate('/', { replace: true });
+      await register({ fullName, email, password });
+      // Registering no longer signs the user straight in. It used to call
+      // setSession() with the token the endpoint returns and jump to the
+      // dashboard, which meant a successful sign-up produced no confirmation at
+      // all — the form simply vanished and the app appeared. Handing over to the
+      // sign-in page gives the success somewhere to be stated, and makes the
+      // account's credentials something the user has actually used once.
+      //
+      // The token in the response is deliberately dropped. Registering proves
+      // the account exists, not that whoever filled the form can sign in to it.
+      navigate('/login', { replace: true, state: { registeredEmail: email } });
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Registration failed.');
     } finally {
