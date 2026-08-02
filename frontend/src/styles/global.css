@@ -1337,6 +1337,41 @@ button:focus-visible,
   color: var(--text-soft);
 }
 
+/* The links on the sign-in, register and password-recovery forms.
+ *
+ * They used to be invisible as links: the base rule is `a { color: inherit }`,
+ * and these sit inside a paragraph painted --text-soft, so "Sign in", "Create
+ * one" and "Forgot your password?" rendered in exactly the grey of the sentence
+ * around them, with no underline. Nothing marked them as clickable at all.
+ *
+ * Underlined rather than only recoloured, because colour alone is not an
+ * available distinction to everyone (WCAG 1.4.1). Measured, the colour on its
+ * own barely distinguishes anything here: link against the grey beside it is
+ * 1.84:1 in light and 1.07:1 in dark. The underline is doing the work; the
+ * colour is the supporting cue.
+ *
+ * --accent-foreground rather than --primary. --primary is the obvious choice
+ * and fails: at #0078d4 it measures 4.46:1 on the warm background tone (FR-40),
+ * just under AA, so the link would be legible on the default surface and not on
+ * one the user can select. --accent-foreground is the darker end of the same
+ * blue and clears every card surface in both themes — worst case 7.00:1 light,
+ * 8.68:1 dark.
+ */
+.auth-link a {
+  color: var(--accent-foreground);
+  text-decoration: underline;
+  /* Clear of descenders, so the underline reads as a rule rather than a strike
+     through the tails of "g" and "y" in "Forgot your password?". */
+  text-underline-offset: 0.2em;
+}
+
+.auth-link a:hover,
+.auth-link a:focus-visible {
+  /* Thicker on hover rather than removing the underline, which is the common
+     inversion and takes the affordance away exactly when it is being used. */
+  text-decoration-thickness: 2px;
+}
+
 /* FR-18.1: 900px is the theme's `md` breakpoint — the sidebar collapses to
    mobile at the same width, so the layouts change together. */
 @media (max-width: 900px) {
