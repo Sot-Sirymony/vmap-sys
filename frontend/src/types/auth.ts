@@ -24,6 +24,22 @@ export type ChangePasswordRequest = {
   newPassword: string;
 };
 
+/** Asking for a reset link. Only the address — the caller is signed out. */
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
+/**
+ * Redeeming a reset link. The token stands in for the old password: it is proof
+ * of access to the account's inbox, which is the only credential someone who has
+ * forgotten their password still has. There is no email field — the token
+ * identifies the account by itself.
+ */
+export type ResetPasswordRequest = {
+  token: string;
+  newPassword: string;
+};
+
 export type AuthResponse = {
   token: string;
   tokenType: string;

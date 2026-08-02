@@ -47,6 +47,20 @@ export DB_PASSWORD='your-password'
 export JWT_SECRET='change-this-secret'
 ```
 
+Password recovery email is optional. Without `MAIL_HOST` the backend still issues
+valid reset tokens but writes the link to the log at WARN instead of sending it,
+which is how the flow is exercised locally:
+
+```bash
+export MAIL_HOST=smtp.example.com      # unset = log the link instead of sending
+export MAIL_PORT=587
+export MAIL_USERNAME='smtp-user'
+export MAIL_PASSWORD='smtp-password'
+export MAIL_FROM='no-reply@yourdomain'
+export PASSWORD_RESET_URL='http://127.0.0.1:5173/reset-password'
+export PASSWORD_RESET_TTL_MINUTES=30
+```
+
 `DB_PASSWORD` is required — the app fails fast on startup if it isn't set. `JWT_SECRET` should also be overridden with a strong value for anything beyond local development.
 
 ## Run Backend
@@ -120,6 +134,8 @@ Public:
 - `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/forgot-password` — email a reset link
+- `POST /api/auth/reset-password` — redeem the link and set a new password
 
 Protected:
 - `POST /api/auth/change-password` — set a new password, current password required

@@ -27,6 +27,8 @@ const InsightsPage = lazy(() => import('./pages/InsightsPage').then((m) => ({ de
 const IssueReportsPage = lazy(() => import('./pages/IssueReportsPage').then((m) => ({ default: m.IssueReportsPage })));
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage').then((m) => ({ default: m.ImportExportPage })));
 const AppearanceSettingsPage = lazy(() => import('./pages/AppearanceSettingsPage').then((m) => ({ default: m.AppearanceSettingsPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
 export function App() {
@@ -35,6 +37,9 @@ export function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        {/* Public: recovery is for users who cannot sign in. */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />

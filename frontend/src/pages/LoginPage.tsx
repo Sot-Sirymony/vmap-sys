@@ -19,19 +19,27 @@ const REMEMBERED_EMAIL_KEY = 'visionMappingRememberedEmail';
 export function LoginPage() {
   const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
   const location = useLocation();
-  const state = location.state as { from?: { pathname?: string }; registeredEmail?: string } | null;
-  // Set by RegisterPage on a successful sign-up. It is the only confirmation the
-  // user gets that the account was created, so it is carried in navigation state
-  // rather than shown as a toast: a toast would expire while they are still
-  // reading the form it belongs to.
+  const state = location.state as {
+    from?: { pathname?: string };
+    registeredEmail?: string;
+    notice?: string;
+  } | null;
+  // Both are set by the page that sent the user here — RegisterPage after a
+  // sign-up, ResetPasswordPage after a recovery. They are the only confirmation
+  // either flow gives, so they travel in navigation state rather than as a
+  // toast, which would expire while the user is still reading the form it
+  // belongs to.
   const registeredEmail = state?.registeredEmail;
+  const notice = registeredEmail
+    ? `Account created for ${registeredEmail}. Sign in to continue.`
+    : state?.notice;
   const [email, setEmail] = useState(registeredEmail ?? rememberedEmail);
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState('');
   // Dismissed on the first submit, so a later failure is never shown underneath
-  // a stale "account created" notice.
-  const [showRegistered, setShowRegistered] = useState(Boolean(registeredEmail));
+  // a stale success notice.
+  const [showNotice, setShowNotice] = useState(Boolean(notice));
   const [loading, setLoading] = useState(false);
   const { setSession } = useAuth();
   const navigate = useNavigate();
@@ -40,7 +48,7 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError('');
-    setShowRegistered(false);
+    setShowNotice(false);
     setLoading(true);
     try {
       const response = await login({ email, password });
@@ -63,11 +71,7 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <h1 className="text-2xl font-semibold">Sign in</h1>
-      {showRegistered && (
-        <MuiAlert severity="success">
-          Account created for <strong>{registeredEmail}</strong>. Sign in to continue.
-        </MuiAlert>
-      )}
+      {showNotice && notice && <MuiAlert severity="success">{notice}</MuiAlert>}
       <form className="form-stack" onSubmit={handleSubmit}>
         <label>
           Email
@@ -98,6 +102,7 @@ export function LoginPage() {
         {error && <ErrorMessage message={error} />}
         <Button type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</Button>
       </form>
+      <p className="auth-link"><Link to="/forgot-password">Forgot your password?</Link></p>
       <p className="auth-link">No account yet? <Link to="/register">Create one</Link></p>
     </AuthLayout>
   );

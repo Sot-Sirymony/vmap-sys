@@ -55,6 +55,64 @@ Body:
 }
 ```
 
+### Forgot password
+
+```text
+POST /auth/forgot-password
+```
+
+Public. Body: `{ "email": "pat@example.com" }`
+
+Always answers `204`, whether or not the address has an account. Answering
+differently would make this a membership oracle — submit addresses, learn which
+are registered — and that list is exactly what is worth having before attacking
+passwords. The UI wording must not claim more than the API does.
+
+Issuing a link retires any the same user still has outstanding, so asking twice
+never leaves two working links alive in two inboxes.
+
+### Reset password
+
+```text
+POST /auth/reset-password
+```
+
+Public, and authorised by the token rather than a session: someone who has
+forgotten their password has no other credential. Body:
+
+```json
+{
+  "token": "<from the emailed link>",
+  "newPassword": "BrandNewPassword456"
+}
+```
+
+Answers `204`. There is no email field — the token identifies the account by
+itself, and accepting an address alongside it would let one be paired with the
+other's token.
+
+Errors, all `400`:
+
+| Case | Message |
+|---|---|
+| Unknown token | `This reset link is not valid. Request a new one.` |
+| Already redeemed | `This reset link has already been used. Request a new one.` |
+| Past expiry | `This reset link has expired. Request a new one.` |
+| New password under 8 chars | validation error |
+
+Unlike the request endpoint, this one *does* distinguish its failures: the user
+is holding a link they believe works, and "expired" versus "already used" is the
+difference between requesting a new one and realising the reset already
+happened. The token is unguessable, so saying which tells an attacker nothing.
+
+**Storage.** The emailed token is never stored — only its SHA-256 — so read
+access to `password_reset_tokens` does not let anyone reset an account. A token
+is single-use and expires after `PASSWORD_RESET_TTL_MINUTES` (default 30).
+
+**Delivery.** Requires `MAIL_HOST` (plus `MAIL_USERNAME` / `MAIL_PASSWORD`).
+Without it the backend still issues valid tokens but writes the link to the log
+at WARN instead of sending it, so the flow can be exercised locally.
+
 ### Change password
 
 ```text

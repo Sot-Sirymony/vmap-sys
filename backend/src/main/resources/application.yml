@@ -3,6 +3,21 @@ spring:
     name: vision-mapping-backend
   profiles:
     active: local
+  # Recovery email. With no host set, Spring builds no JavaMailSender and
+  # PasswordResetMailer logs the link at WARN instead of sending — so the flow is
+  # exercisable locally, and an unconfigured deployment issues valid tokens
+  # rather than failing to start. Set MAIL_HOST to switch to real delivery.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: ${PORT:8080}
@@ -13,6 +28,15 @@ app:
     jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+  password-reset:
+    # Long enough to go and find the mail, short enough that a link left sitting
+    # in a mailbox stops being a key to the account.
+    ttl-minutes: ${PASSWORD_RESET_TTL_MINUTES:30}
+    # The frontend route that redeems the link, not an API path — the user lands
+    # on a form, and that form calls /api/auth/reset-password.
+    reset-url: ${PASSWORD_RESET_URL:http://127.0.0.1:5173/reset-password}
+  mail:
+    from: ${MAIL_FROM:no-reply@visionmapping.app}
 
 ---
 spring:

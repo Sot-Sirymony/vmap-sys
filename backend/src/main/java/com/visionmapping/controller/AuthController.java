@@ -1,10 +1,13 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.ChangePasswordRequest;
+import com.visionmapping.dto.request.ForgotPasswordRequest;
 import com.visionmapping.dto.request.LoginRequest;
 import com.visionmapping.dto.request.RegisterRequest;
+import com.visionmapping.dto.request.ResetPasswordRequest;
 import com.visionmapping.dto.response.AuthResponse;
 import com.visionmapping.service.AuthService;
+import com.visionmapping.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -45,5 +49,30 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(request);
+    }
+
+    /**
+     * Public: the caller has forgotten their password, so they cannot be
+     * authenticated first.
+     *
+     * Always 204, whether or not the address belongs to an account. Answering
+     * differently would make this a membership oracle — submit addresses, learn
+     * which are registered — and that list is exactly what is worth having
+     * before attacking passwords.
+     */
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request);
+    }
+
+    /**
+     * Public, and authorised by the token in the body rather than by a session:
+     * someone who has forgotten their password has no other credential.
+     */
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request);
     }
 }

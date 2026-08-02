@@ -1,5 +1,12 @@
 import { apiClient } from './apiClient';
-import type { AuthResponse, ChangePasswordRequest, LoginRequest, RegisterRequest } from '../types/auth';
+import type {
+  AuthResponse,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  ResetPasswordRequest,
+} from '../types/auth';
 
 export function login(request: LoginRequest) {
   return apiClient<AuthResponse>('/auth/login', {
@@ -25,5 +32,25 @@ export function changePassword(request: ChangePasswordRequest, token: string | n
     method: 'POST',
     body: JSON.stringify(request),
     token,
+  });
+}
+
+/**
+ * Requests a reset link. Answers 204 whether or not the address has an account,
+ * so there is deliberately nothing here to tell the two apart — the UI must not
+ * imply it knows either.
+ */
+export function forgotPassword(request: ForgotPasswordRequest) {
+  return apiClient<void>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/** Redeems a reset link. Public: the caller has no session to authenticate with. */
+export function resetPassword(request: ResetPasswordRequest) {
+  return apiClient<void>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(request),
   });
 }

@@ -68,6 +68,21 @@ services:
       # Render subdomain than the one predicted below.
       - key: CORS_ALLOWED_ORIGINS
         value: https://vision-mapping-frontend.onrender.com
+      # Password recovery. The link points at the frontend route that redeems
+      # it, not at the API — the user lands on a form, and that form calls
+      # /api/auth/reset-password.
+      - key: PASSWORD_RESET_URL
+        value: https://vision-mapping-frontend.onrender.com/reset-password
+      - key: PASSWORD_RESET_TTL_MINUTES
+        value: "30"
+      # Email delivery is OFF until these are set. Without MAIL_HOST the backend
+      # still issues valid tokens but writes the link to the log instead of
+      # sending it — deliberately, so an unconfigured deploy fails visibly in the
+      # log rather than silently swallowing every reset. Set MAIL_HOST,
+      # MAIL_USERNAME and MAIL_PASSWORD in the Render dashboard (they are secrets
+      # and must not be committed here) to turn real delivery on.
+      - key: MAIL_FROM
+        value: no-reply@visionmapping.app
 
   # React/Vite SPA — static build, served from frontend/dist
   - type: web
