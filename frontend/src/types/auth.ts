@@ -11,6 +11,19 @@ export type LoginRequest = {
   password: string;
 };
 
+/**
+ * The current password is required even though the request is authenticated: a
+ * token proves a session was opened at some point, not that the person holding
+ * it now is the account owner.
+ *
+ * There is no user identifier — the backend changes the password of whoever the
+ * token belongs to, so one account can never re-password another.
+ */
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 export type AuthResponse = {
   token: string;
   tokenType: string;

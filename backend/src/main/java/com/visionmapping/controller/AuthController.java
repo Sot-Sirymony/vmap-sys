@@ -1,5 +1,6 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.dto.request.ChangePasswordRequest;
 import com.visionmapping.dto.request.LoginRequest;
 import com.visionmapping.dto.request.RegisterRequest;
 import com.visionmapping.dto.response.AuthResponse;
@@ -29,5 +30,20 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    /**
+     * Unlike register and login, this path is not in SecurityConfig's permitAll
+     * list, so it inherits `anyRequest().authenticated()` — the caller must
+     * already hold a valid token, and the service then re-checks the password.
+     *
+     * Returns no body: the response to a password change has nothing useful to
+     * say, and echoing any part of the request would put a password in a place
+     * it does not need to be.
+     */
+    @PostMapping("/change-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
     }
 }

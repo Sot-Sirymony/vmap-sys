@@ -27,6 +27,7 @@ const InsightsPage = lazy(() => import('./pages/InsightsPage').then((m) => ({ de
 const IssueReportsPage = lazy(() => import('./pages/IssueReportsPage').then((m) => ({ default: m.IssueReportsPage })));
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage').then((m) => ({ default: m.ImportExportPage })));
 const AppearanceSettingsPage = lazy(() => import('./pages/AppearanceSettingsPage').then((m) => ({ default: m.AppearanceSettingsPage })));
+const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
 export function App() {
   return (
@@ -54,6 +55,7 @@ export function App() {
             <Route path="/import-export" element={<ImportExportPage />} />
             {/* FR-39.5 */}
             <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
+            <Route path="/settings/security" element={<SecuritySettingsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

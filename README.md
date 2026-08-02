@@ -122,6 +122,7 @@ Public:
 - `POST /api/auth/login`
 
 Protected:
+- `POST /api/auth/change-password` — set a new password, current password required
 - `/api/vision-areas`
 - `/api/dreams`
 - `/api/goals`

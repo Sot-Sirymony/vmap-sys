@@ -5,6 +5,7 @@ import {
   Compass,
   FileSpreadsheet,
   Flag,
+  KeyRound,
   LayoutDashboard,
   Lightbulb,
   ListChecks,
@@ -61,6 +62,7 @@ export const navGroups: NavGroup[] = [
       // FR-39.5: the full Appearance surface. Reachable from the sidebar as well
       // as the header menu, so the header icon isn't the only way to find it.
       { to: '/settings/appearance', label: 'Appearance', icon: Palette },
+      { to: '/settings/security', label: 'Security', icon: KeyRound },
     ],
   },
 ];

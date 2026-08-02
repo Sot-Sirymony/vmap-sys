@@ -55,6 +55,44 @@ Body:
 }
 ```
 
+### Change password
+
+```text
+POST /auth/change-password
+```
+
+Protected — requires a valid token. The current password is required even so: a
+token proves a session was opened at some point, not that the person holding it
+now is the account owner.
+
+Body:
+
+```json
+{
+  "currentPassword": "Password123",
+  "newPassword": "BrandNewPassword456"
+}
+```
+
+Answers `204 No Content`. There is no user identifier in the body — the password
+changed is always that of the token's owner, so one account cannot re-password
+another.
+
+Errors, all `400` with the message in `message`:
+
+| Case | Message |
+|---|---|
+| Current password wrong | `Current password is incorrect.` |
+| New password same as old | `New password must be different from the current password.` |
+| New password under 8 chars | validation error |
+
+A wrong current password is deliberately **not** a `401`: that status means "sign
+in again", and the frontend acts on it by ending the session. Mistyping the old
+password is an ordinary form error, not an expired session.
+
+Note: existing tokens stay valid after a password change. Sessions are stateless
+JWTs, so nothing is revoked server-side until they expire.
+
 ### Login
 
 ```text
