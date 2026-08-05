@@ -27,6 +27,8 @@ function Probe() {
       <button type="button" onClick={() => update({ reduceMotion: true })}>motion</button>
       <button type="button" onClick={() => update({ backgroundTone: 'warm' })}>warm</button>
       <button type="button" onClick={() => update({ backgroundTone: 'neutral' })}>neutraltone</button>
+      <button type="button" onClick={() => update({ interfaceStyle: 'modern' })}>modern</button>
+      <button type="button" onClick={() => update({ interfaceStyle: 'classic' })}>classic</button>
       <button type="button" onClick={() => applyPreset('dark', 'purple')}>midnight</button>
     </div>
   );
@@ -40,6 +42,7 @@ const STORED = {
   fontSize: 'MEDIUM',
   backgroundTone: 'NEUTRAL',
   fontFamily: 'SYSTEM',
+  interfaceStyle: 'CLASSIC',
   highContrast: false,
   reduceMotion: false,
 };
@@ -59,6 +62,7 @@ describe('ThemeModeProvider (FR-39)', () => {
     document.documentElement.removeAttribute('data-contrast');
     document.documentElement.removeAttribute('data-motion');
     document.documentElement.removeAttribute('data-tone');
+    document.documentElement.removeAttribute('data-style');
   });
 
   afterEach(() => {
@@ -96,6 +100,51 @@ describe('ThemeModeProvider (FR-39)', () => {
 
     await user.click(screen.getByText('neutraltone'));
     expect(document.documentElement.hasAttribute('data-tone')).toBe(false);
+  });
+
+  /**
+   * FR-48: same convention as the tone — absent means Classic, the shape that
+   * shipped before the control existed.
+   */
+  it('stamps data-style only when the style is not Classic', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    expect(document.documentElement.hasAttribute('data-style')).toBe(false);
+
+    await user.click(screen.getByText('modern'));
+    expect(document.documentElement.dataset.style).toBe('modern');
+
+    await user.click(screen.getByText('classic'));
+    expect(document.documentElement.hasAttribute('data-style')).toBe(false);
+  });
+
+  /**
+   * FR-48: unlike the tone, the style is NOT suppressed by high contrast. That
+   * setting exists for legibility, and a corner radius cannot make anything
+   * harder to read, so there is no reason to take the chosen shape away.
+   */
+  it('keeps the style applied while high contrast is on', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('modern'));
+    await user.click(screen.getByText('contrast'));
+
+    expect(document.documentElement.dataset.style).toBe('modern');
+    expect(document.documentElement.dataset.contrast).toBe('high');
+  });
+
+  /** FR-48: the style decides no colour, so it must not disturb the preset. */
+  it('leaves the preset alone when only the style changes', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+    await user.click(screen.getByText('midnight'));
+    expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
+
+    await user.click(screen.getByText('modern'));
+    expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
   });
 
   /** FR-40.4: tone is its own axis — changing it must not disturb the preset. */

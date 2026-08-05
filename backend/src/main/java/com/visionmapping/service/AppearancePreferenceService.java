@@ -7,6 +7,7 @@ import com.visionmapping.entity.enums.AccentColor;
 import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
+import com.visionmapping.entity.enums.InterfaceStyle;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
 import com.visionmapping.entity.enums.UiDensity;
@@ -69,6 +70,9 @@ public class AppearancePreferenceService {
         if (request.backgroundTone() != null) {
             user.setBackgroundTone(request.backgroundTone());
         }
+        if (request.interfaceStyle() != null) {
+            user.setInterfaceStyle(request.interfaceStyle());
+        }
         if (request.highContrast() != null) {
             user.setHighContrast(request.highContrast());
         }
@@ -96,6 +100,7 @@ public class AppearancePreferenceService {
                 user.getFontSize() == null ? FontSize.MEDIUM : user.getFontSize(),
                 user.getFontFamily() == null ? FontFamily.SYSTEM : user.getFontFamily(),
                 user.getBackgroundTone() == null ? BackgroundTone.NEUTRAL : user.getBackgroundTone(),
+                user.getInterfaceStyle() == null ? InterfaceStyle.CLASSIC : user.getInterfaceStyle(),
                 user.isHighContrast(),
                 user.isReduceMotion()
         );

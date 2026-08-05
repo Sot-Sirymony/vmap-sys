@@ -29,6 +29,7 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-contrast');
     document.documentElement.removeAttribute('data-tone');
+    document.documentElement.removeAttribute('data-style');
   });
 
   it('renders exactly one page heading', () => {
@@ -49,6 +50,26 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     expect(screen.getAllByRole('button', { name: /accent$/ })).toHaveLength(12);
     expect(screen.getByRole('button', { name: 'Vermilion accent' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Violet accent' })).toBeInTheDocument();
+  });
+
+  /**
+   * FR-48: the style control is on this page, not only in the header menu,
+   * because the preview beside it is what the choice is actually about.
+   */
+  it('offers both interface styles and applies the one picked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(screen.getByRole('button', { name: 'Classic interface style' })).toBeInTheDocument();
+    const modern = screen.getByRole('button', { name: 'Modern interface style' });
+
+    // Classic is the shipped default, so nothing is stamped until it changes.
+    expect(document.documentElement.hasAttribute('data-style')).toBe(false);
+
+    await user.click(modern);
+
+    expect(modern).toHaveAttribute('aria-pressed', 'true');
+    expect(document.documentElement.dataset.style).toBe('modern');
   });
 
   it('shows the live preview with real badge components', () => {

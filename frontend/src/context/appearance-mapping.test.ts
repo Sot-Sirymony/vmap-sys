@@ -10,6 +10,7 @@ const DEFAULTS: ThemeSettings = {
   fontSize: 'medium',
   backgroundTone: 'neutral',
   fontFamily: 'system',
+  interfaceStyle: 'classic',
   highContrast: false,
   reduceMotion: false,
 };
@@ -22,6 +23,7 @@ const STORED: AppearancePreferences = {
   fontSize: 'LARGE',
   backgroundTone: 'WARM',
   fontFamily: 'INTER',
+  interfaceStyle: 'MODERN',
   highContrast: true,
   reduceMotion: true,
 };
@@ -35,6 +37,7 @@ describe('appearance mapping (FR-39.6)', () => {
       fontSize: 'large',
       backgroundTone: 'warm',
       fontFamily: 'inter',
+      interfaceStyle: 'modern',
       highContrast: true,
       reduceMotion: true,
     });
@@ -112,6 +115,19 @@ describe('appearance mapping (FR-39.6)', () => {
     for (const stored of ['SYSTEM', 'PUBLIC_SANS', 'INTER', 'DM_SANS', 'NUNITO_SANS'] as const) {
       const settings = toSettings({ ...STORED, fontFamily: stored }, DEFAULTS);
       expect(toWire(settings).fontFamily).toBe(stored);
+    }
+  });
+
+  /** FR-48: an unknown style falls back rather than reaching the theme (BR-33). */
+  it('falls back to the default for an interface style it does not know', () => {
+    const settings = toSettings({ ...STORED, interfaceStyle: 'BRUTALIST' as never }, DEFAULTS);
+    expect(settings.interfaceStyle).toBe(DEFAULTS.interfaceStyle);
+  });
+
+  it('round-trips every interface style through the wire format', () => {
+    for (const stored of ['CLASSIC', 'MODERN'] as const) {
+      const settings = toSettings({ ...STORED, interfaceStyle: stored }, DEFAULTS);
+      expect(toWire(settings).interfaceStyle).toBe(stored);
     }
   });
 

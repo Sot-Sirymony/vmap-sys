@@ -22,6 +22,20 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 Work on `main` after the last BRD v2.0.0 feature commit. None of this changes a
 requirement; it is internal quality and UX work.
 
+### Fixed
+- **The Vermilion and Violet accents could not be saved.** FR-43 added them to
+  `theme.ts` and to the swatch row but not to the backend's `AccentColor` enum,
+  so `PUT /preferences/appearance` rejected either with a 400. The accent applied
+  locally and the user was told only that it "could not be saved to your
+  account" — with no indication that the accent itself was the reason. Both
+  values are now in the enum and in `StoredAccent`.
+
+  The class of bug matters more than the instance: each side was internally
+  consistent, so nothing failed. `context/accent-wire.test.ts` now reads the Java
+  enums and compares them against the frontend registries — accents, tones,
+  fonts, presets, and interface styles — because that is the only place the two
+  lists are ever seen together.
+
 ### Changed
 - Clean Code refactor, Phases 0–2n (`375f8a26`…`e1ffef44`) — the God service was
   decomposed into per-entity services (`TaskItemService`, `GoalService`,
@@ -35,6 +49,20 @@ requirement; it is internal quality and UX work.
 ### Added
 - Sorting, selection, pagination, and search on all list pages (`619aaa70`).
 - Permanent delete for archived records (`af9ecbfa`).
+- **Interface style** (FR-48) — a ninth appearance setting, stored per account
+  via `V20__user_interface_style.sql`. `CLASSIC` is the Fluent treatment that
+  shipped before it and remains the default, so no existing user is redesigned;
+  `MODERN` applies larger radii, soft diffused shadows, an accent-derived card
+  wash, pill navigation, a sidebar search affordance wired to the existing ⌘K
+  palette, and a greeting header with a partner stack in place of breadcrumbs.
+
+  It is a separate axis rather than more theme presets because it decides *shape*
+  and never colour — which is what lets it compose with all twelve accents, six
+  tones, and high contrast without adding a single colour pair to validate.
+  `styles/interface-style.test.ts` asserts that invariant in both directions
+  (the TypeScript tokens and the `:root[data-style="modern"]` CSS block), and
+  also that the two channels cannot drift apart, the same way
+  `palette-vars.test.ts` guards the `--palette-*` variables.
 
 ---
 

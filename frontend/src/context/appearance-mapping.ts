@@ -1,4 +1,4 @@
-import { accentOptions, backgroundTones, fontFamilies, fontFamilyFromStored, matchPreset, toneFromStored, type AccentId, type BackgroundToneId, type Density, type FontFamilyId } from '../theme';
+import { accentOptions, backgroundTones, fontFamilies, fontFamilyFromStored, interfaceStyleFromStored, interfaceStyles, matchPreset, toneFromStored, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type InterfaceStyleId } from '../theme';
 import type {
   AppearancePreferences,
   StoredAccent,
@@ -83,6 +83,15 @@ function fontToWire(font: FontFamilyId): AppearancePreferences['fontFamily'] {
   return fontFamilies.find((entry) => entry.id === font)?.stored ?? 'SYSTEM';
 }
 
+/** FR-48: same derive-from-the-registry approach as the tones and fonts. */
+function styleFromWire(wire: string, fallback: InterfaceStyleId): InterfaceStyleId {
+  return interfaceStyles.some((style) => style.stored === wire) ? interfaceStyleFromStored(wire) : fallback;
+}
+
+function styleToWire(style: InterfaceStyleId): AppearancePreferences['interfaceStyle'] {
+  return interfaceStyles.find((entry) => entry.id === style)?.stored ?? 'CLASSIC';
+}
+
 /** Wire → frontend settings, with every unrecognised value replaced by `fallback`'s. */
 export function toSettings(wire: AppearancePreferences, fallback: ThemeSettings): ThemeSettings {
   return {
@@ -92,6 +101,7 @@ export function toSettings(wire: AppearancePreferences, fallback: ThemeSettings)
     fontSize: FONT_SIZE_FROM_WIRE[wire.fontSize] ?? fallback.fontSize,
     backgroundTone: toneFromWire(wire.backgroundTone, fallback.backgroundTone),
     fontFamily: fontFromWire(wire.fontFamily, fallback.fontFamily),
+    interfaceStyle: styleFromWire(wire.interfaceStyle, fallback.interfaceStyle),
     highContrast: Boolean(wire.highContrast),
     reduceMotion: Boolean(wire.reduceMotion),
   };
@@ -114,6 +124,7 @@ export function toWire(settings: ThemeSettings): AppearancePreferences {
     fontSize: FONT_SIZE_TO_WIRE[settings.fontSize],
     backgroundTone: toneToWire(settings.backgroundTone),
     fontFamily: fontToWire(settings.fontFamily),
+    interfaceStyle: styleToWire(settings.interfaceStyle),
     highContrast: settings.highContrast,
     reduceMotion: settings.reduceMotion,
   };

@@ -1,0 +1,13 @@
+-- FR-48: the interface style — how the app's chrome and surfaces are shaped.
+--
+-- Additive and NOT NULL with a default of 'CLASSIC', which is the Fluent 2
+-- treatment the app shipped with: 4px corners, thin borders, tight shadows,
+-- breadcrumb header. Existing users therefore see no change at all, and MODERN
+-- is something a user opts into rather than something applied to them.
+--
+-- Deliberately a separate column from theme_preset rather than more preset
+-- values. A preset is a (mode, accent) shorthand for choices reachable through
+-- the individual controls; style is an orthogonal dimension that composes with
+-- every mode, accent, tone, and font — folding it into the preset list would
+-- have multiplied that list instead of extending it.
+ALTER TABLE app_users ADD COLUMN interface_style VARCHAR(20) NOT NULL DEFAULT 'CLASSIC';

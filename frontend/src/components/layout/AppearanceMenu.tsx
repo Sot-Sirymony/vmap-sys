@@ -11,7 +11,7 @@ import Switch from '@mui/material/Switch';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { Check, Contrast, Monitor, Moon, Settings2, Sun, Waves } from 'lucide-react';
-import { accentOptions, backgroundTones, fontFamilies, fontStack, themePresets, type AccentId, type Density } from '../../theme';
+import { accentOptions, backgroundTones, fontFamilies, fontStack, interfaceStyles, themePresets, type AccentId, type Density } from '../../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../../context/ThemeModeContext';
 
 const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -190,6 +190,17 @@ export function AppearanceMenu() {
               }}
             />
             {tone.label}
+          </MenuItem>
+        ))}
+
+        <Divider />
+        {/* FR-48: unlike the tone above, this stays enabled under high contrast
+            — it changes shape, not legibility. */}
+        <ListSubheader sx={SUBHEADER_SX}>Interface style</ListSubheader>
+        {interfaceStyles.map((style) => (
+          <MenuItem key={style.id} onClick={() => update({ interfaceStyle: style.id })}>
+            {check(settings.interfaceStyle === style.id)}
+            {style.label}
           </MenuItem>
         ))}
 

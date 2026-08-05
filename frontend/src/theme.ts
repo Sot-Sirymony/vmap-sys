@@ -677,6 +677,116 @@ export function toneFromStored(stored: string): BackgroundToneId {
 }
 
 /**
+ * FR-48 — the interface style.
+ *
+ * The dimension the other appearance settings deliberately leave alone: *shape*.
+ * Mode, accent, and tone all decide colour; density decides spacing; this
+ * decides corner radius, shadow diffusion, the surface wash, and which
+ * navigation chrome renders. Because it touches no hue, it multiplies nothing —
+ * Modern works with all twelve accents and all six tones without a single new
+ * pair to hand-validate, which is the whole reason it is its own axis rather
+ * than a longer preset list.
+ *
+ * `classic` is the Fluent 2 treatment the app shipped with and stays the
+ * default, so no existing user is redesigned without asking.
+ */
+export type InterfaceStyleId = 'classic' | 'modern';
+
+export type InterfaceStyleDefinition = {
+  id: InterfaceStyleId;
+  /** Backend enum name. */
+  stored: 'CLASSIC' | 'MODERN';
+  label: string;
+  description: string;
+};
+
+export const interfaceStyles: InterfaceStyleDefinition[] = [
+  {
+    id: 'classic',
+    stored: 'CLASSIC',
+    label: 'Classic',
+    description: 'Fluent — square corners, crisp borders, breadcrumbs',
+  },
+  {
+    id: 'modern',
+    stored: 'MODERN',
+    label: 'Modern',
+    description: 'Rounded cards, soft shadows, pill navigation',
+  },
+];
+
+export function interfaceStyleFromStored(stored: string): InterfaceStyleId {
+  return interfaceStyles.find((style) => style.stored === stored)?.id ?? 'classic';
+}
+
+/**
+ * The shape tokens one style contributes. Mirrored by the
+ * `:root[data-style="modern"]` block in global.css, which carries the same
+ * values for hand-written CSS — the two must change together, exactly as the
+ * type ramp and motion tokens already do.
+ */
+export type StyleShape = {
+  /** `theme.shape.borderRadius`, and `--radius` in the stylesheet. */
+  radius: number;
+  /** Chips and nav items. Classic keeps Fluent's flat 4px; Modern goes pill. */
+  pillRadius: number;
+  cardRadius: number;
+  cardShadow: string;
+  popoverShadow: string;
+  dialogShadow: string;
+  /**
+   * The wash painted over a card, as a `background-image`. Modern uses a faint
+   * accent gradient that fades out by mid-card; `none` is what kills MUI's dark
+   * elevation overlay, so Classic must keep saying it explicitly.
+   *
+   * Expressed against `var(--primary)` rather than a fixed hue so it follows
+   * whichever accent is active — and kept at single-digit alpha so it cannot
+   * move the contrast of text sitting on the card.
+   */
+  cardWash: string;
+  /** Tighter tracking on headings, which reads as intentional at large sizes. */
+  headingLetterSpacing: string;
+};
+
+export function styleShape(style: InterfaceStyleId, mode: 'light' | 'dark'): StyleShape {
+  const dark = mode === 'dark';
+
+  if (style === 'modern') {
+    return {
+      radius: 12,
+      pillRadius: 999,
+      cardRadius: 16,
+      // Soft and diffused: a near-invisible contact shadow plus a wide, low-alpha
+      // ambient one. The large blur with a negative spread is what makes a card
+      // read as floating rather than as outlined.
+      cardShadow: dark
+        ? '0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45)'
+        : '0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -8px rgba(16, 24, 40, 0.10)',
+      popoverShadow: dark
+        ? '0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55)'
+        : '0 4px 8px -2px rgba(16, 24, 40, 0.05), 0 16px 40px -6px rgba(16, 24, 40, 0.14)',
+      dialogShadow: dark
+        ? '0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65)'
+        : '0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20)',
+      cardWash: `linear-gradient(160deg, color-mix(in srgb, var(--primary) ${dark ? 7 : 5}%, transparent) 0%, transparent 42%)`,
+      headingLetterSpacing: '-0.018em',
+    };
+  }
+
+  return {
+    radius: 4, // Fluent's corner radius
+    pillRadius: 4,
+    cardRadius: 4,
+    // The Fluent elevation tiers, matching --shadow-4/8/16 in global.css.
+    cardShadow: '0 1.6px 3.6px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06)',
+    popoverShadow: '0 3.2px 7.2px rgba(0,0,0,0.13), 0 0.6px 1.8px rgba(0,0,0,0.08)',
+    dialogShadow: '0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.08)',
+    cardWash: 'none',
+    headingLetterSpacing: 'normal',
+  };
+}
+
+/**
  * The surface values a tone contributes, for the MUI palette.
  *
  * `background` is the **page canvas** and `card` the surface that sits on it.
@@ -951,8 +1061,13 @@ export function buildTheme(
   highContrast = false,
   tone: BackgroundToneId = 'neutral',
   font: FontFamilyId = 'system',
+  style: InterfaceStyleId = 'classic',
 ) {
   const dark = mode === 'dark';
+  // FR-48: shape only. Nothing below reads a colour from `shape` — the styles
+  // change radii, shadows, and tracking, and leave every hue to the accent,
+  // tone, and contrast settings resolved above.
+  const shape = styleShape(style, mode);
   // FR-40.5: high contrast outranks the tone. Applying the tone only when it is
   // off is what keeps that true here as well as in the stylesheet — and because
   // the tone is never written to the stored settings by this, turning high
@@ -1043,7 +1158,8 @@ export function buildTheme(
       divider: border, // --border / --input
     },
     shape: {
-      borderRadius: 4, // --radius: Fluent's 4px corner radius
+      // FR-48: --radius in global.css carries the same number per style.
+      borderRadius: shape.radius,
     },
     // FR-18.4: Compact narrows the spacing base every sx/gap multiplier builds
     // on; the table/card paddings in global.css follow via [data-density].
@@ -1091,8 +1207,11 @@ export function buildTheme(
       // these two disagree, MUI components and plain elements use different
       // faces.
       fontFamily: fontStack(font),
-      h1: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3 },
-      h2: { fontSize: '1.25rem', fontWeight: 600, lineHeight: 1.35 },
+      // FR-48: only the two display sizes take the tighter tracking. Tightening
+      // body text costs legibility for nothing — the effect reads as deliberate
+      // at 1.25rem and up, and as a rendering fault below it.
+      h1: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3, letterSpacing: shape.headingLetterSpacing },
+      h2: { fontSize: '1.25rem', fontWeight: 600, lineHeight: 1.35, letterSpacing: shape.headingLetterSpacing },
       h3: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
       h4: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
       h5: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
@@ -1116,9 +1235,12 @@ export function buildTheme(
       // MUI's Chip has its own hardcoded pill radius (~16px) that doesn't
       // follow theme.shape.borderRadius — override it directly so badges get
       // Fluent's flatter 4px corners instead of a Material-style pill.
+      // FR-48: Modern wants the pill back, so the value comes from the style
+      // rather than being written in. Either way it is stated explicitly, since
+      // MUI's own default is neither of them.
       MuiChip: {
         styleOverrides: {
-          root: { fontWeight: 700, borderRadius: 4 },
+          root: { fontWeight: 700, borderRadius: shape.pillRadius },
           label: { fontWeight: 700 },
         },
       },
@@ -1126,13 +1248,19 @@ export function buildTheme(
       // cards instead pair a thin neutral-stroke border with its own shadow
       // scale (--shadow-4 from global.css) — elevation is disabled here so
       // that shadow doesn't stack on top of this one.
+      // FR-48: Modern keeps the same anatomy — border plus shadow — and only
+      // changes the values: a larger radius, a wide diffused shadow, and a faint
+      // accent wash in place of the flat fill. `backgroundImage` is always set,
+      // because leaving it unset is what lets MUI's dark-mode elevation overlay
+      // gradient back in.
       MuiCard: {
         defaultProps: { elevation: 0 },
         styleOverrides: {
           root: {
             border: `1px solid ${border}`,
-            boxShadow: '0 1.6px 3.6px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06)',
-            backgroundImage: 'none', // MUI dark mode adds an elevation overlay gradient; Fluent surfaces are flat
+            borderRadius: shape.cardRadius,
+            boxShadow: shape.cardShadow,
+            backgroundImage: shape.cardWash,
           },
         },
       },
@@ -1143,7 +1271,8 @@ export function buildTheme(
       MuiDialog: {
         styleOverrides: {
           paper: {
-            boxShadow: '0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.08)',
+            borderRadius: shape.cardRadius,
+            boxShadow: shape.dialogShadow,
             backgroundImage: 'none',
           },
         },
@@ -1158,7 +1287,7 @@ export function buildTheme(
       MuiPopover: {
         styleOverrides: {
           paper: {
-            boxShadow: '0 3.2px 7.2px rgba(0,0,0,0.13), 0 0.6px 1.8px rgba(0,0,0,0.08)',
+            boxShadow: shape.popoverShadow,
             backgroundImage: 'none',
           },
         },

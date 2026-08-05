@@ -422,6 +422,42 @@
   font-size: 17.5px;
 }
 
+/* FR-48 — the Modern interface style.
+ *
+ * Shape only. There is not one colour in this block, and that is the invariant
+ * worth protecting: because a style never touches a hue, Modern composes with
+ * all twelve accents, all six background tones, and high contrast without a
+ * single new pair to contrast-check. The moment a colour appears here, that
+ * stops being true.
+ *
+ * The values mirror `styleShape('modern', …)` in theme.ts, which carries the
+ * same numbers for MUI components — the same two-channel arrangement the type
+ * ramp and motion tokens already use, and the two must change together.
+ *
+ * --radius feeds the whole --radius-sm…--radius-4xl scale further down, so
+ * raising the base rounds every derived corner in proportion rather than
+ * needing each one restated. */
+:root[data-style="modern"] {
+  --radius: 12px;
+  /* Wide, low-alpha, negative-spread — a card that floats rather than one that
+     is outlined. The paired 1px contact shadow is what stops it reading as a
+     blur with nothing casting it. */
+  --shadow-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px -4px rgba(16, 24, 40, 0.07);
+  --shadow-4: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -8px rgba(16, 24, 40, 0.10);
+  --shadow-8: 0 4px 8px -2px rgba(16, 24, 40, 0.05), 0 16px 40px -6px rgba(16, 24, 40, 0.14);
+  --shadow-16: 0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20);
+}
+
+/* Dark surfaces swallow a soft light-mode shadow entirely — the alphas above
+   are invisible on #1b1a19 — so dark mode gets its own, heavier set rather than
+   a shadow that is technically present and does nothing. */
+:root[data-theme="dark"][data-style="modern"] {
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px -4px rgba(0, 0, 0, 0.40);
+  --shadow-4: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  --shadow-8: 0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55);
+  --shadow-16: 0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65);
+}
+
 .text-muted-foreground {
   color: var(--muted-foreground);
 }

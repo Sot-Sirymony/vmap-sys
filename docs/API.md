@@ -198,6 +198,7 @@ Auth response:
     "fontSize": "MEDIUM",
     "fontFamily": "SYSTEM",
     "backgroundTone": "NEUTRAL",
+    "interfaceStyle": "CLASSIC",
     "highContrast": false,
     "reduceMotion": false
   }
@@ -388,6 +389,7 @@ reset.
   "fontSize": "LARGE",
   "fontFamily": "INTER",
   "backgroundTone": "WARM",
+  "interfaceStyle": "MODERN",
   "highContrast": true,
   "reduceMotion": true
 }
@@ -399,11 +401,12 @@ Allowed values:
 |---|---|
 | `themePreset` | `FLUENT_SYSTEM`, `FLUENT_LIGHT`, `FLUENT_DARK`, `OCEAN`, `FOREST`, `SLATE`, `MIDNIGHT`, `CUSTOM` |
 | `themeMode` | `LIGHT`, `DARK`, `SYSTEM` |
-| `themeAccent` | `BLUE`, `TEAL`, `PURPLE`, `GREEN`, `ORANGE`, `MAGENTA`, `RED`, `BRASS`, `STEEL`, `PINK` |
+| `themeAccent` | `BLUE`, `TEAL`, `PURPLE`, `GREEN`, `ORANGE`, `MAGENTA`, `RED`, `BRASS`, `STEEL`, `PINK`, `VERMILION`, `VIOLET` |
 | `uiDensity` | `COMFORTABLE`, `COMPACT` |
 | `fontSize` | `SMALL`, `MEDIUM`, `LARGE` |
 | `fontFamily` | `SYSTEM`, `PUBLIC_SANS`, `INTER`, `DM_SANS`, `NUNITO_SANS` |
 | `backgroundTone` | `NEUTRAL`, `WARM`, `COOL`, `SOFT`, `TINTED`, `FLAT` |
+| `interfaceStyle` | `CLASSIC`, `MODERN` |
 | `highContrast`, `reduceMotion` | `true`, `false` |
 
 A value outside these sets is rejected with **400** rather than stored, so the

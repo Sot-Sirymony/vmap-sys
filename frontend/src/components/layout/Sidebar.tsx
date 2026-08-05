@@ -1,5 +1,5 @@
 import { useState, type MouseEvent } from 'react';
-import { ChevronsUpDown, LogOut } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Search } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router';
 import Drawer from '@mui/material/Drawer';
 import Toolbar from '@mui/material/Toolbar';
@@ -17,7 +17,9 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
+import { useThemeSettings } from '@/context/ThemeModeContext';
 import { navGroups } from './nav-items';
+import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
 
 const DRAWER_WIDTH = 256;
@@ -26,6 +28,76 @@ const DRAWER_WIDTH_COLLAPSED = 64;
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'VM';
+}
+
+/**
+ * The modifier this device's users actually press. Printing ⌘ to a Windows user
+ * is worse than printing nothing — it names a key their keyboard does not have.
+ * Matches the check in GlobalShortcuts, which accepts either modifier.
+ */
+function shortcutModifier() {
+  if (typeof navigator === 'undefined') {
+    return 'Ctrl';
+  }
+  return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl';
+}
+
+/**
+ * FR-48.3 — the Modern sidebar's search affordance.
+ *
+ * It is a button, not an input, and that is deliberate: it opens the command
+ * palette, which has its own field. Rendering a real text input here would mean
+ * two search boxes, one of which throws its own keystrokes away the moment the
+ * palette takes focus.
+ */
+function SidebarSearch() {
+  const { openPalette } = useCommandPalette();
+  return (
+    <Box sx={{ px: 2, pb: 1.5 }}>
+      <ButtonBase
+        onClick={openPalette}
+        aria-label={`Search and commands (${shortcutModifier()}+K)`}
+        sx={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          px: 1.25,
+          py: 0.875,
+          borderRadius: 'var(--radius)',
+          border: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          color: 'text.secondary',
+          transition: (theme) => theme.transitions.create(['border-color', 'background-color']),
+          '&:hover': { borderColor: 'primary.main' },
+        }}
+      >
+        <Search size={15} />
+        <Typography variant="body2" sx={{ flex: 1, textAlign: 'left' }} noWrap>
+          Search
+        </Typography>
+        <Box
+          component="kbd"
+          sx={{
+            px: 0.625,
+            py: 0.125,
+            borderRadius: 'calc(var(--radius) * 0.6)',
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'var(--muted)',
+            fontFamily: 'inherit',
+            fontSize: 'var(--font-caption)',
+            fontWeight: 600,
+            lineHeight: 1.6,
+            flexShrink: 0,
+          }}
+        >
+          {shortcutModifier()} K
+        </Box>
+      </ButtonBase>
+    </Box>
+  );
 }
 
 function Brand({ collapsed }: { collapsed: boolean }) {
@@ -57,7 +129,18 @@ function Brand({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function NavUser({ collapsed }: { collapsed: boolean }) {
+/**
+ * The bottom card. Classic shows it as a plain user row; Modern presents the
+ * same control as a workspace card — bordered, raised off the rail, workspace
+ * name on top and the signed-in account beneath.
+ *
+ * The Modern label is honest about what the app currently is. The app has no
+ * multi-tenancy, so the card names *this* user's workspace rather than offering
+ * a list of workspaces to switch between: a chevron that opened a picker with
+ * exactly one entry in it would be a promise the product does not keep. The
+ * menu holds what it has always held.
+ */
+function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean }) {
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -70,27 +153,55 @@ function NavUser({ collapsed }: { collapsed: boolean }) {
     logout();
   }
 
+  const name = user?.fullName ?? 'Workspace';
+  const primaryLine = modern ? `${name.split(/\s+/)[0]}'s Workspace` : name;
+  const secondaryLine = modern ? name : (user?.email ?? '');
+
   return (
     <>
       <ButtonBase
         onClick={handleOpen}
+        aria-label={modern ? `${primaryLine} — account menu` : 'Account menu'}
         sx={{
           width: '100%',
           display: 'flex',
           alignItems: 'center',
           gap: 1,
           p: 1,
-          borderRadius: 1.5,
+          borderRadius: modern ? 'var(--radius)' : 1.5,
           justifyContent: collapsed ? 'center' : 'flex-start',
-          '&:hover': { bgcolor: 'action.hover' },
+          // Modern lifts the card off the rail so it reads as a distinct
+          // control rather than as the last row of the nav list.
+          ...(modern && !collapsed
+            ? {
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+                boxShadow: 'var(--shadow-2)',
+              }
+            : null),
+          '&:hover': { bgcolor: modern && !collapsed ? 'background.paper' : 'action.hover', borderColor: modern ? 'primary.main' : undefined },
         }}
       >
-        <Avatar sx={{ width: 32, height: 32, fontSize: 'var(--font-meta)', bgcolor: 'var(--muted)', color: 'var(--foreground)', fontWeight: 600 }}>{initials(user?.fullName ?? 'VM')}</Avatar>
+        <Avatar
+          variant={modern ? 'rounded' : 'circular'}
+          sx={{
+            width: 32,
+            height: 32,
+            fontSize: 'var(--font-meta)',
+            fontWeight: 600,
+            ...(modern
+              ? { bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 'calc(var(--radius) * 0.8)' }
+              : { bgcolor: 'var(--muted)', color: 'var(--foreground)' }),
+          }}
+        >
+          {initials(name)}
+        </Avatar>
         {!collapsed && (
           <>
             <Box sx={{ flex: 1, overflow: 'hidden', textAlign: 'left' }}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{user?.fullName ?? 'Workspace'}</Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>{user?.email ?? ''}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>{primaryLine}</Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>{secondaryLine}</Typography>
             </Box>
             <ChevronsUpDown size={16} />
           </>
@@ -114,7 +225,7 @@ function NavUser({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
+function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavigate: () => void; modern: boolean }) {
   const location = useLocation();
 
   // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
@@ -148,13 +259,29 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: ()
             onClick={onNavigate}
             sx={{
               minHeight: 40,
-              borderRadius: 1.5,
               justifyContent: collapsed ? 'center' : 'flex-start',
               px: collapsed ? 1 : 1.5,
-              borderLeft: '3px solid transparent',
-              transition: (theme) => theme.transitions.create(['background-color', 'border-color'], { duration: 120 }),
-              '&:hover': { borderLeftColor: 'primary.light' },
-              '&.Mui-selected': { borderLeftColor: 'primary.main' },
+              transition: (theme) => theme.transitions.create(['background-color', 'border-color', 'color'], { duration: 120 }),
+              // FR-48.3: the active state is the one nav detail the two styles
+              // disagree about. Classic marks it with a Fluent left rule;
+              // Modern fills a soft pill instead. Both use the accent, so the
+              // signal is the same colour either way — only its shape changes.
+              ...(modern
+                ? {
+                    borderRadius: 999,
+                    '&.Mui-selected': {
+                      bgcolor: 'var(--sidebar-accent)',
+                      color: 'var(--sidebar-accent-foreground)',
+                      fontWeight: 600,
+                      '&:hover': { bgcolor: 'var(--sidebar-accent)' },
+                    },
+                  }
+                : {
+                    borderRadius: 1.5,
+                    borderLeft: '3px solid transparent',
+                    '&:hover': { borderLeftColor: 'primary.light' },
+                    '&.Mui-selected': { borderLeftColor: 'primary.main' },
+                  }),
             }}
           >
             <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 1.5, justifyContent: 'center', color: 'inherit' }}>
@@ -178,16 +305,24 @@ function NavList({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: ()
 }
 
 function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
+  const { settings } = useThemeSettings();
+  const modern = settings.interfaceStyle === 'modern';
+
   return (
     <Box component="nav" aria-label="Sidebar" sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Brand collapsed={collapsed} />
-      <Divider />
+      {/* Collapsed to an icon rail there is no room for the search row, and the
+          ⌘K shortcut still works — so it is omitted rather than squeezed. */}
+      {modern && !collapsed && <SidebarSearch />}
+      {/* Modern separates the rail's regions with whitespace instead of rules,
+          which is what makes the sections read as floating groups. */}
+      {!modern && <Divider />}
       <Box sx={{ flexGrow: 1, overflowY: 'auto', overflowX: 'hidden', py: 1 }}>
-        <NavList collapsed={collapsed} onNavigate={onNavigate} />
+        <NavList collapsed={collapsed} onNavigate={onNavigate} modern={modern} />
       </Box>
-      <Divider />
+      {!modern && <Divider />}
       <Box sx={{ p: 1 }}>
-        <NavUser collapsed={collapsed} />
+        <NavUser collapsed={collapsed} modern={modern} />
         {!collapsed && (
           <Typography
             variant="caption"

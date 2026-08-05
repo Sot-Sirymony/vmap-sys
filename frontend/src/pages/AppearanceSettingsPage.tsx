@@ -15,7 +15,7 @@ import { PageSection } from './PageSection';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { PriorityBadge } from '../components/common/PriorityBadge';
-import { accentOptions, backgroundTones, fontFamilies, fontStack, themePresets, type AccentId } from '../theme';
+import { accentOptions, backgroundTones, fontFamilies, fontStack, interfaceStyles, styleShape, themePresets, type AccentId, type InterfaceStyleId } from '../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../context/ThemeModeContext';
 import type { Density } from '../theme';
 
@@ -35,6 +35,54 @@ const FONT_SIZE_OPTIONS: { value: FontSize; label: string }[] = [
   { value: 'medium', label: 'Medium' },
   { value: 'large', label: 'Large' },
 ];
+
+/**
+ * FR-48 — a miniature of the app's own anatomy (sidebar rail, nav pills, a card
+ * on a canvas), drawn with the shape tokens the style actually applies.
+ *
+ * A swatch cannot show this choice: the difference is corner radius, shadow
+ * diffusion, and pill-vs-square navigation, none of which a colour chip can
+ * express. So the preview is built from `styleShape` rather than hand-drawn —
+ * it cannot describe a look the theme does not produce.
+ */
+function StylePreview({ styleId, mode }: { styleId: InterfaceStyleId; mode: 'light' | 'dark' }) {
+  const shape = styleShape(styleId, mode);
+  return (
+    <Box
+      aria-hidden
+      sx={{
+        display: 'flex',
+        gap: 0.5,
+        height: 52,
+        p: 0.5,
+        bgcolor: 'var(--page)',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: `${Math.min(shape.cardRadius, 10)}px`,
+        overflow: 'hidden',
+      }}
+    >
+      {/* The rail, with the active nav item in this style's pill shape. */}
+      <Box sx={{ width: 16, display: 'flex', flexDirection: 'column', gap: 0.375, flexShrink: 0 }}>
+        <Box sx={{ height: 5, borderRadius: `${Math.min(shape.pillRadius, 4)}px`, bgcolor: 'primary.main' }} />
+        <Box sx={{ height: 5, borderRadius: `${Math.min(shape.pillRadius, 4)}px`, bgcolor: 'var(--border)' }} />
+        <Box sx={{ height: 5, borderRadius: `${Math.min(shape.pillRadius, 4)}px`, bgcolor: 'var(--border)' }} />
+      </Box>
+      {/* The card, carrying this style's radius, shadow, and accent wash. */}
+      <Box
+        sx={{
+          flex: 1,
+          bgcolor: 'background.paper',
+          backgroundImage: shape.cardWash,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: `${Math.min(shape.cardRadius, 10)}px`,
+          boxShadow: shape.cardShadow,
+        }}
+      />
+    </Box>
+  );
+}
 
 /** One labelled block of controls, so the page reads as a list of decisions. */
 function SettingGroup({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
@@ -132,6 +180,45 @@ export function AppearanceSettingsPage() {
                 Your settings don't match a preset, so they're shown as Custom. Pick a preset above to go back to one.
               </Typography>
             )}
+          </SettingGroup>
+
+          <SettingGroup
+            title="Interface style"
+            hint="Changes the shape of the app — corners, shadows, and navigation — not its colours. Works with every theme above."
+          >
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+              {interfaceStyles.map((style) => {
+                const selected = settings.interfaceStyle === style.id;
+                return (
+                  <Card
+                    key={style.id}
+                    component="button"
+                    type="button"
+                    onClick={() => update({ interfaceStyle: style.id })}
+                    aria-pressed={selected}
+                    aria-label={`${style.label} interface style`}
+                    sx={{
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      p: 1.25,
+                      display: 'grid',
+                      gap: 0.75,
+                      borderColor: selected ? 'primary.main' : 'divider',
+                      borderWidth: selected ? 2 : 1,
+                    }}
+                  >
+                    <StylePreview styleId={style.id} mode={resolvedMode} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography variant="body2" noWrap>{style.label}</Typography>
+                      {selected && <Check size={14} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: -0.5 }}>
+                      {style.description}
+                    </Typography>
+                  </Card>
+                );
+              })}
+            </Box>
           </SettingGroup>
 
           <SettingGroup title="Mode" hint="System follows your device setting and updates when it changes.">

@@ -109,6 +109,18 @@ hard to read. This control is switched off while High contrast is on, because
 that mode deliberately uses pure white or black — turn High contrast off and your
 chosen tone comes straight back.
 
+**Interface style** — Classic or Modern. This changes the *shape* of the app,
+not its colours, so it works with any theme, accent, or background you picked:
+
+| Style | What changes |
+|---|---|
+| Classic | The original look — square corners, crisp borders, tight shadows, and a breadcrumb trail in the header |
+| Modern | Rounded cards with soft, wide shadows; a faint tint of your accent across each card; pill-shaped navigation; a search box with its keyboard shortcut in the sidebar; and a header that greets you by name on the dashboard, shows your partners, and puts Export within reach |
+
+Classic is the default, so nothing changes unless you pick Modern. Unlike the
+Background control, this one stays available while High contrast is on — a
+rounded corner can't make anything harder to read.
+
 **Font** — the default is your device's own font and appears instantly. Public
 Sans, Inter, DM Sans, and Nunito Sans download once, the first time you pick
 them, and are stored with the app rather than fetched from the internet — so they

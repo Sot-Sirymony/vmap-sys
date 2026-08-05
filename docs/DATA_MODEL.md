@@ -30,6 +30,7 @@ Fields:
 - fontSize
 - fontFamily
 - backgroundTone
+- interfaceStyle
 - highContrast
 - reduceMotion
 - createdAt
@@ -42,6 +43,15 @@ UI face and loads nothing, so it is both the default and the zero-cost option.
 canvas, cards, popovers, sidebar. `NEUTRAL` is defined as exactly the values that
 shipped before FR-40, so defaulting to it changes nothing for existing users, and
 `TINTED` stores no colour of its own: it is mixed from the accent at render time.
+
+`interfaceStyle` (`V20`, FR-48) selects the *shape* of the app rather than its
+colour: corner radius, shadow diffusion, the card wash, and which navigation
+chrome renders. `CLASSIC` is the Fluent treatment that shipped before FR-48, so
+defaulting to it changes nothing for existing users; `MODERN` is the rounded,
+soft-shadowed SaaS treatment. Because it decides no hue, it composes with every
+accent, tone, and font without adding colour pairs to validate — and unlike the
+tone, it is *not* suppressed by high contrast, since a corner radius cannot make
+anything harder to read.
 
 The seven appearance columns (`V16`) are `NOT NULL` with defaults equal to the
 frontend's pre-FR-39 defaults — `FLUENT_SYSTEM` / `SYSTEM` / `BLUE` /

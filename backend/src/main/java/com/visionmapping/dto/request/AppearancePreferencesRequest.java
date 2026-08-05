@@ -4,6 +4,7 @@ import com.visionmapping.entity.enums.AccentColor;
 import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
+import com.visionmapping.entity.enums.InterfaceStyle;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
 import com.visionmapping.entity.enums.UiDensity;
@@ -29,6 +30,7 @@ public record AppearancePreferencesRequest(
         FontSize fontSize,
         FontFamily fontFamily,
         BackgroundTone backgroundTone,
+        InterfaceStyle interfaceStyle,
         Boolean highContrast,
         Boolean reduceMotion
 ) {

@@ -3,6 +3,7 @@ package com.visionmapping.entity;
 import com.visionmapping.entity.enums.AccentColor;
 import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontFamily;
+import com.visionmapping.entity.enums.InterfaceStyle;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
@@ -104,6 +105,16 @@ public class AppUser extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "background_tone", nullable = false, length = 20)
     private BackgroundTone backgroundTone = BackgroundTone.NEUTRAL;
+
+    /**
+     * FR-48: the shape and weight of the app's surfaces and chrome. CLASSIC is
+     * defined as the Fluent treatment that shipped before FR-48, so this default
+     * is a no-op for existing users.
+     */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "interface_style", nullable = false, length = 20)
+    private InterfaceStyle interfaceStyle = InterfaceStyle.CLASSIC;
 
     /** FR-39.3: composes with light and dark rather than replacing either. */
     @Builder.Default

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { CommandPalette } from '../common/CommandPalette';
 import { ShortcutHelp } from '../common/ShortcutHelp';
+import { useCommandPalette } from './command-palette-context';
 
 const GO_TARGETS: Record<string, string> = {
   d: '/',
@@ -42,7 +43,9 @@ function isEditable(target: EventTarget | null): boolean {
 export function GlobalShortcuts() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  // FR-48.3: the palette's open state is shared, because the Modern sidebar's
+  // search button opens the same palette this shortcut does.
+  const { open: paletteOpen, closePalette, toggle: togglePalette } = useCommandPalette();
   const [helpOpen, setHelpOpen] = useState(false);
   const pendingGo = useRef<number | null>(null);
   const goArmed = useRef(false);
@@ -52,7 +55,7 @@ export function GlobalShortcuts() {
       // Palette: works everywhere, including inside fields.
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setPaletteOpen((open) => !open);
+        togglePalette();
         return;
       }
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
@@ -103,11 +106,11 @@ export function GlobalShortcuts() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, togglePalette]);
 
   return (
     <>
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onShowShortcuts={() => setHelpOpen(true)} />
+      <CommandPalette open={paletteOpen} onClose={closePalette} onShowShortcuts={() => setHelpOpen(true)} />
       {helpOpen && <ShortcutHelp onClose={() => setHelpOpen(false)} />}
     </>
   );

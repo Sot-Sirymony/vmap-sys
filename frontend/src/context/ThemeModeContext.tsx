@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { accentOptions, buildTheme, fontStack, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type StoredThemePreset } from '../theme';
+import { accentOptions, buildTheme, fontStack, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type InterfaceStyleId, type StoredThemePreset } from '../theme';
 import { loadFont } from '../fonts';
 import { getAppearancePreferences, updateAppearancePreferences } from '../api/preferencesApi';
 import { toSettings, toWire } from './appearance-mapping';
@@ -20,6 +20,8 @@ export type ThemeSettings = {
   backgroundTone: BackgroundToneId;
   /** FR-42 — the typeface. `system` loads nothing. */
   fontFamily: FontFamilyId;
+  /** FR-48 — shape and chrome. Decides no colour, so it composes with all of the above. */
+  interfaceStyle: InterfaceStyleId;
   /** FR-39.3 — composes with light and dark rather than replacing them. */
   highContrast: boolean;
   /** FR-39.4 — asks for less motion than the OS preference, never more. */
@@ -37,6 +39,7 @@ const DEFAULT_SETTINGS: ThemeSettings = {
   fontSize: 'medium',
   backgroundTone: 'neutral',
   fontFamily: 'system',
+  interfaceStyle: 'classic',
   highContrast: false,
   reduceMotion: false,
 };
@@ -46,6 +49,9 @@ const KNOWN_TONES = new Set<BackgroundToneId>(['neutral', 'warm', 'cool', 'soft'
 
 /** Fonts this build understands, for validating what comes out of storage. */
 const KNOWN_FONTS = new Set<FontFamilyId>(['system', 'publicSans', 'inter', 'dmSans', 'nunitoSans']);
+
+/** Styles this build understands, for validating what comes out of storage. */
+const KNOWN_STYLES = new Set<InterfaceStyleId>(['classic', 'modern']);
 
 /** How long to wait before saving, so dragging through swatches sends one request. */
 const SAVE_DEBOUNCE_MS = 600;
@@ -90,6 +96,7 @@ function initialSettings(): ThemeSettings {
         fontSize: parsed.fontSize === 'small' || parsed.fontSize === 'large' ? parsed.fontSize : 'medium',
         backgroundTone: parsed.backgroundTone && KNOWN_TONES.has(parsed.backgroundTone) ? parsed.backgroundTone : 'neutral',
         fontFamily: parsed.fontFamily && KNOWN_FONTS.has(parsed.fontFamily) ? parsed.fontFamily : 'system',
+        interfaceStyle: parsed.interfaceStyle && KNOWN_STYLES.has(parsed.interfaceStyle) ? parsed.interfaceStyle : 'classic',
         highContrast: parsed.highContrast === true,
         reduceMotion: parsed.reduceMotion === true,
       };
@@ -240,6 +247,16 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     } else {
       root.dataset.tone = settings.backgroundTone;
     }
+    // FR-48: same convention — absent means Classic, the shape that shipped
+    // before the control existed. Unlike the tone, this one is NOT suppressed by
+    // high contrast: that setting is about legibility, and a corner radius
+    // cannot make anything harder to read, so there is no reason to take the
+    // user's chosen shape away from them when they turn it on.
+    if (settings.interfaceStyle === 'classic') {
+      delete root.dataset.style;
+    } else {
+      root.dataset.style = settings.interfaceStyle;
+    }
     // The accent's CSS variables (FR-18.3). Inline custom properties win over
     // both the :root defaults and the [data-theme="dark"] block, so the
     // chosen ramp applies in either mode.
@@ -316,8 +333,8 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   }, [settings, token]);
 
   const theme = useMemo(
-    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily),
-    [resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily],
+    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily, settings.interfaceStyle),
+    [resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily, settings.interfaceStyle],
   );
 
   const update = useCallback((changes: Partial<ThemeSettings>) => {

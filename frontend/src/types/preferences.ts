@@ -10,6 +10,12 @@
  */
 export type StoredThemeMode = 'LIGHT' | 'DARK' | 'SYSTEM';
 
+/**
+ * Must stay in step with both `accentOptions` in `theme.ts` and the backend's
+ * `AccentColor` enum — a name missing from any of the three is an accent the
+ * picker offers but the account cannot store. `accent-wire.test.ts` checks all
+ * three against each other.
+ */
 export type StoredAccent =
   | 'BLUE'
   | 'TEAL'
@@ -20,7 +26,10 @@ export type StoredAccent =
   | 'RED'
   | 'BRASS'
   | 'STEEL'
-  | 'PINK';
+  | 'PINK'
+  // FR-43 additions, derived from the supplied primary/secondary ramps.
+  | 'VERMILION'
+  | 'VIOLET';
 
 export type StoredDensity = 'COMFORTABLE' | 'COMPACT';
 
@@ -29,6 +38,9 @@ export type StoredFontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 export type StoredFontFamily = 'SYSTEM' | 'PUBLIC_SANS' | 'INTER' | 'DM_SANS' | 'NUNITO_SANS';
 
 export type StoredBackgroundTone = 'NEUTRAL' | 'WARM' | 'COOL' | 'SOFT' | 'TINTED' | 'FLAT';
+
+/** FR-48 — shape and chrome, orthogonal to every colour setting above. */
+export type StoredInterfaceStyle = 'CLASSIC' | 'MODERN';
 
 export type StoredPreset =
   | 'FLUENT_SYSTEM'
@@ -48,6 +60,7 @@ export type AppearancePreferences = {
   fontSize: StoredFontSize;
   fontFamily: StoredFontFamily;
   backgroundTone: StoredBackgroundTone;
+  interfaceStyle: StoredInterfaceStyle;
   highContrast: boolean;
   reduceMotion: boolean;
 };
