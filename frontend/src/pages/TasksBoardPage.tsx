@@ -20,7 +20,9 @@ import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { Input } from '../components/common/Input';
+import { SearchBar } from '../components/common/SearchBar';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
 import { ProgressBar } from '../components/common/ProgressBar';
@@ -604,7 +606,8 @@ export function TasksBoardPage() {
           { key: 'preset-week', label: '· Due this week', count: crud.items.filter((task) => { const d = new Date(`${task.dueDate}T00:00:00`); const now = new Date(); const end = new Date(now); end.setDate(now.getDate() + 7); return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= end && task.status !== 'COMPLETED'; }).length, active: Boolean(filterDueFrom && filterDueTo), onClick: applyDueThisWeek },
         ]}
       />
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterOwner, filterPriority, filterStatus, filterVisionAreaId, filterDreamId, filterGoalId, filterDueFrom, filterDueTo, filterOverdueOnly].filter(Boolean).length}>
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="tasks" />
         <label>
           Owner
           <Input value={filterOwner} onChange={(event) => setFilterOwner(event.target.value)} placeholder="Any owner" />
@@ -652,35 +655,27 @@ export function TasksBoardPage() {
           Overdue only
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       {filterStepId && (
         <Card className="filter-banner flex-row">
           <span>Showing tasks for step: <strong>{steps.find((step) => String(step.id) === filterStepId)?.title ?? filterStepId}</strong></span>
           <Link to="/tasks">Clear filter</Link>
         </Card>
       )}
-      <div className="toolbar">
-        <Input
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Search Here"
-          aria-label="Search tasks"
-        />
-      </div>
-      <div className="view-toggle-row">
+      <div className="list-controls">
+        {crud.items.length > 0 && steps.length > 0 && (
+          <QuickAddRow
+            parentLabel="Step"
+            parents={steps.map((step) => ({ value: String(step.id), label: step.title }))}
+            parentValue={quickParentId}
+            onParentChange={setQuickParentId}
+            placeholder="New task title"
+            withDueDate
+            onAdd={handleQuickAdd}
+          />
+        )}
         <ViewToggle value={viewMode} onChange={setViewMode} label="Task view" />
       </div>
-      {crud.items.length > 0 && steps.length > 0 && (
-        <QuickAddRow
-          parentLabel="Step"
-          parents={steps.map((step) => ({ value: String(step.id), label: step.title }))}
-          parentValue={quickParentId}
-          onParentChange={setQuickParentId}
-          placeholder="New task title"
-          withDueDate
-          onAdd={handleQuickAdd}
-        />
-      )}
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
           headline="No tasks yet"

@@ -1,4 +1,4 @@
-import { Ban, CalendarClock, CalendarDays, CheckCircle2, CheckSquare, Compass, Flag, Rocket, Sparkles, TrendingUp } from 'lucide-react';
+import { Ban, CalendarClock, CalendarDays, CheckCircle2, CheckSquare, Compass, MoonStar, Rocket, Target, TrendingUp } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
@@ -95,10 +95,10 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
         <DashboardCard
           label="Active Dreams"
           value={summary?.activeDreams ?? 0}
-          icon={Sparkles}
+          icon={MoonStar}
           to={scoped('/dreams?status=ACTIVE', visionAreaId)}
         />
-        <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} icon={Flag} />
+        <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} icon={Target} />
         <DashboardCard label="Open Tasks" value={summary?.activeTasks ?? 0} icon={CheckSquare} />
         {/*
           Completed is scoped to the period by completion date. It doesn't link:

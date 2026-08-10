@@ -16,6 +16,13 @@
   font-family: var(--font-family, "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  /* Native controls (checkboxes, radios, date inputs) follow the accent, so
+     they never flash browser-default blue inside a purple-accented app. */
+  accent-color: var(--primary);
+  /* Firefox scrollbars; the WebKit pseudo-element half lives further down.
+     The thumb derives from --foreground, so it adapts to mode and tone. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 24%, transparent) transparent;
   --background: #ffffff;
   --foreground: #242424;
   --card: #ffffff;
@@ -485,6 +492,44 @@ body {
   min-height: 100vh;
 }
 
+/* Text selection follows the accent: it keeps the text colour and only tints
+   behind it, so contrast is never reduced below what the page had. */
+::selection {
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+/* Scrollbars in the app's own neutrals (WebKit half; Firefox reads the
+   scrollbar-width/-color pair declared in the base :root block). */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 24%, transparent);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 38%, transparent);
+  background-clip: content-box;
+}
+
+/* FR-39.3: translucency softens the boundary between header and content —
+   exactly what high contrast exists to avoid. The !important is what lets an
+   accessibility setting beat the sx-injected glass styles. */
+:root[data-contrast="high"] .app-header {
+  background: var(--background) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 button,
 input,
 select,
@@ -624,6 +669,76 @@ button:focus-visible,
 .view-toggle-row {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Quick-add and the view switch share one row: the entry field takes the
+   slack, the switch keeps to the right — one row of chrome instead of two. */
+.list-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.list-controls .quick-add-row {
+  flex: 1 1 480px;
+  min-width: 0;
+}
+
+/* FR-20.3 collapsible filter panel. The Card supplies the surface; the inner
+   .filter-bar keeps its own padding, so desktop renders pixel-identical to the
+   old always-open card. The toggle exists only below the md breakpoint, where
+   a full set of empty dropdowns used to fill the first screen. */
+/* Doubled class specificity: MUI's ButtonBase sets its own display via a
+   later-injected emotion rule, and a single class would tie and lose. */
+.filter-panel .filter-panel-toggle {
+  display: none;
+}
+
+@media (max-width: 899.98px) {
+  .filter-panel .filter-panel-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 12px 18px;
+    font: inherit;
+    font-size: var(--font-body-sm);
+    font-weight: 600;
+    color: var(--text-label);
+  }
+
+  .filter-panel-toggle[aria-expanded="true"] {
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .filter-panel-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    color: var(--accent-foreground);
+    font-size: var(--font-caption);
+    font-weight: 700;
+  }
+
+  .filter-panel-chevron {
+    margin-left: auto;
+    transition: transform var(--motion-fast) var(--motion-ease);
+  }
+
+  .filter-panel-chevron--open {
+    transform: rotate(180deg);
+  }
+
+  .filter-bar--collapsed {
+    display: none;
+  }
 }
 
 .bulk-actions-bar {
@@ -826,8 +941,10 @@ button:focus-visible,
   vertical-align: middle;
 }
 
+/* The head is a labelled rule, not a band: transparent so the table reads as
+   one surface, with the border carrying the separation. */
 .data-table thead th {
-  background: var(--muted);
+  background: transparent;
   color: var(--muted-foreground);
   font-size: var(--font-caption);
   font-weight: 600;
@@ -1944,8 +2061,10 @@ button:focus-visible,
   .MuiDrawer-root,
   .MuiAppBar-root,
   .filter-bar,
+  .filter-panel,
   .summary-strip,
   .quick-add-row,
+  .list-controls,
   .view-toggle-row,
   .page-heading-actions,
   .toast-stack,

@@ -11,6 +11,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import Box from '@mui/material/Box';
+import { BrandMark } from '../common/BrandMark';
 import Typography from '@mui/material/Typography';
 import Avatar from '@mui/material/Avatar';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -112,12 +113,10 @@ function Brand({ collapsed }: { collapsed: boolean }) {
           color: 'primary.contrastText',
           display: 'grid',
           placeItems: 'center',
-          fontWeight: 700,
-          fontSize: 'var(--font-meta)',
           flexShrink: 0,
         }}
       >
-        VM
+        <BrandMark size={20} />
       </Box>
       {!collapsed && (
         <Box sx={{ overflow: 'hidden' }}>

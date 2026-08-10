@@ -15,6 +15,7 @@ import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
@@ -458,7 +459,7 @@ export function ObstaclesPage() {
           { key: 'resolved', label: 'resolved', count: crud.items.filter((obstacle) => obstacle.status === 'RESOLVED').length, tone: 'positive', active: filterStatus === 'RESOLVED', onClick: () => setFilterStatus(filterStatus === 'RESOLVED' ? '' : 'RESOLVED') },
         ]}
       />
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterObstacleType, filterSeverity, filterStatus, filterDreamId].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
         <FilterSelect
           label="Type"
@@ -485,7 +486,7 @@ export function ObstaclesPage() {
           options={optionsFromEntities(dreams, (dream) => dream.title)}
         />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Obstacle view" />
       </div>

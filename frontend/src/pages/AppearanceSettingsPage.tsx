@@ -85,6 +85,27 @@ function StylePreview({ styleId, mode }: { styleId: InterfaceStyleId; mode: 'lig
 }
 
 /** One labelled block of controls, so the page reads as a list of decisions. */
+/**
+ * The Tinted tone's swatch, mixed from the live accent (FR-40.3) — a fixed
+ * blue stand-in would show every purple- or green-accented user the wrong
+ * preview. Returns [canvas, card, sidebar]; the mix ratios mirror the
+ * `[data-tone="tinted"]` blocks in global.css and must change with them.
+ */
+function tintedSwatch(accentMain: string, mode: 'light' | 'dark'): [string, string, string] {
+  if (mode === 'dark') {
+    return [
+      `color-mix(in srgb, ${accentMain} 6%, #1b1a19)`,
+      `color-mix(in srgb, ${accentMain} 8%, #252423)`,
+      `color-mix(in srgb, ${accentMain} 8%, #252423)`,
+    ];
+  }
+  return [
+    `color-mix(in srgb, ${accentMain} 4%, #F9FAFB)`,
+    '#ffffff',
+    `color-mix(in srgb, ${accentMain} 8%, #f5f5f5)`,
+  ];
+}
+
 function SettingGroup({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
     <Box component="section" sx={{ mb: 3 }}>
@@ -278,43 +299,52 @@ export function AppearanceSettingsPage() {
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
               {backgroundTones.map((tone) => {
                 const selected = settings.backgroundTone === tone.id;
-                const [canvas, card] = tone.preview[resolvedMode];
+                const [canvas, card, sidebar] =
+                  tone.id === 'tinted'
+                    ? tintedSwatch(accentOptions[settings.accent][resolvedMode].main, resolvedMode)
+                    : tone.preview[resolvedMode];
                 return (
-                  <Tooltip key={tone.id} title={tone.description}>
-                    {/* The span keeps the tooltip working on a disabled control —
-                        MUI can't attach a listener to a disabled button. */}
-                    <span>
-                      <Box
-                        component="button"
-                        type="button"
-                        disabled={settings.highContrast}
-                        onClick={() => update({ backgroundTone: tone.id })}
-                        aria-label={`${tone.label} background`}
-                        aria-pressed={selected}
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'stretch',
-                          gap: 0.5,
-                          width: 78,
-                          p: 0.75,
-                          borderRadius: 1,
-                          cursor: settings.highContrast ? 'not-allowed' : 'pointer',
-                          opacity: settings.highContrast ? 0.5 : 1,
-                          bgcolor: 'transparent',
-                          border: '2px solid',
-                          borderColor: selected ? 'primary.main' : 'divider',
-                        }}
-                      >
-                        {/* A miniature of the real thing: canvas with a card on
-                            it, so Flat's lack of a step is visible up front. */}
-                        <Box sx={{ height: 34, borderRadius: '3px', bgcolor: canvas, border: '1px solid', borderColor: 'divider', p: 0.5 }}>
-                          <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: card, border: '1px solid', borderColor: 'divider' }} />
-                        </Box>
-                        <Typography variant="caption" noWrap>{tone.label}</Typography>
+                  <Box
+                    key={tone.id}
+                    component="button"
+                    type="button"
+                    disabled={settings.highContrast}
+                    onClick={() => update({ backgroundTone: tone.id })}
+                    aria-label={`${tone.label} background`}
+                    aria-pressed={selected}
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'stretch',
+                      gap: 0.5,
+                      width: 126,
+                      p: 0.75,
+                      borderRadius: 1,
+                      textAlign: 'left',
+                      cursor: settings.highContrast ? 'not-allowed' : 'pointer',
+                      opacity: settings.highContrast ? 0.5 : 1,
+                      bgcolor: 'transparent',
+                      border: '2px solid',
+                      borderColor: selected ? 'primary.main' : 'divider',
+                    }}
+                  >
+                    {/* A miniature of the real app — sidebar rail, canvas, and a
+                        card on it — because the tone paints all three. Flat's
+                        missing canvas step is visible up front. */}
+                    <Box sx={{ display: 'flex', height: 44, borderRadius: '4px', overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ width: 18, flexShrink: 0, bgcolor: sidebar, borderRight: '1px solid', borderColor: 'divider' }} />
+                      <Box sx={{ flex: 1, bgcolor: canvas, p: 0.5 }}>
+                        <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: card, border: '1px solid', borderColor: 'divider' }} />
                       </Box>
-                    </span>
-                  </Tooltip>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 600 }} noWrap>{tone.label}</Typography>
+                      {selected && <Check size={12} aria-hidden />}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                      {tone.description}
+                    </Typography>
+                  </Box>
                 );
               })}
             </Box>

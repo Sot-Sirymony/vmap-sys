@@ -13,6 +13,7 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
@@ -390,7 +391,7 @@ export function ReviewsPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterReviewType, filterVisionAreaId, filterDreamId].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="reviews" />
         <FilterSelect
           label="Review Type"
@@ -411,7 +412,7 @@ export function ReviewsPage() {
           options={optionsFromEntities(dreams, (dream) => dream.title)}
         />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <Card>
         <CardContent>
         <DataTable

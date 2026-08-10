@@ -18,20 +18,22 @@ override it.
 of truth: a concept uses the **same icon everywhere** it appears (nav, empty
 states, cards, prompts).
 
-| Concept | Icon |
-|---|---|
-| Dashboard | LayoutDashboard |
-| Vision Area | Compass |
-| Dream | Sparkles |
-| Goal | Flag |
-| Step | ListChecks |
-| Task | CheckSquare |
-| Partner | Users |
-| Obstacle | TriangleAlert |
-| Communication | MessageSquare |
-| Review | ClipboardList |
-| Import/Export | FileSpreadsheet |
-| Moonshot | Rocket |
+| Concept | Icon | Why this one |
+|---|---|---|
+| Dashboard | LayoutDashboard | convention |
+| Vision Area | Compass | direction for a life domain |
+| Dream | MoonStar | dreaming; Sparkles now reads as "AI" |
+| Goal | Target | universal goal metaphor |
+| Step | Footprints | steps toward a goal; ListChecks was a near-twin of the Task icon |
+| Task | CheckSquare | executable checkbox item |
+| Partner | Handshake | partnership, not user administration |
+| Obstacle | TrafficCone | a roadblock, distinct from generic warning triangles |
+| Communication | Send | outreach to a partner |
+| Review | ClipboardList | structured review questions |
+| Insight | Lightbulb | lesson learned |
+| Issue Report | Bug | app-defect reporting convention |
+| Import/Export | FileSpreadsheet | Excel workbook |
+| Moonshot | Rocket | aspirational reach |
 
 ## Rules
 

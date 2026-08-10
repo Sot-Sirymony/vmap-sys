@@ -15,6 +15,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { VisionAreaWizard } from '../components/forms/VisionAreaWizard';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { FilterSelect, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
@@ -312,7 +313,7 @@ export function VisionAreasPage() {
       )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterPriority, filterStatus].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="vision areas" />
         <FilterSelect
           label="Priority"
@@ -331,7 +332,7 @@ export function VisionAreasPage() {
           )}
         />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Vision area view" />
       </div>

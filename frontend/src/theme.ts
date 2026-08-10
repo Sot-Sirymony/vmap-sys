@@ -622,8 +622,13 @@ export type BackgroundToneDefinition = {
   stored: 'NEUTRAL' | 'WARM' | 'COOL' | 'SOFT' | 'TINTED' | 'FLAT';
   label: string;
   description: string;
-  /** Swatch pair for the picker: [canvas, card]. `tinted` resolves at render time. */
-  preview: { light: [string, string]; dark: [string, string] };
+  /**
+   * Swatch triple for the picker: [canvas, card, sidebar] — the real values
+   * the tone paints (mirror the `[data-tone]` blocks in global.css; a swatch
+   * that understates its tone sells the wrong choice). `tinted` is resolved
+   * from the live accent at render time; its entries are stand-ins.
+   */
+  preview: { light: [string, string, string]; dark: [string, string, string] };
 };
 
 export const backgroundTones: BackgroundToneDefinition[] = [
@@ -631,44 +636,44 @@ export const backgroundTones: BackgroundToneDefinition[] = [
     id: 'neutral',
     stored: 'NEUTRAL',
     label: 'Neutral',
-    description: 'The default',
-    preview: { light: ['#fafafa', '#ffffff'], dark: ['#1b1a19', '#252423'] },
+    description: 'Clean grey default',
+    preview: { light: ['#F9FAFB', '#ffffff', '#f5f5f5'], dark: ['#1b1a19', '#252423', '#252423'] },
   },
   {
     id: 'warm',
     stored: 'WARM',
     label: 'Warm',
-    description: 'Softer, cream-tinted',
-    preview: { light: ['#faf7f2', '#fffdfa'], dark: ['#1f1b17', '#2a2521'] },
+    description: 'Cream, easy on the eyes',
+    preview: { light: ['#faf7f2', '#fffdfa', '#f5f1e9'], dark: ['#1f1b17', '#2a2521', '#2a2521'] },
   },
   {
     id: 'cool',
     stored: 'COOL',
     label: 'Cool',
-    description: 'Slight blue cast',
-    preview: { light: ['#f6f8fa', '#ffffff'], dark: ['#171a1d', '#212529'] },
+    description: 'Calm blue-grey cast',
+    preview: { light: ['#EDF3F9', '#ffffff', '#E7EEF6'], dark: ['#171a1d', '#212529', '#212529'] },
   },
   {
     id: 'soft',
     stored: 'SOFT',
     label: 'Soft',
-    description: 'More separation',
-    preview: { light: ['#eef0f2', '#ffffff'], dark: ['#141414', '#242424'] },
+    description: 'Deeper canvas, cards stand out',
+    preview: { light: ['#eef0f2', '#ffffff', '#e7eaee'], dark: ['#141414', '#242424', '#242424'] },
   },
   {
     id: 'tinted',
     stored: 'TINTED',
     label: 'Tinted',
-    description: 'Follows your accent',
+    description: 'Washed with your accent',
     // Resolved from the accent at render time; these stand in for the swatch.
-    preview: { light: ['#f7fafd', '#ffffff'], dark: ['#16191c', '#202427'] },
+    preview: { light: ['#f7fafd', '#ffffff', '#eef4f9'], dark: ['#16191c', '#202427', '#202427'] },
   },
   {
     id: 'flat',
     stored: 'FLAT',
     label: 'Flat',
-    description: 'No canvas step',
-    preview: { light: ['#ffffff', '#ffffff'], dark: ['#1f1e1d', '#1f1e1d'] },
+    description: 'One surface, borders only',
+    preview: { light: ['#ffffff', '#ffffff', '#ffffff'], dark: ['#1f1e1d', '#1f1e1d', '#1f1e1d'] },
   },
 ];
 
@@ -1302,6 +1307,16 @@ export function buildTheme(
       // everything else, not just have a bigger version of the Card shadow.
       MuiDialog: {
         styleOverrides: {
+          // A light blur on the backdrop separates the modal from the page it
+          // covers without darkening it further. Scoped to Dialog's own
+          // backdrop — a blanket MuiBackdrop override would also hit Popover's
+          // invisible backdrop and blur the page every time a menu opens.
+          root: {
+            '& .MuiBackdrop-root': {
+              backdropFilter: 'blur(3px)',
+              WebkitBackdropFilter: 'blur(3px)',
+            },
+          },
           paper: {
             borderRadius: shape.cardRadius,
             boxShadow: shape.dialogShadow,

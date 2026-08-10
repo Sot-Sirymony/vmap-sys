@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { CheckCircle2, Compass, ListChecks, Sparkles } from 'lucide-react';
+import { CheckCircle2, Compass, Footprints, MoonStar } from 'lucide-react';
 import Box from '@mui/material/Box';
 import MuiButton from '@mui/material/Button';
 import Card from '@mui/material/Card';
@@ -31,7 +31,7 @@ export function GettingStarted({ hasArea, hasDream, hasGoal }: GettingStartedPro
       to: '/vision-areas?create=area',
     },
     {
-      icon: Sparkles,
+      icon: MoonStar,
       done: hasDream,
       title: 'Add a Dream',
       description: 'A meaningful outcome you want to reach. A short guide helps you make it clear.',
@@ -39,7 +39,7 @@ export function GettingStarted({ hasArea, hasDream, hasGoal }: GettingStartedPro
       to: '/dreams?create=dream',
     },
     {
-      icon: ListChecks,
+      icon: Footprints,
       done: hasGoal,
       title: 'Break it down',
       description: 'Turn the dream into goals, steps, and tasks on the Vision Map.',

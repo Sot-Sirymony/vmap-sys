@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CheckCircle2, Flag, Sparkles } from 'lucide-react';
+import { CheckCircle2, MoonStar, Target } from 'lucide-react';
 import FormControl from '@mui/material/FormControl';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -213,7 +213,7 @@ export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, 
       {step === 3 && createdDream && (
         <div className="form-grid">
           <p className="field-full wizard-created">
-            <Sparkles size={16} /> <strong>{createdDream.title}</strong> is on the map. What major results would make it real?
+            <MoonStar size={16} /> <strong>{createdDream.title}</strong> is on the map. What major results would make it real?
           </p>
           {addedGoals.length > 0 && (
             <ul className="field-full wizard-goal-list">
@@ -233,7 +233,7 @@ export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, 
               {addingGoal ? 'Adding...' : 'Add goal'}
             </Button>
           </form>
-          <span className="field-full field-hint"><Flag size={14} /> Aim for 2–4 goals; each one becomes steps and tasks on the Vision Map.</span>
+          <span className="field-full field-hint"><Target size={14} /> Aim for 2–4 goals; each one becomes steps and tasks on the Vision Map.</span>
           <div className="field-full row-actions">
             <Button type="button" onClick={() => { finish(); navigate(`/dreams/${createdDream.id}`); }}>Open the Vision Map</Button>
             <Button type="button" variant="secondary" onClick={finish}>Done</Button>

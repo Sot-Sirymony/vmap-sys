@@ -25,6 +25,7 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { FilterSelect, optionsFromLabels } from '../components/common/FilterSelect';
 import { Loading } from '../components/common/Loading';
 import { Modal } from '../components/common/Modal';
@@ -198,11 +199,11 @@ export function IssueReportsPage() {
       )}
 
       {isAdmin && scope === 'all' && (
-        <Card className="filter-bar flex-row">
+        <FilterPanel activeCount={[filterType, filterStatus, filterSeverity].filter(Boolean).length}>
           <FilterSelect label="Type" value={filterType} onChange={setFilterType} options={optionsFromLabels(reportTypeLabels)} />
           <FilterSelect label="Status" value={filterStatus} onChange={setFilterStatus} options={optionsFromLabels(issueReportStatusLabels)} />
           <FilterSelect label="Severity" value={filterSeverity} onChange={setFilterSeverity} options={optionsFromLabels(severityLabels)} />
-        </Card>
+        </FilterPanel>
       )}
 
       {loading && <Loading variant="table" />}

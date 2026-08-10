@@ -11,7 +11,7 @@ import FormControl from '@mui/material/FormControl';
 import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import { Rocket, Sparkles } from 'lucide-react';
+import { MoonStar, Rocket } from 'lucide-react';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
@@ -20,6 +20,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { DreamWizard } from '../components/forms/DreamWizard';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
@@ -480,7 +481,7 @@ export function DreamsPage() {
           { key: 'completed', label: 'completed', count: crud.items.filter((dream) => dream.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
         ]}
       />
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamType, filterPriority, filterStatus, filterOverdueOnly, filterMoonshotOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="dreams" />
         <FilterSelect
           label="Vision Area"
@@ -519,14 +520,14 @@ export function DreamsPage() {
           Moonshots only
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Dream view" />
       </div>
       {!crud.loading && crud.items.length === 0 && !hasFilters ? (
         <EmptyState
           headline="No dreams yet"
-          icon={Sparkles}
+          icon={MoonStar}
           action={
             visionAreas.length === 0 ? (
               <Button type="button" onClick={() => navigate('/vision-areas?create=area')}>Create a vision area first</Button>

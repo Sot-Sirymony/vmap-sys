@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Flag, Rocket } from 'lucide-react';
+import { Rocket, Target } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
 import { listSteps } from '../api/stepApi';
 import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
@@ -20,6 +20,7 @@ import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
@@ -514,7 +515,7 @@ export function GoalsPage() {
           { key: 'completed', label: 'completed', count: crud.items.filter((goal) => goal.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
         ]}
       />
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamId, filterStatus, filterPriority, filterOverdueOnly, filterMoonshotOnly, filterTargetFrom, filterTargetTo].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="goals" />
         <FilterSelect
           label="Vision Area"
@@ -557,7 +558,7 @@ export function GoalsPage() {
           Moonshots only
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Goal view" />
       </div>
@@ -574,7 +575,7 @@ export function GoalsPage() {
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
           headline="No goals yet"
-          icon={Flag}
+          icon={Target}
           action={
             dreams.length === 0 ? (
               <Button type="button" onClick={() => navigate('/dreams?create=dream')}>Create a dream first</Button>

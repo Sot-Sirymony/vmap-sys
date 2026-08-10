@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BrandMark } from '../components/common/BrandMark';
 
 const FUNNEL_LEVELS = ['Vision Area', 'Dream', 'Goal', 'Step', 'Task'];
 
@@ -12,7 +13,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="auth-shell">
       <div className="auth-hero" aria-hidden="true">
-        <p className="auth-brand"><span className="auth-brand-mark">VM</span> Vision Map</p>
+        <p className="auth-brand"><span className="auth-brand-mark"><BrandMark size={22} /></span> Vision Map</p>
         <p className="auth-tagline">Turn dreams into scheduled work.</p>
         <div className="auth-funnel">
           {FUNNEL_LEVELS.map((level, index) => (

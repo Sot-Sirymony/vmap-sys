@@ -7,7 +7,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Ban, CalendarClock, CheckCircle2, GitBranch, Rocket, Sparkles, Target, TrendingDown } from 'lucide-react';
+import { Ban, CalendarClock, CheckCircle2, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardAttention } from '../../types/vision';
 
@@ -64,7 +64,7 @@ function buildFindings(attention: DashboardAttention, overdueCount: number, visi
     },
     {
       key: 'dreams-no-goals',
-      icon: Sparkles,
+      icon: MoonStar,
       count: attention.dreamsWithoutGoals.length,
       title: 'Dreams with no goals',
       why: 'A dream with no goals is still a wish — nothing can be executed on it.',

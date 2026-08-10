@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { CheckCircle2, Compass, Sparkles } from 'lucide-react';
+import { CheckCircle2, Compass, MoonStar } from 'lucide-react';
 import FormControl from '@mui/material/FormControl';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -179,7 +179,7 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated }: VisionAr
               {addingDream ? 'Adding...' : 'Add dream'}
             </Button>
           </form>
-          <span className="field-full field-hint"><Sparkles size={14} /> A dream added here can be fleshed out with its own why and success definition any time.</span>
+          <span className="field-full field-hint"><MoonStar size={14} /> A dream added here can be fleshed out with its own why and success definition any time.</span>
           <div className="field-full row-actions">
             <Button type="button" onClick={() => { finish(); navigate('/dreams'); }}>View Dreams</Button>
             <Button type="button" variant="secondary" onClick={finish}>Done</Button>

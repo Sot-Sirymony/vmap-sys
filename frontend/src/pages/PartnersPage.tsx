@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { Handshake } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listIdealPartnerProfiles } from '../api/idealPartnerProfileApi';
@@ -17,7 +18,9 @@ import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
+import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
@@ -393,6 +396,12 @@ export function PartnersPage() {
     </>
   );
 
+  // A first-run page shows one clear invitation instead of an empty table;
+  // once a search or filter is narrowing the list, the table's own "no
+  // matches" row explains the emptiness better than this would.
+  const filtersNarrowing = Boolean(searchTerm || filterSupportType || filterStatus || filterDreamId);
+  const showFirstRun = !crud.loading && crud.items.length === 0 && !filtersNarrowing;
+
   return (
     <PageSection
       title="Partners"
@@ -422,7 +431,7 @@ export function PartnersPage() {
           { key: 'waiting', label: 'waiting', count: crud.items.filter((partner) => partner.status === 'WAITING').length, active: filterStatus === 'WAITING', onClick: () => setFilterStatus(filterStatus === 'WAITING' ? '' : 'WAITING') },
         ]}
       />
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterSupportType, filterStatus, filterDreamId].filter(Boolean).length}>
         <SearchBar
           value={searchTerm}
           onChange={(value) => {
@@ -450,11 +459,20 @@ export function PartnersPage() {
           options={optionsFromEntities(dreams, (dream) => dream.title)}
         />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Partner view" />
       </div>
-      {viewMode === 'board' && (
+      {showFirstRun && (
+        <EmptyState
+          headline="No partners yet"
+          icon={Handshake}
+          action={<Button type="button" onClick={() => setCreateOpen(true)}>Add your first partner</Button>}
+        >
+          Partners are the mentors, experts, and supporters who help unblock your work — link them to a dream, goal, step, or task.
+        </EmptyState>
+      )}
+      {!showFirstRun && viewMode === 'board' && (
         // Partners are server-paged, so the board shows the currently loaded page.
         <StatusBoard
           items={crud.items}
@@ -474,7 +492,7 @@ export function PartnersPage() {
           cardActions={(partner) => renderPartnerActions(partner)}
         />
       )}
-      {viewMode === 'list' && (
+      {!showFirstRun && viewMode === 'list' && (
       <Card>
         <CardContent>
         <DataTable

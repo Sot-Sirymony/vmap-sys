@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { ListChecks } from 'lucide-react';
+import { Footprints } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
@@ -21,6 +21,7 @@ import { Modal } from '../components/common/Modal';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { FilterPanel } from '../components/common/FilterPanel';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { PriorityBadge } from '../components/common/PriorityBadge';
@@ -533,7 +534,7 @@ export function StepsPage() {
           { key: 'completed', label: 'completed', count: crud.items.filter((step) => step.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
         ]}
       />
-      <Card className="filter-bar flex-row">
+      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterGoalId, filterStatus, filterPriority, filterOverdueOnly, filterComplexOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="steps" />
         <FilterSelect
           label="Vision Area"
@@ -568,7 +569,7 @@ export function StepsPage() {
           Complex only
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
-      </Card>
+      </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Step view" />
       </div>
@@ -585,7 +586,7 @@ export function StepsPage() {
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
           headline="No steps yet"
-          icon={ListChecks}
+          icon={Footprints}
           action={
             goals.length === 0 ? (
               <Button type="button" onClick={() => navigate('/goals?create=goal')}>Create a goal first</Button>

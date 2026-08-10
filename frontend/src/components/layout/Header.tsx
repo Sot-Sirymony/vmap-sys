@@ -11,7 +11,7 @@ import AvatarGroup from '@mui/material/AvatarGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
-import { MessageSquareWarning, PanelLeft, Plus, Upload } from 'lucide-react';
+import { Bug, PanelLeft, Plus, Upload } from 'lucide-react';
 import { AppearanceMenu } from './AppearanceMenu';
 import { navItems } from './nav-items';
 import { useSidebarState } from './sidebar-context';
@@ -165,10 +165,20 @@ export function Header() {
   return (
     <AppBar
       component="header"
-      position="static"
+      position="sticky"
       color="transparent"
       elevation={0}
-      sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.default' }}
+      className="app-header"
+      sx={{
+        borderBottom: 1,
+        borderColor: 'divider',
+        // Glass header: stays put while the page scrolls under it, translucent
+        // enough to hint at what's passing beneath. High contrast makes it
+        // opaque again via the .app-header override in global.css.
+        bgcolor: 'color-mix(in srgb, var(--background) 82%, transparent)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+      }}
     >
       <Toolbar sx={{ gap: 1.5, minHeight: `${modern ? 64 : 56}px !important` }}>
         <IconButton onClick={toggle} aria-label="Toggle sidebar" edge="start" size="small">
@@ -194,7 +204,7 @@ export function Header() {
         {modern ? (
           <Tooltip title="Report an issue">
             <IconButton size="small" aria-label="Report an issue" onClick={() => setReportOpen(true)}>
-              <MessageSquareWarning size={18} />
+              <Bug size={18} />
             </IconButton>
           </Tooltip>
         ) : (
@@ -202,7 +212,7 @@ export function Header() {
             onClick={() => setReportOpen(true)}
             size="small"
             color="inherit"
-            startIcon={<MessageSquareWarning size={16} />}
+            startIcon={<Bug size={16} />}
             sx={{ textTransform: 'none' }}
           >
             Report an issue
