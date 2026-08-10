@@ -67,7 +67,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
         an aggregate, not a set of rows. Due This Week now links via the tasks
         due-date range (BRD C-6).
       */}
-      <TileGroup label="Needs attention" columns={3}>
+      <TileGroup label="Task pressure" columns={3}>
         <DashboardCard
           label="Overdue Tasks"
           value={summary?.overdueTasks ?? 0}

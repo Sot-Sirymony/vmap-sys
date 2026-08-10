@@ -10,7 +10,9 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import { useEffect } from 'react';
 import { Check, Monitor, Moon, Sun } from 'lucide-react';
+import { loadFont } from '../fonts';
 import { PageSection } from './PageSection';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -127,6 +129,17 @@ function SettingGroup({ title, hint, children }: { title: string; hint: string; 
  */
 export function AppearanceSettingsPage() {
   const { settings, resolvedMode, preset, update, applyPreset, reset, saveError } = useThemeSettings();
+
+  // The font cards render each face in itself, but ThemeModeProvider only
+  // fetches the SELECTED font — so on this page (and only here) all of them
+  // are loaded, or every unpicked preview silently falls back to the system
+  // stack and the cards all look the same. loadFont memoises and swallows
+  // failures, so this is one fetch per face, once, best-effort.
+  useEffect(() => {
+    for (const font of fontFamilies) {
+      void loadFont(font.id);
+    }
+  }, []);
 
   const activePresetLabel = preset === 'CUSTOM'
     ? 'Custom'
@@ -276,12 +289,20 @@ export function AppearanceSettingsPage() {
                         borderRadius: '50%',
                         cursor: 'pointer',
                         padding: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         bgcolor: accentOptions[accentId][resolvedMode].main,
+                        // The check is the primary signal; the ring backs it up
+                        // for anyone who reads shape before colour.
+                        color: accentOptions[accentId][resolvedMode].contrastText,
                         border: '2px solid',
                         borderColor: selected ? 'text.primary' : 'transparent',
                         outlineOffset: 2,
                       }}
-                    />
+                    >
+                      {selected && <Check size={16} aria-hidden />}
+                    </Box>
                   </Tooltip>
                 );
               })}
@@ -453,7 +474,10 @@ export function AppearanceSettingsPage() {
           </SettingGroup>
         </Box>
 
-        <Box>
+        {/* Sticky (from md, where it sits beside the controls): the whole
+            point of a live preview is seeing it while changing the settings
+            further down the page. top clears the sticky glass header. */}
+        <Box sx={{ position: { md: 'sticky' }, top: { md: 88 }, alignSelf: 'start' }}>
           <Typography variant="h3" sx={{ mb: 0.25 }}>Preview</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
             Real components, not mock-ups — this is how your data will look.

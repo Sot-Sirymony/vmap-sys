@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router';
 import Box from '@mui/material/Box';
+import { BottomNav } from './BottomNav';
 import { GlobalShortcuts } from './GlobalShortcuts';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -22,6 +23,7 @@ export function AppLayout() {
             </Box>
           </Box>
         </Box>
+        <BottomNav />
       </CommandPaletteProvider>
     </SidebarStateProvider>
   );

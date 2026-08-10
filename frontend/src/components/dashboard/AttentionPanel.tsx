@@ -7,7 +7,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Ban, CalendarClock, CheckCircle2, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
+import { Ban, CheckCircle2, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardAttention } from '../../types/vision';
 
@@ -32,8 +32,11 @@ function scoped(base: string, visionAreaId?: string) {
   return `${base}${base.includes('?') ? '&' : '?'}visionAreaId=${visionAreaId}`;
 }
 
-function buildFindings(attention: DashboardAttention, overdueCount: number, visionAreaId?: string): Finding[] {
-  // Ranked: hard blockers first, time pressure second, structural gaps after.
+function buildFindings(attention: DashboardAttention, visionAreaId?: string): Finding[] {
+  // Ranked: hard blockers first, structural gaps after. Plain time pressure
+  // (overdue / due soon) is NOT repeated here — the Task pressure tiles above
+  // already carry those counts with the same links; this panel holds only the
+  // findings that need a structural fix, not just work.
   const findings: Finding[] = [
     {
       key: 'blocked-no-partner',
@@ -43,15 +46,6 @@ function buildFindings(attention: DashboardAttention, overdueCount: number, visi
       why: 'Nothing is lined up to unblock these. They will stay stuck until someone helps.',
       to: scoped('/tasks?status=BLOCKED', visionAreaId),
       action: 'Find a partner',
-    },
-    {
-      key: 'overdue',
-      icon: CalendarClock,
-      count: overdueCount,
-      title: 'Overdue tasks',
-      why: 'Past their due date and not completed. Reschedule them or finish them — a stale date helps nobody.',
-      to: scoped('/tasks?overdue=true', visionAreaId),
-      action: 'Review overdue',
     },
     {
       key: 'complex-no-tasks',
@@ -121,12 +115,12 @@ function buildFindings(attention: DashboardAttention, overdueCount: number, visi
  * so it disappears entirely when there is nothing to fix, rather than sitting
  * there as a permanent scold.
  */
-export function AttentionPanel({ attention, overdueCount = 0, visionAreaId }: { attention: DashboardAttention | undefined; overdueCount?: number; visionAreaId?: string }) {
+export function AttentionPanel({ attention, visionAreaId }: { attention: DashboardAttention | undefined; visionAreaId?: string }) {
   if (!attention) {
     return null;
   }
 
-  const findings = buildFindings(attention, overdueCount, visionAreaId);
+  const findings = buildFindings(attention, visionAreaId);
 
   if (findings.length === 0) {
     return (

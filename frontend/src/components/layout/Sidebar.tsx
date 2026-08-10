@@ -19,7 +19,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeSettings } from '@/context/ThemeModeContext';
-import { navGroups } from './nav-items';
+import { navGroups, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
 
@@ -226,6 +226,7 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
 
 function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavigate: () => void; modern: boolean }) {
   const location = useLocation();
+  const pathname = navPathname(location.pathname);
 
   // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
   // flat list of eleven entries. Collapsed mode drops the labels and keeps a
@@ -248,7 +249,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
             )}
           <List disablePadding>
       {group.items.map((item) => {
-        const isActive = item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to);
+        const isActive = item.to === '/' ? pathname === '/' : pathname.startsWith(item.to);
         const button = (
           <ListItemButton
             component={NavLink}

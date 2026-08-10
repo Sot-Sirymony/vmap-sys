@@ -2060,10 +2060,74 @@ button:focus-visible,
   flex-shrink: 0;
 }
 
+/* Mobile bottom navigation. Hidden from the md breakpoint up, where the
+   sidebar rail takes over; on phones the four core destinations sit one
+   thumb-tap away instead of behind the hamburger. Same glass treatment as
+   the header, with the same high-contrast opt-out. */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 899.98px) {
+  .bottom-nav {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    /* The appBar tier — beneath the mobile drawer (1200) and toasts (1400). */
+    z-index: 1100;
+    display: flex;
+    gap: 2px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border: 0;
+    background: none;
+    border-radius: var(--radius-md);
+    color: var(--text-soft);
+    font: inherit;
+    font-size: var(--font-caption);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .bottom-nav-item--active {
+    color: var(--sidebar-accent-foreground);
+    background: var(--sidebar-accent);
+  }
+
+  /* Content and toasts clear the fixed bar instead of hiding behind it. */
+  .page-shell {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .toast-stack {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}
+
+:root[data-contrast="high"] .bottom-nav {
+  background: var(--card);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* FR-29.5 print-friendly pages (weekly reviews especially): content only. */
 @media print {
   .MuiDrawer-root,
   .MuiAppBar-root,
+  .bottom-nav,
   .filter-bar,
   .filter-panel,
   .summary-strip,

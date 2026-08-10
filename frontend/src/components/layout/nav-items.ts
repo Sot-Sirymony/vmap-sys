@@ -29,6 +29,16 @@ export type NavGroup = {
   items: NavItem[];
 };
 
+/**
+ * Which nav destination a path belongs to. A dream tree at /dreams/:id is
+ * reached from the Vision Map overview and renders the map, so the map stays
+ * the highlighted destination — /dreams itself is still the Dreams list.
+ * Shared by the sidebar and the mobile bottom nav so they can never disagree.
+ */
+export function navPathname(pathname: string): string {
+  return /^\/dreams\/\d+/.test(pathname) ? '/vision-map' : pathname;
+}
+
 // FR-23.2: three sections mirroring the method's mental model — set the
 // direction (Plan), do the work (Execute), get help and review (Support).
 export const navGroups: NavGroup[] = [
