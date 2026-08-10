@@ -687,8 +687,8 @@ export function toneFromStored(stored: string): BackgroundToneId {
  * pair to hand-validate, which is the whole reason it is its own axis rather
  * than a longer preset list.
  *
- * `classic` is the Fluent 2 treatment the app shipped with and stays the
- * default, so no existing user is redesigned without asking.
+ * `modern` is the baseline every surface is designed against; `classic` is the
+ * Fluent 2 treatment the app shipped with, kept as a flatter, denser opt-in.
  */
 export type InterfaceStyleId = 'classic' | 'modern';
 
@@ -705,25 +705,27 @@ export const interfaceStyles: InterfaceStyleDefinition[] = [
     id: 'classic',
     stored: 'CLASSIC',
     label: 'Classic',
-    description: 'Fluent — square corners, crisp borders, breadcrumbs',
+    description: 'Flatter and denser — square corners, crisp borders, breadcrumbs',
   },
   {
     id: 'modern',
     stored: 'MODERN',
     label: 'Modern',
-    description: 'Rounded cards, soft shadows, pill navigation',
+    description: 'Rounded cards, soft shadows, pill navigation (default)',
   },
 ];
 
 export function interfaceStyleFromStored(stored: string): InterfaceStyleId {
-  return interfaceStyles.find((style) => style.stored === stored)?.id ?? 'classic';
+  return interfaceStyles.find((style) => style.stored === stored)?.id ?? 'modern';
 }
 
 /**
- * The shape tokens one style contributes. Mirrored by the
- * `:root[data-style="modern"]` block in global.css, which carries the same
- * values for hand-written CSS — the two must change together, exactly as the
- * type ramp and motion tokens already do.
+ * The shape tokens one style contributes. Mirrored in global.css — Modern's
+ * values live in the base `:root` (and `[data-theme="dark"]`) token blocks,
+ * Classic's in the `:root[data-style="classic"]` override — and the two files
+ * must change together, exactly as the type ramp and motion tokens already do.
+ * Keep these literal strings (never `var(--shadow-*)`): the Appearance page's
+ * StylePreview renders BOTH styles side-by-side from this function.
  */
 export type StyleShape = {
   /** `theme.shape.borderRadius`, and `--radius` in the stylesheet. */
@@ -1061,7 +1063,7 @@ export function buildTheme(
   highContrast = false,
   tone: BackgroundToneId = 'neutral',
   font: FontFamilyId = 'system',
-  style: InterfaceStyleId = 'classic',
+  style: InterfaceStyleId = 'modern',
 ) {
   const dark = mode === 'dark';
   // FR-48: shape only. Nothing below reads a colour from `shape` — the styles
@@ -1229,7 +1231,37 @@ export function buildTheme(
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
-          root: { textTransform: 'none', fontWeight: 600 },
+          // The radius is stated explicitly (not inherited) so a button and the
+          // input beside it agree even if MUI's own derivation changes. Buttons
+          // stay on the base radius in both styles — pills are for chips/nav.
+          root: { textTransform: 'none', fontWeight: 600, borderRadius: shape.radius },
+        },
+      },
+      // Skeletons appear wherever Loading.tsx mirrors a page's real layout.
+      // `wave` reads as activity rather than a static grey block; the blanket
+      // reduce-motion rules in global.css suppress the sweep when asked.
+      MuiSkeleton: {
+        defaultProps: { animation: 'wave' },
+        styleOverrides: {
+          root: { borderRadius: 'var(--radius-sm)' },
+        },
+      },
+      MuiTooltip: {
+        styleOverrides: {
+          tooltip: { borderRadius: 'var(--radius-sm)', fontSize: '0.75rem' },
+        },
+      },
+      // Flyout rows read as soft inset rows rather than full-bleed strips: a
+      // small radius plus a hair of inline margin. Classic collapses the token
+      // to 4px, so both styles keep their own character.
+      MuiMenuItem: {
+        styleOverrides: {
+          root: { borderRadius: 'var(--radius-sm)', marginInline: 4 },
+        },
+      },
+      MuiListItemButton: {
+        styleOverrides: {
+          root: { borderRadius: 'var(--radius-sm)' },
         },
       },
       // MUI's Chip has its own hardcoded pill radius (~16px) that doesn't

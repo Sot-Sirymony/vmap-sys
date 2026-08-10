@@ -34,7 +34,15 @@
   --border: #e1e1e1;
   --input: #e1e1e1;
   --ring: #0078d4;
-  --radius: 4px;
+  /* FR-48 — Modern is the baseline shape. --radius carries the panel tier;
+     the explicit scale below is absolute (not calc-derived) so the Classic
+     override can flatten every tier to one value uniformly. */
+  --radius: 12px;
+  --radius-sm: 6px;    /* kbd, toast actions, inline edits, thead corners */
+  --radius-md: 8px;    /* inputs, palette rows, map rows, icon chips */
+  --radius-lg: 12px;   /* panels, kanban columns, list/table cards, toasts */
+  --radius-xl: 16px;   /* MUI Card, dialogs, auth panel (= styleShape cardRadius) */
+  --radius-pill: 999px; /* chips, nav pills, progress bars */
   --sidebar: #f5f5f5;
   --sidebar-foreground: #242424;
   --sidebar-primary: #0078d4;
@@ -125,14 +133,18 @@
   /* FR-18.1: the toast layer sits on the theme's z-index scale (snackbar
      tier), not an invented number. */
   --z-toast: 1400;
-  /* Fluent's elevation/depth scale. Consumed both here (list-card hover =
-     shadow-8, board cards = shadow-2) and in theme.ts, where the MUI overrides
-     apply the matching tiers: Card = shadow-4, Popover/Menu = shadow-8,
-     Dialog = shadow-16. The theme uses literal values equal to these tokens. */
-  --shadow-2: 0 0.6px 1.8px rgba(0, 0, 0, 0.10), 0 0.3px 0.9px rgba(0, 0, 0, 0.06);
-  --shadow-4: 0 1.6px 3.6px rgba(0, 0, 0, 0.10), 0 0.3px 0.9px rgba(0, 0, 0, 0.06);
-  --shadow-8: 0 3.2px 7.2px rgba(0, 0, 0, 0.13), 0 0.6px 1.8px rgba(0, 0, 0, 0.08);
-  --shadow-16: 0 6.4px 14.4px rgba(0, 0, 0, 0.13), 0 1.2px 3.6px rgba(0, 0, 0, 0.08);
+  /* Elevation scale. Consumed both here (list-card hover = shadow-8, board
+     cards = shadow-2) and in theme.ts, where the MUI overrides apply the
+     matching tiers: Card = shadow-4, Popover/Menu = shadow-8, Dialog =
+     shadow-16. The theme uses literal values equal to these tokens.
+     The baseline set is Modern's: wide, low-alpha, negative-spread — a card
+     that floats rather than one that is outlined. The paired 1px contact
+     shadow is what stops it reading as a blur with nothing casting it.
+     Values mirror styleShape('modern', 'light') in theme.ts. */
+  --shadow-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px -4px rgba(16, 24, 40, 0.07);
+  --shadow-4: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -8px rgba(16, 24, 40, 0.10);
+  --shadow-8: 0 4px 8px -2px rgba(16, 24, 40, 0.05), 0 16px 40px -6px rgba(16, 24, 40, 0.14);
+  --shadow-16: 0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20);
   /* FR-20.1 type ramp — mirrors theme.ts `typography` (the two must change
      together). Six sizes are the whole scale; no other font-size values may
      appear in this file (M-7). */
@@ -196,6 +208,14 @@
   --danger-bg: #3a1d1f;
   --hint: #6ccdc2;
   --moonshot-fg: #cdbce6;
+  /* Dark surfaces swallow the soft light-mode shadows entirely — those alphas
+     are invisible on #1b1a19 — so dark mode gets its own, heavier set rather
+     than a shadow that is technically present and does nothing. Values mirror
+     styleShape('modern', 'dark') in theme.ts. */
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px -4px rgba(0, 0, 0, 0.40);
+  --shadow-4: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  --shadow-8: 0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55);
+  --shadow-16: 0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65);
 }
 
 /*
@@ -422,40 +442,33 @@
   font-size: 17.5px;
 }
 
-/* FR-48 — the Modern interface style.
+/* FR-48 — the Classic interface style (opt-in; Modern is the baseline above).
  *
  * Shape only. There is not one colour in this block, and that is the invariant
- * worth protecting: because a style never touches a hue, Modern composes with
+ * worth protecting: because a style never touches a hue, Classic composes with
  * all twelve accents, all six background tones, and high contrast without a
  * single new pair to contrast-check. The moment a colour appears here, that
  * stops being true.
  *
- * The values mirror `styleShape('modern', …)` in theme.ts, which carries the
+ * The values mirror `styleShape('classic', …)` in theme.ts, which carries the
  * same numbers for MUI components — the same two-channel arrangement the type
  * ramp and motion tokens already use, and the two must change together.
  *
- * --radius feeds the whole --radius-sm…--radius-4xl scale further down, so
- * raising the base rounds every derived corner in proportion rather than
- * needing each one restated. */
-:root[data-style="modern"] {
-  --radius: 12px;
-  /* Wide, low-alpha, negative-spread — a card that floats rather than one that
-     is outlined. The paired 1px contact shadow is what stops it reading as a
-     blur with nothing casting it. */
-  --shadow-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px -4px rgba(16, 24, 40, 0.07);
-  --shadow-4: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -8px rgba(16, 24, 40, 0.10);
-  --shadow-8: 0 4px 8px -2px rgba(16, 24, 40, 0.05), 0 16px 40px -6px rgba(16, 24, 40, 0.14);
-  --shadow-16: 0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20);
-}
-
-/* Dark surfaces swallow a soft light-mode shadow entirely — the alphas above
-   are invisible on #1b1a19 — so dark mode gets its own, heavier set rather than
-   a shadow that is technically present and does nothing. */
-:root[data-theme="dark"][data-style="modern"] {
-  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px -4px rgba(0, 0, 0, 0.40);
-  --shadow-4: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
-  --shadow-8: 0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55);
-  --shadow-16: 0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65);
+ * Classic is Fluent's flat look: one 4px radius across every tier, and the
+ * tight Fluent depth shadows. Those shadows read the same on light and dark
+ * surfaces, so — unlike the Modern baseline — no dark twin block is needed;
+ * this block's higher specificity beats the dark block's shadow overrides. */
+:root[data-style="classic"] {
+  --radius: 4px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-pill: 4px;
+  --shadow-2: 0 0.6px 1.8px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06);
+  --shadow-4: 0 1.6px 3.6px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06);
+  --shadow-8: 0 3.2px 7.2px rgba(0,0,0,0.13), 0 0.6px 1.8px rgba(0,0,0,0.08);
+  --shadow-16: 0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.08);
 }
 
 .text-muted-foreground {
@@ -490,7 +503,7 @@ button:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .page-heading h1,
@@ -512,11 +525,33 @@ button:focus-visible,
 
 .page-shell {
   padding: 28px;
+  /* A one-time entrance, not a route transition system: pages settle in with a
+     short fade-and-rise. Suppressed wholesale by both reduce-motion blocks. */
+  animation: page-in var(--motion-base) var(--motion-ease);
+}
+
+/* Wider viewports can afford more breathing room around the content. The
+   mobile override further down still takes it back to 18px. */
+@media (min-width: 900px) {
+  .page-shell {
+    padding: 32px;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .page-section {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .create-trigger {
@@ -532,14 +567,14 @@ button:focus-visible,
 .auth-panel {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
 }
 
 /* FR-27.2: the column is a recessed tray; the cards float on it. */
 .kanban-column {
   background: var(--background-subtle);
   border: 1px solid var(--border-soft);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
 }
 
 .filter-banner {
@@ -708,7 +743,7 @@ button:focus-visible,
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   background: var(--muted);
 }
 
@@ -744,9 +779,9 @@ button:focus-visible,
   background: #14202f;
   color: #f8fafc;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border-left: 3px solid #16a34a;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+  box-shadow: var(--shadow-16);
   font-size: var(--font-body);
   animation: toast-in 0.18s ease-out;
 }
@@ -761,7 +796,7 @@ button:focus-visible,
   color: var(--primary-foreground);
   background: var(--primary);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -803,11 +838,11 @@ button:focus-visible,
 }
 
 .data-table thead th:first-child {
-  border-top-left-radius: 4px;
+  border-top-left-radius: var(--radius-sm);
 }
 
 .data-table thead th:last-child {
-  border-top-right-radius: 4px;
+  border-top-right-radius: var(--radius-sm);
 }
 
 .data-table tbody tr {
@@ -847,15 +882,31 @@ button:focus-visible,
   gap: 10px;
   padding: var(--card-pad);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   background: var(--card);
   cursor: grab;
   min-width: 0;
-  transition: box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+/* Hover lift for card-like interactive surfaces: a shadow step plus a small
+   rise. The transform halves are explicitly neutralised in the reduce-motion
+   blocks below — zeroing the transition duration alone would leave the final
+   offset in place, just applied instantly. */
+.list-card,
+.metric-card,
+.table-card {
+  transition: box-shadow var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 
 .list-card:hover {
   box-shadow: var(--shadow-8);
+  transform: translateY(-2px);
+}
+
+.metric-card:hover,
+.table-card:hover {
+  box-shadow: var(--shadow-4);
+  transform: translateY(-1px);
 }
 
 .list-card strong,
@@ -1036,7 +1087,7 @@ button:focus-visible,
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--accent);
   color: var(--accent-foreground);
 }
@@ -1055,7 +1106,7 @@ button:focus-visible,
   background: var(--info-bg);
   border: 1px solid var(--info-border);
   border-left: 4px solid #3b82f6;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 14px 16px;
 }
 
@@ -1128,7 +1179,7 @@ button:focus-visible,
   min-height: 220px;
   max-height: 640px;
   min-width: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-4);
   transition: background-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
 }
@@ -1165,98 +1216,6 @@ button:focus-visible,
   opacity: 0.5;
 }
 
-.vision-tree {
-  display: grid;
-  gap: 16px;
-}
-
-.vision-tree-dream {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--foreground);
-  border-radius: 10px;
-  padding: 18px 20px;
-  display: grid;
-  gap: 8px;
-}
-
-.vision-tree-area {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: var(--font-meta);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.vision-tree-dream h2 {
-  margin: 0;
-  font-size: var(--font-title-panel);
-  font-weight: 600;
-}
-
-.vision-tree-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.vision-tree-code {
-  font-family: monospace;
-  color: var(--text-faint);
-  font-size: var(--font-body-sm);
-}
-
-.vision-tree-meta {
-  margin: 0;
-  color: var(--text-label);
-  font-size: var(--font-body);
-}
-
-.vision-tree-blocker {
-  margin: 0;
-  color: #b45309;
-  font-size: var(--font-body-sm);
-}
-
-.vision-tree-children {
-  display: grid;
-  gap: 12px;
-  padding-left: 24px;
-  border-left: 2px solid var(--border-soft);
-  margin-left: 8px;
-}
-
-.vision-tree-empty {
-  margin: 0;
-  color: var(--text-faint);
-  font-size: var(--font-body);
-  font-style: italic;
-}
-
-.vision-tree-goal,
-.vision-tree-step,
-.vision-tree-task {
-  background: var(--card);
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  padding: 12px 14px;
-  display: grid;
-  gap: 8px;
-}
-
-.vision-tree-goal {
-  border-left: 3px solid #3b82f6;
-}
-
-.vision-tree-step {
-  border-left: 3px solid #8b5cf6;
-}
-
-.vision-tree-task {
-  border-left: 3px solid #14b8a6;
-}
-
 .quick-add {
   display: flex;
   gap: 8px;
@@ -1273,25 +1232,11 @@ button:focus-visible,
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   margin-top: 6px;
   background: var(--card);
   color: var(--foreground);
-}
-
-.button {
-  min-height: 40px;
-  border: 0;
-  border-radius: 8px;
-  padding: 0 14px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.button-secondary {
-  color: var(--accent-foreground);
-  background: var(--accent);
 }
 
 .auth-shell {
@@ -1302,7 +1247,10 @@ button:focus-visible,
   justify-content: center;
   gap: 48px;
   padding: 20px;
-  background: #17324d;
+  /* A quiet diagonal within the same navy family — depth without introducing
+     a new hue. Deliberately fixed (see the hero note below): this renders
+     before any account appearance is known. */
+  background: linear-gradient(150deg, #1b3a59 0%, #17324d 45%, #10263c 100%);
 }
 
 /* FR-27.3 brand hero. Fixed light tones on the fixed navy panel. */
@@ -1329,7 +1277,7 @@ button:focus-visible,
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: #0078d4;
   color: #ffffff;
   font-size: var(--font-body-sm);
@@ -1344,13 +1292,13 @@ button:focus-visible,
 
 .auth-funnel {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin-top: 6px;
 }
 
 .auth-funnel-level {
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: rgba(120, 180, 235, 0.18);
   border: 1px solid rgba(120, 180, 235, 0.35);
   color: #cfe0f1;
@@ -1366,7 +1314,11 @@ button:focus-visible,
 
 .auth-panel {
   width: min(440px, 100%);
-  padding: 28px;
+  padding: 32px;
+  /* The form floats on the navy shell: the card tier's radius with the top
+     elevation tier, since this is the only surface on the page. */
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-16);
 }
 
 .auth-link {
@@ -1425,8 +1377,6 @@ button:focus-visible,
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -1458,13 +1408,6 @@ button:focus-visible,
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 @layer base {
@@ -1490,6 +1433,14 @@ button:focus-visible,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* The hover lift is a transform, not a transition — zeroing durations above
+     only makes it instant. Remove the offset itself. */
+  .list-card:hover,
+  .metric-card:hover,
+  .table-card:hover {
+    transform: none;
+  }
 }
 
 /* FR-39.4: the in-app Reduce motion toggle, for a user who wants less motion
@@ -1505,6 +1456,13 @@ button:focus-visible,
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
+}
+
+/* Same transform removal as the media query above, for the in-app toggle. */
+[data-motion="reduced"] .list-card:hover,
+[data-motion="reduced"] .metric-card:hover,
+[data-motion="reduced"] .table-card:hover {
+  transform: none;
 }
 
 /* FR-24: Vision Map working tree. Depth reads through three channels —
@@ -1531,7 +1489,7 @@ button:focus-visible,
 .map-node--dream {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   padding: 14px;
 }
 
@@ -1540,7 +1498,7 @@ button:focus-visible,
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   flex-wrap: wrap;
 }
 
@@ -1621,7 +1579,7 @@ button:focus-visible,
   min-width: 160px;
   padding: 2px 6px;
   border: 1px solid var(--primary);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--card);
   color: var(--foreground);
 }
@@ -1719,7 +1677,7 @@ button:focus-visible,
   gap: 6px;
   margin: 2px 0;
   padding: 6px 10px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: var(--font-caption);
   line-height: 1.4;
   color: var(--text-soft);
@@ -1760,7 +1718,7 @@ button:focus-visible,
 .table-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-lg);
   padding: 12px;
   box-shadow: var(--shadow-2);
   display: grid;
@@ -1885,7 +1843,7 @@ button:focus-visible,
   width: 100%;
   padding: 8px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--foreground);
   font: inherit;
@@ -1937,7 +1895,7 @@ button:focus-visible,
   padding: 2px 8px;
   border: 1px solid var(--border);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--background-subtle);
   font-family: inherit;
   font-size: var(--font-meta);

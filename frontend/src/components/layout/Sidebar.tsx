@@ -82,7 +82,7 @@ function SidebarSearch() {
           sx={{
             px: 0.625,
             py: 0.125,
-            borderRadius: 'calc(var(--radius) * 0.6)',
+            borderRadius: 'var(--radius-sm)',
             border: '1px solid',
             borderColor: 'divider',
             bgcolor: 'var(--muted)',
@@ -191,7 +191,7 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
             fontSize: 'var(--font-meta)',
             fontWeight: 600,
             ...(modern
-              ? { bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 'calc(var(--radius) * 0.8)' }
+              ? { bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 'var(--radius-md)' }
               : { bgcolor: 'var(--muted)', color: 'var(--foreground)' }),
           }}
         >

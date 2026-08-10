@@ -6,15 +6,17 @@ import { buildTheme, interfaceStyles, styleShape, type InterfaceStyleId } from '
 /**
  * FR-48 — the interface style, and the two invariants it depends on.
  *
- * The first is a contract between files: `styleShape` drives MUI components and
- * the `:root[data-style="modern"]` block drives hand-written CSS, and a card
- * whose corner disagreed with the panel beside it would be the visible symptom
- * of them drifting. Same arrangement as the `--palette-*` variables, and the
- * same reason for testing it.
+ * The first is a contract between files: `styleShape` drives MUI components
+ * and the stylesheet tokens drive hand-written CSS. Modern is the baseline, so
+ * its values live in the base `:root` block (dark shadows in
+ * `[data-theme="dark"]`); Classic is the opt-in override block. A card whose
+ * corner disagreed with the panel beside it would be the visible symptom of
+ * the two channels drifting. Same arrangement as the `--palette-*` variables,
+ * and the same reason for testing it.
  *
  * The second is the claim that makes this a cheap feature at all: a style
- * changes shape, never colour. That is what lets Modern compose with twelve
- * accents, six tones, and high contrast without a single new pair to
+ * changes shape, never colour. That is what lets either style compose with
+ * twelve accents, six tones, and high contrast without a single new pair to
  * contrast-check — so it is asserted rather than merely documented.
  */
 const css = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
@@ -37,15 +39,17 @@ function normalise(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+const RADIUS_SCALE = ['--radius-sm', '--radius-md', '--radius-lg', '--radius-xl', '--radius-pill'];
+
 describe('interface style (FR-48)', () => {
   it('exposes exactly the two styles the backend enum stores', () => {
     expect(interfaceStyles.map((style) => style.stored)).toEqual(['CLASSIC', 'MODERN']);
   });
 
   /**
-   * AC: Classic is defined as the treatment that shipped before this control
-   * existed, so it has to be byte-identical to Fluent's own tokens — otherwise
-   * the "no existing user is redesigned" promise is not kept.
+   * AC: Classic is defined as the treatment the app originally shipped with,
+   * so it has to be byte-identical to Fluent's own tokens — square corners,
+   * flat surfaces, no wash.
    */
   it('leaves Classic on Fluent’s 4px radius and flat surfaces', () => {
     const shape = styleShape('classic', 'light');
@@ -65,9 +69,13 @@ describe('interface style (FR-48)', () => {
     expect(shape.cardWash).toContain('linear-gradient');
   });
 
-  it('matches the --radius global.css declares for Modern', () => {
-    expect(blockVars(':root[data-style="modern"]').get('--radius'))
+  it('matches the --radius each side of the stylesheet declares', () => {
+    // Modern is the baseline, so its radius is the base :root token…
+    expect(blockVars(':root').get('--radius'))
       .toBe(`${styleShape('modern', 'light').radius}px`);
+    // …and Classic restores its own in the override block.
+    expect(blockVars(':root[data-style="classic"]').get('--radius'))
+      .toBe(`${styleShape('classic', 'light').radius}px`);
   });
 
   /**
@@ -75,19 +83,37 @@ describe('interface style (FR-48)', () => {
    * `styleShape().cardShadow`, and hand-written panels use `--shadow-4`. They
    * are the same tier and must be the same value, per mode.
    */
-  it('keeps the Modern card shadow identical in the theme and the stylesheet', () => {
-    expect(normalise(blockVars(':root[data-style="modern"]').get('--shadow-4') ?? ''))
+  it('keeps the card shadow identical in the theme and the stylesheet', () => {
+    expect(normalise(blockVars(':root').get('--shadow-4') ?? ''))
       .toBe(normalise(styleShape('modern', 'light').cardShadow));
-    expect(normalise(blockVars(':root[data-theme="dark"][data-style="modern"]').get('--shadow-4') ?? ''))
+    expect(normalise(blockVars('[data-theme="dark"]').get('--shadow-4') ?? ''))
       .toBe(normalise(styleShape('modern', 'dark').cardShadow));
+    // Classic's Fluent shadows are mode-independent, so one block covers both.
+    expect(normalise(blockVars(':root[data-style="classic"]').get('--shadow-4') ?? ''))
+      .toBe(normalise(styleShape('classic', 'light').cardShadow));
   });
 
-  it('declares all four elevation tiers for Modern, in both modes', () => {
-    for (const selector of [':root[data-style="modern"]', ':root[data-theme="dark"][data-style="modern"]']) {
+  it('declares all four elevation tiers in every shadow-bearing block', () => {
+    for (const selector of [':root', '[data-theme="dark"]', ':root[data-style="classic"]']) {
       const declared = blockVars(selector);
       for (const tier of ['--shadow-2', '--shadow-4', '--shadow-8', '--shadow-16']) {
         expect(declared.has(tier), `${tier} missing from ${selector}`).toBe(true);
       }
+    }
+  });
+
+  /**
+   * The radius scale is what lets the style axis reach hand-written surfaces
+   * (kanban columns, toasts, the command palette, the map tree). The base
+   * declares every tier, and Classic must re-declare every tier — a partial
+   * override would leave some corners modern in Classic mode.
+   */
+  it('declares the full radius scale in the base and re-declares it for Classic', () => {
+    const base = blockVars(':root');
+    const classic = blockVars(':root[data-style="classic"]');
+    for (const tier of RADIUS_SCALE) {
+      expect(base.has(tier), `${tier} missing from base :root`).toBe(true);
+      expect(classic.has(tier), `${tier} missing from the Classic override`).toBe(true);
     }
   });
 
@@ -112,14 +138,12 @@ describe('interface style (FR-48)', () => {
   });
 
   /** The stylesheet half of the same rule. */
-  it('declares no colour in the Modern CSS block beyond shadow alphas', () => {
-    for (const selector of [':root[data-style="modern"]', ':root[data-theme="dark"][data-style="modern"]']) {
-      for (const [name, value] of blockVars(selector)) {
-        if (name.startsWith('--shadow-')) {
-          continue;
-        }
-        expect(value, `${name} in ${selector} names a colour`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
+  it('declares no colour in the Classic CSS block beyond shadow alphas', () => {
+    for (const [name, value] of blockVars(':root[data-style="classic"]')) {
+      if (name.startsWith('--shadow-')) {
+        continue;
       }
+      expect(value, `${name} in the Classic block names a colour`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
     }
   });
 
@@ -148,7 +172,7 @@ describe('interface style (FR-48)', () => {
     expect(theme.shape.borderRadius).toBe(styleShape('modern', 'light').radius);
   });
 
-  it('defaults to Classic when no style is given', () => {
-    expect(buildTheme('light').shape.borderRadius).toBe(styleShape('classic', 'light').radius);
+  it('defaults to Modern when no style is given', () => {
+    expect(buildTheme('light').shape.borderRadius).toBe(styleShape('modern', 'light').radius);
   });
 });

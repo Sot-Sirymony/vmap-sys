@@ -31,6 +31,41 @@ export type ThemeSettings = {
 const STORAGE_KEY = 'vms-theme-settings';
 // Pre-FR-18 key that held only 'light' | 'dark'; migrated on first load.
 const LEGACY_MODE_KEY = 'vms-theme-mode';
+/**
+ * One-shot re-baseline to the Modern interface style. Before Modern became the
+ * baseline, Classic was the default — so virtually every stored profile says
+ * CLASSIC without the user ever having chosen it. The first time this build
+ * sees a profile (local cache or account), a stored Classic is treated as
+ * "never chose" and re-based to Modern, then this flag stops it happening
+ * again — an explicit Classic pick afterwards is honoured forever. The flag is
+ * also set by any explicit style pick, so a deliberate choice is never undone.
+ */
+const STYLE_REBASELINE_KEY = 'vms-style-rebaseline';
+
+function styleRebaselineDone(): boolean {
+  try {
+    return localStorage.getItem(STYLE_REBASELINE_KEY) === '1';
+  } catch {
+    // Unreadable storage: never force anything.
+    return true;
+  }
+}
+
+function markStyleRebaselined(): void {
+  try {
+    localStorage.setItem(STYLE_REBASELINE_KEY, '1');
+  } catch {
+    // Best effort — worst case the re-baseline repeats, which is idempotent.
+  }
+}
+
+/** The re-baseline itself, pure so it can be tested directly. */
+export function rebaselineInterfaceStyle(settings: ThemeSettings, alreadyDone: boolean): ThemeSettings {
+  if (alreadyDone || settings.interfaceStyle !== 'classic') {
+    return settings;
+  }
+  return { ...settings, interfaceStyle: 'modern' };
+}
 
 const DEFAULT_SETTINGS: ThemeSettings = {
   mode: 'system',
@@ -39,7 +74,7 @@ const DEFAULT_SETTINGS: ThemeSettings = {
   fontSize: 'medium',
   backgroundTone: 'neutral',
   fontFamily: 'system',
-  interfaceStyle: 'classic',
+  interfaceStyle: 'modern',
   highContrast: false,
   reduceMotion: false,
 };
@@ -89,17 +124,21 @@ function initialSettings(): ThemeSettings {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<ThemeSettings>;
-      return {
+      return rebaselineInterfaceStyle({
         mode: parsed.mode === 'light' || parsed.mode === 'dark' || parsed.mode === 'system' ? parsed.mode : DEFAULT_SETTINGS.mode,
         accent: parsed.accent && parsed.accent in accentOptions ? parsed.accent : DEFAULT_SETTINGS.accent,
         density: parsed.density === 'compact' ? 'compact' : 'comfortable',
         fontSize: parsed.fontSize === 'small' || parsed.fontSize === 'large' ? parsed.fontSize : 'medium',
         backgroundTone: parsed.backgroundTone && KNOWN_TONES.has(parsed.backgroundTone) ? parsed.backgroundTone : 'neutral',
         fontFamily: parsed.fontFamily && KNOWN_FONTS.has(parsed.fontFamily) ? parsed.fontFamily : 'system',
-        interfaceStyle: parsed.interfaceStyle && KNOWN_STYLES.has(parsed.interfaceStyle) ? parsed.interfaceStyle : 'classic',
+        interfaceStyle: parsed.interfaceStyle && KNOWN_STYLES.has(parsed.interfaceStyle) ? parsed.interfaceStyle : 'modern',
         highContrast: parsed.highContrast === true,
         reduceMotion: parsed.reduceMotion === true,
-      };
+        // The flag is deliberately NOT set here: a signed-in user's account
+        // value arrives later via adopt(), which is where the re-baseline is
+        // recorded as done. Setting it this early would let a stale local
+        // cache block the account migration.
+      }, styleRebaselineDone());
     }
     const legacyMode = localStorage.getItem(LEGACY_MODE_KEY);
     if (legacyMode === 'light' || legacyMode === 'dark') {
@@ -169,9 +208,15 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
    * happened to have (BR-33).
    */
   const adopt = useCallback((wire: AppearancePreferences) => {
-    const next = toSettings(wire, DEFAULT_SETTINGS);
-    lastSynced.current = JSON.stringify(toWire(next));
+    const stored = toSettings(wire, DEFAULT_SETTINGS);
+    // Record what the account actually holds, THEN apply the one-shot Modern
+    // re-baseline. When it changes anything, settings and lastSynced disagree,
+    // so the debounced save below writes MODERN back to the account — the
+    // migration persists rather than repeating on every device forever.
+    lastSynced.current = JSON.stringify(toWire(stored));
     userTouched.current = false;
+    const next = rebaselineInterfaceStyle(stored, styleRebaselineDone());
+    markStyleRebaselined();
     setSettings(next);
   }, []);
 
@@ -247,12 +292,12 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     } else {
       root.dataset.tone = settings.backgroundTone;
     }
-    // FR-48: same convention — absent means Classic, the shape that shipped
-    // before the control existed. Unlike the tone, this one is NOT suppressed by
-    // high contrast: that setting is about legibility, and a corner radius
-    // cannot make anything harder to read, so there is no reason to take the
-    // user's chosen shape away from them when they turn it on.
-    if (settings.interfaceStyle === 'classic') {
+    // FR-48: same convention — absent means Modern, the baseline the tokens in
+    // global.css now carry; Classic is the stamped override. Unlike the tone,
+    // this one is NOT suppressed by high contrast: that setting is about
+    // legibility, and a corner radius cannot make anything harder to read, so
+    // there is no reason to take the user's chosen shape away when it is on.
+    if (settings.interfaceStyle === 'modern') {
       delete root.dataset.style;
     } else {
       root.dataset.style = settings.interfaceStyle;
@@ -339,6 +384,11 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback((changes: Partial<ThemeSettings>) => {
     userTouched.current = true;
+    // An explicit style pick is a deliberate decision — record it so the
+    // one-shot Modern re-baseline can never override it later.
+    if (changes.interfaceStyle) {
+      markStyleRebaselined();
+    }
     setSettings((current) => ({ ...current, ...changes }));
   }, []);
 

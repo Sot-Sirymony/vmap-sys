@@ -17,7 +17,7 @@ export function ChartTooltipContent({ active, payload }: { active?: boolean; pay
     return null;
   }
   return (
-    <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, boxShadow: 3, px: 1.5, py: 1 }}>
+    <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, boxShadow: 'var(--shadow-8)', px: 1.5, py: 1 }}>
       {payload.map((item, index) => (
         <Stack key={index} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: item.payload?.fill ?? item.color, flexShrink: 0 }} />

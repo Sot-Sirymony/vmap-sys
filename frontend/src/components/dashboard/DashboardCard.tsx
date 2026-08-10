@@ -47,7 +47,7 @@ export function DashboardCard({ label, value, icon: Icon, tone = 'neutral', to }
       <CardContent>
         <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="body2" color="text.secondary">{label}</Typography>
-          <Box sx={{ width: 28, height: 28, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: bg, color: fg }}>
+          <Box sx={{ width: 28, height: 28, borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: bg, color: fg }}>
             <Icon size={16} />
           </Box>
         </Stack>

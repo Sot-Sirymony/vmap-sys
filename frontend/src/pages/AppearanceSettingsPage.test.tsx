@@ -60,16 +60,16 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('button', { name: 'Classic interface style' })).toBeInTheDocument();
-    const modern = screen.getByRole('button', { name: 'Modern interface style' });
+    expect(screen.getByRole('button', { name: 'Modern interface style' })).toBeInTheDocument();
+    const classic = screen.getByRole('button', { name: 'Classic interface style' });
 
-    // Classic is the shipped default, so nothing is stamped until it changes.
+    // Modern is the baseline, so nothing is stamped until Classic is chosen.
     expect(document.documentElement.hasAttribute('data-style')).toBe(false);
 
-    await user.click(modern);
+    await user.click(classic);
 
-    expect(modern).toHaveAttribute('aria-pressed', 'true');
-    expect(document.documentElement.dataset.style).toBe('modern');
+    expect(classic).toHaveAttribute('aria-pressed', 'true');
+    expect(document.documentElement.dataset.style).toBe('classic');
   });
 
   it('shows the live preview with real badge components', () => {

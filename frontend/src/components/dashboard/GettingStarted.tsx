@@ -65,7 +65,7 @@ export function GettingStarted({ hasArea, hasDream, hasGoal }: GettingStartedPro
                   sx={{
                     width: 32,
                     height: 32,
-                    borderRadius: '8px',
+                    borderRadius: 'var(--radius-md)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

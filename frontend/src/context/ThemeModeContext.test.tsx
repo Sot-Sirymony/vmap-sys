@@ -55,6 +55,10 @@ describe('ThemeModeProvider (FR-39)', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     localStorage.clear();
+    // Mark the one-shot Modern re-baseline as already done, so these tests
+    // exercise steady-state behaviour. The migration itself has its own tests
+    // below, which clear this flag deliberately.
+    localStorage.setItem('vms-style-rebaseline', '1');
     authState.token = null;
     authState.appearance = null;
     getAppearancePreferences.mockReset().mockResolvedValue(STORED);
@@ -103,19 +107,19 @@ describe('ThemeModeProvider (FR-39)', () => {
   });
 
   /**
-   * FR-48: same convention as the tone — absent means Classic, the shape that
-   * shipped before the control existed.
+   * FR-48: same convention as the tone — absent means Modern, the baseline the
+   * global.css tokens carry; Classic is the stamped override.
    */
-  it('stamps data-style only when the style is not Classic', async () => {
+  it('stamps data-style only when the style is not Modern', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
 
     expect(document.documentElement.hasAttribute('data-style')).toBe(false);
 
-    await user.click(screen.getByText('modern'));
-    expect(document.documentElement.dataset.style).toBe('modern');
-
     await user.click(screen.getByText('classic'));
+    expect(document.documentElement.dataset.style).toBe('classic');
+
+    await user.click(screen.getByText('modern'));
     expect(document.documentElement.hasAttribute('data-style')).toBe(false);
   });
 
@@ -128,10 +132,10 @@ describe('ThemeModeProvider (FR-39)', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
 
-    await user.click(screen.getByText('modern'));
+    await user.click(screen.getByText('classic'));
     await user.click(screen.getByText('contrast'));
 
-    expect(document.documentElement.dataset.style).toBe('modern');
+    expect(document.documentElement.dataset.style).toBe('classic');
     expect(document.documentElement.dataset.contrast).toBe('high');
   });
 
@@ -143,7 +147,7 @@ describe('ThemeModeProvider (FR-39)', () => {
     await user.click(screen.getByText('midnight'));
     expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
 
-    await user.click(screen.getByText('modern'));
+    await user.click(screen.getByText('classic'));
     expect(state()).toBe('MIDNIGHT|dark|purple|false|false');
   });
 
@@ -288,5 +292,69 @@ describe('ThemeModeProvider (FR-39)', () => {
 
     // The user's intent is newer than the server's answer.
     expect(state()).toContain('brass');
+  });
+
+  /**
+   * The one-shot Modern re-baseline. Before Modern became the baseline,
+   * Classic was the default, so a stored CLASSIC almost always means "never
+   * chose" — the first profile this build sees is re-based to Modern once,
+   * and any explicit choice after that is honoured forever.
+   */
+  describe('one-shot Modern re-baseline', () => {
+    it('re-bases a stored Classic account to Modern and persists it', async () => {
+      localStorage.removeItem('vms-style-rebaseline');
+      authState.token = 'jwt';
+      authState.appearance = STORED; // interfaceStyle: 'CLASSIC'
+      render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+      // Modern applied: the attribute convention says absent = Modern.
+      await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+      expect(document.documentElement.hasAttribute('data-style')).toBe(false);
+      expect(localStorage.getItem('vms-style-rebaseline')).toBe('1');
+
+      // And written back to the account, so it does not repeat elsewhere.
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(updateAppearancePreferences).toHaveBeenCalledWith('jwt', expect.objectContaining({
+        interfaceStyle: 'MODERN',
+      }));
+    });
+
+    it('honours a stored Classic once the re-baseline has already run', async () => {
+      // Flag present from beforeEach — this is every later session.
+      authState.token = 'jwt';
+      authState.appearance = STORED;
+      render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+      await waitFor(() => expect(state()).toBe('OCEAN|light|teal|false|false'));
+      expect(document.documentElement.dataset.style).toBe('classic');
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(updateAppearancePreferences).not.toHaveBeenCalled();
+    });
+
+    it('re-bases a Classic local cache while signed out, without touching the flag', async () => {
+      localStorage.removeItem('vms-style-rebaseline');
+      localStorage.setItem('vms-theme-settings', JSON.stringify({ mode: 'light', interfaceStyle: 'classic' }));
+      render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+      expect(document.documentElement.hasAttribute('data-style')).toBe(false);
+      // The flag is reserved for adopt() and explicit picks, so a later login
+      // can still migrate the account value.
+      expect(localStorage.getItem('vms-style-rebaseline')).toBeNull();
+    });
+
+    it('records an explicit style pick so the re-baseline never overrides it', async () => {
+      localStorage.removeItem('vms-style-rebaseline');
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      render(<ThemeModeProvider><Probe /></ThemeModeProvider>);
+
+      await user.click(screen.getByText('classic'));
+
+      expect(document.documentElement.dataset.style).toBe('classic');
+      expect(localStorage.getItem('vms-style-rebaseline')).toBe('1');
+    });
   });
 });

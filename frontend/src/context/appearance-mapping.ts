@@ -89,7 +89,7 @@ function styleFromWire(wire: string, fallback: InterfaceStyleId): InterfaceStyle
 }
 
 function styleToWire(style: InterfaceStyleId): AppearancePreferences['interfaceStyle'] {
-  return interfaceStyles.find((entry) => entry.id === style)?.stored ?? 'CLASSIC';
+  return interfaceStyles.find((entry) => entry.id === style)?.stored ?? 'MODERN';
 }
 
 /** Wire → frontend settings, with every unrecognised value replaced by `fallback`'s. */

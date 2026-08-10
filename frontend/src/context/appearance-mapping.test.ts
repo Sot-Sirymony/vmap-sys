@@ -10,7 +10,7 @@ const DEFAULTS: ThemeSettings = {
   fontSize: 'medium',
   backgroundTone: 'neutral',
   fontFamily: 'system',
-  interfaceStyle: 'classic',
+  interfaceStyle: 'modern',
   highContrast: false,
   reduceMotion: false,
 };
