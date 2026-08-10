@@ -1011,7 +1011,8 @@ button:focus-visible,
    offset in place, just applied instantly. */
 .list-card,
 .metric-card,
-.table-card {
+.table-card,
+.map-overview-card {
   transition: box-shadow var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease);
 }
 
@@ -1021,7 +1022,8 @@ button:focus-visible,
 }
 
 .metric-card:hover,
-.table-card:hover {
+.table-card:hover,
+.map-overview-card:hover {
   box-shadow: var(--shadow-4);
   transform: translateY(-1px);
 }
@@ -1555,7 +1557,8 @@ button:focus-visible,
      only makes it instant. Remove the offset itself. */
   .list-card:hover,
   .metric-card:hover,
-  .table-card:hover {
+  .table-card:hover,
+  .map-overview-card:hover {
     transform: none;
   }
 }
@@ -1578,7 +1581,8 @@ button:focus-visible,
 /* Same transform removal as the media query above, for the in-app toggle. */
 [data-motion="reduced"] .list-card:hover,
 [data-motion="reduced"] .metric-card:hover,
-[data-motion="reduced"] .table-card:hover {
+[data-motion="reduced"] .table-card:hover,
+[data-motion="reduced"] .map-overview-card:hover {
   transform: none;
 }
 
