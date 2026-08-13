@@ -364,7 +364,20 @@ export type AccentId =
   | 'pink'
   // FR-43 additions, derived from the supplied primary/secondary ramps.
   | 'vermilion'
-  | 'violet';
+  | 'violet'
+  // The royal blue from the Stitch project's DESIGN.md style guide.
+  | 'cobalt'
+  // Ten more hues, spanning the wheel plus two neutrals-with-a-cast.
+  | 'indigo'
+  | 'sky'
+  | 'emerald'
+  | 'olive'
+  | 'amber'
+  | 'rose'
+  | 'fuchsia'
+  | 'graphite'
+  | 'coffee'
+  | 'navy';
 
 type AccentSet = {
   main: string;
@@ -454,6 +467,74 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
     light: { main: '#b8306e', hover: '#a32860', pressed: '#931f56', contrastText: '#ffffff', tint: '#fce4f1', tintForeground: '#931f56' },
     dark: { main: '#eb84b6', hover: '#f2a2c8', pressed: '#d1699b', contrastText: '#1b1a19', tint: '#3d1229', tintForeground: '#f7bdd8' },
   },
+  // The Stitch DESIGN.md's "Vibrant Royal Blue". The guide names #3B82F6 as the
+  // accent and #2563EB for solid CTAs; #3B82F6 measures 3.68:1 against white,
+  // so — exactly like Vermilion — light mode takes `main` from the CTA end of
+  // the ramp and keeps the vibrant value as dark mode's pressed state. The
+  // light tint is the guide's segmented-control blue (#D1E9FE). All eight
+  // pairs measured before being written down: 5.17/6.70/8.72/6.98 light,
+  // 6.84/9.64/4.73/8.42 dark.
+  cobalt: {
+    label: 'Cobalt',
+    light: { main: '#2563EB', hover: '#1D4ED8', pressed: '#1E40AF', contrastText: '#ffffff', tint: '#D1E9FE', tintForeground: '#1E40AF' },
+    dark: { main: '#60A5FA', hover: '#93C5FD', pressed: '#3B82F6', contrastText: '#1b1a19', tint: '#16294A', tintForeground: '#A8C7FA' },
+  },
+  // Ten more accents, same construction and the same guarantee as everything
+  // above: every main/hover/pressed clears 4.5:1 against its contrastText and
+  // every tint pair clears 4.5:1, in both modes, with light-mode ramps
+  // descending in lightness (Fluent's convention — see the FR-39.2 note).
+  // All 80 pairs were measured before being written down; the tightest is
+  // indigo's dark pressed at 5.07:1. theme.test.ts enforces every one.
+  indigo: {
+    label: 'Indigo',
+    light: { main: '#4F46E5', hover: '#4338CA', pressed: '#3730A3', contrastText: '#ffffff', tint: '#E0E7FF', tintForeground: '#3730A3' },
+    dark: { main: '#818CF8', hover: '#A5B4FC', pressed: '#7280F5', contrastText: '#1b1a19', tint: '#232567', tintForeground: '#C7D2FE' },
+  },
+  sky: {
+    label: 'Sky',
+    light: { main: '#0369A1', hover: '#075985', pressed: '#0C4A6E', contrastText: '#ffffff', tint: '#E0F2FE', tintForeground: '#0C4A6E' },
+    dark: { main: '#38BDF8', hover: '#7DD3FC', pressed: '#0EA5E9', contrastText: '#1b1a19', tint: '#082F49', tintForeground: '#7DD3FC' },
+  },
+  emerald: {
+    label: 'Emerald',
+    light: { main: '#047857', hover: '#065F46', pressed: '#064E3B', contrastText: '#ffffff', tint: '#D1FAE5', tintForeground: '#065F46' },
+    dark: { main: '#34D399', hover: '#6EE7B7', pressed: '#10B981', contrastText: '#1b1a19', tint: '#06281E', tintForeground: '#A7F3D0' },
+  },
+  olive: {
+    label: 'Olive',
+    light: { main: '#4D7C0F', hover: '#3F6212', pressed: '#365314', contrastText: '#ffffff', tint: '#ECFCCB', tintForeground: '#365314' },
+    dark: { main: '#A3E635', hover: '#BEF264', pressed: '#84CC16', contrastText: '#1b1a19', tint: '#1A2E05', tintForeground: '#D9F99D' },
+  },
+  amber: {
+    label: 'Amber',
+    light: { main: '#B45309', hover: '#92400E', pressed: '#78350F', contrastText: '#ffffff', tint: '#FEF3C7', tintForeground: '#78350F' },
+    dark: { main: '#FBBF24', hover: '#FCD34D', pressed: '#F59E0B', contrastText: '#1b1a19', tint: '#3A2A08', tintForeground: '#FDE68A' },
+  },
+  rose: {
+    label: 'Rose',
+    light: { main: '#BE123C', hover: '#9F1239', pressed: '#881337', contrastText: '#ffffff', tint: '#FFE4E6', tintForeground: '#9F1239' },
+    dark: { main: '#FB7185', hover: '#FDA4AF', pressed: '#F43F5E', contrastText: '#1b1a19', tint: '#4C0519', tintForeground: '#FECDD3' },
+  },
+  fuchsia: {
+    label: 'Fuchsia',
+    light: { main: '#A21CAF', hover: '#86198F', pressed: '#701A75', contrastText: '#ffffff', tint: '#FAE8FF', tintForeground: '#86198F' },
+    dark: { main: '#E879F9', hover: '#F0ABFC', pressed: '#D946EF', contrastText: '#1b1a19', tint: '#4A044E', tintForeground: '#F5D0FE' },
+  },
+  graphite: {
+    label: 'Graphite',
+    light: { main: '#475569', hover: '#334155', pressed: '#1E293B', contrastText: '#ffffff', tint: '#E2E8F0', tintForeground: '#334155' },
+    dark: { main: '#94A3B8', hover: '#CBD5E1', pressed: '#7A8BA3', contrastText: '#1b1a19', tint: '#27303C', tintForeground: '#CBD5E1' },
+  },
+  coffee: {
+    label: 'Coffee',
+    light: { main: '#8B4513', hover: '#74390F', pressed: '#5E2E0C', contrastText: '#ffffff', tint: '#F5E6D8', tintForeground: '#5E2E0C' },
+    dark: { main: '#D39C74', hover: '#E4BC9E', pressed: '#C1824F', contrastText: '#1b1a19', tint: '#3B2716', tintForeground: '#E9C9AC' },
+  },
+  navy: {
+    label: 'Navy',
+    light: { main: '#1E3A8A', hover: '#182E6E', pressed: '#122353', contrastText: '#ffffff', tint: '#DBEAFE', tintForeground: '#1E3A8A' },
+    dark: { main: '#8FA8F8', hover: '#B4C4FB', pressed: '#6E8AF0', contrastText: '#1b1a19', tint: '#14204A', tintForeground: '#BFD0FF' },
+  },
 };
 
 /**
@@ -477,10 +558,11 @@ export type ThemePresetId =
   | 'ocean'
   | 'forest'
   | 'slate'
-  | 'midnight';
+  | 'midnight'
+  | 'stitch';
 
 /** The wire value stored per account; `CUSTOM` is computed, never selected. */
-export type StoredThemePreset = 'FLUENT_SYSTEM' | 'FLUENT_LIGHT' | 'FLUENT_DARK' | 'OCEAN' | 'FOREST' | 'SLATE' | 'MIDNIGHT' | 'CUSTOM';
+export type StoredThemePreset = 'FLUENT_SYSTEM' | 'FLUENT_LIGHT' | 'FLUENT_DARK' | 'OCEAN' | 'FOREST' | 'SLATE' | 'MIDNIGHT' | 'STITCH' | 'CUSTOM';
 
 export type ThemePresetDefinition = {
   id: ThemePresetId;
@@ -499,6 +581,11 @@ export const themePresets: ThemePresetDefinition[] = [
   { id: 'forest', stored: 'FOREST', label: 'Forest', description: 'Light and green', mode: 'light', accent: 'green' },
   { id: 'slate', stored: 'SLATE', label: 'Slate', description: 'Light and steel blue', mode: 'light', accent: 'steel' },
   { id: 'midnight', stored: 'MIDNIGHT', label: 'Midnight', description: 'Dark and purple', mode: 'dark', accent: 'purple' },
+  // From the Stitch project's DESIGN.md ("Clean, Modern, Data-Driven"): light
+  // workspace with the guide's royal blue. Its other rules — Inter, the cool
+  // sidebar wash, soft-shadow cards — are the existing Font/Tone/Style knobs
+  // (Inter / Cool / Modern), which a preset deliberately does not touch.
+  { id: 'stitch', stored: 'STITCH', label: 'Stitch', description: 'Light and cobalt blue', mode: 'light', accent: 'cobalt' },
 ];
 
 /**
@@ -535,7 +622,7 @@ export type Density = 'comfortable' | 'compact';
  * All four are variable fonts, which is why one file per family covers every
  * weight the app uses.
  */
-export type FontFamilyId = 'system' | 'publicSans' | 'inter' | 'dmSans' | 'nunitoSans';
+export type FontFamilyId = 'system' | 'publicSans' | 'inter' | 'dmSans' | 'nunitoSans' | 'montserrat' | 'lexend' | 'plusJakartaSans';
 
 /** The tail every stack shares — Fluent's face first, then each platform's own. */
 const SYSTEM_STACK = '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif';
@@ -543,7 +630,7 @@ const SYSTEM_STACK = '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSy
 export type FontFamilyDefinition = {
   id: FontFamilyId;
   /** Backend enum name. */
-  stored: 'SYSTEM' | 'PUBLIC_SANS' | 'INTER' | 'DM_SANS' | 'NUNITO_SANS';
+  stored: 'SYSTEM' | 'PUBLIC_SANS' | 'INTER' | 'DM_SANS' | 'NUNITO_SANS' | 'MONTSERRAT' | 'LEXEND' | 'PLUS_JAKARTA_SANS';
   label: string;
   description: string;
   stack: string;
@@ -585,6 +672,27 @@ export const fontFamilies: FontFamilyDefinition[] = [
     description: 'Rounded and friendly',
     stack: `"Nunito Sans Variable", ${SYSTEM_STACK}`,
   },
+  {
+    id: 'montserrat',
+    stored: 'MONTSERRAT',
+    label: 'Montserrat',
+    description: 'Geometric, from the Stitch style guide',
+    stack: `"Montserrat Variable", ${SYSTEM_STACK}`,
+  },
+  {
+    id: 'lexend',
+    stored: 'LEXEND',
+    label: 'Lexend',
+    description: 'Tuned for effortless reading',
+    stack: `"Lexend Variable", ${SYSTEM_STACK}`,
+  },
+  {
+    id: 'plusJakartaSans',
+    stored: 'PLUS_JAKARTA_SANS',
+    label: 'Plus Jakarta Sans',
+    description: 'Contemporary and open',
+    stack: `"Plus Jakarta Sans Variable", ${SYSTEM_STACK}`,
+  },
 ];
 
 export function fontFamilyFromStored(stored: string): FontFamilyId {
@@ -614,12 +722,46 @@ export function fontStack(id: FontFamilyId): string {
  * CSS, so the ten accents don't become twenty more colours to hand-validate and
  * a future accent works with no change here.
  */
-export type BackgroundToneId = 'neutral' | 'warm' | 'cool' | 'soft' | 'tinted' | 'flat';
+export type BackgroundToneId =
+  | 'neutral'
+  | 'warm'
+  | 'cool'
+  | 'soft'
+  | 'tinted'
+  | 'flat'
+  // Ten more washes, same construction: a coordinated surface set per tone,
+  // every value measured against the body/muted text bars before landing.
+  | 'rose'
+  | 'mint'
+  | 'lavender'
+  | 'sand'
+  | 'sage'
+  | 'ice'
+  | 'linen'
+  | 'slate'
+  | 'plum'
+  | 'stone';
 
 export type BackgroundToneDefinition = {
   id: BackgroundToneId;
   /** Backend enum name. */
-  stored: 'NEUTRAL' | 'WARM' | 'COOL' | 'SOFT' | 'TINTED' | 'FLAT';
+  stored:
+    | 'NEUTRAL'
+    | 'WARM'
+    | 'COOL'
+    | 'SOFT'
+    | 'TINTED'
+    | 'FLAT'
+    | 'ROSE'
+    | 'MINT'
+    | 'LAVENDER'
+    | 'SAND'
+    | 'SAGE'
+    | 'ICE'
+    | 'LINEN'
+    | 'SLATE'
+    | 'PLUM'
+    | 'STONE';
   label: string;
   description: string;
   /**
@@ -674,6 +816,76 @@ export const backgroundTones: BackgroundToneDefinition[] = [
     label: 'Flat',
     description: 'One surface, borders only',
     preview: { light: ['#ffffff', '#ffffff', '#ffffff'], dark: ['#1f1e1d', '#1f1e1d', '#1f1e1d'] },
+  },
+  {
+    id: 'rose',
+    stored: 'ROSE',
+    label: 'Rose',
+    description: 'Gentle pink blush',
+    preview: { light: ['#FAF3F5', '#FFFBFC', '#F4E9ED'], dark: ['#201819', '#2B2224', '#2B2224'] },
+  },
+  {
+    id: 'mint',
+    stored: 'MINT',
+    label: 'Mint',
+    description: 'Fresh green wash',
+    preview: { light: ['#EFF6F1', '#FBFEFC', '#E7EFEA'], dark: ['#161B18', '#202623', '#202623'] },
+  },
+  {
+    id: 'lavender',
+    stored: 'LAVENDER',
+    label: 'Lavender',
+    description: 'Quiet violet cast',
+    preview: { light: ['#F4F2FA', '#FDFCFF', '#EDEAF5'], dark: ['#1A181F', '#24222B', '#24222B'] },
+  },
+  {
+    id: 'sand',
+    stored: 'SAND',
+    label: 'Sand',
+    description: 'Deeper desert beige',
+    preview: { light: ['#F5F0E6', '#FDFAF2', '#EEE7D8'], dark: ['#1E1A14', '#29241C', '#29241C'] },
+  },
+  {
+    id: 'sage',
+    stored: 'SAGE',
+    label: 'Sage',
+    description: 'Muted grey-green',
+    preview: { light: ['#F0F2EE', '#FAFBF9', '#E8ECE5'], dark: ['#191C18', '#232722', '#232722'] },
+  },
+  {
+    id: 'ice',
+    stored: 'ICE',
+    label: 'Ice',
+    description: 'Bright glacial blue',
+    preview: { light: ['#EAF4FB', '#ffffff', '#DFECF7'], dark: ['#151A20', '#1F262E', '#1F262E'] },
+  },
+  {
+    id: 'linen',
+    stored: 'LINEN',
+    label: 'Linen',
+    description: 'Soft paper white',
+    preview: { light: ['#FBF9F4', '#ffffff', '#F4F0E7'], dark: ['#1D1B17', '#272420', '#272420'] },
+  },
+  {
+    id: 'slate',
+    stored: 'SLATE',
+    label: 'Slate',
+    description: 'Deep blue-grey canvas',
+    preview: { light: ['#E9ECF0', '#F8FAFC', '#DFE4EA'], dark: ['#15181C', '#1E2227', '#1E2227'] },
+  },
+  {
+    id: 'plum',
+    stored: 'PLUM',
+    label: 'Plum',
+    description: 'Dusky purple-pink',
+    preview: { light: ['#F6F0F6', '#FDFAFD', '#EFE6EF'], dark: ['#1E1820', '#28222A', '#28222A'] },
+  },
+  {
+    id: 'stone',
+    stored: 'STONE',
+    label: 'Stone',
+    description: 'Warm mineral grey',
+    preview: { light: ['#F2F0ED', '#FAF9F7', '#EAE7E2'], dark: ['#1B1A18', '#252320', '#252320'] },
   },
 ];
 
@@ -843,6 +1055,29 @@ export function toneSurfaces(
       return dark
         ? { background: '#1f1e1d', card: '#1f1e1d', border: '#4d4b49' }
         : { background: '#ffffff', card: '#ffffff', border: '#d4d4d4' };
+    // The ten washes. Same shape as warm/cool above; every value cleared the
+    // body ≥7:1 and muted ≥4.5:1 bars in both modes before being written down
+    // (theme.test.ts measures them all).
+    case 'rose':
+      return dark ? { background: '#201819', card: '#2B2224' } : { background: '#FAF3F5', card: '#FFFBFC' };
+    case 'mint':
+      return dark ? { background: '#161B18', card: '#202623' } : { background: '#EFF6F1', card: '#FBFEFC' };
+    case 'lavender':
+      return dark ? { background: '#1A181F', card: '#24222B' } : { background: '#F4F2FA', card: '#FDFCFF' };
+    case 'sand':
+      return dark ? { background: '#1E1A14', card: '#29241C' } : { background: '#F5F0E6', card: '#FDFAF2' };
+    case 'sage':
+      return dark ? { background: '#191C18', card: '#232722' } : { background: '#F0F2EE', card: '#FAFBF9' };
+    case 'ice':
+      return dark ? { background: '#151A20', card: '#1F262E' } : { background: '#EAF4FB', card: '#ffffff' };
+    case 'linen':
+      return dark ? { background: '#1D1B17', card: '#272420' } : { background: '#FBF9F4', card: '#ffffff' };
+    case 'slate':
+      return dark ? { background: '#15181C', card: '#1E2227' } : { background: '#E9ECF0', card: '#F8FAFC' };
+    case 'plum':
+      return dark ? { background: '#1E1820', card: '#28222A' } : { background: '#F6F0F6', card: '#FDFAFD' };
+    case 'stone':
+      return dark ? { background: '#1B1A18', card: '#252320' } : { background: '#F2F0ED', card: '#FAF9F7' };
     default:
       return null;
   }

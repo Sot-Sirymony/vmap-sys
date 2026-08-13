@@ -29,15 +29,52 @@ export type StoredAccent =
   | 'PINK'
   // FR-43 additions, derived from the supplied primary/secondary ramps.
   | 'VERMILION'
-  | 'VIOLET';
+  | 'VIOLET'
+  // The royal blue from the Stitch project's DESIGN.md style guide.
+  | 'COBALT'
+  // Ten more hues, spanning the wheel plus two neutrals-with-a-cast.
+  | 'INDIGO'
+  | 'SKY'
+  | 'EMERALD'
+  | 'OLIVE'
+  | 'AMBER'
+  | 'ROSE'
+  | 'FUCHSIA'
+  | 'GRAPHITE'
+  | 'COFFEE'
+  | 'NAVY';
 
 export type StoredDensity = 'COMFORTABLE' | 'COMPACT';
 
 export type StoredFontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 
-export type StoredFontFamily = 'SYSTEM' | 'PUBLIC_SANS' | 'INTER' | 'DM_SANS' | 'NUNITO_SANS';
+export type StoredFontFamily =
+  | 'SYSTEM'
+  | 'PUBLIC_SANS'
+  | 'INTER'
+  | 'DM_SANS'
+  | 'NUNITO_SANS'
+  | 'MONTSERRAT'
+  | 'LEXEND'
+  | 'PLUS_JAKARTA_SANS';
 
-export type StoredBackgroundTone = 'NEUTRAL' | 'WARM' | 'COOL' | 'SOFT' | 'TINTED' | 'FLAT';
+export type StoredBackgroundTone =
+  | 'NEUTRAL'
+  | 'WARM'
+  | 'COOL'
+  | 'SOFT'
+  | 'TINTED'
+  | 'FLAT'
+  | 'ROSE'
+  | 'MINT'
+  | 'LAVENDER'
+  | 'SAND'
+  | 'SAGE'
+  | 'ICE'
+  | 'LINEN'
+  | 'SLATE'
+  | 'PLUM'
+  | 'STONE';
 
 /** FR-48 — shape and chrome, orthogonal to every colour setting above. */
 export type StoredInterfaceStyle = 'CLASSIC' | 'MODERN';
@@ -50,6 +87,7 @@ export type StoredPreset =
   | 'FOREST'
   | 'SLATE'
   | 'MIDNIGHT'
+  | 'STITCH'
   | 'CUSTOM';
 
 export type AppearancePreferences = {

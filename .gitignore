@@ -40,3 +40,7 @@ data/backup/
 # moved or copied to another folder.
 local_db.md
 **/local_db.md
+
+# Google Stitch MCP API key (never commit).
+google_stitch.md
+**/google_stitch.md

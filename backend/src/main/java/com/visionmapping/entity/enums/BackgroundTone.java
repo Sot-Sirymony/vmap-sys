@@ -22,5 +22,17 @@ public enum BackgroundTone {
     /** Derived from the user's accent at render time (FR-40.3); stores no values of its own. */
     TINTED,
     /** No canvas step — borders carry all the separation. */
-    FLAT
+    FLAT,
+    // The ten washes: same coordinated-surface construction, every value
+    // contrast-measured in the frontend theme layer before being offered.
+    ROSE,
+    MINT,
+    LAVENDER,
+    SAND,
+    SAGE,
+    ICE,
+    LINEN,
+    SLATE,
+    PLUM,
+    STONE
 }

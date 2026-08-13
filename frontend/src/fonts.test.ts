@@ -10,6 +10,9 @@ vi.mock('@fontsource-variable/public-sans', () => { imported.push('publicSans');
 vi.mock('@fontsource-variable/inter', () => { imported.push('inter'); return {}; });
 vi.mock('@fontsource-variable/dm-sans', () => { imported.push('dmSans'); return {}; });
 vi.mock('@fontsource-variable/nunito-sans', () => { imported.push('nunitoSans'); return {}; });
+vi.mock('@fontsource-variable/montserrat', () => { imported.push('montserrat'); return {}; });
+vi.mock('@fontsource-variable/lexend', () => { imported.push('lexend'); return {}; });
+vi.mock('@fontsource-variable/plus-jakarta-sans', () => { imported.push('plusJakartaSans'); return {}; });
 
 const { loadFont } = await import('./fonts');
 
@@ -57,13 +60,16 @@ describe('font loading (FR-42.2)', () => {
 });
 
 describe('font stacks (FR-42)', () => {
-  it('offers the system default plus the four named faces', () => {
+  it('offers the system default plus the seven named faces', () => {
     expect(fontFamilies.map((font) => font.id)).toEqual([
       'system',
       'publicSans',
       'inter',
       'dmSans',
       'nunitoSans',
+      'montserrat',
+      'lexend',
+      'plusJakartaSans',
     ]);
   });
 
@@ -83,6 +89,9 @@ describe('font stacks (FR-42)', () => {
     expect(fontStack('publicSans')).toMatch(/^"Public Sans Variable"/);
     expect(fontStack('dmSans')).toMatch(/^"DM Sans Variable"/);
     expect(fontStack('nunitoSans')).toMatch(/^"Nunito Sans Variable"/);
+    expect(fontStack('montserrat')).toMatch(/^"Montserrat Variable"/);
+    expect(fontStack('lexend')).toMatch(/^"Lexend Variable"/);
+    expect(fontStack('plusJakartaSans')).toMatch(/^"Plus Jakarta Sans Variable"/);
   });
 
   it('falls back to the system stack for an unknown id', () => {

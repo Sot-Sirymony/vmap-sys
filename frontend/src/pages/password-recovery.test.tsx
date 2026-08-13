@@ -151,7 +151,8 @@ describe('redeeming a reset link', () => {
     await submitNewPassword(user);
 
     await screen.findByRole('heading', { name: /sign in/i });
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    // Exact string: the reveal toggle's accessible name also contains "password".
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
   });
 
   it.each([

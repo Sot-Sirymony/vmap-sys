@@ -1,10 +1,10 @@
 import { FormEvent, useState } from 'react';
 import { Link } from 'react-router';
 import MuiAlert from '@mui/material/Alert';
+import { Mail } from 'lucide-react';
 import { forgotPassword } from '../api/authApi';
-import { Button } from '../components/common/Button';
+import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { Input } from '../components/common/Input';
 import { AuthLayout } from '../layouts/AuthLayout';
 
 export function ForgotPasswordPage() {
@@ -30,9 +30,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthLayout>
-      <h1 className="text-2xl font-semibold">Reset your password</h1>
-
+    <AuthLayout subtitle="Reset your password">
       {sent ? (
         <>
           {/*
@@ -50,30 +48,33 @@ export function ForgotPasswordPage() {
           </p>
         </>
       ) : (
-        <form className="form-stack" onSubmit={handleSubmit}>
-          <p className="text-sm text-muted-foreground">
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <p className="auth-status-text">
             Enter the email address for your account and we'll send you a link to choose a
             new password.
           </p>
-          <label>
-            Email
-            <Input
-              type="email"
-              name="email"
-              autoComplete="username"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
+          <AuthField
+            id="forgot-email"
+            label="Email address"
+            type="email"
+            name="email"
+            autoComplete="username"
+            placeholder="you@company.com"
+            icon={<Mail size={18} />}
+            value={email}
+            onChange={setEmail}
+            required
+          />
           {error && <ErrorMessage message={error} />}
-          <Button type="submit" disabled={loading}>
+          <button className="auth-submit" type="submit" disabled={loading}>
             {loading ? 'Sending...' : 'Send reset link'}
-          </Button>
+          </button>
         </form>
       )}
 
-      <p className="auth-link">Remembered it? <Link to="/login">Sign in</Link></p>
+      <p className="auth-link" style={{ textAlign: 'center' }}>
+        Remembered it? <Link to="/login">Sign in</Link>
+      </p>
     </AuthLayout>
   );
 }

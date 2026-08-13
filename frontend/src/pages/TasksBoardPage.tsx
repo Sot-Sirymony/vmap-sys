@@ -63,6 +63,16 @@ export function TasksBoardPage() {
   const filterStepId = searchParams.get('stepId');
   const [autoOpenCreate, setAutoOpenCreate] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  // The dashboard's "New Task" button lands here with ?new=true — open the
+  // create form once and drop the flag, so refresh or back doesn't reopen it.
+  const [openCreateFromUrl, setOpenCreateFromUrl] = useUrlFlag('new');
+  useEffect(() => {
+    if (openCreateFromUrl) {
+      setCreateOpen(true);
+      setOpenCreateFromUrl(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openCreateFromUrl]);
   const crud = useCrudEntity<TaskItem, TaskItemRequest>({
     token,
     entityLabel: 'tasks',

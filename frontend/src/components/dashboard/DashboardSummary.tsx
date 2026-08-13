@@ -1,4 +1,4 @@
-import { Ban, CalendarClock, CalendarDays, CheckCircle2, CheckSquare, Compass, MoonStar, Rocket, Target, TrendingUp } from 'lucide-react';
+import { Ban, CalendarClock, CalendarDays, Rocket } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
@@ -25,39 +25,17 @@ function scoped(base: string, visionAreaId?: string) {
   return `${base}${base.includes('?') ? '&' : '?'}visionAreaId=${visionAreaId}`;
 }
 
-function TileGroup({ label, columns, children }: { label: string; columns: number; children: React.ReactNode }) {
-  return (
-    <Box component="section">
-      <Typography
-        variant="overline"
-        component="h2"
-        sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.05em', lineHeight: 1, display: 'block', mb: 1.5 }}
-      >
-        {label}
-      </Typography>
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: `repeat(${columns}, 1fr)` },
-        }}
-      >
-        {children}
-      </Box>
-    </Box>
-  );
-}
-
 /**
- * KPI tiles split into two clusters: the three counts that demand action
- * (overdue, blocked, due soon) lead the page, followed by the six
- * portfolio-level counts. 3- and 3x2-column grids keep both rows exact,
- * with no orphaned tile (the old flat 9-tile grid always left one
- * hanging alone in a half-empty last row).
+ * The comp's KPI split: the three counts that demand action (overdue, blocked,
+ * due soon) stack on the left as rail tiles, and the six portfolio counts fill
+ * a 3×2 grid on the right. On narrow screens both clusters flatten into plain
+ * columns.
  */
 export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, visionAreaId }: DashboardSummaryProps) {
+  const averageProgress = Math.min(100, Math.max(0, summary?.averageProgress ?? 0));
+
   return (
-    <Box sx={{ display: 'grid', gap: 2.5 }}>
+    <Box sx={{ display: 'grid', gap: 2 }}>
       {/*
         A tile links only where a filter reproduces its number exactly. "Active
         Goals" counts IN_PROGRESS *or* NOT_STARTED and "Open Tasks" counts
@@ -67,58 +45,95 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
         an aggregate, not a set of rows. Due This Week now links via the tasks
         due-date range (BRD C-6).
       */}
-      <TileGroup label="Task pressure" columns={3}>
-        <DashboardCard
-          label="Overdue Tasks"
-          value={summary?.overdueTasks ?? 0}
-          icon={CalendarClock}
-          tone={(summary?.overdueTasks ?? 0) > 0 ? 'critical' : 'neutral'}
-          to={scoped('/tasks?overdue=true', visionAreaId)}
-        />
-        <DashboardCard
-          label="Blocked Tasks"
-          value={summary?.blockedTasks ?? 0}
-          icon={Ban}
-          tone={(summary?.blockedTasks ?? 0) > 0 ? 'warning' : 'neutral'}
-          to={scoped('/tasks?status=BLOCKED', visionAreaId)}
-        />
-        <DashboardCard
-          label={`Due ${periodLabel}`}
-          value={summary?.tasksDueInPeriod ?? 0}
-          icon={CalendarDays}
-          tone={(summary?.tasksDueInPeriod ?? 0) > 0 ? 'warning' : 'neutral'}
-          to={dueInPeriodLink}
-        />
-      </TileGroup>
-      <TileGroup label="Portfolio overview" columns={3}>
-        <DashboardCard label="Vision Areas" value={summary?.totalVisionAreas ?? 0} icon={Compass} to="/vision-areas" />
-        <DashboardCard
-          label="Active Dreams"
-          value={summary?.activeDreams ?? 0}
-          icon={MoonStar}
-          to={scoped('/dreams?status=ACTIVE', visionAreaId)}
-        />
-        <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} icon={Target} />
-        <DashboardCard label="Open Tasks" value={summary?.activeTasks ?? 0} icon={CheckSquare} />
-        {/*
-          Completed is scoped to the period by completion date. It doesn't link:
-          the tasks board filters by *due* date, not completion date, so no
-          filter reproduces "completed this month" — and a tile that links to a
-          different number is worse than one that doesn't link.
-        */}
-        <DashboardCard
-          label={`Completed ${periodLabel}`}
-          value={summary?.completedTasksInPeriod ?? 0}
-          icon={CheckCircle2}
-          tone={(summary?.completedTasksInPeriod ?? 0) > 0 ? 'positive' : 'neutral'}
-        />
-        <DashboardCard
-          label="Average Progress"
-          value={`${summary?.averageProgress ?? 0}%`}
-          icon={TrendingUp}
-          tone={(summary?.averageProgress ?? 0) >= 50 ? 'positive' : 'neutral'}
-        />
-      </TileGroup>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(12, 1fr)' } }}>
+        <Box
+          component="section"
+          aria-label="Task pressure"
+          sx={{
+            gridColumn: { lg: 'span 4' },
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', lg: '1fr' },
+          }}
+        >
+          <DashboardCard
+            label="Overdue Tasks"
+            value={summary?.overdueTasks ?? 0}
+            icon={CalendarClock}
+            variant="rail"
+            tone={(summary?.overdueTasks ?? 0) > 0 ? 'critical' : 'neutral'}
+            to={scoped('/tasks?overdue=true', visionAreaId)}
+          />
+          <DashboardCard
+            label="Blocked Tasks"
+            value={summary?.blockedTasks ?? 0}
+            icon={Ban}
+            variant="rail"
+            tone={(summary?.blockedTasks ?? 0) > 0 ? 'warning' : 'neutral'}
+            to={scoped('/tasks?status=BLOCKED', visionAreaId)}
+          />
+          {/* The comp keeps this tile on the accent rail: due-soon is workload,
+              not an alarm, so it stays neutral regardless of the count. */}
+          <DashboardCard
+            label={`Due ${periodLabel}`}
+            value={summary?.tasksDueInPeriod ?? 0}
+            icon={CalendarDays}
+            variant="rail"
+            to={dueInPeriodLink}
+          />
+        </Box>
+        <Box
+          component="section"
+          aria-label="Portfolio overview"
+          sx={{
+            gridColumn: { lg: 'span 8' },
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+          }}
+        >
+          <DashboardCard label="Vision Areas" value={summary?.totalVisionAreas ?? 0} to="/vision-areas" />
+          <DashboardCard
+            label="Active Dreams"
+            value={summary?.activeDreams ?? 0}
+            to={scoped('/dreams?status=ACTIVE', visionAreaId)}
+          />
+          <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} />
+          <DashboardCard label="Open Tasks" value={summary?.activeTasks ?? 0} />
+          {/*
+            Completed is scoped to the period by completion date. It doesn't link:
+            the tasks board filters by *due* date, not completion date, so no
+            filter reproduces "completed this month" — and a tile that links to a
+            different number is worse than one that doesn't link.
+          */}
+          <DashboardCard
+            label={`Completed ${periodLabel}`}
+            value={summary?.completedTasksInPeriod ?? 0}
+            tone={(summary?.completedTasksInPeriod ?? 0) > 0 ? 'positive' : 'neutral'}
+          />
+          <DashboardCard
+            label="Average Progress"
+            value={`${Math.round(summary?.averageProgress ?? 0)}%`}
+            tone={(summary?.averageProgress ?? 0) >= 50 ? 'positive' : 'neutral'}
+            extra={
+              <Box
+                aria-hidden
+                sx={{
+                  flex: 1,
+                  maxWidth: 120,
+                  height: 6,
+                  borderRadius: 'var(--radius-pill)',
+                  bgcolor: 'var(--background-subtle)',
+                  border: '1px solid var(--border-soft)',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ width: `${averageProgress}%`, height: '100%', bgcolor: 'primary.main', borderRadius: 'var(--radius-pill)' }} />
+              </Box>
+            }
+          />
+        </Box>
+      </Box>
       {(summary?.moonshotGoals ?? 0) > 0 && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--moonshot-fg)', mt: -0.5 }}>
           <Rocket size={14} />

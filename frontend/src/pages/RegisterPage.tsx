@@ -1,15 +1,16 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { register } from '../api/authApi';
-import { Button } from '../components/common/Button';
+import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { Input } from '../components/common/Input';
+import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
 import { AuthLayout } from '../layouts/AuthLayout';
 
 export function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -17,6 +18,12 @@ export function RegisterPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError('');
+
+    if (password !== confirmPassword) {
+      setError('The passwords do not match.');
+      return;
+    }
+
     setLoading(true);
     try {
       await register({ fullName, email, password });
@@ -38,25 +45,65 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout>
-      <h1 className="text-2xl font-semibold">Create account</h1>
-      <form className="form-stack" onSubmit={handleSubmit}>
-        <label>
-          Full name
-          <Input value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-        </label>
-        <label>
-          Email
-          <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-        </label>
-        <label>
-          Password
-          <Input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required />
-        </label>
+    <AuthLayout subtitle="Create your account">
+      <GoogleSignInButton onClick={() => navigate('/oauth/google')} />
+      <div className="auth-divider" aria-hidden="true">
+        <span>or</span>
+      </div>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <AuthField
+          id="register-name"
+          label="Full name"
+          name="fullName"
+          autoComplete="name"
+          placeholder="John Doe"
+          value={fullName}
+          onChange={setFullName}
+          required
+        />
+        <AuthField
+          id="register-email"
+          label="Email"
+          type="email"
+          name="email"
+          autoComplete="username"
+          placeholder="john@example.com"
+          value={email}
+          onChange={setEmail}
+          required
+        />
+        <AuthField
+          id="register-password"
+          label="Password"
+          type="password"
+          name="password"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          minLength={8}
+          value={password}
+          onChange={setPassword}
+          required
+        />
+        <AuthField
+          id="register-confirm-password"
+          label="Confirm password"
+          type="password"
+          name="confirmPassword"
+          autoComplete="new-password"
+          placeholder="••••••••"
+          minLength={8}
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          required
+        />
         {error && <ErrorMessage message={error} />}
-        <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create account'}</Button>
+        <button className="auth-submit" type="submit" disabled={loading}>
+          {loading ? 'Creating...' : 'Create account'}
+        </button>
       </form>
-      <p className="auth-link">Already registered? <Link to="/login">Sign in</Link></p>
+      <p className="auth-link" style={{ textAlign: 'center' }}>
+        Already have an account? <Link to="/login">Sign in</Link>
+      </p>
     </AuthLayout>
   );
 }

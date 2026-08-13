@@ -21,6 +21,9 @@ const loaders: Record<Exclude<FontFamilyId, 'system'>, () => Promise<unknown>> =
   inter: () => import('@fontsource-variable/inter'),
   dmSans: () => import('@fontsource-variable/dm-sans'),
   nunitoSans: () => import('@fontsource-variable/nunito-sans'),
+  montserrat: () => import('@fontsource-variable/montserrat'),
+  lexend: () => import('@fontsource-variable/lexend'),
+  plusJakartaSans: () => import('@fontsource-variable/plus-jakarta-sans'),
 };
 
 const started = new Map<FontFamilyId, Promise<unknown>>();

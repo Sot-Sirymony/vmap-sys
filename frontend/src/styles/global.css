@@ -287,6 +287,94 @@
   --sidebar-border: #d4d4d4;
 }
 
+/* The ten washes (FR-40 additions). Tones whose card carries the cast follow
+   warm's pattern (card surfaces move too); Ice and Linen keep white cards and
+   follow cool's. All values are mirrored in theme.ts's toneSurfaces and
+   measured there. */
+:root[data-tone="rose"] {
+  --background: #FFFBFC;
+  --card: #FFFBFC;
+  --popover: #FFFBFC;
+  --sidebar: #F4E9ED;
+  --page: #FAF3F5;
+  --background-subtle: #F6EEF1;
+}
+
+:root[data-tone="mint"] {
+  --background: #FBFEFC;
+  --card: #FBFEFC;
+  --popover: #FBFEFC;
+  --sidebar: #E7EFEA;
+  --page: #EFF6F1;
+  --background-subtle: #EAF2ED;
+}
+
+:root[data-tone="lavender"] {
+  --background: #FDFCFF;
+  --card: #FDFCFF;
+  --popover: #FDFCFF;
+  --sidebar: #EDEAF5;
+  --page: #F4F2FA;
+  --background-subtle: #EFEDF6;
+}
+
+:root[data-tone="sand"] {
+  --background: #FDFAF2;
+  --card: #FDFAF2;
+  --popover: #FDFAF2;
+  --sidebar: #EEE7D8;
+  --page: #F5F0E6;
+  --background-subtle: #F0EADD;
+}
+
+:root[data-tone="sage"] {
+  --background: #FAFBF9;
+  --card: #FAFBF9;
+  --popover: #FAFBF9;
+  --sidebar: #E8ECE5;
+  --page: #F0F2EE;
+  --background-subtle: #EBEEE8;
+}
+
+:root[data-tone="ice"] {
+  --sidebar: #DFECF7;
+  --page: #EAF4FB;
+  --background-subtle: #E4EFF8;
+}
+
+:root[data-tone="linen"] {
+  --sidebar: #F4F0E7;
+  --page: #FBF9F4;
+  --background-subtle: #F6F3EB;
+}
+
+:root[data-tone="slate"] {
+  --background: #F8FAFC;
+  --card: #F8FAFC;
+  --popover: #F8FAFC;
+  --sidebar: #DFE4EA;
+  --page: #E9ECF0;
+  --background-subtle: #E3E7EC;
+}
+
+:root[data-tone="plum"] {
+  --background: #FDFAFD;
+  --card: #FDFAFD;
+  --popover: #FDFAFD;
+  --sidebar: #EFE6EF;
+  --page: #F6F0F6;
+  --background-subtle: #F1EAF1;
+}
+
+:root[data-tone="stone"] {
+  --background: #FAF9F7;
+  --card: #FAF9F7;
+  --popover: #FAF9F7;
+  --sidebar: #EAE7E2;
+  --page: #F2F0ED;
+  --background-subtle: #EDEBE7;
+}
+
 :root[data-theme="dark"][data-tone="warm"] {
   --background: #1f1b17;
   --card: #2a2521;
@@ -332,6 +420,96 @@
   --background-subtle: #282726;
   --border: #4d4b49;
   --sidebar-border: #4d4b49;
+}
+
+:root[data-theme="dark"][data-tone="rose"] {
+  --background: #201819;
+  --card: #2B2224;
+  --popover: #2B2224;
+  --sidebar: #2B2224;
+  --page: #201819;
+  --background-subtle: #251D1F;
+}
+
+:root[data-theme="dark"][data-tone="mint"] {
+  --background: #161B18;
+  --card: #202623;
+  --popover: #202623;
+  --sidebar: #202623;
+  --page: #161B18;
+  --background-subtle: #1B211D;
+}
+
+:root[data-theme="dark"][data-tone="lavender"] {
+  --background: #1A181F;
+  --card: #24222B;
+  --popover: #24222B;
+  --sidebar: #24222B;
+  --page: #1A181F;
+  --background-subtle: #1F1D25;
+}
+
+:root[data-theme="dark"][data-tone="sand"] {
+  --background: #1E1A14;
+  --card: #29241C;
+  --popover: #29241C;
+  --sidebar: #29241C;
+  --page: #1E1A14;
+  --background-subtle: #231F18;
+}
+
+:root[data-theme="dark"][data-tone="sage"] {
+  --background: #191C18;
+  --card: #232722;
+  --popover: #232722;
+  --sidebar: #232722;
+  --page: #191C18;
+  --background-subtle: #1E211D;
+}
+
+:root[data-theme="dark"][data-tone="ice"] {
+  --background: #151A20;
+  --card: #1F262E;
+  --popover: #1F262E;
+  --sidebar: #1F262E;
+  --page: #151A20;
+  --background-subtle: #1A2026;
+}
+
+:root[data-theme="dark"][data-tone="linen"] {
+  --background: #1D1B17;
+  --card: #272420;
+  --popover: #272420;
+  --sidebar: #272420;
+  --page: #1D1B17;
+  --background-subtle: #221F1B;
+}
+
+:root[data-theme="dark"][data-tone="slate"] {
+  --background: #15181C;
+  --card: #1E2227;
+  --popover: #1E2227;
+  --sidebar: #1E2227;
+  --page: #15181C;
+  --background-subtle: #191D21;
+}
+
+:root[data-theme="dark"][data-tone="plum"] {
+  --background: #1E1820;
+  --card: #28222A;
+  --popover: #28222A;
+  --sidebar: #28222A;
+  --page: #1E1820;
+  --background-subtle: #231D25;
+}
+
+:root[data-theme="dark"][data-tone="stone"] {
+  --background: #1B1A18;
+  --card: #252320;
+  --popover: #252320;
+  --sidebar: #252320;
+  --page: #1B1A18;
+  --background-subtle: #201E1C;
 }
 
 /*
@@ -551,8 +729,7 @@ button:focus-visible,
   border-radius: var(--radius-sm);
 }
 
-.page-heading h1,
-.auth-panel h1 {
+.page-heading h1 {
   margin: 0;
   line-height: 1.2;
   font-size: var(--font-title-page);
@@ -566,6 +743,25 @@ button:focus-visible,
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+/* The action cluster can hold filters as well as buttons (the dashboard's
+   scope selects live here per the Stitch comp) — bottom-aligned so a labelled
+   select and a bare button share a baseline. */
+.page-heading-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-heading-actions label {
+  display: grid;
+  gap: 4px;
+  font-size: var(--font-meta);
+  font-weight: 600;
+  color: var(--text-label);
+  min-width: 170px;
 }
 
 .page-shell {
@@ -608,8 +804,7 @@ button:focus-visible,
 }
 
 .metric-card,
-.empty-state,
-.auth-panel {
+.empty-state {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -1358,86 +1553,372 @@ button:focus-visible,
   color: var(--foreground);
 }
 
+/* ── Auth flow (Stitch "Vision Map" auth screens) ─────────────────────────
+   One centred card on the page canvas, replacing the former navy hero +
+   panel pair. Every colour routes through the theme variables so the same
+   markup holds up in dark mode and under a user-chosen accent. */
 .auth-shell {
   min-height: 100vh;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 48px;
   padding: 20px;
-  /* A quiet diagonal within the same navy family — depth without introducing
-     a new hue. Deliberately fixed (see the hero note below): this renders
-     before any account appearance is known. */
-  background: linear-gradient(150deg, #1b3a59 0%, #17324d 45%, #10263c 100%);
+  background: var(--page);
 }
 
-/* FR-27.3 brand hero. Fixed light tones on the fixed navy panel. */
-.auth-hero {
-  width: min(360px, 100%);
-  color: #e8eef5;
+.auth-card {
+  position: relative;
+  overflow: hidden;
+  width: min(440px, 100%);
+  padding: 32px;
   display: grid;
-  gap: 14px;
+  gap: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-8);
 }
 
-.auth-brand {
-  margin: 0;
+/* The comp's corner gradient mesh, derived from the accent instead of two
+   hard-coded blues so it tints along with the appearance settings. */
+.auth-card-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--primary) 14%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 50%);
+}
+
+/* Content sits above the glow overlay without each block naming a z-index. */
+.auth-card > :not(.auth-card-glow) {
+  position: relative;
+}
+
+.auth-head {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  font-size: var(--font-title-panel);
-  font-weight: 600;
-  color: #ffffff;
+  gap: 8px;
+  text-align: center;
 }
 
-.auth-brand-mark {
+.auth-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  background: #0078d4;
-  color: #ffffff;
-  font-size: var(--font-body-sm);
-  font-weight: 700;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-4);
+  margin-bottom: 4px;
 }
 
-.auth-tagline {
+.auth-title {
+  margin: 0;
+  font-size: var(--font-title-page);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
   margin: 0;
   font-size: var(--font-body);
-  color: #b9c8d8;
+  font-weight: 400;
+  color: var(--text-soft);
 }
 
-.auth-funnel {
+.auth-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: var(--font-body);
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  transition: background-color var(--motion-base, 0.15s) ease;
+}
+
+.auth-google:hover {
+  background: var(--secondary);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--font-body-sm);
+  color: var(--text-soft);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-field {
   display: grid;
   gap: 8px;
-  margin-top: 6px;
 }
 
-.auth-funnel-level {
-  padding: 6px 12px;
-  border-radius: var(--radius-md);
-  background: rgba(120, 180, 235, 0.18);
-  border: 1px solid rgba(120, 180, 235, 0.35);
-  color: #cfe0f1;
+.auth-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-label {
   font-size: var(--font-meta);
   font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-label);
 }
 
-@media (max-width: 900px) {
-  .auth-hero {
-    display: none;
+.auth-forgot {
+  font-size: var(--font-body-sm);
+}
+
+.auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input-icon {
+  position: absolute;
+  left: 12px;
+  display: inline-flex;
+  color: var(--text-soft);
+  pointer-events: none;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: var(--font-body);
+  transition: border-color var(--motion-base, 0.15s) ease, box-shadow var(--motion-base, 0.15s) ease;
+}
+
+.auth-input--icon {
+  padding-left: 40px;
+}
+
+.auth-input--toggle {
+  padding-right: 44px;
+}
+
+.auth-input::placeholder {
+  color: color-mix(in srgb, var(--text-soft) 55%, transparent);
+}
+
+.auth-input:focus {
+  border-color: var(--ring);
+  outline: 3px solid color-mix(in srgb, var(--ring) 20%, transparent);
+  outline-offset: 0;
+}
+
+.auth-toggle {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.auth-toggle:hover {
+  color: var(--foreground);
+}
+
+/* Pill CTA per the comp; --ghost is the tinted secondary (account linking's
+   Cancel), --text the borderless quiet action (error screen's email fallback). */
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-4);
+  transition: filter var(--motion-base, 0.15s) ease, transform 0.1s ease;
+}
+
+.auth-submit:hover {
+  filter: brightness(1.08);
+}
+
+.auth-submit:active {
+  transform: scale(0.98);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+  filter: none;
+}
+
+.auth-submit--ghost {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: none;
+}
+
+.auth-submit--text {
+  background: transparent;
+  color: var(--accent-foreground);
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.auth-submit--text:hover {
+  background: var(--secondary);
+  filter: none;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 12px;
+}
+
+/* OAuth status screens: loading, error, account linking. */
+.auth-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.auth-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 4px;
+}
+
+.auth-status-icon--error {
+  background: var(--danger-bg);
+  color: var(--destructive);
+}
+
+.auth-status-icon--link {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.auth-status-title {
+  margin: 0;
+  font-size: var(--font-title-panel);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.auth-status-text {
+  margin: 0;
+  font-size: var(--font-body);
+  color: var(--text-soft);
+}
+
+.auth-status-note {
+  margin: 12px 0 0;
+  max-width: 260px;
+  font-size: var(--font-body-sm);
+  color: var(--text-faint);
+}
+
+/* Indeterminate ring with the Google glyph at its centre (Stitch loading
+   screen). Under reduced motion the global kill-switch freezes it; the status
+   text still says what is happening. */
+.auth-spinner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-spinner-ring {
+  width: 56px;
+  height: 56px;
+  color: var(--primary);
+  animation: auth-rotate 2s linear infinite;
+}
+
+.auth-spinner-ring circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 1, 200;
+  stroke-dashoffset: 0;
+  animation: auth-dash 1.5s ease-in-out infinite;
+}
+
+.auth-spinner-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes auth-rotate {
+  100% {
+    transform: rotate(360deg);
   }
 }
 
-.auth-panel {
-  width: min(440px, 100%);
-  padding: 32px;
-  /* The form floats on the navy shell: the card tier's radius with the top
-     elevation tier, since this is the only surface on the page. */
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-16);
+@keyframes auth-dash {
+  0% {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 200;
+    stroke-dashoffset: -35px;
+  }
+  100% {
+    stroke-dasharray: 90, 200;
+    stroke-dashoffset: -124px;
+  }
 }
 
 .auth-link {

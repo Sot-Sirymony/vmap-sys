@@ -43,13 +43,17 @@ const ACCENT_IDS = Object.keys(accentOptions) as AccentId[];
 const MODES = ['light', 'dark'] as const;
 
 describe('accent palette (FR-39.2)', () => {
-  it('offers the twelve curated accents', () => {
-    expect(ACCENT_IDS).toHaveLength(12);
+  it('offers the twenty-three curated accents', () => {
+    expect(ACCENT_IDS).toHaveLength(23);
     expect(ACCENT_IDS).toEqual(
       expect.arrayContaining([
         'blue', 'teal', 'purple', 'green', 'orange', 'magenta', 'red', 'brass', 'steel', 'pink',
         // FR-43, derived from the supplied primary/secondary ramps.
         'vermilion', 'violet',
+        // The Stitch DESIGN.md's royal blue.
+        'cobalt',
+        // The wheel-spanning additions.
+        'indigo', 'sky', 'emerald', 'olive', 'amber', 'rose', 'fuchsia', 'graphite', 'coffee', 'navy',
       ]),
     );
   });
@@ -507,8 +511,12 @@ describe('background tones (FR-40)', () => {
     dark: { body: surfaceTokens('dark').foreground, muted: surfaceTokens('dark').mutedForeground },
   } as const;
 
-  it('offers the six curated tones and nothing else', () => {
-    expect(TONE_IDS).toEqual(['neutral', 'warm', 'cool', 'soft', 'tinted', 'flat']);
+  it('offers the sixteen curated tones and nothing else', () => {
+    expect(TONE_IDS).toEqual([
+      'neutral', 'warm', 'cool', 'soft', 'tinted', 'flat',
+      // The ten washes.
+      'rose', 'mint', 'lavender', 'sand', 'sage', 'ice', 'linen', 'slate', 'plum', 'stone',
+    ]);
   });
 
   /**

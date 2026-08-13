@@ -1,9 +1,8 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { resetPassword } from '../api/authApi';
-import { Button } from '../components/common/Button';
+import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { Input } from '../components/common/Input';
 import { AuthLayout } from '../layouts/AuthLayout';
 
 /** Matches the backend's @Size(min = 8) on the new password. */
@@ -47,49 +46,49 @@ export function ResetPasswordPage() {
   // mangled the link. Saying so beats a form that can only fail on submit.
   if (!token) {
     return (
-      <AuthLayout>
-        <h1 className="text-2xl font-semibold">Reset your password</h1>
+      <AuthLayout subtitle="Reset your password">
         <ErrorMessage message="This reset link is incomplete. Request a new one." />
-        <p className="auth-link"><Link to="/forgot-password">Send a new link</Link></p>
+        <p className="auth-link" style={{ textAlign: 'center' }}>
+          <Link to="/forgot-password">Send a new link</Link>
+        </p>
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout>
-      <h1 className="text-2xl font-semibold">Choose a new password</h1>
-      <form className="form-stack" onSubmit={handleSubmit}>
-        <label>
-          New password
-          <Input
-            type="password"
-            name="newPassword"
-            autoComplete="new-password"
-            minLength={MIN_PASSWORD_LENGTH}
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Confirm new password
-          <Input
-            type="password"
-            name="confirmPassword"
-            autoComplete="new-password"
-            minLength={MIN_PASSWORD_LENGTH}
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            required
-          />
-        </label>
-        <p className="text-sm text-muted-foreground">Use at least {MIN_PASSWORD_LENGTH} characters.</p>
+    <AuthLayout subtitle="Choose a new password">
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <AuthField
+          id="reset-new-password"
+          label="New password"
+          type="password"
+          name="newPassword"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          value={newPassword}
+          onChange={setNewPassword}
+          required
+        />
+        <AuthField
+          id="reset-confirm-password"
+          label="Confirm new password"
+          type="password"
+          name="confirmPassword"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          required
+        />
+        <p className="auth-status-note" style={{ margin: 0, maxWidth: 'none' }}>
+          Use at least {MIN_PASSWORD_LENGTH} characters.
+        </p>
         {error && <ErrorMessage message={error} />}
-        <Button type="submit" disabled={loading}>
+        <button className="auth-submit" type="submit" disabled={loading}>
           {loading ? 'Saving...' : 'Set new password'}
-        </Button>
+        </button>
       </form>
-      <p className="auth-link">
+      <p className="auth-link" style={{ textAlign: 'center' }}>
         Link expired? <Link to="/forgot-password">Request a new one</Link>
       </p>
     </AuthLayout>

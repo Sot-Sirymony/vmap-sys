@@ -35,7 +35,10 @@ function renderAuthRoutes(initialPath: string) {
 async function fillRegistration(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/full name/i), 'Local Smoke');
   await user.type(screen.getByLabelText(/email/i), 'new.user@example.com');
-  await user.type(screen.getByLabelText(/password/i), 'Password123');
+  // Exact strings: the page also has a "Confirm password" field, and the
+  // reveal toggles carry "password" in their accessible names.
+  await user.type(screen.getByLabelText('Password'), 'Password123');
+  await user.type(screen.getByLabelText('Confirm password'), 'Password123');
   await user.click(screen.getByRole('button', { name: /create account/i }));
 }
 
@@ -106,7 +109,7 @@ describe('registration hands over to sign-in', () => {
     await fillRegistration(user);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Email is already registered.');
-    expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /create your account/i })).toBeInTheDocument();
   });
 });
 
@@ -137,7 +140,7 @@ describe('sign-in page notice', () => {
     await screen.findByRole('heading', { name: /sign in/i });
     expect(await screen.findByRole('alert')).toHaveTextContent(/account created/i);
 
-    await user.type(screen.getByLabelText(/password/i), 'wrong-password');
+    await user.type(screen.getByLabelText('Password'), 'wrong-password');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
     await waitFor(() => {

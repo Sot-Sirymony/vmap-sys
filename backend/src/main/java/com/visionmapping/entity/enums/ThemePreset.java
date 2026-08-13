@@ -23,5 +23,7 @@ public enum ThemePreset {
     FOREST,
     SLATE,
     MIDNIGHT,
+    /** Light mode + Cobalt — the Stitch project's DESIGN.md style guide. */
+    STITCH,
     CUSTOM
 }

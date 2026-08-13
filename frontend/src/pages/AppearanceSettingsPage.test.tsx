@@ -40,14 +40,15 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     expect(headings[0]).toHaveTextContent('Appearance');
   });
 
-  it('offers every preset and all twelve accents', () => {
+  it('offers every preset and all twenty-three accents', () => {
     renderPage();
 
     expect(screen.getByText('Fluent System')).toBeInTheDocument();
     expect(screen.getByText('Midnight')).toBeInTheDocument();
     expect(screen.getByText('Ocean')).toBeInTheDocument();
+    expect(screen.getByText('Stitch')).toBeInTheDocument();
     // The accents are swatches, so they're found by their accessible names.
-    expect(screen.getAllByRole('button', { name: /accent$/ })).toHaveLength(12);
+    expect(screen.getAllByRole('button', { name: /accent$/ })).toHaveLength(23);
     expect(screen.getByRole('button', { name: 'Vermilion accent' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Violet accent' })).toBeInTheDocument();
   });
@@ -112,11 +113,12 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     expect(await screen.findByText(/don't match a preset/i)).toBeInTheDocument();
   });
 
-  it('offers the six background tones', () => {
+  it('offers the sixteen background tones', () => {
     renderPage();
 
-    expect(screen.getAllByRole('button', { name: /background$/ })).toHaveLength(6);
+    expect(screen.getAllByRole('button', { name: /background$/ })).toHaveLength(16);
     expect(screen.getByRole('button', { name: 'Warm background' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lavender background' })).toBeInTheDocument();
   });
 
   it('applies a background tone', async () => {

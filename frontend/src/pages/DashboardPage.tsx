@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Compass } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { getDashboardSummary } from '../api/dashboardApi';
 import { CategoryBreakdownChart, OTHER_CATEGORY_KEY } from '../components/dashboard/CategoryBreakdownChart';
@@ -110,6 +109,9 @@ export function DashboardPage() {
   const [periodValue, setPeriodValue] = useUrlFilter('period');
   const period = isPeriod(periodValue) ? periodValue : 'month';
   const { from, to } = periodRange(period);
+  // Local calendar date, for painting overdue due-dates in the priority list.
+  const now = new Date();
+  const todayIso = isoDay(now.getFullYear(), now.getMonth() + 1, now.getDate());
   // Drill-down links carry the dashboard's vision-area scope, so the target
   // page shows the same rows the widget counted. When no area is selected the
   // links carry only their own value (status, priority, dates). The period
@@ -190,7 +192,36 @@ export function DashboardPage() {
   const showOnboardingBanner = !loading && !error && summary !== null && hasArea && (!hasDream || !hasGoal);
 
   return (
-    <PageSection title="Dashboard" subtitle="Track progress across dreams, goals, steps, and tasks.">
+    <PageSection
+      title="Dashboard"
+      subtitle="Track progress across dreams, goals, steps, and tasks."
+      // The comp puts the scope controls and the primary action in the title
+      // row itself, not in a filter card below it.
+      actions={
+        <>
+          <FilterSelect
+            label="Vision Area"
+            value={filterVisionAreaId}
+            onChange={setFilterVisionAreaId}
+            options={optionsFromEntities(visionAreas, (area) => area.name)}
+            allLabel="All areas"
+          />
+          <label>
+            Period
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <Select SelectDisplayProps={{ 'aria-label': "Period" }} value={period} onChange={(event) => setPeriodValue(event.target.value)}>
+                {PERIOD_OPTIONS.map((option) => (
+                  <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </label>
+          <MuiButton variant="contained" onClick={() => navigate('/tasks?new=true')} sx={{ whiteSpace: 'nowrap' }}>
+            New Task
+          </MuiButton>
+        </>
+      }
+    >
       {loading && <Loading variant="cards" rows={6} />}
       {error && <ErrorMessage message={error} />}
       {isFirstRun ? (
@@ -198,25 +229,6 @@ export function DashboardPage() {
       ) : (
       <>
       {showOnboardingBanner && <GettingStarted hasArea={hasArea} hasDream={hasDream} hasGoal={hasGoal} />}
-      <Card className="filter-bar flex-row">
-        <FilterSelect
-          label="Vision Area"
-          value={filterVisionAreaId}
-          onChange={setFilterVisionAreaId}
-          options={optionsFromEntities(visionAreas, (area) => area.name)}
-          allLabel="All areas"
-        />
-        <label>
-          Period
-          <FormControl fullWidth size="small">
-            <Select SelectDisplayProps={{ 'aria-label': "Period" }} value={period} onChange={(event) => setPeriodValue(event.target.value)}>
-              {PERIOD_OPTIONS.map((option) => (
-                <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </label>
-      </Card>
       {/* FR-25.3: what to DO comes before what IS — the feed leads the page. */}
       <AttentionPanel attention={summary?.attention} visionAreaId={filterVisionAreaId} />
       <DashboardSummary
@@ -226,6 +238,8 @@ export function DashboardPage() {
         visionAreaId={filterVisionAreaId}
       />
       <EnergyBudgetCard budget={summary?.energyBudget} />
+      {/* The comp pairs the priority-task list with the dreams donut in one row. */}
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, alignItems: 'stretch' }}>
       <Card>
         <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />
         <CardContent>
@@ -247,7 +261,10 @@ export function DashboardPage() {
                 {priorityTasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell sx={{ fontWeight: 500 }}>{task.title}</TableCell>
-                    <TableCell>{task.dueDate}</TableCell>
+                    {/* The comp paints an overdue due-date red; completed rows are exempt. */}
+                    <TableCell sx={task.dueDate < todayIso && task.status !== 'COMPLETED' ? { color: 'error.main', fontWeight: 600 } : undefined}>
+                      {task.dueDate}
+                    </TableCell>
                     <TableCell><PriorityBadge priority={task.priority} /></TableCell>
                     <TableCell><StatusBadge status={task.status} /></TableCell>
                     <TableCell sx={{ width: 160 }}><ProgressBar value={Number(task.progressPercent)} /></TableCell>
@@ -259,44 +276,6 @@ export function DashboardPage() {
           )}
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader title="Progress trend" subheader="Portfolio-wide average task progress over the last 12 weeks" />
-        <CardContent>
-          {progressTrend.length === 0 ? (
-            <EmptyState>No progress logged yet — update a task's progress to start the trend.</EmptyState>
-          ) : (
-            <Box sx={{ width: '100%', height: 220 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={progressTrend} margin={{ left: 8, right: 16 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={40} />
-                  <RechartsTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    dataKey="progress"
-                    name="Average progress %"
-                    type="monotone"
-                    fill={chartPrimary}
-                    fillOpacity={0.15}
-                    stroke={chartPrimary}
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
-        <CategoryBreakdownChart
-          title="Goals by status"
-          description="Current distribution across all active goals — click a slice to open those goals"
-          data={summary?.goalsByStatus ?? {}}
-          formatLabel={formatLabel}
-          variant="donut"
-          colorForKey={(key) => workStatusFill(key as WorkStatus)}
-          linkForKey={(key) => `/goals?status=${key}${scopeSuffix}`}
-        />
         <CategoryBreakdownChart
           title="Dreams by vision area"
           description="Where active dreams are concentrated — click a slice to open those dreams"
@@ -316,6 +295,17 @@ export function DashboardPage() {
             const area = visionAreas.find((candidate) => candidate.name === name);
             return area ? `/dreams?visionAreaId=${area.id}` : '/dreams';
           }}
+        />
+      </Box>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
+        <CategoryBreakdownChart
+          title="Goals by status"
+          description="Current distribution across all active goals — click a slice to open those goals"
+          data={summary?.goalsByStatus ?? {}}
+          formatLabel={formatLabel}
+          variant="donut"
+          colorForKey={(key) => workStatusFill(key as WorkStatus)}
+          linkForKey={(key) => `/goals?status=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
           title="Tasks by status"
@@ -349,6 +339,34 @@ export function DashboardPage() {
           // The rollup bucket spans several types, so it links to the plain list.
           linkForKey={(key) => (key === OTHER_CATEGORY_KEY ? '/obstacles' : `/obstacles?type=${key}`)}
         />
+        <Card>
+          <CardHeader title="Progress trend" subheader="Portfolio-wide average task progress over the last 12 weeks" />
+          <CardContent>
+            {progressTrend.length === 0 ? (
+              <EmptyState>No progress logged yet — update a task's progress to start the trend.</EmptyState>
+            ) : (
+              <Box sx={{ width: '100%', height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={progressTrend} margin={{ left: 8, right: 16 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={40} />
+                    <RechartsTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      dataKey="progress"
+                      name="Average progress %"
+                      type="monotone"
+                      fill={chartPrimary}
+                      fillOpacity={0.15}
+                      stroke={chartPrimary}
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader title="Vision Area progress" subheader="Average goal progress per area — lowest first is what needs attention" />
           <CardContent>

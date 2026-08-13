@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import MuiAlert from '@mui/material/Alert';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { Lock, Mail } from 'lucide-react';
 import { login } from '../api/authApi';
-import { Button } from '../components/common/Button';
+import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { Input } from '../components/common/Input';
+import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 
@@ -69,41 +70,54 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout>
-      <h1 className="text-2xl font-semibold">Sign in</h1>
+    <AuthLayout subtitle="Sign in to continue to your dashboard">
       {showNotice && notice && <MuiAlert severity="success">{notice}</MuiAlert>}
-      <form className="form-stack" onSubmit={handleSubmit}>
-        <label>
-          Email
-          <Input
-            type="email"
-            name="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Password
-          <Input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </label>
+      <GoogleSignInButton onClick={() => navigate('/oauth/google', { state: { from } })} />
+      <div className="auth-divider" aria-hidden="true">
+        <span>or sign in with email</span>
+      </div>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <AuthField
+          id="login-email"
+          label="Email address"
+          type="email"
+          name="email"
+          autoComplete="username"
+          placeholder="you@company.com"
+          icon={<Mail size={18} />}
+          value={email}
+          onChange={setEmail}
+          required
+        />
+        <AuthField
+          id="login-password"
+          label="Password"
+          name="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          icon={<Lock size={18} />}
+          revealable
+          value={password}
+          onChange={setPassword}
+          required
+          labelEnd={
+            <span className="auth-link auth-forgot">
+              <Link to="/forgot-password">Forgot password?</Link>
+            </span>
+          }
+        />
         <FormControlLabel
           control={<Checkbox checked={remember} onChange={(event) => setRemember(event.target.checked)} />}
           label="Remember me on this device"
         />
         {error && <ErrorMessage message={error} />}
-        <Button type="submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</Button>
+        <button className="auth-submit" type="submit" disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
       </form>
-      <p className="auth-link"><Link to="/forgot-password">Forgot your password?</Link></p>
-      <p className="auth-link">No account yet? <Link to="/register">Create one</Link></p>
+      <p className="auth-link" style={{ textAlign: 'center' }}>
+        No account yet? <Link to="/register">Create one</Link>
+      </p>
     </AuthLayout>
   );
 }

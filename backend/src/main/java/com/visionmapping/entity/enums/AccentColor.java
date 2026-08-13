@@ -31,5 +31,18 @@ public enum AccentColor {
     PINK,
     // FR-43: derived from the supplied primary and secondary ramps.
     VERMILION,
-    VIOLET
+    VIOLET,
+    // The royal blue from the Stitch project's DESIGN.md style guide.
+    COBALT,
+    // Ten more hues, spanning the wheel plus two neutrals-with-a-cast.
+    INDIGO,
+    SKY,
+    EMERALD,
+    OLIVE,
+    AMBER,
+    ROSE,
+    FUCHSIA,
+    GRAPHITE,
+    COFFEE,
+    NAVY
 }

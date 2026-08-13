@@ -9,7 +9,7 @@ package com.visionmapping.entity.enums;
  * it stays the default rather than being replaced by whichever face looks
  * nicest in a screenshot.
  *
- * <p>The other four are self-hosted and fetched only when a user actually
+ * <p>The other seven are self-hosted and fetched only when a user actually
  * selects one (FR-42.2). The font files ship with the app rather than coming
  * from a third-party CDN, so the app makes no external request, keeps working
  * offline, and never exposes a user's IP to a font host.
@@ -19,5 +19,8 @@ public enum FontFamily {
     PUBLIC_SANS,
     INTER,
     DM_SANS,
-    NUNITO_SANS
+    NUNITO_SANS,
+    MONTSERRAT,
+    LEXEND,
+    PLUS_JAKARTA_SANS
 }

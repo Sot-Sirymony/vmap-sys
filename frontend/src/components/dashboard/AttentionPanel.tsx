@@ -7,7 +7,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Ban, CheckCircle2, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
+import { Ban, CheckCircle2, CircleAlert, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardAttention } from '../../types/vision';
 
@@ -142,8 +142,16 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
   }
 
   return (
-    <Card>
+    // The comp marks this panel with a warning rail down the left edge — the
+    // one card on the page that asks for action rather than reporting state.
+    <Card sx={{ position: 'relative', overflow: 'hidden' }}>
+      <Box aria-hidden sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, bgcolor: semanticTints.warning.fg, opacity: 0.35 }} />
       <CardHeader
+        avatar={
+          <Box sx={{ color: semanticTints.warning.fg, display: 'flex' }}>
+            <CircleAlert size={20} />
+          </Box>
+        }
         title="Needs your attention"
         subheader="Places where the map has a dead end — nothing below can move until these are fixed"
       />
@@ -157,8 +165,8 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
               direction="row"
               sx={{
                 alignItems: 'center',
-                gap: 1.5,
-                py: 1.5,
+                gap: 2,
+                py: 2,
                 textDecoration: 'none',
                 color: 'inherit',
                 '&:hover .attention-action': { textDecoration: 'underline' },
@@ -166,9 +174,9 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
             >
               <Box
                 sx={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 1,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 'var(--radius-md)',
                   flexShrink: 0,
                   display: 'grid',
                   placeItems: 'center',
@@ -176,12 +184,16 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
                   color: semanticTints.warning.fg,
                 }}
               >
-                <finding.icon size={16} />
+                <finding.icon size={20} />
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{finding.title}</Typography>
-                  <Chip size="small" label={finding.count} sx={{ height: 20, fontWeight: 700 }} />
+                  <Chip
+                    size="small"
+                    label={`${finding.count} ${finding.count === 1 ? 'issue' : 'issues'}`}
+                    sx={{ height: 20, fontWeight: 700, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                  />
                 </Stack>
                 <Typography variant="caption" color="text.secondary">{finding.why}</Typography>
               </Box>

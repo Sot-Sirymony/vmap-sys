@@ -29,6 +29,9 @@ const ImportExportPage = lazy(() => import('./pages/ImportExportPage').then((m) 
 const AppearanceSettingsPage = lazy(() => import('./pages/AppearanceSettingsPage').then((m) => ({ default: m.AppearanceSettingsPage })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
+const OAuthGoogleStartPage = lazy(() => import('./pages/OAuthGoogleStartPage').then((m) => ({ default: m.OAuthGoogleStartPage })));
+const OAuthGoogleErrorPage = lazy(() => import('./pages/OAuthGoogleErrorPage').then((m) => ({ default: m.OAuthGoogleErrorPage })));
+const AccountLinkingPage = lazy(() => import('./pages/AccountLinkingPage').then((m) => ({ default: m.AccountLinkingPage })));
 const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
 export function App() {
@@ -40,6 +43,10 @@ export function App() {
         {/* Public: recovery is for users who cannot sign in. */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Public: the Google OAuth flow happens while signed out. */}
+        <Route path="/oauth/google" element={<OAuthGoogleStartPage />} />
+        <Route path="/oauth/google/error" element={<OAuthGoogleErrorPage />} />
+        <Route path="/oauth/google/link" element={<AccountLinkingPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
