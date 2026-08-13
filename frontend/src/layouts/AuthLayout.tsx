@@ -26,9 +26,9 @@ export function AuthLayout({
         <div className="auth-card-glow" aria-hidden="true" />
         {brand && (
           <header className="auth-head">
-            <span className="auth-logo">
-              <BrandMark size={24} />
-            </span>
+            {/* The colour mark replaces the old accent circle — the header is
+                the brand lockup: mark over wordmark. */}
+            <BrandMark size={52} variant="color" />
             <h1 className="auth-title">Vision Map</h1>
             {subtitle && <h2 className="auth-subtitle">{subtitle}</h2>}
           </header>

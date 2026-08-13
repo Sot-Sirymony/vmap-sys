@@ -25,5 +25,13 @@ public enum InterfaceStyle {
      * gradient-washed cards, pill navigation, a sidebar search affordance and a
      * greeting header in place of breadcrumbs.
      */
-    MODERN
+    MODERN,
+
+    /**
+     * Frosted translucent panels: backdrop-blurred glass surfaces with a
+     * specular top edge, capsule-leaning corners, deep floating shadows.
+     * Suppressed by high contrast in the frontend — translucency is the one
+     * shape treatment that can cost legibility.
+     */
+    LIQUID_GLASS
 }

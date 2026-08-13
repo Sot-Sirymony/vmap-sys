@@ -907,12 +907,12 @@ export function toneFromStored(stored: string): BackgroundToneId {
  * `modern` is the baseline every surface is designed against; `classic` is the
  * Fluent 2 treatment the app shipped with, kept as a flatter, denser opt-in.
  */
-export type InterfaceStyleId = 'classic' | 'modern';
+export type InterfaceStyleId = 'classic' | 'modern' | 'liquidGlass';
 
 export type InterfaceStyleDefinition = {
   id: InterfaceStyleId;
   /** Backend enum name. */
-  stored: 'CLASSIC' | 'MODERN';
+  stored: 'CLASSIC' | 'MODERN' | 'LIQUID_GLASS';
   label: string;
   description: string;
 };
@@ -929,6 +929,12 @@ export const interfaceStyles: InterfaceStyleDefinition[] = [
     stored: 'MODERN',
     label: 'Modern',
     description: 'Rounded cards, soft shadows, pill navigation (default)',
+  },
+  {
+    id: 'liquidGlass',
+    stored: 'LIQUID_GLASS',
+    label: 'Liquid Glass',
+    description: 'Frosted translucent panels that float over your background',
   },
 ];
 
@@ -965,6 +971,18 @@ export type StyleShape = {
   cardWash: string;
   /** Tighter tracking on headings, which reads as intentional at large sizes. */
   headingLetterSpacing: string;
+  /**
+   * Liquid Glass only — the translucency channel. A card surface as a
+   * color-mix of `var(--card)` toward transparent, the backdrop-filter that
+   * frosts what shows through it, and the specular border that replaces the
+   * neutral stroke. All three are absent on opaque styles, and buildTheme
+   * skips them entirely under high contrast: translucency is the one shape
+   * treatment that can cost legibility, so the accessibility toggle wins
+   * (the same rule the tones and the background image follow).
+   */
+  cardBackground?: string;
+  cardBackdropFilter?: string;
+  cardBorderColor?: string;
 };
 
 export function styleShape(style: InterfaceStyleId, mode: 'light' | 'dark'): StyleShape {
@@ -989,6 +1007,36 @@ export function styleShape(style: InterfaceStyleId, mode: 'light' | 'dark'): Sty
         : '0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20)',
       cardWash: `linear-gradient(160deg, color-mix(in srgb, var(--primary) ${dark ? 7 : 5}%, transparent) 0%, transparent 42%)`,
       headingLetterSpacing: '-0.018em',
+    };
+  }
+
+  if (style === 'liquidGlass') {
+    // The core Liquid Glass vocabulary, in web terms: frosted translucent
+    // panels (backdrop blur + saturation), capsule-leaning corners one step
+    // rounder than Modern, a specular top edge drawn as an inset highlight
+    // in every shadow, and deep soft drop shadows so the panels read as
+    // floating layers. The highlight is achromatic white-alpha — like a
+    // shadow, it carries no hue of its own (BR-14).
+    return {
+      radius: 14,
+      pillRadius: 999,
+      cardRadius: 22,
+      cardShadow: dark
+        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px -6px rgba(0, 0, 0, 0.55)'
+        : 'inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 10px 30px -6px rgba(16, 24, 40, 0.16)',
+      popoverShadow: dark
+        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 44px -8px rgba(0, 0, 0, 0.60)'
+        : 'inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 16px 44px -8px rgba(16, 24, 40, 0.20)',
+      dialogShadow: dark
+        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 32px 72px -12px rgba(0, 0, 0, 0.70)'
+        : 'inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 28px 64px -12px rgba(16, 24, 40, 0.26)',
+      cardWash: `linear-gradient(160deg, color-mix(in srgb, var(--primary) ${dark ? 8 : 6}%, transparent) 0%, transparent 45%)`,
+      headingLetterSpacing: '-0.018em',
+      cardBackground: dark
+        ? 'color-mix(in srgb, var(--card) 66%, transparent)'
+        : 'color-mix(in srgb, var(--card) 60%, transparent)',
+      cardBackdropFilter: 'blur(18px) saturate(1.7)',
+      cardBorderColor: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.55)',
     };
   }
 
@@ -1529,10 +1577,20 @@ export function buildTheme(
         defaultProps: { elevation: 0 },
         styleOverrides: {
           root: {
-            border: `1px solid ${border}`,
+            border: `1px solid ${!highContrast && shape.cardBorderColor ? shape.cardBorderColor : border}`,
             borderRadius: shape.cardRadius,
             boxShadow: shape.cardShadow,
             backgroundImage: shape.cardWash,
+            // Liquid Glass: the frosted surface. Skipped under high contrast —
+            // translucency is the one shape treatment that can cost
+            // legibility, so the accessibility toggle keeps surfaces solid.
+            ...(!highContrast && shape.cardBackground
+              ? {
+                  backgroundColor: shape.cardBackground,
+                  backdropFilter: shape.cardBackdropFilter,
+                  WebkitBackdropFilter: shape.cardBackdropFilter,
+                }
+              : {}),
           },
         },
       },
@@ -1556,6 +1614,13 @@ export function buildTheme(
             borderRadius: shape.cardRadius,
             boxShadow: shape.dialogShadow,
             backgroundImage: 'none',
+            ...(!highContrast && shape.cardBackground
+              ? {
+                  backgroundColor: shape.cardBackground,
+                  backdropFilter: shape.cardBackdropFilter,
+                  WebkitBackdropFilter: shape.cardBackdropFilter,
+                }
+              : {}),
           },
         },
       },
@@ -1571,6 +1636,13 @@ export function buildTheme(
           paper: {
             boxShadow: shape.popoverShadow,
             backgroundImage: 'none',
+            ...(!highContrast && shape.cardBackground
+              ? {
+                  backgroundColor: shape.cardBackground,
+                  backdropFilter: shape.cardBackdropFilter,
+                  WebkitBackdropFilter: shape.cardBackdropFilter,
+                }
+              : {}),
           },
         },
       },

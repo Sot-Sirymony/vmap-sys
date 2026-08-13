@@ -157,7 +157,9 @@ export function Header() {
   const navigate = useNavigate();
   const { toggle } = useSidebarState();
   const { settings } = useThemeSettings();
-  const modern = settings.interfaceStyle === 'modern';
+  // Liquid Glass builds on the Modern chrome (greeting header, not
+  // breadcrumbs) — Classic is the only style that swaps the anatomy.
+  const modern = settings.interfaceStyle !== 'classic';
   // FR-38.1: the "Report an issue" affordance lives in the header, so it's
   // reachable from every authenticated page without leaving the current one.
   const [reportOpen, setReportOpen] = useState(false);

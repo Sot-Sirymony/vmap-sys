@@ -512,6 +512,48 @@
   --background-subtle: #201E1C;
 }
 
+/* Device-local background image (Appearance → Background image). The image
+   lives on its own fixed layer behind the content — a pseudo-element rather
+   than the body background, so the contrast() filter reaches only the
+   picture, never the app. The scrim (a gradient of the active tone's page
+   colour at --bg-wash percent) sits in the same layer, so text rendered
+   directly on the canvas keeps most of its contrast, and cards (opaque
+   surfaces) are unaffected entirely. All three variables are set inline by
+   ThemeModeProvider. Paint order inside body: its own background colour
+   first, then this negative-z layer, then the content — so the image sits
+   between canvas and content exactly like a wallpaper. */
+/* isolation makes body its own stacking context. Without it the negative-z
+   pseudo-element paints in the ROOT context — behind body's opaque background
+   colour — and the image is drawn but never visible. With it, body's paint
+   order becomes: own background, then this layer, then content. */
+:root[data-bg-image] body {
+  isolation: isolate;
+}
+
+:root[data-bg-image] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--page) calc(var(--bg-wash, 85) * 1%), transparent),
+      color-mix(in srgb, var(--page) calc(var(--bg-wash, 85) * 1%), transparent)
+    ),
+    var(--bg-image);
+  background-size: cover;
+  background-position: center;
+  filter: contrast(calc(var(--bg-contrast, 100) * 1%));
+}
+
+/* The accessibility mode outranks the decoration (same rule as the tones,
+   FR-40.5): high contrast removes the image rather than washing it, and
+   switching high contrast off restores it exactly. */
+:root[data-contrast="high"] body::before {
+  display: none;
+}
+
 /*
  * FR-39.3 — High contrast. An independent toggle, not a theme: it composes with
  * whichever mode is active, so the two blocks below are "light, stronger" and
@@ -654,6 +696,54 @@
   --shadow-4: 0 1.6px 3.6px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06);
   --shadow-8: 0 3.2px 7.2px rgba(0,0,0,0.13), 0 0.6px 1.8px rgba(0,0,0,0.08);
   --shadow-16: 0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.08);
+}
+
+/* FR-48 third style — Liquid Glass. Same two-channel arrangement as Classic:
+   these tokens mirror styleShape('liquidGlass', …) in theme.ts, and the two
+   must change together. Corners go one step rounder than Modern, and every
+   shadow carries a specular top edge (an inset white-alpha highlight — hueless,
+   like a shadow) over a deep soft drop, so panels read as floating glass.
+   The --glass-* tokens carry the translucency channel for hand-written
+   surfaces; MUI surfaces get the same values through buildTheme. */
+:root[data-style="liquidGlass"] {
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 6px 18px -6px rgba(16, 24, 40, 0.12);
+  --shadow-4: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 10px 30px -6px rgba(16, 24, 40, 0.16);
+  --shadow-8: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 16px 44px -8px rgba(16, 24, 40, 0.20);
+  --shadow-16: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 28px 64px -12px rgba(16, 24, 40, 0.26);
+  --glass-surface: color-mix(in srgb, var(--card) 60%, transparent);
+  --glass-blur: blur(18px) saturate(1.7);
+  --glass-border: rgba(255, 255, 255, 0.55);
+}
+
+:root[data-theme="dark"][data-style="liquidGlass"] {
+  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 18px -6px rgba(0, 0, 0, 0.45);
+  --shadow-4: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px -6px rgba(0, 0, 0, 0.55);
+  --shadow-8: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 44px -8px rgba(0, 0, 0, 0.60);
+  --shadow-16: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 32px 72px -12px rgba(0, 0, 0, 0.70);
+  --glass-surface: color-mix(in srgb, var(--card) 66%, transparent);
+  --glass-border: rgba(255, 255, 255, 0.12);
+}
+
+/* The frosted treatment for hand-written surfaces and the sidebar. Guarded by
+   :not([data-contrast="high"]): translucency is the one shape treatment that
+   can cost legibility, so high contrast keeps every surface solid — the same
+   rule the tones and the background image follow. buildTheme applies the same
+   guard to MUI's Card, Dialog, and Popover. */
+:root[data-style="liquidGlass"]:not([data-contrast="high"]) .metric-card,
+:root[data-style="liquidGlass"]:not([data-contrast="high"]) .empty-state,
+:root[data-style="liquidGlass"]:not([data-contrast="high"]) .auth-card,
+:root[data-style="liquidGlass"]:not([data-contrast="high"]) .kanban-column,
+:root[data-style="liquidGlass"]:not([data-contrast="high"]) .MuiDrawer-paper {
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
 }
 
 .text-muted-foreground {

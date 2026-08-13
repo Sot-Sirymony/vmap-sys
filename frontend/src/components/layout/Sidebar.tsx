@@ -104,19 +104,10 @@ function SidebarSearch() {
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
     <Toolbar sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2 }}>
-      <Box
-        sx={{
-          width: 32,
-          height: 32,
-          borderRadius: 1.5,
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <BrandMark size={20} />
+      {/* The colour mark carries its own palette now, so it sits directly on
+          the sidebar instead of inside an accent tile. */}
+      <Box sx={{ display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+        <BrandMark size={26} variant="color" />
       </Box>
       {!collapsed && (
         <Box sx={{ overflow: 'hidden' }}>
@@ -306,7 +297,9 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
 
 function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
   const { settings } = useThemeSettings();
-  const modern = settings.interfaceStyle === 'modern';
+  // Liquid Glass builds on the Modern chrome (search pill, workspace card) —
+  // Classic is the only style that swaps the navigation anatomy.
+  const modern = settings.interfaceStyle !== 'classic';
 
   return (
     <Box component="nav" aria-label="Sidebar" sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

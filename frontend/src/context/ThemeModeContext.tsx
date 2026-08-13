@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { accentOptions, buildTheme, fontStack, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type InterfaceStyleId, type StoredThemePreset } from '../theme';
+import { accentOptions, backgroundTones, buildTheme, fontFamilies, fontStack, interfaceStyles, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type InterfaceStyleId, type StoredThemePreset } from '../theme';
 import { loadFont } from '../fonts';
 import { getAppearancePreferences, updateAppearancePreferences } from '../api/preferencesApi';
 import { toSettings, toWire } from './appearance-mapping';
@@ -79,14 +79,73 @@ const DEFAULT_SETTINGS: ThemeSettings = {
   reduceMotion: false,
 };
 
-/** Tone ids this build understands, for validating what comes out of storage. */
-const KNOWN_TONES = new Set<BackgroundToneId>(['neutral', 'warm', 'cool', 'soft', 'tinted', 'flat']);
+/**
+ * The ids this build understands, for validating what comes out of storage.
+ * Derived from the registries rather than written out: a hand-typed list here
+ * silently dropped the ten FR-40 tone additions and the three new fonts from
+ * the local cache on reload — the account round-trip corrected it a moment
+ * later, but every cold start flashed the default first.
+ */
+const KNOWN_TONES = new Set<BackgroundToneId>(backgroundTones.map((tone) => tone.id));
+const KNOWN_FONTS = new Set<FontFamilyId>(fontFamilies.map((font) => font.id));
+const KNOWN_STYLES = new Set<InterfaceStyleId>(interfaceStyles.map((style) => style.id));
 
-/** Fonts this build understands, for validating what comes out of storage. */
-const KNOWN_FONTS = new Set<FontFamilyId>(['system', 'publicSans', 'inter', 'dmSans', 'nunitoSans']);
+/**
+ * The device-local background image (Appearance → Background image). A data
+ * URL in localStorage, deliberately NOT part of ThemeSettings: the account
+ * payload is a set of enum names, and a multi-megabyte image does not belong
+ * in it — so this stays a per-device decoration, like a desktop wallpaper.
+ */
+const BG_IMAGE_KEY = 'vms-bg-image';
+const BG_WASH_KEY = 'vms-bg-image-wash';
+const BG_CONTRAST_KEY = 'vms-bg-image-contrast';
+/** % of the tone's page colour in the scrim laid over the image (0–95).
+    0 means no scrim at all — the image fully visible, the user's explicit
+    call; 95 leaves only a hint of it. */
+const DEFAULT_BG_WASH = 85;
+/** CSS contrast() applied to the image layer, as a percentage (50–150). */
+const DEFAULT_BG_CONTRAST = 100;
 
-/** Styles this build understands, for validating what comes out of storage. */
-const KNOWN_STYLES = new Set<InterfaceStyleId>(['classic', 'modern']);
+function clampWash(value: number): number {
+  return Math.min(95, Math.max(0, Math.round(value)));
+}
+
+function clampContrast(value: number): number {
+  return Math.min(150, Math.max(50, Math.round(value)));
+}
+
+function initialBackgroundImage(): string | null {
+  try {
+    return localStorage.getItem(BG_IMAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function initialBackgroundWash(): number {
+  try {
+    // Null-checked before Number(): Number(null) is 0, which is now a LEGAL
+    // wash value (fully visible image), so "no stored value" must not be
+    // mistaken for it.
+    const raw = localStorage.getItem(BG_WASH_KEY);
+    if (raw === null) {
+      return DEFAULT_BG_WASH;
+    }
+    const stored = Number(raw);
+    return Number.isFinite(stored) ? clampWash(stored) : DEFAULT_BG_WASH;
+  } catch {
+    return DEFAULT_BG_WASH;
+  }
+}
+
+function initialBackgroundContrast(): number {
+  try {
+    const stored = Number(localStorage.getItem(BG_CONTRAST_KEY));
+    return Number.isFinite(stored) && stored > 0 ? clampContrast(stored) : DEFAULT_BG_CONTRAST;
+  } catch {
+    return DEFAULT_BG_CONTRAST;
+  }
+}
 
 /** How long to wait before saving, so dragging through swatches sends one request. */
 const SAVE_DEBOUNCE_MS = 600;
@@ -107,6 +166,15 @@ type ThemeSettingsContextValue = {
    * and cached locally (BR-33) — this only lets the UI say so honestly.
    */
   saveError: string | null;
+  /** Device-local background image as a data URL, or null when none is set. */
+  backgroundImage: string | null;
+  /** Scrim strength over the image: % of the page colour, 0–95. */
+  backgroundWash: number;
+  /** contrast() on the image layer as a percentage, 50–150 (100 = as shot). */
+  backgroundContrast: number;
+  setBackgroundImage: (dataUrl: string | null) => void;
+  setBackgroundWash: (wash: number) => void;
+  setBackgroundContrast: (contrast: number) => void;
 };
 
 const ThemeSettingsContext = createContext<ThemeSettingsContextValue>({
@@ -117,6 +185,12 @@ const ThemeSettingsContext = createContext<ThemeSettingsContextValue>({
   applyPreset: () => undefined,
   reset: () => undefined,
   saveError: null,
+  backgroundImage: null,
+  backgroundWash: DEFAULT_BG_WASH,
+  backgroundContrast: DEFAULT_BG_CONTRAST,
+  setBackgroundImage: () => undefined,
+  setBackgroundWash: () => undefined,
+  setBackgroundContrast: () => undefined,
 });
 
 function initialSettings(): ThemeSettings {
@@ -175,6 +249,9 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<ThemeSettings>(initialSettings);
   const [osPrefersDark, setOsPrefersDark] = useState(systemPrefersDark);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [backgroundImage, setBackgroundImageState] = useState<string | null>(initialBackgroundImage);
+  const [backgroundWash, setBackgroundWashState] = useState<number>(initialBackgroundWash);
+  const [backgroundContrast, setBackgroundContrastState] = useState<number>(initialBackgroundContrast);
 
   /**
    * The last payload known to match the account, as a comparable string. The
@@ -331,6 +408,26 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--sidebar-ring', accentMain);
   }, [settings, resolvedMode]);
 
+  // The device-local background image. The attribute drives global.css's
+  // `[data-bg-image]` rule; the scrim keeps canvas text legible, and a
+  // separate `[data-contrast="high"]` rule removes the image entirely —
+  // the accessibility mode outranks the decoration (same shape as FR-40.5),
+  // and switching high contrast off restores it exactly.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (backgroundImage) {
+      root.dataset.bgImage = 'on';
+      root.style.setProperty('--bg-image', `url("${backgroundImage}")`);
+      root.style.setProperty('--bg-wash', String(backgroundWash));
+      root.style.setProperty('--bg-contrast', String(backgroundContrast));
+    } else {
+      delete root.dataset.bgImage;
+      root.style.removeProperty('--bg-image');
+      root.style.removeProperty('--bg-wash');
+      root.style.removeProperty('--bg-contrast');
+    }
+  }, [backgroundImage, backgroundWash, backgroundContrast]);
+
   // FR-42.2: fetch the font files only once a font is actually chosen. The
   // stack already names the face, so the browser applies it the moment the
   // @font-face rules arrive; until then it renders the system fallback rather
@@ -405,6 +502,40 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     setSettings(DEFAULT_SETTINGS);
   }, []);
 
+  const setBackgroundImage = useCallback((dataUrl: string | null) => {
+    setBackgroundImageState(dataUrl);
+    try {
+      if (dataUrl) {
+        localStorage.setItem(BG_IMAGE_KEY, dataUrl);
+      } else {
+        localStorage.removeItem(BG_IMAGE_KEY);
+      }
+    } catch {
+      // Quota exceeded: the image still applies for this session — losing it
+      // on reload is a better outcome than refusing the choice.
+    }
+  }, []);
+
+  const setBackgroundWash = useCallback((wash: number) => {
+    const clamped = clampWash(wash);
+    setBackgroundWashState(clamped);
+    try {
+      localStorage.setItem(BG_WASH_KEY, String(clamped));
+    } catch {
+      // Same best-effort stance as the image itself.
+    }
+  }, []);
+
+  const setBackgroundContrast = useCallback((contrast: number) => {
+    const clamped = clampContrast(contrast);
+    setBackgroundContrastState(clamped);
+    try {
+      localStorage.setItem(BG_CONTRAST_KEY, String(clamped));
+    } catch {
+      // Same best-effort stance as the image itself.
+    }
+  }, []);
+
   const value = useMemo<ThemeSettingsContextValue>(
     () => ({
       settings,
@@ -414,8 +545,14 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
       applyPreset,
       reset,
       saveError,
+      backgroundImage,
+      backgroundWash,
+      backgroundContrast,
+      setBackgroundImage,
+      setBackgroundWash,
+      setBackgroundContrast,
     }),
-    [settings, resolvedMode, update, applyPreset, reset, saveError],
+    [settings, resolvedMode, update, applyPreset, reset, saveError, backgroundImage, backgroundWash, backgroundContrast, setBackgroundImage, setBackgroundWash, setBackgroundContrast],
   );
 
   return (

@@ -5,12 +5,14 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Slider from '@mui/material/Slider';
 import Switch from '@mui/material/Switch';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useEffect } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
+import { fileToBackgroundDataUrl, MAX_BACKGROUND_DATA_URL_LENGTH } from '../utils/backgroundImage';
 import { Check, Monitor, Moon, Sun } from 'lucide-react';
 import { loadFont } from '../fonts';
 import { PageSection } from './PageSection';
@@ -128,7 +130,28 @@ function SettingGroup({ title, hint, children }: { title: string; hint: string; 
  * like, because it is rendered by the same components reading the same theme.
  */
 export function AppearanceSettingsPage() {
-  const { settings, resolvedMode, preset, update, applyPreset, reset, saveError } = useThemeSettings();
+  const { settings, resolvedMode, preset, update, applyPreset, reset, saveError, backgroundImage, backgroundWash, backgroundContrast, setBackgroundImage, setBackgroundWash, setBackgroundContrast } = useThemeSettings();
+  const [imageError, setImageError] = useState('');
+
+  async function onPickBackgroundImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Cleared so picking the same file again still fires a change event.
+    event.target.value = '';
+    if (!file) {
+      return;
+    }
+    setImageError('');
+    try {
+      const dataUrl = await fileToBackgroundDataUrl(file);
+      if (dataUrl.length > MAX_BACKGROUND_DATA_URL_LENGTH) {
+        setImageError('That image is too large even after compression — try a smaller one.');
+        return;
+      }
+      setBackgroundImage(dataUrl);
+    } catch {
+      setImageError('Could not read that file as an image.');
+    }
+  }
 
   // The font cards render each face in itself, but ThemeModeProvider only
   // fetches the SELECTED font — so on this page (and only here) all of them
@@ -368,6 +391,92 @@ export function AppearanceSettingsPage() {
                   </Box>
                 );
               })}
+            </Box>
+          </SettingGroup>
+
+          <SettingGroup
+            title="Background image"
+            hint={
+              settings.highContrast
+                ? 'Paused while high contrast is on — the image is removed so text stays maximally legible. It comes back when high contrast is switched off.'
+                : 'Your own picture behind the app — stored on this device only, never uploaded. A wash of the page colour keeps text readable.'
+            }
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-start' }}>
+              {backgroundImage && (
+                <Box
+                  component="img"
+                  src={backgroundImage}
+                  alt="Current background image"
+                  sx={{
+                    width: 240,
+                    height: 135,
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    opacity: settings.highContrast ? 0.5 : 1,
+                  }}
+                />
+              )}
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button variant="outlined" size="small" component="label" disabled={settings.highContrast}>
+                  {backgroundImage ? 'Replace image' : 'Browse image'}
+                  <input hidden type="file" accept="image/*" onChange={onPickBackgroundImage} />
+                </Button>
+                {backgroundImage && (
+                  <Button size="small" color="error" onClick={() => setBackgroundImage(null)}>
+                    Remove
+                  </Button>
+                )}
+              </Box>
+              {backgroundImage && !settings.highContrast && (
+                <Box sx={{ width: 260, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" id="bg-image-strength-label">
+                    Image visibility — {100 - backgroundWash}%
+                  </Typography>
+                  {/* The slider shows how visible the image is; the stored value
+                      is the scrim's opacity, so the two run in opposite
+                      directions (visibility 5–100 ↔ wash 95–0). 100% means no
+                      wash at all — the user's explicit call. */}
+                  <Slider
+                    size="small"
+                    min={5}
+                    max={100}
+                    step={5}
+                    value={100 - backgroundWash}
+                    onChange={(_, value) => typeof value === 'number' && setBackgroundWash(100 - value)}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(value) => `${value}%`}
+                    aria-labelledby="bg-image-strength-label"
+                  />
+                  {100 - backgroundWash > 60 && (
+                    <Typography variant="caption" color="text.secondary">
+                      At high visibility, text sitting directly on the page canvas may be harder to
+                      read over busy parts of the picture. Cards stay solid either way.
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary" id="bg-image-contrast-label">
+                    Image contrast — {backgroundContrast}% {backgroundContrast === 100 ? '(as shot)' : ''}
+                  </Typography>
+                  {/* CSS contrast() on the image layer only — 100% is the photo
+                      as shot, below softens it further, above makes it punchier.
+                      The app's own text is never touched by this filter. */}
+                  <Slider
+                    size="small"
+                    min={50}
+                    max={150}
+                    step={5}
+                    value={backgroundContrast}
+                    onChange={(_, value) => typeof value === 'number' && setBackgroundContrast(value)}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(value) => `${value}%`}
+                    marks={[{ value: 100 }]}
+                    aria-labelledby="bg-image-contrast-label"
+                  />
+                </Box>
+              )}
+              {imageError && <Typography variant="caption" color="error">{imageError}</Typography>}
             </Box>
           </SettingGroup>
 

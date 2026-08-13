@@ -42,8 +42,8 @@ function normalise(value: string): string {
 const RADIUS_SCALE = ['--radius-sm', '--radius-md', '--radius-lg', '--radius-xl', '--radius-pill'];
 
 describe('interface style (FR-48)', () => {
-  it('exposes exactly the two styles the backend enum stores', () => {
-    expect(interfaceStyles.map((style) => style.stored)).toEqual(['CLASSIC', 'MODERN']);
+  it('exposes exactly the three styles the backend enum stores', () => {
+    expect(interfaceStyles.map((style) => style.stored)).toEqual(['CLASSIC', 'MODERN', 'LIQUID_GLASS']);
   });
 
   /**
@@ -73,9 +73,11 @@ describe('interface style (FR-48)', () => {
     // Modern is the baseline, so its radius is the base :root token…
     expect(blockVars(':root').get('--radius'))
       .toBe(`${styleShape('modern', 'light').radius}px`);
-    // …and Classic restores its own in the override block.
+    // …and each opt-in style restores its own in its override block.
     expect(blockVars(':root[data-style="classic"]').get('--radius'))
       .toBe(`${styleShape('classic', 'light').radius}px`);
+    expect(blockVars(':root[data-style="liquidGlass"]').get('--radius'))
+      .toBe(`${styleShape('liquidGlass', 'light').radius}px`);
   });
 
   /**
@@ -91,10 +93,15 @@ describe('interface style (FR-48)', () => {
     // Classic's Fluent shadows are mode-independent, so one block covers both.
     expect(normalise(blockVars(':root[data-style="classic"]').get('--shadow-4') ?? ''))
       .toBe(normalise(styleShape('classic', 'light').cardShadow));
+    // Liquid Glass shadows differ per mode, so it has a dark twin block.
+    expect(normalise(blockVars(':root[data-style="liquidGlass"]').get('--shadow-4') ?? ''))
+      .toBe(normalise(styleShape('liquidGlass', 'light').cardShadow));
+    expect(normalise(blockVars(':root[data-theme="dark"][data-style="liquidGlass"]').get('--shadow-4') ?? ''))
+      .toBe(normalise(styleShape('liquidGlass', 'dark').cardShadow));
   });
 
   it('declares all four elevation tiers in every shadow-bearing block', () => {
-    for (const selector of [':root', '[data-theme="dark"]', ':root[data-style="classic"]']) {
+    for (const selector of [':root', '[data-theme="dark"]', ':root[data-style="classic"]', ':root[data-style="liquidGlass"]', ':root[data-theme="dark"][data-style="liquidGlass"]']) {
       const declared = blockVars(selector);
       for (const tier of ['--shadow-2', '--shadow-4', '--shadow-8', '--shadow-16']) {
         expect(declared.has(tier), `${tier} missing from ${selector}`).toBe(true);
@@ -108,12 +115,14 @@ describe('interface style (FR-48)', () => {
    * declares every tier, and Classic must re-declare every tier — a partial
    * override would leave some corners modern in Classic mode.
    */
-  it('declares the full radius scale in the base and re-declares it for Classic', () => {
+  it('declares the full radius scale in the base and re-declares it per opt-in style', () => {
     const base = blockVars(':root');
     const classic = blockVars(':root[data-style="classic"]');
+    const glass = blockVars(':root[data-style="liquidGlass"]');
     for (const tier of RADIUS_SCALE) {
       expect(base.has(tier), `${tier} missing from base :root`).toBe(true);
       expect(classic.has(tier), `${tier} missing from the Classic override`).toBe(true);
+      expect(glass.has(tier), `${tier} missing from the Liquid Glass override`).toBe(true);
     }
   });
 
@@ -123,7 +132,7 @@ describe('interface style (FR-48)', () => {
    * an alpha, and it carries no meaning a user could misread as a status.
    */
   it('introduces no colour of its own', () => {
-    for (const style of ['classic', 'modern'] as InterfaceStyleId[]) {
+    for (const style of interfaceStyles.map((entry) => entry.id) as InterfaceStyleId[]) {
       for (const mode of ['light', 'dark'] as const) {
         const shape = styleShape(style, mode);
         const colourBearing = [shape.cardWash, shape.headingLetterSpacing].join(' ');

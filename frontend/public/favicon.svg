@@ -1,11 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Same geometry as BrandMark.tsx (root branching into two nodes), on the
-       fixed navy tile the auth hero uses. Keep the two in step. -->
-  <rect width="64" height="64" rx="14" fill="#17324d"/>
-  <g transform="translate(8 8) scale(2)" fill="#ffffff">
-    <path d="M12 5.5 5.5 18.5M12 5.5l6.5 13" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-    <circle cx="12" cy="5.5" r="3"/>
-    <circle cx="5.5" cy="18.5" r="2.7"/>
-    <circle cx="18.5" cy="18.5" r="2.7"/>
+  <!-- The VM mark (see public/brand/vm-mark.svg) on the brand's dark navy
+       tile. Keep in step with BrandMark.tsx. -->
+  <defs>
+    <linearGradient id="fgv" x1="0" y1="1" x2="0.7" y2="0">
+      <stop offset="0" stop-color="#0E8F87"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="fga" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#84CC16"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#242B39"/>
+  <g transform="translate(6 12) scale(0.084)">
+    <path d="M58,150 L166,436 L320,162" fill="none" stroke="url(#fgv)" stroke-width="56" stroke-linejoin="miter"/>
+    <polygon points="369,75 276,138 364,187" fill="url(#fga)"/>
+    <path d="M300,326 L344,252 L386,306 L430,216" fill="none" stroke="url(#fga)" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="344" cy="252" r="25" fill="#14B8A6"/>
+    <circle cx="430" cy="216" r="25" fill="#84CC16"/>
+    <rect x="466" y="252" width="54" height="188" rx="10" fill="#84CC16"/>
+    <polygon points="530,64 543,103 584,103 551,127 563,166 530,142 497,166 509,127 476,103 517,103" fill="#84CC16"/>
   </g>
 </svg>

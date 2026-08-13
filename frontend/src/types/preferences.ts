@@ -77,7 +77,7 @@ export type StoredBackgroundTone =
   | 'STONE';
 
 /** FR-48 — shape and chrome, orthogonal to every colour setting above. */
-export type StoredInterfaceStyle = 'CLASSIC' | 'MODERN';
+export type StoredInterfaceStyle = 'CLASSIC' | 'MODERN' | 'LIQUID_GLASS';
 
 export type StoredPreset =
   | 'FLUENT_SYSTEM'

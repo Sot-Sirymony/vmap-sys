@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 480" role="img" aria-label="Vision Map mark (white)">
+  <path d="M58,150 L166,436 L320,162" fill="none" stroke="#ffffff" stroke-width="56" stroke-linejoin="miter"/>
+  <polygon points="369,75 276,138 364,187" fill="#ffffff"/>
+  <path d="M300,326 L344,252 L386,306 L430,216" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="344" cy="252" r="25" fill="#ffffff"/>
+  <circle cx="430" cy="216" r="25" fill="#ffffff"/>
+  <rect x="466" y="252" width="54" height="188" rx="10" fill="#ffffff"/>
+  <polygon points="530,64 543,103 584,103 551,127 563,166 530,142 497,166 509,127 476,103 517,103" fill="#ffffff"/>
+</svg>
