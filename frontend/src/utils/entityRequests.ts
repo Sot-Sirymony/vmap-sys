@@ -20,6 +20,14 @@ export const dreamRequest = (dream: Dream): DreamRequest => ({
   moonshot: dream.moonshot,
   moonshotVision: dream.moonshotVision,
   scheduleMode: dream.scheduleMode,
+  decisionSkippedResearch: dream.decisionSkippedResearch,
+  decisionAssumedNoChange: dream.decisionAssumedNoChange,
+  decisionTrustedUnverifiedClaim: dream.decisionTrustedUnverifiedClaim,
+  decisionJudgedByAppearance: dream.decisionJudgedByAppearance,
+  decisionUnderTimePressure: dream.decisionUnderTimePressure,
+  decisionNoOutsideInput: dream.decisionNoOutsideInput,
+  decisionChasedEasyReward: dream.decisionChasedEasyReward,
+  decisionDismissedDisagreeingAdvice: dream.decisionDismissedDisagreeingAdvice,
 });
 
 export const goalRequest = (goal: Goal): GoalRequest => ({

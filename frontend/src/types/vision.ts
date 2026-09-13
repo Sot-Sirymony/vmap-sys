@@ -92,6 +92,19 @@ export type Dream = {
   // goal's target date now runs past this dream's fixed target date.
   scheduleOverrun: boolean;
   scheduleOverrunDetail?: string;
+  // FR-55.2: Gate A of BR-44 — an eight-item decision-prudence checklist,
+  // relevant only for a High/Critical-priority Moonshot dream. "Answered"
+  // means non-null regardless of value; never scored (FR-55.4).
+  decisionSkippedResearch?: boolean | null;
+  decisionAssumedNoChange?: boolean | null;
+  decisionTrustedUnverifiedClaim?: boolean | null;
+  decisionJudgedByAppearance?: boolean | null;
+  decisionUnderTimePressure?: boolean | null;
+  decisionNoOutsideInput?: boolean | null;
+  decisionChasedEasyReward?: boolean | null;
+  decisionDismissedDisagreeingAdvice?: boolean | null;
+  // FR-55.4: non-null once BR-44's gate has cleared; never re-fires after.
+  decisionGateClearedAt?: string | null;
   archived: boolean;
 };
 
@@ -108,6 +121,14 @@ export type DreamRequest = {
   moonshot: boolean;
   moonshotVision?: string;
   scheduleMode: ScheduleMode;
+  decisionSkippedResearch?: boolean | null;
+  decisionAssumedNoChange?: boolean | null;
+  decisionTrustedUnverifiedClaim?: boolean | null;
+  decisionJudgedByAppearance?: boolean | null;
+  decisionUnderTimePressure?: boolean | null;
+  decisionNoOutsideInput?: boolean | null;
+  decisionChasedEasyReward?: boolean | null;
+  decisionDismissedDisagreeingAdvice?: boolean | null;
 };
 
 export type Goal = {

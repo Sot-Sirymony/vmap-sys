@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -87,6 +88,38 @@ public class Dream extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "schedule_mode", nullable = false, length = 20)
     private ScheduleMode scheduleMode = ScheduleMode.BOTTOM_UP;
+
+    // FR-55.2: Gate A of BR-44 — an eight-item, originally-worded decision
+    // checklist. "Answered" means non-null regardless of value; the answers
+    // are diagnostic and never scored (FR-55.4).
+    @Column(name = "decision_skipped_research")
+    private Boolean decisionSkippedResearch;
+
+    @Column(name = "decision_assumed_no_change")
+    private Boolean decisionAssumedNoChange;
+
+    @Column(name = "decision_trusted_unverified_claim")
+    private Boolean decisionTrustedUnverifiedClaim;
+
+    @Column(name = "decision_judged_by_appearance")
+    private Boolean decisionJudgedByAppearance;
+
+    @Column(name = "decision_under_time_pressure")
+    private Boolean decisionUnderTimePressure;
+
+    @Column(name = "decision_no_outside_input")
+    private Boolean decisionNoOutsideInput;
+
+    @Column(name = "decision_chased_easy_reward")
+    private Boolean decisionChasedEasyReward;
+
+    @Column(name = "decision_dismissed_disagreeing_advice")
+    private Boolean decisionDismissedDisagreeingAdvice;
+
+    // FR-55.4: set the first time either BR-44 gate clears for this dream;
+    // a non-null value means the gate never re-fires.
+    @Column(name = "decision_gate_cleared_at")
+    private Instant decisionGateClearedAt;
 
     @Column(nullable = false)
     private boolean archived;

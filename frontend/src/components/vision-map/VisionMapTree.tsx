@@ -5,6 +5,8 @@ import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import {
   archiveDream, getDreamArchiveImpact, permanentlyDeleteDream, restoreDream, updateDream,
 } from '../../api/dreamApi';
@@ -29,7 +31,10 @@ import { useToast } from '../../context/ToastContext';
 import { dreamRequest, goalRequest, stepRequest, taskRequest } from '../../utils/entityRequests';
 import { nudgeAfterTaskComplete } from '../../utils/completionNudge';
 import { suggestPartnerFor } from '../../utils/partnerSuggestion';
-import { energyDemandLabels, obstacleTypeLabels, scheduleModeLabels } from '../../utils/enumLabels';
+import {
+  DECISION_CHECKLIST_QUESTIONS, EMPTY_DECISION_ANSWERS, energyDemandLabels, isDecisionChecklistComplete,
+  obstacleTypeLabels, scheduleModeLabels, type DecisionChecklistKey,
+} from '../../utils/enumLabels';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CrudModalForm } from '../common/CrudModalForm';
@@ -194,6 +199,10 @@ export function VisionMapTree({
   const [dreamMoonshot, setDreamMoonshot] = useState(false);
   const [dreamMoonshotVision, setDreamMoonshotVision] = useState('');
   const [dreamScheduleMode, setDreamScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
+  const [dreamDecisionAnswers, setDreamDecisionAnswers] = useState<Record<DecisionChecklistKey, boolean | null>>(EMPTY_DECISION_ANSWERS);
+  // FR-55.4: null until the BR-44 gate has cleared for this dream — that's
+  // when the checklist below is shown; once cleared, it never re-fires.
+  const [dreamDecisionGateClearedAt, setDreamDecisionGateClearedAt] = useState<string | null>(null);
   const [dreamSaving, setDreamSaving] = useState(false);
 
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
@@ -339,6 +348,16 @@ export function VisionMapTree({
   }
 
   async function changeStatus(row: RowInfo, status: string) {
+    // FR-55.1: a High/Critical moonshot dream's first move to Active needs
+    // either the checklist or two linked counselors, which the quick status
+    // dropdown can't collect — open the edit modal (pre-set to Active)
+    // instead of completing the change directly.
+    if (row.kind === 'dream' && status === 'ACTIVE' && !dream.decisionGateClearedAt
+      && dream.moonshot && (dream.priority === 'HIGH' || dream.priority === 'CRITICAL')) {
+      openDreamEdit();
+      setDreamStatusField('ACTIVE');
+      return;
+    }
     setError('');
     const id = Number(row.key.slice(1));
     try {
@@ -377,12 +396,31 @@ export function VisionMapTree({
     setDreamMoonshot(dream.moonshot);
     setDreamMoonshotVision(dream.moonshotVision ?? '');
     setDreamScheduleMode(dream.scheduleMode);
+    setDreamDecisionAnswers({
+      decisionSkippedResearch: dream.decisionSkippedResearch ?? null,
+      decisionAssumedNoChange: dream.decisionAssumedNoChange ?? null,
+      decisionTrustedUnverifiedClaim: dream.decisionTrustedUnverifiedClaim ?? null,
+      decisionJudgedByAppearance: dream.decisionJudgedByAppearance ?? null,
+      decisionUnderTimePressure: dream.decisionUnderTimePressure ?? null,
+      decisionNoOutsideInput: dream.decisionNoOutsideInput ?? null,
+      decisionChasedEasyReward: dream.decisionChasedEasyReward ?? null,
+      decisionDismissedDisagreeingAdvice: dream.decisionDismissedDisagreeingAdvice ?? null,
+    });
+    setDreamDecisionGateClearedAt(dream.decisionGateClearedAt ?? null);
     setEditingDream(true);
   }
 
   function cancelDreamEdit() {
     setEditingDream(false);
   }
+
+  // FR-55.1: same gate as DreamsPage's flat form — Gate B (two linked
+  // counselors) isn't checked here since it isn't cheaply available on this
+  // component's props; the backend enforces the real either/or rule.
+  const showDreamDecisionChecklist = !dreamDecisionGateClearedAt
+    && dreamMoonshot
+    && (dreamPriority === 'HIGH' || dreamPriority === 'CRITICAL')
+    && dreamStatusField === 'ACTIVE';
 
   async function submitDreamEdit(event: FormEvent) {
     event.preventDefault();
@@ -402,6 +440,14 @@ export function VisionMapTree({
         moonshot: dreamMoonshot,
         moonshotVision: dreamMoonshot ? dreamMoonshotVision : undefined,
         scheduleMode: dreamScheduleMode,
+        decisionSkippedResearch: dreamDecisionAnswers.decisionSkippedResearch ?? undefined,
+        decisionAssumedNoChange: dreamDecisionAnswers.decisionAssumedNoChange ?? undefined,
+        decisionTrustedUnverifiedClaim: dreamDecisionAnswers.decisionTrustedUnverifiedClaim ?? undefined,
+        decisionJudgedByAppearance: dreamDecisionAnswers.decisionJudgedByAppearance ?? undefined,
+        decisionUnderTimePressure: dreamDecisionAnswers.decisionUnderTimePressure ?? undefined,
+        decisionNoOutsideInput: dreamDecisionAnswers.decisionNoOutsideInput ?? undefined,
+        decisionChasedEasyReward: dreamDecisionAnswers.decisionChasedEasyReward ?? undefined,
+        decisionDismissedDisagreeingAdvice: dreamDecisionAnswers.decisionDismissedDisagreeingAdvice ?? undefined,
       };
       await updateDream(token, dream.id, request);
       await onDataChange();
@@ -974,6 +1020,41 @@ export function VisionMapTree({
               </Select>
             </FormControl>
           </label>
+          {showDreamDecisionChecklist && (
+            <div className="field-full diligence-checklist">
+              <strong>Before you move this moonshot dream to Active…</strong>
+              <p>
+                This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least
+                two Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page.
+                Either one clears this check.
+              </p>
+              {DECISION_CHECKLIST_QUESTIONS.map((question) => (
+                <div className="diligence-row" key={question.key}>
+                  <span>{question.label}</span>
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={dreamDecisionAnswers[question.key] === null ? '' : dreamDecisionAnswers[question.key] ? 'yes' : 'no'}
+                    onChange={(_event, value) => {
+                      if (value === null) {
+                        return;
+                      }
+                      setDreamDecisionAnswers((current) => ({ ...current, [question.key]: value === 'yes' }));
+                    }}
+                    aria-label={question.label}
+                  >
+                    <ToggleButton value="no">No</ToggleButton>
+                    <ToggleButton value="yes">Yes</ToggleButton>
+                  </ToggleButtonGroup>
+                </div>
+              ))}
+              <span className="field-hint">
+                {isDecisionChecklistComplete(dreamDecisionAnswers)
+                  ? 'All eight answered — this checklist clears the gate on save.'
+                  : `${DECISION_CHECKLIST_QUESTIONS.filter((question) => dreamDecisionAnswers[question.key] !== null).length} of ${DECISION_CHECKLIST_QUESTIONS.length} answered.`}
+              </span>
+            </div>
+          )}
           <label className="field-full">
             Why Important
             <Textarea value={dreamWhyImportant} onChange={(event) => setDreamWhyImportant(event.target.value)} />

@@ -21,6 +21,14 @@ public record DreamRequest(
         @NotNull DreamStatus status,
         boolean moonshot,
         @Size(max = 3000) String moonshotVision,
-        @NotNull ScheduleMode scheduleMode
+        @NotNull ScheduleMode scheduleMode,
+        Boolean decisionSkippedResearch,
+        Boolean decisionAssumedNoChange,
+        Boolean decisionTrustedUnverifiedClaim,
+        Boolean decisionJudgedByAppearance,
+        Boolean decisionUnderTimePressure,
+        Boolean decisionNoOutsideInput,
+        Boolean decisionChasedEasyReward,
+        Boolean decisionDismissedDisagreeingAdvice
 ) {
 }

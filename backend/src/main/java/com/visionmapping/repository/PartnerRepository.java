@@ -3,6 +3,7 @@ package com.visionmapping.repository;
 import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,6 +15,28 @@ public interface PartnerRepository extends JpaRepository<Partner, Long>, UserSco
     Page<Partner> findByUser_Id(Long userId, Pageable pageable);
 
     Page<Partner> findByUser_IdAndArchivedFalse(Long userId, Pageable pageable);
+
+    /**
+     * FR-55.3 / BR-44 Gate B: non-archived partners of the given support
+     * types linked to the dream itself, or to one of the dream's own
+     * non-archived goals. Counting the result size is the "at least two"
+     * check.
+     */
+    @Query("""
+            select p from Partner p
+            left join p.relatedDream d
+            left join p.relatedGoal g
+            left join g.dream gd
+            where p.user.id = :userId
+              and p.archived = false
+              and p.supportType in :supportTypes
+              and ((d.id = :dreamId)
+                or (gd.id = :dreamId and g.archived = false))
+            """)
+    List<Partner> findCounselorsForDream(
+            @Param("userId") Long userId,
+            @Param("dreamId") Long dreamId,
+            @Param("supportTypes") List<PartnerSupportType> supportTypes);
 
     /**
      * One query for the partner list: free-text search plus the dropdown filters.

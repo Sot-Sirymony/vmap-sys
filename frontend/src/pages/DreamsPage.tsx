@@ -11,6 +11,8 @@ import FormControl from '@mui/material/FormControl';
 import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { MoonStar, Rocket, TriangleAlert } from 'lucide-react';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
@@ -41,7 +43,10 @@ import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, ScheduleMode, VisionArea } from '../types/vision';
 import { moonshotViolet } from '../theme';
 import { dreamRequest } from '../utils/entityRequests';
-import { dreamStatusLabels, dreamTypeLabels, priorityLabels, scheduleModeLabels } from '../utils/enumLabels';
+import {
+  DECISION_CHECKLIST_QUESTIONS, dreamStatusLabels, dreamTypeLabels, EMPTY_DECISION_ANSWERS, isDecisionChecklistComplete,
+  priorityLabels, scheduleModeLabels, type DecisionChecklistKey,
+} from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
@@ -75,6 +80,11 @@ export function DreamsPage() {
   const [moonshot, setMoonshot] = useState(false);
   const [moonshotVision, setMoonshotVision] = useState('');
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
+  const [decisionAnswers, setDecisionAnswers] = useState<Record<DecisionChecklistKey, boolean | null>>(EMPTY_DECISION_ANSWERS);
+  // FR-55.4: null until the BR-44 gate has cleared for the dream being
+  // edited (or when creating a new one) — that's when the checklist below
+  // is shown; once cleared, it never re-fires.
+  const [editingDecisionGateClearedAt, setEditingDecisionGateClearedAt] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   // In the URL, not component state: the dashboard links straight into a
@@ -133,6 +143,17 @@ export function DreamsPage() {
     setGoalCounts(counts);
   }
 
+  // FR-55.1: the checklist only applies the first time a High/Critical
+  // moonshot dream moves to Active — once cleared (editingDecisionGateClearedAt
+  // set), it never re-fires, matching BR-44's "does not re-apply" behavior.
+  // Gate B (two linked Advisor/Mentor partners) isn't checked here since the
+  // frontend doesn't have that count cheaply on hand; the backend enforces
+  // the real either/or rule and its message surfaces via crud.error on save.
+  const showDecisionChecklist = !editingDecisionGateClearedAt
+    && moonshot
+    && (priority === 'HIGH' || priority === 'CRITICAL')
+    && status === 'ACTIVE';
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!visionAreaId) {
@@ -151,6 +172,14 @@ export function DreamsPage() {
       moonshot,
       moonshotVision: moonshot ? moonshotVision : undefined,
       scheduleMode,
+      decisionSkippedResearch: decisionAnswers.decisionSkippedResearch ?? undefined,
+      decisionAssumedNoChange: decisionAnswers.decisionAssumedNoChange ?? undefined,
+      decisionTrustedUnverifiedClaim: decisionAnswers.decisionTrustedUnverifiedClaim ?? undefined,
+      decisionJudgedByAppearance: decisionAnswers.decisionJudgedByAppearance ?? undefined,
+      decisionUnderTimePressure: decisionAnswers.decisionUnderTimePressure ?? undefined,
+      decisionNoOutsideInput: decisionAnswers.decisionNoOutsideInput ?? undefined,
+      decisionChasedEasyReward: decisionAnswers.decisionChasedEasyReward ?? undefined,
+      decisionDismissedDisagreeingAdvice: decisionAnswers.decisionDismissedDisagreeingAdvice ?? undefined,
     });
     if (success) {
       setTitle('');
@@ -160,6 +189,8 @@ export function DreamsPage() {
       setMoonshot(false);
       setMoonshotVision('');
       setScheduleMode('BOTTOM_UP');
+      setDecisionAnswers(EMPTY_DECISION_ANSWERS);
+      setEditingDecisionGateClearedAt(null);
     }
     return success;
   }
@@ -178,6 +209,17 @@ export function DreamsPage() {
     setMoonshot(dream.moonshot);
     setMoonshotVision(dream.moonshotVision ?? '');
     setScheduleMode(dream.scheduleMode);
+    setDecisionAnswers({
+      decisionSkippedResearch: dream.decisionSkippedResearch ?? null,
+      decisionAssumedNoChange: dream.decisionAssumedNoChange ?? null,
+      decisionTrustedUnverifiedClaim: dream.decisionTrustedUnverifiedClaim ?? null,
+      decisionJudgedByAppearance: dream.decisionJudgedByAppearance ?? null,
+      decisionUnderTimePressure: dream.decisionUnderTimePressure ?? null,
+      decisionNoOutsideInput: dream.decisionNoOutsideInput ?? null,
+      decisionChasedEasyReward: dream.decisionChasedEasyReward ?? null,
+      decisionDismissedDisagreeingAdvice: dream.decisionDismissedDisagreeingAdvice ?? null,
+    });
+    setEditingDecisionGateClearedAt(dream.decisionGateClearedAt ?? null);
   }
 
   function cancelEdit() {
@@ -193,12 +235,25 @@ export function DreamsPage() {
     setMoonshot(false);
     setMoonshotVision('');
     setScheduleMode('BOTTOM_UP');
+    setDecisionAnswers(EMPTY_DECISION_ANSWERS);
+    setEditingDecisionGateClearedAt(null);
   }
 
   // Board drag/dropdown move. There is no status PATCH endpoint for dreams, so
   // the move sends a full update built from the loaded entity.
   async function handleMove(dream: Dream, nextStatus: DreamStatus) {
     if (!token || dream.status === nextStatus) {
+      return;
+    }
+    // FR-55.1: a High/Critical moonshot dream's first move to Active needs
+    // either the checklist or two linked counselors, which a silent drag
+    // can't collect — open the edit form (pre-set to Active) instead of
+    // completing the move directly.
+    const needsDecisionGate = nextStatus === 'ACTIVE' && !dream.decisionGateClearedAt
+      && dream.moonshot && (dream.priority === 'HIGH' || dream.priority === 'CRITICAL');
+    if (needsDecisionGate) {
+      startEdit(dream);
+      setStatus('ACTIVE');
       return;
     }
     try {
@@ -449,6 +504,41 @@ export function DreamsPage() {
             : 'A real external deadline that cannot move. Goals running past it are flagged, not blocked.'}
         </span>
       </label>
+      {showDecisionChecklist && (
+        <div className="field-full diligence-checklist">
+          <strong>Before you move this moonshot dream to Active…</strong>
+          <p>
+            This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least two
+            Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page. Either one
+            clears this check — there's no right answer here, only an honest one.
+          </p>
+          {DECISION_CHECKLIST_QUESTIONS.map((question) => (
+            <div className="diligence-row" key={question.key}>
+              <span>{question.label}</span>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={decisionAnswers[question.key] === null ? '' : decisionAnswers[question.key] ? 'yes' : 'no'}
+                onChange={(_event, value) => {
+                  if (value === null) {
+                    return;
+                  }
+                  setDecisionAnswers((current) => ({ ...current, [question.key]: value === 'yes' }));
+                }}
+                aria-label={question.label}
+              >
+                <ToggleButton value="no">No</ToggleButton>
+                <ToggleButton value="yes">Yes</ToggleButton>
+              </ToggleButtonGroup>
+            </div>
+          ))}
+          <span className="field-hint">
+            {isDecisionChecklistComplete(decisionAnswers)
+              ? 'All eight answered — this checklist clears the gate on save.'
+              : `${DECISION_CHECKLIST_QUESTIONS.filter((question) => decisionAnswers[question.key] !== null).length} of ${DECISION_CHECKLIST_QUESTIONS.length} answered.`}
+          </span>
+        </div>
+      )}
       <label className="field-full">
         Description
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />

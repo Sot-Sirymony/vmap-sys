@@ -8,10 +8,13 @@ import static org.mockito.Mockito.when;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.LifecycleStatus;
+import com.visionmapping.entity.enums.PartnerStatus;
+import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.UserRole;
@@ -34,6 +37,7 @@ import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +81,7 @@ class DreamServiceTest {
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, idealPartnerProfileRepository);
         service = new DreamService(lookup, archiveCascade, permanentDeleteCascade,
-                new VisionMappingMapper(), dreamRepository, goalRepository);
+                new VisionMappingMapper(), dreamRepository, goalRepository, partnerRepository, Clock.systemDefaultZone());
         testUser = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         lenient().when(userScope.currentUser()).thenReturn(testUser);
@@ -104,7 +108,16 @@ class DreamServiceTest {
         return new com.visionmapping.dto.request.DreamRequest(dream.getVisionArea().getId(), dream.getTitle(),
                 dream.getDescription(), dream.getWhyImportant(), dream.getSuccessDefinition(), dream.getDreamType(),
                 dream.getPriority(), dream.getTargetDate(), dream.getStatus(), dream.isMoonshot(),
-                dream.getMoonshotVision(), dream.getScheduleMode());
+                dream.getMoonshotVision(), dream.getScheduleMode(),
+                dream.getDecisionSkippedResearch(), dream.getDecisionAssumedNoChange(),
+                dream.getDecisionTrustedUnverifiedClaim(), dream.getDecisionJudgedByAppearance(),
+                dream.getDecisionUnderTimePressure(), dream.getDecisionNoOutsideInput(),
+                dream.getDecisionChasedEasyReward(), dream.getDecisionDismissedDisagreeingAdvice());
+    }
+
+    private Partner counselor(Long id, PartnerSupportType supportType) {
+        return Partner.builder().id(id).user(testUser).code("P-001").name("Counselor")
+                .supportType(supportType).status(PartnerStatus.ACTIVE).build();
     }
 
     @Test
@@ -158,5 +171,117 @@ class DreamServiceTest {
         var response = service.updateDream(1L, requestFrom(dream));
 
         assertThat(response.scheduleOverrun()).isFalse();
+    }
+
+    // --- BR-44 (FR-55): decision prudence gate ---
+
+    private Dream moonshotDream(Long id, Priority priority, DreamStatus status) {
+        return Dream.builder().id(id).user(testUser).visionArea(visionArea(1L)).code("D-001").title("Dream")
+                .dreamType(DreamType.LONG_TERM).priority(priority).status(status).moonshot(true)
+                .scheduleMode(ScheduleMode.BOTTOM_UP).build();
+    }
+
+    @Test
+    void highPriorityMoonshotDreamCannotGoActiveWithNeitherGateCleared() {
+        Dream dream = moonshotDream(20L, Priority.HIGH, DreamStatus.IDEA);
+        when(dreamRepository.findById(20L)).thenReturn(Optional.of(dream));
+        when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
+        lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of());
+        when(partnerRepository.findCounselorsForDream(1L, 20L, List.of(PartnerSupportType.ADVISOR, PartnerSupportType.MENTOR)))
+                .thenReturn(List.of());
+
+        Dream requested = moonshotDream(20L, Priority.HIGH, DreamStatus.ACTIVE);
+        assertThatThrownBy(() -> service.updateDream(20L, requestFrom(requested)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("decision checklist")
+                .hasMessageContaining("Advisor/Mentor");
+        assertThat(dream.getDecisionGateClearedAt()).isNull();
+    }
+
+    @Test
+    void lowPriorityMoonshotDreamNeedsNoGate() {
+        Dream dream = moonshotDream(21L, Priority.MEDIUM, DreamStatus.IDEA);
+        when(dreamRepository.findById(21L)).thenReturn(Optional.of(dream));
+        when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
+        lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(21L, 1L)).thenReturn(List.of());
+
+        Dream requested = moonshotDream(21L, Priority.MEDIUM, DreamStatus.ACTIVE);
+        var response = service.updateDream(21L, requestFrom(requested));
+
+        assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
+        assertThat(dream.getDecisionGateClearedAt()).isNull();
+    }
+
+    @Test
+    void nonMoonshotDreamNeedsNoGateRegardlessOfPriority() {
+        Dream dream = Dream.builder().id(22L).user(testUser).visionArea(visionArea(1L)).code("D-001").title("Dream")
+                .dreamType(DreamType.LONG_TERM).priority(Priority.CRITICAL).status(DreamStatus.IDEA)
+                .moonshot(false).scheduleMode(ScheduleMode.BOTTOM_UP).build();
+        when(dreamRepository.findById(22L)).thenReturn(Optional.of(dream));
+        when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
+        lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(22L, 1L)).thenReturn(List.of());
+
+        dream.setStatus(DreamStatus.ACTIVE);
+        var response = service.updateDream(22L, requestFrom(dream));
+
+        assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
+    }
+
+    @Test
+    void completingAllEightChecklistItemsClearsTheGate() {
+        Dream dream = moonshotDream(23L, Priority.CRITICAL, DreamStatus.IDEA);
+        when(dreamRepository.findById(23L)).thenReturn(Optional.of(dream));
+        when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
+        lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(23L, 1L)).thenReturn(List.of());
+
+        Dream requested = moonshotDream(23L, Priority.CRITICAL, DreamStatus.ACTIVE);
+        requested.setDecisionSkippedResearch(true);
+        requested.setDecisionAssumedNoChange(false);
+        requested.setDecisionTrustedUnverifiedClaim(false);
+        requested.setDecisionJudgedByAppearance(false);
+        requested.setDecisionUnderTimePressure(true);
+        requested.setDecisionNoOutsideInput(false);
+        requested.setDecisionChasedEasyReward(false);
+        requested.setDecisionDismissedDisagreeingAdvice(false);
+
+        var response = service.updateDream(23L, requestFrom(requested));
+
+        assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
+        assertThat(dream.getDecisionGateClearedAt()).isNotNull();
+    }
+
+    @Test
+    void twoCounselorPartnersClearTheGateWithoutTheChecklist() {
+        Dream dream = moonshotDream(24L, Priority.HIGH, DreamStatus.IDEA);
+        when(dreamRepository.findById(24L)).thenReturn(Optional.of(dream));
+        when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
+        lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(24L, 1L)).thenReturn(List.of());
+        when(partnerRepository.findCounselorsForDream(1L, 24L, List.of(PartnerSupportType.ADVISOR, PartnerSupportType.MENTOR)))
+                .thenReturn(List.of(counselor(30L, PartnerSupportType.ADVISOR), counselor(31L, PartnerSupportType.MENTOR)));
+
+        Dream requested = moonshotDream(24L, Priority.HIGH, DreamStatus.ACTIVE);
+        var response = service.updateDream(24L, requestFrom(requested));
+
+        assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
+        assertThat(dream.getDecisionGateClearedAt()).isNotNull();
+    }
+
+    @Test
+    void gateDoesNotReFireOnceClearedAcrossAStatusRoundTrip() {
+        Dream dream = moonshotDream(25L, Priority.HIGH, DreamStatus.ACTIVE);
+        dream.setDecisionGateClearedAt(java.time.Instant.parse("2026-01-01T00:00:00Z"));
+        when(dreamRepository.findById(25L)).thenReturn(Optional.of(dream));
+        when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
+        lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(25L, 1L)).thenReturn(List.of());
+
+        // Paused, then back to Active — the gate must not re-fire even though
+        // no checklist item is answered and no counselors are linked.
+        dream.setStatus(DreamStatus.PAUSED);
+        service.updateDream(25L, requestFrom(dream));
+        dream.setStatus(DreamStatus.ACTIVE);
+        var response = service.updateDream(25L, requestFrom(dream));
+
+        assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
+        assertThat(dream.getDecisionGateClearedAt()).isEqualTo(java.time.Instant.parse("2026-01-01T00:00:00Z"));
     }
 }

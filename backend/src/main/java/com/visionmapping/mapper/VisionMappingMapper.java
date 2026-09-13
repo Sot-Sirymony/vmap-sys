@@ -47,6 +47,11 @@ public class VisionMappingMapper {
                 entity.getDescription(), entity.getWhyImportant(), entity.getSuccessDefinition(), entity.getDreamType(),
                 entity.getPriority(), entity.getTargetDate(), entity.getStatus(), entity.isMoonshot(),
                 entity.getMoonshotVision(), entity.getScheduleMode(), scheduleOverrun, scheduleOverrunDetail,
+                entity.getDecisionSkippedResearch(), entity.getDecisionAssumedNoChange(),
+                entity.getDecisionTrustedUnverifiedClaim(), entity.getDecisionJudgedByAppearance(),
+                entity.getDecisionUnderTimePressure(), entity.getDecisionNoOutsideInput(),
+                entity.getDecisionChasedEasyReward(), entity.getDecisionDismissedDisagreeingAdvice(),
+                entity.getDecisionGateClearedAt(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 

@@ -3,9 +3,9 @@
 | | |
 |---|---|
 | **Document** | VMS_BRD_V5.0.0 |
-| **Version** | 5.0.0 (In progress) |
-| **Date** | 2026-09-13 |
-| **Status** | 🔶 In progress. Written from a gap analysis comparing VMS_BRD_V1.0.0 → V4.0.0 against the achievement-strategy frameworks the system is conceptually inspired by. ✅ **FR-51** (Bottom-Up Target-Date Cascade), ✅ **FR-53** (Extended Diligence Review Matrix), ✅ **FR-50** (Partner Integrity Vetting Checklist), ✅ **FR-49** (Work-Style Profile & Partner Complementarity), ✅ **FR-52** (Extended Persuasion Structure), and ✅ **FR-54** (Conflict & Feedback Processing Worksheet) shipped 2026-09-13. FR-55 remains proposed — not yet built. |
+| **Version** | 5.0.0 (Complete) |
+| **Date** | 2026-09-14 |
+| **Status** | ✅ Complete. Written from a gap analysis comparing VMS_BRD_V1.0.0 → V4.0.0 against the achievement-strategy frameworks the system is conceptually inspired by. ✅ **FR-51** (Bottom-Up Target-Date Cascade), ✅ **FR-53** (Extended Diligence Review Matrix), ✅ **FR-50** (Partner Integrity Vetting Checklist), ✅ **FR-49** (Work-Style Profile & Partner Complementarity), ✅ **FR-52** (Extended Persuasion Structure), ✅ **FR-54** (Conflict & Feedback Processing Worksheet), and ✅ **FR-55** (Decision Prudence Checklist) all shipped 2026-09-13/14. Every requirement in this document is now built. |
 | **Baseline** | Builds on VMS_BRD_V4.0.0 (all V1–V4 requirements, FR-1…FR-43, remain in force) — **and** on unreleased work already shipped past V4.0.0 (see *Numbering correction* below) |
 | **Concept source** | *Mentored by a Millionaire* (Steven K. Scott), used as conceptual reference only, as in V1–V4. This document also draws on *The Richest Man Who Ever Lived* (Steven K. Scott) and a four-quadrant work-style model, for the same reason and under the same rule: **no copyrighted text, named proprietary frameworks, or scripture is reproduced anywhere in this document or in the product.** See *Originality note* below for what that changed. |
 
@@ -744,7 +744,31 @@ ready-made tone option for delivering hard feedback constructively.
 
 ---
 
-## FR-55 Decision Prudence Checklist *(Effort: S)*
+## FR-55 Decision Prudence Checklist — ✅ Done 2026-09-14 *(Effort: S)*
+
+**Shipped (2026-09-14):** Backend gate lives in `DreamService.validateDecisionGate`,
+called from `createDream`, `updateDream`, and `updateDreamStatus` — the same
+"guard every mutation path" pattern FR-50 established. One deliberate
+generalization from the FR-55.1 spec text: the gate fires whenever a
+High/Critical moonshot Dream's status is *becoming* `ACTIVE`, not only on an
+`IDEA → ACTIVE` transition specifically. This closes the loophole of creating
+a Dream with `status: ACTIVE` directly, or re-triggering intentionally by
+going through another status first — matching how `PartnerService.prepareForActive`
+already treats "becoming Active" as the one meaningful event, regardless of
+the prior status. Gate B's `PartnerRepository.findCounselorsForDream` query
+initially used implicit JPQL path navigation (`p.relatedGoal.dream.id`) for
+its OR condition, which Hibernate compiles as an inner join — silently
+dropping partners linked *directly* to the Dream (`relatedGoal` null) from
+the result before the `OR` was ever evaluated. Caught by
+`DreamDecisionGateFlowTests`, a real-repository integration test (unlike
+`DreamServiceTest`'s mocked repository, which couldn't see the bug); fixed
+with explicit `left join`s on both `relatedDream` and `relatedGoal`. Frontend
+checklist UI lives in both `DreamsPage.tsx` (flat form) and
+`VisionMapTree.tsx` (inline Dream edit) for the same reason FR-51's
+`scheduleMode` field lives in both; Gate B's counselor count isn't checked
+client-side (not cheaply available on the Dream object), so the frontend
+only pre-fills Gate A and surfaces the backend's rejection message via the
+existing `crud.error` path when neither gate is actually met.
 
 A brief, mandatory pause before committing fully to a big, ambitious bet —
 using fields the system already has rather than inventing a new "financial
@@ -827,7 +851,7 @@ risk" concept.
 | 4 | FR-49 Work-Style Profile & Partner Complementarity | Depends conceptually on FR-50 existing so the partner detail view has one integrity/character section, not two built separately | M | ✅ Done 2026-09-13 |
 | 5 | FR-52 Extended Persuasion Structure | Extends FR-17's existing generator; independent of the above | M | ✅ Done 2026-09-13 |
 | 6 | FR-54 Conflict & Feedback Processing Worksheet | Smaller; benefits from FR-52's generator changes landing first (shares the tone-selector idea) | S–M | ✅ Done 2026-09-13 |
-| 7 | FR-55 Decision Prudence Checklist | Smallest in isolation but depends on FR-50's `ADVISOR`/`MENTOR` partner concept being solid, since Gate B counts those partner records | S | Not started |
+| 7 | FR-55 Decision Prudence Checklist | Smallest in isolation but depends on FR-50's `ADVISOR`/`MENTOR` partner concept being solid, since Gate B counts those partner records | S | ✅ Done 2026-09-14 |
 
 ---
 
@@ -841,7 +865,7 @@ risk" concept.
 | BR-41 | A generated message must include, at minimum, a Hook or Problem, a Request, and a Benefit to Partner. The FR-52 fields are additive and never required. | ✅ Done 2026-09-13 |
 | BR-42 | A weekly/monthly review's diligence checklist, once started, requires all ten checks answered before saving. `diligenceScorePercent` is computed, never entered directly. | ✅ Done 2026-09-13 |
 | BR-43 | An obstacle's conflict-worksheet private note is never included in any Excel export sheet. | ✅ Done 2026-09-13 |
-| BR-44 | A Moonshot Dream with High/Critical priority cannot transition `IDEA → ACTIVE` unless its eight-item decision checklist is completed, or ≥2 `ADVISOR`/`MENTOR` partners are linked to it. The gate does not re-apply once cleared for that Dream. | Not started |
+| BR-44 | A Moonshot Dream with High/Critical priority cannot transition `IDEA → ACTIVE` unless its eight-item decision checklist is completed, or ≥2 `ADVISOR`/`MENTOR` partners are linked to it. The gate does not re-apply once cleared for that Dream. | ✅ Done 2026-09-14 |
 
 ## Migrations (V5.0.0)
 
@@ -851,8 +875,9 @@ FR-49 and FR-53 below — the same reassignment V4.0.0 made when FR-38's
 `issue_reports` table took the V15 slot originally reserved for an FR-36
 index that turned out not to be needed. `V23` through `V27` each shipped
 exactly where already provisioned (FR-50, FR-49's two migrations, FR-52,
-then FR-54), so no further reassignment was needed this round. The only
-number still provisional is `V28` (FR-55).
+then FR-54), so no further reassignment was needed this round. `V28`
+(FR-55) also shipped exactly where provisioned — every migration slot
+sketched for this document landed without reassignment.
 
 | Migration | Purpose | Type | Status |
 |---|---|---|---|
@@ -863,7 +888,7 @@ number still provisional is `V28` (FR-55).
 | `V25__partner_work_style_type.sql` | `work_style_type` on `partners` (FR-49) | Additive, nullable | ✅ Done 2026-09-13 |
 | `V26__communication_persuasion_fields.sql` | Four persuasion fields on `communication_messages` (FR-52) | Additive, nullable | ✅ Done 2026-09-13 |
 | `V27__obstacle_conflict_worksheet.sql` | Conflict-worksheet fields on `obstacles` (FR-54) | Additive, nullable | ✅ Done 2026-09-13 |
-| `V28__dream_decision_checklist.sql` *(provisional)* | Decision checklist + gate timestamp on `dreams` (FR-55) | Additive, nullable | Not started |
+| `V28__dream_decision_checklist.sql` | Decision checklist + gate timestamp on `dreams` (FR-55) | Additive, nullable | ✅ Done 2026-09-14 |
 
 ## Non-Functional Notes
 
@@ -879,7 +904,7 @@ number still provisional is `V28` (FR-55).
   met by export exclusion rather than by adding encryption, which would
   have been the one item here to actually require new infrastructure.
 - New business rules (BR-38…BR-44) should get backend test coverage where
-  they carry logic, matching V1–V4 practice. **BR-38 through BR-43 are all
+  they carry logic, matching V1–V4 practice. **BR-38 through BR-44 are all
   done**: BR-38 has no gate to test directly (its whole content is "never
   blocks"), but the archetype-computation logic FR-49 actually carries is
   covered by seven new `WorkStyleProfileServiceTest` cases; BR-39 covered by
@@ -893,14 +918,15 @@ number still provisional is `V28` (FR-55).
   cases instead; BR-42 covered by two new cases in `ReviewServiceTest` (a
   widened-rule rejection and a score computation); BR-43 covered by a new
   `ExcelImportFlowTests` integration test that exports a real workbook and
-  confirms a marker string is absent from every cell of every sheet —
-  backend 175/175, frontend 341/341, both green.
-- This document is a **living plan, mostly built**: FR-49/BR-38,
-  FR-50/BR-39, FR-51/BR-40, FR-52/BR-41, FR-53/BR-42, and FR-54/BR-43 are
-  shipped; only FR-55/BR-44 remains unbuilt. Per this project's standing
-  rule of working phase by phase and stopping for confirmation between
-  phases, the Build Order table
-  is a recommendation, not a commitment — confirm which item to build next
-  before
-  further code
-  changes begin.
+  confirms a marker string is absent from every cell of every sheet; BR-44
+  covered by six new `DreamServiceTest` cases (mocked-repository unit tests
+  for each gate branch) **and** six new `DreamDecisionGateFlowTests` cases
+  that exercise the real `findCounselorsForDream` query end-to-end through
+  MockMvc + H2 — the latter is what caught an implicit-inner-join bug in
+  that query (see FR-55's "Shipped" note) that the mocked unit tests
+  structurally could not see — backend 187/187, frontend 345/345, both
+  green.
+- This document is a **living plan, now fully built**: FR-49/BR-38,
+  FR-50/BR-39, FR-51/BR-40, FR-52/BR-41, FR-53/BR-42, FR-54/BR-43, and
+  FR-55/BR-44 are all shipped. Every requirement, business rule, and
+  migration proposed in this document has landed.

@@ -135,6 +135,41 @@ export const INTEGRITY_CHECKLIST_QUESTIONS = [
   { key: 'flagDisregardBoundaries', label: 'They disregard agreements, rules, or boundaries' },
 ] as const;
 
+// FR-55.2: Gate A of BR-44 — an eight-item, originally-worded decision-
+// prudence checklist. Answering honestly that a trap applies is still
+// "answered" (FR-55.4) — there is no right answer, only a completed one.
+export const DECISION_CHECKLIST_QUESTIONS = [
+  { key: 'decisionSkippedResearch', label: 'Have I actually researched this, not just gone with my first instinct?' },
+  { key: 'decisionAssumedNoChange', label: 'Am I assuming today’s conditions will hold, rather than considering how things could change?' },
+  { key: 'decisionTrustedUnverifiedClaim', label: 'Have I verified the key claims myself, rather than taking them at face value?' },
+  { key: 'decisionJudgedByAppearance', label: 'Am I judging this by substance, not just how polished or confident it looks?' },
+  { key: 'decisionUnderTimePressure', label: 'Am I deciding on my own timeline, rather than because someone is rushing me?' },
+  { key: 'decisionNoOutsideInput', label: 'Have I talked this through with someone outside my own head?' },
+  { key: 'decisionChasedEasyReward', label: 'Does the reward here match the effort, rather than looking too easy?' },
+  { key: 'decisionDismissedDisagreeingAdvice', label: 'Am I still willing to hear advice that disagrees with what I want to do?' },
+] as const;
+
+export type DecisionChecklistKey = (typeof DECISION_CHECKLIST_QUESTIONS)[number]['key'];
+
+/** FR-55.2: "answered" means every item has a value, regardless of what it is. */
+export function isDecisionChecklistComplete(answers: Record<DecisionChecklistKey, boolean | null>): boolean {
+  return DECISION_CHECKLIST_QUESTIONS.every((question) => answers[question.key] !== null);
+}
+
+// FR-55.2: null (not false) for every item — "answered" means non-null,
+// regardless of which way it went. Shared by DreamsPage and VisionMapTree,
+// the two places that edit a dream's decision checklist.
+export const EMPTY_DECISION_ANSWERS: Record<DecisionChecklistKey, boolean | null> = {
+  decisionSkippedResearch: null,
+  decisionAssumedNoChange: null,
+  decisionTrustedUnverifiedClaim: null,
+  decisionJudgedByAppearance: null,
+  decisionUnderTimePressure: null,
+  decisionNoOutsideInput: null,
+  decisionChasedEasyReward: null,
+  decisionDismissedDisagreeingAdvice: null,
+};
+
 export type IntegrityFlagKey = (typeof INTEGRITY_CHECKLIST_QUESTIONS)[number]['key'];
 
 export const communicationStatusLabels: Record<CommunicationStatus, string> = {

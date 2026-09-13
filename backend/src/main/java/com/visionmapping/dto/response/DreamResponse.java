@@ -27,6 +27,17 @@ public record DreamResponse(
         // latest active goal's targetDate.
         boolean scheduleOverrun,
         String scheduleOverrunDetail,
+        Boolean decisionSkippedResearch,
+        Boolean decisionAssumedNoChange,
+        Boolean decisionTrustedUnverifiedClaim,
+        Boolean decisionJudgedByAppearance,
+        Boolean decisionUnderTimePressure,
+        Boolean decisionNoOutsideInput,
+        Boolean decisionChasedEasyReward,
+        Boolean decisionDismissedDisagreeingAdvice,
+        // FR-55.4: non-null once BR-44's gate has cleared for this dream;
+        // the gate never re-fires afterward.
+        Instant decisionGateClearedAt,
         boolean archived,
         Instant createdAt,
         Instant updatedAt
