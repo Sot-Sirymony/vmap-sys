@@ -19,6 +19,12 @@ public record ObstacleRequest(
         @Size(max = 3000) String solution,
         @Size(max = 3000) String rootCause,
         @Size(max = 3000) String creativeAlternatives,
+        @Size(max = 2000) String conflictIncident,
+        @Size(max = 2000) String conflictCost,
+        @Size(max = 2000) String conflictOtherPerspective,
+        @Size(max = 2000) String conflictLesson,
+        @Size(max = 2000) String conflictPrivateNote,
+        @Size(max = 2000) String conflictNextAction,
         Long requiredPartnerId,
         @NotNull ObstacleStatus status
 ) {

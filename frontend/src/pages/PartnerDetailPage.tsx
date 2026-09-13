@@ -26,7 +26,8 @@ import { Loading } from '../components/common/Loading';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 import type { CommunicationMessage, Dream, Goal, Partner, PartnerStatus, TaskItem, VisionArea, VisionStep } from '../types/vision';
-import { offerTypeLabels, partnerSupportTypeLabels } from '../utils/enumLabels';
+import { INTEGRITY_CHECKLIST_QUESTIONS, offerTypeLabels, partnerMotivatorLabels, partnerSupportTypeLabels } from '../utils/enumLabels';
+import { workStyleArchetypeLabels } from '../utils/workStyleAssessment';
 import { PageSection } from './PageSection';
 
 // FR-15.4: the recruitment lifecycle the existing pipeline statuses map onto.
@@ -125,7 +126,18 @@ export function PartnerDetailPage() {
     { label: 'Strength', value: partner.strength ?? '-' },
     { label: 'Support Type', value: partnerSupportTypeLabels[partner.supportType] },
     { label: 'Offer Type', value: partner.offerType ? offerTypeLabels[partner.offerType] : '-' },
+    { label: 'Primary Motivator', value: partner.primaryMotivator ? partnerMotivatorLabels[partner.primaryMotivator] : '-' },
+    { label: 'Work Style', value: partner.workStyleType ? workStyleArchetypeLabels[partner.workStyleType] : '-' },
     { label: 'Notes', value: partner.notes ?? '-' },
+  ];
+
+  // FR-50.3: an audit trail, not just a one-time gate — visible here after
+  // the fact whether or not this partner was ever flagged.
+  const flaggedConcerns = INTEGRITY_CHECKLIST_QUESTIONS.filter((question) => partner[question.key]).map((question) => question.label);
+  const vettingRows: { label: string; value: string }[] = [
+    { label: 'Vetted', value: partner.vettedAt ? new Date(partner.vettedAt).toLocaleString() : 'Not yet vetted' },
+    { label: 'Concerns flagged', value: flaggedConcerns.length > 0 ? flaggedConcerns.join('; ') : 'None' },
+    ...(partner.riskOverrideNote ? [{ label: 'Why proceeded anyway', value: partner.riskOverrideNote }] : []),
   ];
 
   return (
@@ -196,6 +208,21 @@ export function PartnerDetailPage() {
           </CardContent>
         </Card>
       </div>
+      {(partner.supportType === 'FINANCIAL' || partner.supportType === 'TECHNICAL') && (
+        <Card>
+          <CardHeader title="Integrity vetting" subheader="FR-50: checked once before this partner's first move to Active" />
+          <CardContent>
+            <div className="status-grid">
+              {vettingRows.map((row) => (
+                <div className="status-row" key={row.label}>
+                  <Typography variant="body2" color="text.secondary">{row.label}</Typography>
+                  <Typography variant="body2" sx={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{row.value}</Typography>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader title="Communication history" subheader="Every message prepared for this partner" />
         <CardContent>

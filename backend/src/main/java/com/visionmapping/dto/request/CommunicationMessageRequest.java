@@ -19,6 +19,10 @@ public record CommunicationMessageRequest(
         @Size(max = 2000) String benefitToPartner,
         @Size(max = 2000) String wordPicture,
         @Size(max = 2000) String expectedOutcome,
+        @Size(max = 2000) String objectionsAndAnswers,
+        @Size(max = 2000) String socialProof,
+        @Size(max = 2000) String valueComparison,
+        @Size(max = 2000) String callToAction,
         @Size(max = 6000) String messageBody,
         @NotNull CommunicationStatus status,
         LocalDate followUpDate

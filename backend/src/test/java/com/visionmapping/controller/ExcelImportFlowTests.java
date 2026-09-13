@@ -6,10 +6,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.Map;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -74,16 +82,60 @@ class ExcelImportFlowTests {
                 .andExpect(jsonPath("$[0].title").value("Search PubMed"));
     }
 
+    /**
+     * FR-54.2 / BR-43: the conflict worksheet's private note must never
+     * appear in an exported workbook, in any sheet — checked across every
+     * cell of every sheet, not just the Obstacles sheet, since BR-43 says
+     * "regardless of export options."
+     */
+    @Test
+    void conflictWorksheetPrivateNoteIsNeverIncludedInExcelExport() throws Exception {
+        String token = registerAndToken("conflict-worksheet");
+        String secretMarker = "SECRET-NEVER-EXPORTED-" + System.nanoTime();
+        mockMvc.perform(post("/api/obstacles")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Disagreement with a mentor",
+                                "obstacleType", "PARTNER",
+                                "severity", "MEDIUM",
+                                "status", "OPEN",
+                                "conflictIncident", "A visible, non-secret incident note.",
+                                "conflictPrivateNote", secretMarker))))
+                .andExpect(status().isCreated());
+
+        byte[] workbook = mockMvc.perform(post("/api/excel/export")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+
+        try (XSSFWorkbook xssf = new XSSFWorkbook(new ByteArrayInputStream(workbook))) {
+            for (Sheet sheet : xssf) {
+                for (Row row : sheet) {
+                    for (Cell cell : row) {
+                        if (cell.getCellType() == CellType.STRING) {
+                            assertThat(cell.getStringCellValue()).doesNotContain(secretMarker);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private void buildSampleHierarchy(String token) throws Exception {
         long areaId = postAndId("/api/vision-areas", token, Map.of(
                 "name", "Career", "description", "Growth", "priority", "HIGH", "status", "ACTIVE"));
         long dreamId = postAndId("/api/dreams", token, Map.of(
                 "visionAreaId", areaId, "title", "Become a researcher", "whyImportant", "Impact",
                 "successDefinition", "Paper", "dreamType", "LONG_TERM", "priority", "HIGH",
-                "targetDate", LocalDate.now().plusMonths(6).toString(), "status", "ACTIVE"));
+                "targetDate", LocalDate.now().plusMonths(6).toString(), "status", "ACTIVE",
+                "scheduleMode", "BOTTOM_UP"));
         long goalId = postAndId("/api/goals", token, Map.of(
                 "dreamId", dreamId, "title", "Learn AI tools", "priority", "HIGH",
-                "targetDate", LocalDate.now().plusMonths(3).toString(), "status", "NOT_STARTED"));
+                "targetDate", LocalDate.now().plusMonths(3).toString(), "status", "NOT_STARTED",
+                "scheduleMode", "BOTTOM_UP"));
         long stepId = postAndId("/api/steps", token, Map.of(
                 "goalId", goalId, "title", "Search literature", "sequenceNumber", 1, "complex", true,
                 "priority", "HIGH", "targetDate", LocalDate.now().plusMonths(2).toString(), "status", "NOT_STARTED"));

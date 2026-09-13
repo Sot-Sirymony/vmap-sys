@@ -30,6 +30,7 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { CommunicationMessage, CommunicationMessageRequest, CommunicationStatus, Dream, Goal, Partner, TaskItem } from '../types/vision';
 import { communicationStatusLabels } from '../utils/enumLabels';
+import { generateMessageBody, type MessageTone } from '../utils/communicationMessageGenerator';
 import { PageSection } from './PageSection';
 
 export function CommunicationBuilderPage() {
@@ -88,7 +89,13 @@ export function CommunicationBuilderPage() {
   const [benefitToPartner, setBenefitToPartner] = useState('');
   const [wordPicture, setWordPicture] = useState('');
   const [expectedOutcome, setExpectedOutcome] = useState('');
+  const [objectionsAndAnswers, setObjectionsAndAnswers] = useState('');
+  const [socialProof, setSocialProof] = useState('');
+  const [valueComparison, setValueComparison] = useState('');
+  const [callToAction, setCallToAction] = useState('');
   const [messageBody, setMessageBody] = useState('');
+  // FR-54.3: not persisted — chosen just before "Generate message" runs.
+  const [tone, setTone] = useState<MessageTone>('DEFAULT');
   const [status, setStatus] = useState<CommunicationStatus>('DRAFT');
   const [followUpDate, setFollowUpDate] = useState('');
 
@@ -133,6 +140,10 @@ export function CommunicationBuilderPage() {
       benefitToPartner,
       wordPicture,
       expectedOutcome,
+      objectionsAndAnswers,
+      socialProof,
+      valueComparison,
+      callToAction,
       messageBody,
       status,
       followUpDate: followUpDate || undefined,
@@ -146,6 +157,10 @@ export function CommunicationBuilderPage() {
       setBenefitToPartner('');
       setWordPicture('');
       setExpectedOutcome('');
+      setObjectionsAndAnswers('');
+      setSocialProof('');
+      setValueComparison('');
+      setCallToAction('');
       setMessageBody('');
     }
     return success;
@@ -166,6 +181,10 @@ export function CommunicationBuilderPage() {
     setBenefitToPartner(message.benefitToPartner ?? '');
     setWordPicture(message.wordPicture ?? '');
     setExpectedOutcome(message.expectedOutcome ?? '');
+    setObjectionsAndAnswers(message.objectionsAndAnswers ?? '');
+    setSocialProof(message.socialProof ?? '');
+    setValueComparison(message.valueComparison ?? '');
+    setCallToAction(message.callToAction ?? '');
     setMessageBody(message.messageBody ?? '');
     setStatus(message.status);
     setFollowUpDate(message.followUpDate ?? '');
@@ -186,6 +205,10 @@ export function CommunicationBuilderPage() {
     setBenefitToPartner('');
     setWordPicture('');
     setExpectedOutcome('');
+    setObjectionsAndAnswers('');
+    setSocialProof('');
+    setValueComparison('');
+    setCallToAction('');
     setMessageBody('');
     setStatus('DRAFT');
     setFollowUpDate('');
@@ -212,6 +235,10 @@ export function CommunicationBuilderPage() {
         benefitToPartner: message.benefitToPartner,
         wordPicture: message.wordPicture,
         expectedOutcome: message.expectedOutcome,
+        objectionsAndAnswers: message.objectionsAndAnswers,
+        socialProof: message.socialProof,
+        valueComparison: message.valueComparison,
+        callToAction: message.callToAction,
         messageBody: message.messageBody,
         status: nextStatus,
         followUpDate: message.followUpDate,
@@ -358,6 +385,21 @@ export function CommunicationBuilderPage() {
         </span>
       </label>
       <label className="field-full">
+        Objections & Answers
+        <Textarea value={objectionsAndAnswers} onChange={(event) => setObjectionsAndAnswers(event.target.value)} />
+        <span className="field-hint">Optional. The pushback you expect, and how you'd answer it.</span>
+      </label>
+      <label className="field-full">
+        Social Proof
+        <Textarea value={socialProof} onChange={(event) => setSocialProof(event.target.value)} />
+        <span className="field-hint">Optional. Credibility points — prior results, references.</span>
+      </label>
+      <label className="field-full">
+        Value Comparison
+        <Textarea value={valueComparison} onChange={(event) => setValueComparison(event.target.value)} />
+        <span className="field-hint">Optional. Why this is worth more to them than it costs them.</span>
+      </label>
+      <label className="field-full">
         Request
         <Textarea value={request} onChange={(event) => setRequest(event.target.value)} />
       </label>
@@ -370,57 +412,38 @@ export function CommunicationBuilderPage() {
         <Textarea value={expectedOutcome} onChange={(event) => setExpectedOutcome(event.target.value)} />
       </label>
       <label className="field-full">
+        Call to Action
+        <Textarea value={callToAction} onChange={(event) => setCallToAction(event.target.value)} />
+        <span className="field-hint">
+          Optional. The one specific next step you're asking for — replaces the generic closing line when filled in.
+        </span>
+      </label>
+      <label className="field-full">
         Message
         <Textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
       </label>
     </>
   );
 
-  // FR-17.3: compose in a fixed persuasive order — Hook, Problem (with the
-  // word picture folded in), Request, Benefit, Expected Outcome — including
-  // only the parts the user actually filled, in respectful language. The
-  // draft stays fully editable afterward.
+  // FR-17.3 / FR-52.2: composition itself lives in generateMessageBody so
+  // FR-52's "unchanged when the four new fields are blank" acceptance
+  // criterion is unit-testable directly.
   function handleGenerateMessage() {
     const partner = partners.find((item) => item.id === Number(partnerId));
-    const recipient = audience || partner?.name || 'there';
-    const paragraphs: string[] = [];
-
-    if (hook.trim()) {
-      paragraphs.push(hook.trim());
-    }
-
-    const contextSentences: string[] = [];
-    if (purpose.trim()) {
-      contextSentences.push(`I am working on ${purpose.trim()}.`);
-    }
-    if (problem.trim()) {
-      contextSentences.push(`Right now, ${lowerFirst(problem.trim())}`);
-    }
-    if (wordPicture.trim()) {
-      contextSentences.push(`To put it plainly: ${lowerFirst(wordPicture.trim())}`);
-    }
-    if (contextSentences.length > 0) {
-      paragraphs.push(contextSentences.join(' '));
-    }
-
-    if (request.trim()) {
-      paragraphs.push(`I would be grateful for your help with ${lowerFirst(request.trim())}`);
-    }
-
-    const closingSentences: string[] = [];
-    if (expectedOutcome.trim()) {
-      closingSentences.push(`Your support would help ${lowerFirst(expectedOutcome.trim())}`);
-    }
-    if (benefitToPartner.trim()) {
-      closingSentences.push(`I also hope this could be worthwhile for you: ${lowerFirst(benefitToPartner.trim())}`);
-    }
-    if (closingSentences.length > 0) {
-      paragraphs.push(closingSentences.join(' '));
-    }
-
-    paragraphs.push('Would you be open to a short conversation about this? No pressure either way, and thank you for considering it.');
-
-    setMessageBody(`Dear ${recipient},\n\n${paragraphs.join('\n\n')}\n\nBest regards`);
+    setMessageBody(generateMessageBody({
+      recipient: audience || partner?.name || 'there',
+      hook,
+      purpose,
+      problem,
+      wordPicture,
+      objectionsAndAnswers,
+      socialProof,
+      valueComparison,
+      request,
+      expectedOutcome,
+      benefitToPartner,
+      callToAction,
+    }, tone));
   }
 
   return (
@@ -432,7 +455,17 @@ export function CommunicationBuilderPage() {
         saving={crud.saving}
         onSubmit={handleSubmit}
         onCancelEdit={cancelEdit}
-        extraActions={<Button type="button" variant="secondary" onClick={handleGenerateMessage}>Generate message</Button>}
+        extraActions={
+          <>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select SelectDisplayProps={{ 'aria-label': 'Generate tone' }} value={tone} onChange={(event) => setTone(event.target.value as MessageTone)}>
+                <MenuItem value="DEFAULT">Default tone</MenuItem>
+                <MenuItem value="CONSTRUCTIVE_FEEDBACK">Constructive feedback</MenuItem>
+              </Select>
+            </FormControl>
+            <Button type="button" variant="secondary" onClick={handleGenerateMessage}>Generate message</Button>
+          </>
+        }
       >
         {formFields}
       </CrudModalForm>
@@ -533,14 +566,4 @@ export function CommunicationBuilderPage() {
 
 function optionalNumber(value: string) {
   return value ? Number(value) : undefined;
-}
-
-// Lowercases the first letter so a user's field (often written as its own
-// sentence) reads naturally mid-sentence in the generated body. Leaves the
-// standalone pronoun "I" capitalized, since lowering it to "i" reads wrong.
-function lowerFirst(value: string) {
-  if (/^I(\s|'|$)/.test(value)) {
-    return value;
-  }
-  return value.charAt(0).toLowerCase() + value.slice(1);
 }

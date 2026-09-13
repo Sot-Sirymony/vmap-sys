@@ -11,6 +11,7 @@ import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
@@ -23,7 +24,10 @@ import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -96,6 +100,7 @@ public class VisionStepService {
         entity.setTargetDate(request.targetDate());
         entity.setStatus(request.status());
         validateComplexStep(entity);
+        validateScheduleCascade(entity);
         progress.recalculateGoal(oldGoal);
         progress.recalculateGoal(entity.getGoal());
         return mapper.toResponse(entity);
@@ -143,6 +148,25 @@ public class VisionStepService {
         if (step.isComplex() && step.getStatus() == WorkStatus.COMPLETED
                 && taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), step.getUser().getId()).isEmpty()) {
             throw new BusinessRuleException("A complex step must have at least one task before it can be completed.");
+        }
+    }
+
+    // BR-40: a step's target date must not precede its latest active task's
+    // due date. Unlike Dream/Goal, a step has no schedule-mode override — the
+    // task-to-step boundary is the smallest unit and always enforced.
+    private void validateScheduleCascade(VisionStep step) {
+        if (step.getTargetDate() == null) {
+            return;
+        }
+        LocalDate latestTaskDueDate = taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), step.getUser().getId()).stream()
+                .map(TaskItem::getDueDate)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+        if (latestTaskDueDate != null && step.getTargetDate().isBefore(latestTaskDueDate)) {
+            throw new BusinessRuleException(
+                    "This step's target date (%s) is earlier than one of its tasks' due date (%s). Move the step's date later or adjust the task."
+                            .formatted(step.getTargetDate(), latestTaskDueDate));
         }
     }
 }

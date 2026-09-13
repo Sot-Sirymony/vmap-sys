@@ -18,6 +18,13 @@ public record ObstacleResponse(
         String solution,
         String rootCause,
         String creativeAlternatives,
+        String conflictIncident,
+        String conflictCost,
+        String conflictOtherPerspective,
+        String conflictLesson,
+        // FR-54.2 / BR-43: never included in any Excel export sheet.
+        String conflictPrivateNote,
+        String conflictNextAction,
         Long requiredPartnerId,
         ObstacleStatus status,
         boolean archived,

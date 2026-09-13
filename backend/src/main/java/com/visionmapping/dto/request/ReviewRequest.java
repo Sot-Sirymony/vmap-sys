@@ -21,6 +21,11 @@ public record ReviewRequest(
         Boolean diligenceUsedLeverage,
         Boolean diligencePriorityFirst,
         Boolean diligenceSmarterRoute,
+        Boolean diligenceRightlyPlanned,
+        Boolean diligenceRightlyPerformed,
+        Boolean diligenceExpeditious,
+        Boolean diligenceEfficient,
+        Boolean diligenceQualityOutcome,
         @Size(max = 2000) String diligenceNote
 ) {
 }

@@ -15,6 +15,7 @@ import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.Priority;
+import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
 import com.visionmapping.entity.enums.WorkStatus;
@@ -97,7 +98,13 @@ class GoalServiceTest {
     private Goal goal(Long id, Dream dream, WorkStatus status, BigDecimal progress, boolean manualOverride) {
         return Goal.builder().id(id).user(testUser).dream(dream).code("G-001").title("Goal")
                 .priority(Priority.HIGH).status(status).progressPercent(progress)
-                .manualProgressOverride(manualOverride).build();
+                .manualProgressOverride(manualOverride).scheduleMode(ScheduleMode.BOTTOM_UP).build();
+    }
+
+    private com.visionmapping.dto.request.GoalRequest requestFrom(Goal goal) {
+        return new com.visionmapping.dto.request.GoalRequest(goal.getDream().getId(), goal.getTitle(),
+                goal.getDescription(), goal.getSuccessCriteria(), goal.getPriority(), goal.getTargetDate(),
+                goal.getStatus(), goal.isMoonshot(), goal.getMoonshotVision(), goal.getScheduleMode());
     }
 
     private VisionStep step(Long id, Goal goal, WorkStatus status, BigDecimal progress, boolean complex, boolean manualOverride) {
@@ -135,6 +142,37 @@ class GoalServiceTest {
 
         assertThat(goal.getStatus()).isEqualTo(WorkStatus.COMPLETED);
         assertThat(goal.isManualProgressOverride()).isTrue();
+    }
+
+    @Test
+    void bottomUpGoalEarlierThanStepTargetDateThrows() {
+        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+        goal.setTargetDate(java.time.LocalDate.of(2026, 1, 1));
+        VisionStep step = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        step.setTargetDate(java.time.LocalDate.of(2026, 6, 1));
+        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
+        when(dreamRepository.findById(1L)).thenReturn(Optional.of(goal.getDream()));
+        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+
+        assertThatThrownBy(() -> service.updateGoal(10L, requestFrom(goal)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("earlier than one of its steps' target date");
+    }
+
+    @Test
+    void topDownFixedGoalEarlierThanStepTargetDateSavesWithOverrunFlagged() {
+        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false);
+        goal.setScheduleMode(ScheduleMode.TOP_DOWN_FIXED);
+        goal.setTargetDate(java.time.LocalDate.of(2026, 1, 1));
+        VisionStep step = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        step.setTargetDate(java.time.LocalDate.of(2026, 6, 1));
+        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
+        when(dreamRepository.findById(1L)).thenReturn(Optional.of(goal.getDream()));
+        lenient().when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+
+        var response = service.updateGoal(10L, requestFrom(goal));
+
+        assertThat(response.scheduleOverrun()).isTrue();
     }
 
     @Test

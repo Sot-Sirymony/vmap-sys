@@ -114,6 +114,12 @@ class VisionStepServiceTest {
                 .status(status).progressPercent(progress).build();
     }
 
+    private com.visionmapping.dto.request.VisionStepRequest requestFrom(VisionStep step) {
+        return new com.visionmapping.dto.request.VisionStepRequest(step.getGoal().getId(), step.getTitle(),
+                step.getDescription(), step.getSequenceNumber(), step.isComplex(), step.getPriority(),
+                step.getTargetDate(), step.getStatus());
+    }
+
     @Test
     void completingComplexStepWithNoTasksThrows() {
         Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
@@ -138,6 +144,39 @@ class VisionStepServiceTest {
         service.updateStepStatus(20L, "COMPLETED", false);
 
         assertThat(complexStep.getStatus()).isEqualTo(WorkStatus.COMPLETED);
+    }
+
+    @Test
+    void stepEarlierThanTaskDueDateThrows() {
+        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
+        VisionStep step = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        step.setTargetDate(java.time.LocalDate.of(2026, 1, 1));
+        TaskItem existingTask = task(30L, step, WorkStatus.IN_PROGRESS, BigDecimal.ZERO);
+        existingTask.setDueDate(java.time.LocalDate.of(2026, 6, 1));
+        when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
+        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
+        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(existingTask));
+
+        assertThatThrownBy(() -> service.updateStep(20L, requestFrom(step)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("earlier than one of its tasks' due date");
+    }
+
+    @Test
+    void stepOnOrAfterTaskDueDateSucceeds() {
+        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
+        VisionStep step = step(20L, goal, WorkStatus.IN_PROGRESS, BigDecimal.ZERO, false, false);
+        step.setTargetDate(java.time.LocalDate.of(2026, 6, 1));
+        TaskItem existingTask = task(30L, step, WorkStatus.IN_PROGRESS, BigDecimal.ZERO);
+        existingTask.setDueDate(java.time.LocalDate.of(2026, 6, 1));
+        when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
+        when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
+        lenient().when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(existingTask));
+        lenient().when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+
+        service.updateStep(20L, requestFrom(step));
+
+        assertThat(step.getTargetDate()).isEqualTo(java.time.LocalDate.of(2026, 6, 1));
     }
 
     @Test

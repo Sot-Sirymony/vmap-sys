@@ -3,6 +3,7 @@ package com.visionmapping.entity;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.Priority;
+import com.visionmapping.entity.enums.ScheduleMode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -78,6 +79,14 @@ public class Dream extends BaseAuditableEntity {
 
     @Column(name = "moonshot_vision", length = 3000)
     private String moonshotVision;
+
+    // FR-51: BOTTOM_UP (default) requires this dream's targetDate to be no
+    // earlier than its latest active goal's targetDate (BR-40).
+    // TOP_DOWN_FIXED opts out for a real external hard deadline.
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "schedule_mode", nullable = false, length = 20)
+    private ScheduleMode scheduleMode = ScheduleMode.BOTTOM_UP;
 
     @Column(nullable = false)
     private boolean archived;

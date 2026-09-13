@@ -33,8 +33,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Unit tests for the FR-16 diligence rule: the checklist must be answered as a
- * whole or skipped as a whole.
+ * Unit tests for the FR-16/FR-53 diligence rule: the (now ten-item)
+ * checklist must be answered as a whole or skipped as a whole, and the
+ * FR-53 score is computed only when every item is answered.
  */
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -68,7 +69,18 @@ class ReviewServiceTest {
     void partialDiligenceChecklistIsRejected() {
         ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                true, true, null, null, null, null);
+                true, true, null, null, null, null, null, null, null, null, null);
+
+        assertThatThrownBy(() -> service.createReview(request))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Answer every diligence question, or skip the whole checklist.");
+    }
+
+    @Test
+    void partialAmongTheFiveNewFr53ChecksIsAlsoRejected() {
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+                "Summary", null, null, null, null, null,
+                true, true, true, true, true, true, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createReview(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -81,12 +93,28 @@ class ReviewServiceTest {
 
         ReviewRequest full = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                true, false, true, true, false, "Tempo weeks slipped");
+                true, false, true, true, false, true, true, true, true, true, "Tempo weeks slipped");
         ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
 
         assertThat(service.createReview(full).diligenceWorkedPlan()).isFalse();
         assertThat(service.createReview(skipped).diligenceClearVision()).isNull();
+    }
+
+    @Test
+    void diligenceScoreIsComputedOnlyWhenAllTenAreAnswered() {
+        when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // 7 of 10 true -> 70%.
+        ReviewRequest full = new ReviewRequest(ReviewType.MONTHLY, LocalDateTime.now(), null, null,
+                "Summary", null, null, null, null, null,
+                true, true, true, true, true, true, true, false, false, false, null);
+        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
+                "Summary", null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null);
+
+        assertThat(service.createReview(full).diligenceScorePercent()).isEqualTo(70);
+        assertThat(service.createReview(skipped).diligenceScorePercent()).isNull();
     }
 }

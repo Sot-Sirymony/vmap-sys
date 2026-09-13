@@ -5,6 +5,7 @@ import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { archiveIdealPartnerProfile, createIdealPartnerProfile, listIdealPartnerProfiles, updateIdealPartnerProfile } from '../api/idealPartnerProfileApi';
 import { archiveStep, permanentlyDeleteStep, createStep, getStepArchiveImpact, listSteps, restoreStep, updateStep } from '../api/stepApi';
+import { getWorkStyleProfile } from '../api/workStyleProfileApi';
 import { listTasks } from '../api/taskApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import Card from '@mui/material/Card';
@@ -40,11 +41,12 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
-import type { Dream, Goal, IdealPartnerProfile, Priority, TaskItem, VisionArea, VisionStep, VisionStepRequest, WorkStatus } from '../types/vision';
+import type { Dream, Goal, IdealPartnerProfile, Priority, TaskItem, VisionArea, VisionStep, VisionStepRequest, WorkStatus, WorkStyleArchetype } from '../types/vision';
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
+import { ARCHETYPE_GUIDANCE, getComplementarySuggestion, workStyleArchetypeLabels } from '../utils/workStyleAssessment';
 import { PageSection } from './PageSection';
 
 export function StepsPage() {
@@ -98,6 +100,9 @@ export function StepsPage() {
   const [profileMotivation, setProfileMotivation] = useState('');
   const [profileOffer, setProfileOffer] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
+  // FR-49.4: the current user's own dominant archetype, used only to derive
+  // a complementary-partner suggestion in the Ideal Partner Profile modal.
+  const [myWorkStyleDominant, setMyWorkStyleDominant] = useState<WorkStyleArchetype | null>(null);
 
   // Arrived from a goal's "Add step" shortcut: pre-select that goal and open the
   // create form, then strip the params so a refresh doesn't reopen it.
@@ -133,6 +138,7 @@ export function StepsPage() {
       },
     );
     void listIdealPartnerProfiles(token).then(setProfiles);
+    void getWorkStyleProfile(token).then((profile) => setMyWorkStyleDominant(profile.dominant));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -662,6 +668,22 @@ export function StepsPage() {
               Describe the person this step needs before looking for them — it turns recruiting
               from "who do I know?" into "who fits this?".
             </p>
+            {myWorkStyleDominant && (() => {
+              const suggestion = getComplementarySuggestion(myWorkStyleDominant);
+              if (!suggestion || suggestion.length === 0) {
+                return null;
+              }
+              return (
+                <div className="coaching-panel">
+                  <strong>Complementary work style</strong>
+                  <p>
+                    Your own work style leans {workStyleArchetypeLabels[myWorkStyleDominant]} ({ARCHETYPE_GUIDANCE[myWorkStyleDominant].blindSpot}).
+                    A partner leaning {suggestion.map((archetype) => workStyleArchetypeLabels[archetype]).join(' or ')} tends
+                    to cover that gap well.
+                  </p>
+                </div>
+              );
+            })()}
             <label>
               Required experience
               <Textarea value={profileExperience} onChange={(event) => setProfileExperience(event.target.value)} />

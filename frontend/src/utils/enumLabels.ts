@@ -9,10 +9,12 @@ import type {
   ObstacleType,
   OfferType,
   ReportType,
+  PartnerMotivator,
   PartnerStatus,
   PartnerSupportType,
   Priority,
   ReviewType,
+  ScheduleMode,
   Severity,
   WorkStatus,
 } from '../types/vision';
@@ -22,6 +24,12 @@ export const priorityLabels: Record<Priority, string> = {
   MEDIUM: 'Medium',
   HIGH: 'High',
   CRITICAL: 'Critical',
+};
+
+// FR-51: how a dream's or goal's target date relates to its children's.
+export const scheduleModeLabels: Record<ScheduleMode, string> = {
+  BOTTOM_UP: 'Bottom-up (default)',
+  TOP_DOWN_FIXED: 'Fixed deadline (top-down)',
 };
 
 // FR-39.3 removed the `priorityColors` and `workStatusColors` re-exports that
@@ -105,6 +113,29 @@ export const offerTypeLabels: Record<OfferType, string> = {
   EXPERIENCE: 'Experience',
   OTHER: 'Other',
 };
+
+// FR-50.4: what drives the partner, as distinct from offerTypeLabels above
+// (what the user offers them in return).
+export const partnerMotivatorLabels: Record<PartnerMotivator, string> = {
+  FINANCIAL_GAIN: 'Financial gain',
+  AVOIDING_LOSS: 'Avoiding a loss',
+  SHARED_VISION: 'Shared vision',
+  RECOGNITION: 'Recognition',
+  OTHER: 'Other',
+};
+
+// FR-50.1: seven original, plain-language integrity-and-reliability checks.
+export const INTEGRITY_CHECKLIST_QUESTIONS = [
+  { key: 'flagDishonesty', label: 'I have concerns about this person’s honesty or trustworthiness' },
+  { key: 'flagAnger', label: 'I have seen a pattern of volatile anger from them' },
+  { key: 'flagPoorJudgment', label: 'I have seen a pattern of poor judgment or repeated bad decisions' },
+  { key: 'flagOutsizedReward', label: 'They are promising an unusually large reward for very little effort' },
+  { key: 'flagFlatteryPressure', label: 'They rely on excessive flattery or high-pressure persuasion' },
+  { key: 'flagGossip', label: 'They share other people’s private information inappropriately' },
+  { key: 'flagDisregardBoundaries', label: 'They disregard agreements, rules, or boundaries' },
+] as const;
+
+export type IntegrityFlagKey = (typeof INTEGRITY_CHECKLIST_QUESTIONS)[number]['key'];
 
 export const communicationStatusLabels: Record<CommunicationStatus, string> = {
   DRAFT: 'Draft',

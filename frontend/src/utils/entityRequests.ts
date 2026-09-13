@@ -19,6 +19,7 @@ export const dreamRequest = (dream: Dream): DreamRequest => ({
   status: dream.status,
   moonshot: dream.moonshot,
   moonshotVision: dream.moonshotVision,
+  scheduleMode: dream.scheduleMode,
 });
 
 export const goalRequest = (goal: Goal): GoalRequest => ({
@@ -31,6 +32,7 @@ export const goalRequest = (goal: Goal): GoalRequest => ({
   status: goal.status,
   moonshot: goal.moonshot,
   moonshotVision: goal.moonshotVision,
+  scheduleMode: goal.scheduleMode,
 });
 
 export const stepRequest = (step: VisionStep): VisionStepRequest => ({

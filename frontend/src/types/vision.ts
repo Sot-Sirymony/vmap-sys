@@ -40,11 +40,19 @@ export type PartnerStatus = 'TO_CONTACT' | 'CONTACTED' | 'ACTIVE' | 'WAITING' | 
 export type PartnerSupportType = 'MENTOR' | 'EXPERT' | 'ADVISOR' | 'COLLEAGUE' | 'FINANCIAL' | 'TECHNICAL' | 'EMOTIONAL' | 'OTHER';
 // FR-15.2: the exchange basis a partner responds to.
 export type OfferType = 'MONEY' | 'SHARED_VISION' | 'RECOGNITION' | 'EXPERIENCE' | 'OTHER';
+// FR-49: a two-axis (pace x focus) work-style archetype.
+export type WorkStyleArchetype = 'DRIVER' | 'CONNECTOR' | 'STEADIER' | 'PLANNER';
+// FR-50.4: what drives the partner, distinct from OfferType (what the user offers them).
+export type PartnerMotivator = 'FINANCIAL_GAIN' | 'AVOIDING_LOSS' | 'SHARED_VISION' | 'RECOGNITION' | 'OTHER';
 export type CommunicationStatus = 'DRAFT' | 'SENT' | 'FOLLOWED_UP' | 'REPLIED' | 'CLOSED';
 export type ReviewType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY';
 export type ObstacleType = 'KNOWLEDGE' | 'SKILL' | 'TIME' | 'MONEY' | 'MOTIVATION' | 'PARTNER' | 'SYSTEM' | 'DECISION' | 'OTHER';
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type ObstacleStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ACCEPTED';
+// FR-51: how a dream's or goal's target date relates to its children's dates.
+// BOTTOM_UP (default) requires the parent date to be no earlier than the
+// latest child date; TOP_DOWN_FIXED opts out for a real external deadline.
+export type ScheduleMode = 'BOTTOM_UP' | 'TOP_DOWN_FIXED';
 
 export type VisionArea = {
   id: number;
@@ -79,6 +87,11 @@ export type Dream = {
   status: DreamStatus;
   moonshot: boolean;
   moonshotVision?: string;
+  scheduleMode: ScheduleMode;
+  // FR-51: computed — true only when scheduleMode is TOP_DOWN_FIXED and a
+  // goal's target date now runs past this dream's fixed target date.
+  scheduleOverrun: boolean;
+  scheduleOverrunDetail?: string;
   archived: boolean;
 };
 
@@ -94,6 +107,7 @@ export type DreamRequest = {
   status: DreamStatus;
   moonshot: boolean;
   moonshotVision?: string;
+  scheduleMode: ScheduleMode;
 };
 
 export type Goal = {
@@ -109,6 +123,11 @@ export type Goal = {
   progressPercent: number;
   moonshot: boolean;
   moonshotVision?: string;
+  scheduleMode: ScheduleMode;
+  // FR-51: computed — true only when scheduleMode is TOP_DOWN_FIXED and a
+  // step's target date now runs past this goal's fixed target date.
+  scheduleOverrun: boolean;
+  scheduleOverrunDetail?: string;
   archived: boolean;
 };
 
@@ -122,6 +141,7 @@ export type GoalRequest = {
   status: WorkStatus;
   moonshot: boolean;
   moonshotVision?: string;
+  scheduleMode: ScheduleMode;
 };
 
 export type VisionStep = {
@@ -205,6 +225,21 @@ export type Partner = {
   relatedTaskId?: number;
   status: PartnerStatus;
   notes?: string;
+  // FR-50.1: seven original integrity-and-reliability checks. Gate (BR-39)
+  // fires only the first time a FINANCIAL/TECHNICAL partner moves to Active.
+  flagDishonesty?: boolean | null;
+  flagAnger?: boolean | null;
+  flagPoorJudgment?: boolean | null;
+  flagOutsizedReward?: boolean | null;
+  flagFlatteryPressure?: boolean | null;
+  flagGossip?: boolean | null;
+  flagDisregardBoundaries?: boolean | null;
+  riskOverrideNote?: string;
+  primaryMotivator?: PartnerMotivator | null;
+  // FR-50.2: non-null once the BR-39 gate has cleared; never re-fires after.
+  vettedAt?: string | null;
+  // FR-49.3: the user's own estimate, never a partner self-report.
+  workStyleType?: WorkStyleArchetype | null;
   archived: boolean;
 };
 
@@ -224,6 +259,34 @@ export type PartnerRequest = {
   relatedTaskId?: number;
   status: PartnerStatus;
   notes?: string;
+  flagDishonesty?: boolean | null;
+  flagAnger?: boolean | null;
+  flagPoorJudgment?: boolean | null;
+  flagOutsizedReward?: boolean | null;
+  flagFlatteryPressure?: boolean | null;
+  flagGossip?: boolean | null;
+  flagDisregardBoundaries?: boolean | null;
+  riskOverrideNote?: string;
+  primaryMotivator?: PartnerMotivator | null;
+  workStyleType?: WorkStyleArchetype | null;
+};
+
+// FR-49.2: dominant is null only when the user has never taken the
+// assessment. secondary is null whenever both axes read decisively.
+export type WorkStyleProfile = {
+  dominant: WorkStyleArchetype | null;
+  secondary: WorkStyleArchetype | null;
+  paceFastScore: number | null;
+  paceDeliberateScore: number | null;
+  focusTaskScore: number | null;
+  focusPeopleScore: number | null;
+};
+
+export type WorkStyleAssessmentRequest = {
+  paceFastScore: number;
+  paceDeliberateScore: number;
+  focusTaskScore: number;
+  focusPeopleScore: number;
 };
 
 // FR-15.1: the partner a step needs, written down before anyone is recruited.
@@ -254,6 +317,11 @@ export type CommunicationMessage = {
   benefitToPartner?: string;
   wordPicture?: string;
   expectedOutcome?: string;
+  // FR-52.1: four additive persuasion fields, all optional.
+  objectionsAndAnswers?: string;
+  socialProof?: string;
+  valueComparison?: string;
+  callToAction?: string;
   messageBody?: string;
   status: CommunicationStatus;
   followUpDate?: string;
@@ -279,11 +347,20 @@ export type Review = {
   diligenceUsedLeverage?: boolean | null;
   diligencePriorityFirst?: boolean | null;
   diligenceSmarterRoute?: boolean | null;
+  // FR-53: widens the checklist above from five checks to ten.
+  diligenceRightlyPlanned?: boolean | null;
+  diligenceRightlyPerformed?: boolean | null;
+  diligenceExpeditious?: boolean | null;
+  diligenceEfficient?: boolean | null;
+  diligenceQualityOutcome?: boolean | null;
+  // FR-53: computed server-side — met-count / 10 * 100 once all ten are
+  // answered, null while the checklist is skipped. Never sent in a request.
+  diligenceScorePercent?: number | null;
   diligenceNote?: string;
   archived: boolean;
 };
 
-export type ReviewRequest = Omit<Review, 'id' | 'archived'>;
+export type ReviewRequest = Omit<Review, 'id' | 'archived' | 'diligenceScorePercent'>;
 
 export type Obstacle = {
   id: number;
@@ -298,6 +375,15 @@ export type Obstacle = {
   solution?: string;
   rootCause?: string;
   creativeAlternatives?: string;
+  // FR-54.1: a guided worksheet, offered only for PARTNER-type obstacles.
+  // Diagnostic only (FR-54.4) — none of these gate a status transition.
+  conflictIncident?: string;
+  conflictCost?: string;
+  conflictOtherPerspective?: string;
+  conflictLesson?: string;
+  // FR-54.2 / BR-43: never sent to Excel export.
+  conflictPrivateNote?: string;
+  conflictNextAction?: string;
   requiredPartnerId?: number;
   status: ObstacleStatus;
   archived: boolean;

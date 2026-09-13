@@ -22,14 +22,14 @@ import { useStoredState } from '../../hooks/useStoredState';
 import { useEnergyOvercommitNudge } from '../../hooks/useEnergyOvercommitNudge';
 import { moonshotTint, moonshotViolet, moonshotVioletDeep, visionAreaDotColor } from '../../theme';
 import type {
-  Dream, DreamRequest, DreamStatus, DreamType, EnergyDemand, Goal, GoalRequest, ObstacleType, Priority, TaskItem,
-  TaskItemRequest, VisionStep, VisionStepRequest, WorkStatus,
+  Dream, DreamRequest, DreamStatus, DreamType, EnergyDemand, Goal, GoalRequest, ObstacleType, Priority,
+  ScheduleMode, TaskItem, TaskItemRequest, VisionStep, VisionStepRequest, WorkStatus,
 } from '../../types/vision';
 import { useToast } from '../../context/ToastContext';
 import { dreamRequest, goalRequest, stepRequest, taskRequest } from '../../utils/entityRequests';
 import { nudgeAfterTaskComplete } from '../../utils/completionNudge';
 import { suggestPartnerFor } from '../../utils/partnerSuggestion';
-import { energyDemandLabels, obstacleTypeLabels } from '../../utils/enumLabels';
+import { energyDemandLabels, obstacleTypeLabels, scheduleModeLabels } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
 import { CrudModalForm } from '../common/CrudModalForm';
@@ -193,6 +193,7 @@ export function VisionMapTree({
   const [dreamStatusField, setDreamStatusField] = useState<DreamStatus>('ACTIVE');
   const [dreamMoonshot, setDreamMoonshot] = useState(false);
   const [dreamMoonshotVision, setDreamMoonshotVision] = useState('');
+  const [dreamScheduleMode, setDreamScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
   const [dreamSaving, setDreamSaving] = useState(false);
 
   const [editingGoalId, setEditingGoalId] = useState<number | null>(null);
@@ -204,6 +205,7 @@ export function VisionMapTree({
   const [goalStatus, setGoalStatus] = useState<WorkStatus>('NOT_STARTED');
   const [goalMoonshot, setGoalMoonshot] = useState(false);
   const [goalMoonshotVision, setGoalMoonshotVision] = useState('');
+  const [goalScheduleMode, setGoalScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
   const [goalSaving, setGoalSaving] = useState(false);
 
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
@@ -374,6 +376,7 @@ export function VisionMapTree({
     setDreamStatusField(dream.status);
     setDreamMoonshot(dream.moonshot);
     setDreamMoonshotVision(dream.moonshotVision ?? '');
+    setDreamScheduleMode(dream.scheduleMode);
     setEditingDream(true);
   }
 
@@ -398,6 +401,7 @@ export function VisionMapTree({
         status: dreamStatusField,
         moonshot: dreamMoonshot,
         moonshotVision: dreamMoonshot ? dreamMoonshotVision : undefined,
+        scheduleMode: dreamScheduleMode,
       };
       await updateDream(token, dream.id, request);
       await onDataChange();
@@ -462,6 +466,7 @@ export function VisionMapTree({
     setGoalStatus(goal.status);
     setGoalMoonshot(goal.moonshot);
     setGoalMoonshotVision(goal.moonshotVision ?? '');
+    setGoalScheduleMode(goal.scheduleMode);
   }
 
   function cancelGoalEdit() {
@@ -486,6 +491,7 @@ export function VisionMapTree({
         status: goalStatus,
         moonshot: goalMoonshot,
         moonshotVision: goalMoonshot ? goalMoonshotVision : undefined,
+        scheduleMode: goalScheduleMode,
       };
       await updateGoal(token, editingGoalId, request);
       await onDataChange();
@@ -960,6 +966,15 @@ export function VisionMapTree({
             </label>
           )}
           <label className="field-full">
+            Target date scheduling
+            <FormControl fullWidth size="small">
+              <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={dreamScheduleMode} onChange={(event) => setDreamScheduleMode(event.target.value as ScheduleMode)}>
+                <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
+                <MenuItem value="TOP_DOWN_FIXED">{scheduleModeLabels.TOP_DOWN_FIXED}</MenuItem>
+              </Select>
+            </FormControl>
+          </label>
+          <label className="field-full">
             Why Important
             <Textarea value={dreamWhyImportant} onChange={(event) => setDreamWhyImportant(event.target.value)} />
           </label>
@@ -1023,6 +1038,15 @@ export function VisionMapTree({
               <Textarea value={goalMoonshotVision} onChange={(event) => setGoalMoonshotVision(event.target.value)} />
             </label>
           )}
+          <label className="field-full">
+            Target date scheduling
+            <FormControl fullWidth size="small">
+              <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={goalScheduleMode} onChange={(event) => setGoalScheduleMode(event.target.value as ScheduleMode)}>
+                <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
+                <MenuItem value="TOP_DOWN_FIXED">{scheduleModeLabels.TOP_DOWN_FIXED}</MenuItem>
+              </Select>
+            </FormControl>
+          </label>
           <label className="field-full">
             Description
             <Textarea value={goalDescription} onChange={(event) => setGoalDescription(event.target.value)} />
@@ -1379,7 +1403,7 @@ export function VisionMapTree({
                 placeholder="New goal title"
                 level={2}
                 onAdd={async (title) => {
-                  await createGoal(token, { dreamId: dream.id, title, priority: 'MEDIUM', status: 'NOT_STARTED', moonshot: false });
+                  await createGoal(token, { dreamId: dream.id, title, priority: 'MEDIUM', status: 'NOT_STARTED', moonshot: false, scheduleMode: 'BOTTOM_UP' });
                   await onDataChange();
                 }}
                 inputRef={registerAdd('dream')}

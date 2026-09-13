@@ -43,10 +43,12 @@ class PermanentDeleteFlowTests {
         long dreamId = postAndId("/api/dreams", token, Map.of(
                 "visionAreaId", areaId, "title", "Become a researcher", "whyImportant", "Impact",
                 "successDefinition", "Paper", "dreamType", "LONG_TERM", "priority", "HIGH",
-                "targetDate", LocalDate.now().plusMonths(6).toString(), "status", "ACTIVE"));
+                "targetDate", LocalDate.now().plusMonths(6).toString(), "status", "ACTIVE",
+                "scheduleMode", "BOTTOM_UP"));
         long goalId = postAndId("/api/goals", token, Map.of(
                 "dreamId", dreamId, "title", "Learn AI tools", "priority", "HIGH",
-                "targetDate", LocalDate.now().plusMonths(3).toString(), "status", "NOT_STARTED"));
+                "targetDate", LocalDate.now().plusMonths(3).toString(), "status", "NOT_STARTED",
+                "scheduleMode", "BOTTOM_UP"));
         long stepId = postAndId("/api/steps", token, Map.of(
                 "goalId", goalId, "title", "Search literature", "sequenceNumber", 1, "complex", true,
                 "priority", "HIGH", "targetDate", LocalDate.now().plusMonths(2).toString(), "status", "NOT_STARTED"));

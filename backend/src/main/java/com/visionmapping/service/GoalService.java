@@ -12,6 +12,8 @@ import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
@@ -22,7 +24,10 @@ import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -50,7 +55,7 @@ public class GoalService {
     @Transactional(readOnly = true)
     public List<GoalResponse> listGoals(boolean includeArchived) {
         return findAllForUser(goalRepository, lookup.userId(), includeArchived).stream()
-                .map(mapper::toResponse)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -71,14 +76,15 @@ public class GoalService {
                 .manualProgressOverride(false)
                 .moonshot(request.moonshot())
                 .moonshotVision(request.moonshotVision())
+                .scheduleMode(request.scheduleMode())
                 .build();
-        return mapper.toResponse(goalRepository.save(entity));
+        return toResponse(goalRepository.save(entity));
     }
 
     @Cacheable(CacheConfig.GOAL_CACHE)
     @Transactional(readOnly = true)
     public GoalResponse getGoal(Long id) {
-        return mapper.toResponse(lookup.goal(id));
+        return toResponse(lookup.goal(id));
     }
 
     public GoalResponse updateGoal(Long id, GoalRequest request) {
@@ -92,8 +98,10 @@ public class GoalService {
         entity.setStatus(request.status());
         entity.setMoonshot(request.moonshot());
         entity.setMoonshotVision(request.moonshotVision());
+        entity.setScheduleMode(request.scheduleMode());
         validateGoalCompletion(entity, false);
-        return mapper.toResponse(entity);
+        validateScheduleCascade(entity);
+        return toResponse(entity);
     }
 
     public GoalResponse updateGoalStatus(Long id, String status, boolean manualOverride) {
@@ -103,7 +111,7 @@ public class GoalService {
         if (manualOverride) {
             entity.setManualProgressOverride(true);
         }
-        return mapper.toResponse(entity);
+        return toResponse(entity);
     }
 
     public void archiveGoal(Long id) {
@@ -136,5 +144,42 @@ public class GoalService {
         if (!allStepsComplete) {
             throw new BusinessRuleException("A goal cannot be completed until all steps are completed, unless manualOverride is true.");
         }
+    }
+
+    // FR-51: the latest targetDate among this goal's own non-archived steps
+    // that actually have one set (a step with no date yet never counts).
+    private LocalDate latestActiveStepDate(Goal goal) {
+        return visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), goal.getUser().getId()).stream()
+                .map(VisionStep::getTargetDate)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    // BR-40: unless TOP_DOWN_FIXED, a goal's target date must not precede
+    // its latest active step's target date.
+    private void validateScheduleCascade(Goal goal) {
+        if (goal.getTargetDate() == null || goal.getScheduleMode() != ScheduleMode.BOTTOM_UP) {
+            return;
+        }
+        LocalDate latestStepDate = latestActiveStepDate(goal);
+        if (latestStepDate != null && goal.getTargetDate().isBefore(latestStepDate)) {
+            throw new BusinessRuleException(
+                    "This goal's target date (%s) is earlier than one of its steps' target date (%s). Move the goal's date later, adjust the step, or switch this goal to a fixed top-down deadline."
+                            .formatted(goal.getTargetDate(), latestStepDate));
+        }
+    }
+
+    // FR-51: overrun is informational only — true when TOP_DOWN_FIXED lets a
+    // parent date stand even though a child's date now runs past it.
+    private GoalResponse toResponse(Goal entity) {
+        LocalDate latestStepDate = latestActiveStepDate(entity);
+        boolean overrun = entity.getScheduleMode() == ScheduleMode.TOP_DOWN_FIXED
+                && entity.getTargetDate() != null && latestStepDate != null
+                && entity.getTargetDate().isBefore(latestStepDate);
+        String detail = overrun
+                ? "A step's target date (%s) is after this goal's fixed target date (%s).".formatted(latestStepDate, entity.getTargetDate())
+                : null;
+        return mapper.toResponse(entity, overrun, detail);
     }
 }

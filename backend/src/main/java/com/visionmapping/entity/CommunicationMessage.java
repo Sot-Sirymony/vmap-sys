@@ -79,6 +79,20 @@ public class CommunicationMessage extends BaseAuditableEntity {
     @Column(name = "expected_outcome", length = 2000)
     private String expectedOutcome;
 
+    // FR-52.1: four additive persuasion fields, all optional (FR-52.3 — a
+    // message using none of them generates exactly as it did before FR-52).
+    @Column(name = "objections_and_answers", length = 2000)
+    private String objectionsAndAnswers;
+
+    @Column(name = "social_proof", length = 2000)
+    private String socialProof;
+
+    @Column(name = "value_comparison", length = 2000)
+    private String valueComparison;
+
+    @Column(name = "call_to_action", length = 2000)
+    private String callToAction;
+
     @Column(name = "message_body", length = 6000)
     private String messageBody;
 

@@ -79,6 +79,31 @@ public class Obstacle extends BaseAuditableEntity {
     @Column(name = "creative_alternatives", length = 3000)
     private String creativeAlternatives;
 
+    // FR-54.1: a guided worksheet for PARTNER-type obstacles. Diagnostic
+    // only (FR-54.4) — never gates a status transition, unlike rootCause/
+    // creativeAlternatives above.
+    @Column(name = "conflict_incident", length = 2000)
+    private String conflictIncident;
+
+    @Column(name = "conflict_cost", length = 2000)
+    private String conflictCost;
+
+    @Column(name = "conflict_other_perspective", length = 2000)
+    private String conflictOtherPerspective;
+
+    @Column(name = "conflict_lesson", length = 2000)
+    private String conflictLesson;
+
+    // FR-54.2: BR-43 — this field is never wired into Excel export, in
+    // either direction. See ExcelService: the Obstacles sheet lists only
+    // the columns it explicitly names, so keeping this one out of that list
+    // is the whole enforcement — there is no separate exclusion to bypass.
+    @Column(name = "conflict_private_note", length = 2000)
+    private String conflictPrivateNote;
+
+    @Column(name = "conflict_next_action", length = 2000)
+    private String conflictNextAction;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "required_partner_id")
     private Partner requiredPartner;

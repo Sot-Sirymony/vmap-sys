@@ -91,6 +91,12 @@ export function ObstaclesPage() {
   const [solution, setSolution] = useState('');
   const [rootCause, setRootCause] = useState('');
   const [creativeAlternatives, setCreativeAlternatives] = useState('');
+  const [conflictIncident, setConflictIncident] = useState('');
+  const [conflictCost, setConflictCost] = useState('');
+  const [conflictOtherPerspective, setConflictOtherPerspective] = useState('');
+  const [conflictLesson, setConflictLesson] = useState('');
+  const [conflictPrivateNote, setConflictPrivateNote] = useState('');
+  const [conflictNextAction, setConflictNextAction] = useState('');
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
@@ -136,6 +142,12 @@ export function ObstaclesPage() {
       solution,
       rootCause,
       creativeAlternatives,
+      conflictIncident,
+      conflictCost,
+      conflictOtherPerspective,
+      conflictLesson,
+      conflictPrivateNote,
+      conflictNextAction,
       requiredPartnerId: optionalNumber(requiredPartnerId),
       status,
     });
@@ -145,6 +157,12 @@ export function ObstaclesPage() {
       setSolution('');
       setRootCause('');
       setCreativeAlternatives('');
+      setConflictIncident('');
+      setConflictCost('');
+      setConflictOtherPerspective('');
+      setConflictLesson('');
+      setConflictPrivateNote('');
+      setConflictNextAction('');
     }
     return success;
   }
@@ -161,6 +179,12 @@ export function ObstaclesPage() {
     setSolution(obstacle.solution ?? '');
     setRootCause(obstacle.rootCause ?? '');
     setCreativeAlternatives(obstacle.creativeAlternatives ?? '');
+    setConflictIncident(obstacle.conflictIncident ?? '');
+    setConflictCost(obstacle.conflictCost ?? '');
+    setConflictOtherPerspective(obstacle.conflictOtherPerspective ?? '');
+    setConflictLesson(obstacle.conflictLesson ?? '');
+    setConflictPrivateNote(obstacle.conflictPrivateNote ?? '');
+    setConflictNextAction(obstacle.conflictNextAction ?? '');
     setObstacleType(obstacle.obstacleType);
     setSeverity(obstacle.severity);
     setStatus(obstacle.status);
@@ -178,6 +202,12 @@ export function ObstaclesPage() {
     setSolution('');
     setRootCause('');
     setCreativeAlternatives('');
+    setConflictIncident('');
+    setConflictCost('');
+    setConflictOtherPerspective('');
+    setConflictLesson('');
+    setConflictPrivateNote('');
+    setConflictNextAction('');
     setObstacleType('KNOWLEDGE');
     setSeverity('MEDIUM');
     setStatus('OPEN');
@@ -219,6 +249,12 @@ export function ObstaclesPage() {
         solution: obstacle.solution,
         rootCause: obstacle.rootCause,
         creativeAlternatives: obstacle.creativeAlternatives,
+        conflictIncident: obstacle.conflictIncident,
+        conflictCost: obstacle.conflictCost,
+        conflictOtherPerspective: obstacle.conflictOtherPerspective,
+        conflictLesson: obstacle.conflictLesson,
+        conflictPrivateNote: obstacle.conflictPrivateNote,
+        conflictNextAction: obstacle.conflictNextAction,
         requiredPartnerId: obstacle.requiredPartnerId,
         status: nextStatus,
       });
@@ -427,6 +463,44 @@ export function ObstaclesPage() {
           {alternativeCount} of 3 listed so far.
         </span>
       </label>
+      {obstacleType === 'PARTNER' && (
+        <div className="field-full diligence-checklist">
+          <strong>Conflict worksheet</strong>
+          <p>
+            Optional, and never gates this obstacle's status — a way to work through what happened, not another
+            required field.
+          </p>
+          <label className="field-full">
+            What happened
+            <Textarea value={conflictIncident} onChange={(event) => setConflictIncident(event.target.value)} />
+          </label>
+          <label className="field-full">
+            What it cost
+            <Textarea value={conflictCost} onChange={(event) => setConflictCost(event.target.value)} />
+            <span className="field-hint">Time, trust, an opportunity — whatever this actually cost.</span>
+          </label>
+          <label className="field-full">
+            Their likely perspective
+            <Textarea value={conflictOtherPerspective} onChange={(event) => setConflictOtherPerspective(event.target.value)} />
+          </label>
+          <label className="field-full">
+            What's worth keeping from this
+            <Textarea value={conflictLesson} onChange={(event) => setConflictLesson(event.target.value)} />
+          </label>
+          <label className="field-full">
+            Private note — <strong>never shared or exported</strong>
+            <Textarea value={conflictPrivateNote} onChange={(event) => setConflictPrivateNote(event.target.value)} />
+            <span className="field-hint">
+              A space to work through your own reaction. This never appears in an Excel export, in any sheet
+              (BR-43).
+            </span>
+          </label>
+          <label className="field-full">
+            One concrete next action
+            <Textarea value={conflictNextAction} onChange={(event) => setConflictNextAction(event.target.value)} />
+          </label>
+        </div>
+      )}
     </>
   );
 

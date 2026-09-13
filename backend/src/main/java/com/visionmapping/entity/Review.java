@@ -86,6 +86,29 @@ public class Review extends BaseAuditableEntity {
     @Column(name = "diligence_smarter_route")
     private Boolean diligenceSmarterRoute;
 
+    // FR-53: extends the FR-16 checklist above from five checks to ten,
+    // widening execution quality alongside the original planning-quality
+    // questions. Same all-or-nothing rule (BR-42), now over all ten.
+    @Column(name = "diligence_rightly_planned")
+    private Boolean diligenceRightlyPlanned;
+
+    @Column(name = "diligence_rightly_performed")
+    private Boolean diligenceRightlyPerformed;
+
+    @Column(name = "diligence_expeditious")
+    private Boolean diligenceExpeditious;
+
+    @Column(name = "diligence_efficient")
+    private Boolean diligenceEfficient;
+
+    @Column(name = "diligence_quality_outcome")
+    private Boolean diligenceQualityOutcome;
+
+    // FR-53: computed as (met-count / 10) * 100 when all ten are answered;
+    // null otherwise. Never set directly from a request.
+    @Column(name = "diligence_score_percent")
+    private Integer diligenceScorePercent;
+
     @Column(name = "diligence_note", length = 2000)
     private String diligenceNote;
 

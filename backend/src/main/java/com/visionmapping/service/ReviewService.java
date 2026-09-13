@@ -59,6 +59,12 @@ public class ReviewService {
                 .diligenceUsedLeverage(request.diligenceUsedLeverage())
                 .diligencePriorityFirst(request.diligencePriorityFirst())
                 .diligenceSmarterRoute(request.diligenceSmarterRoute())
+                .diligenceRightlyPlanned(request.diligenceRightlyPlanned())
+                .diligenceRightlyPerformed(request.diligenceRightlyPerformed())
+                .diligenceExpeditious(request.diligenceExpeditious())
+                .diligenceEfficient(request.diligenceEfficient())
+                .diligenceQualityOutcome(request.diligenceQualityOutcome())
+                .diligenceScorePercent(computeDiligenceScore(request))
                 .diligenceNote(request.diligenceNote())
                 .build();
         return mapper.toResponse(reviewRepository.save(entity));
@@ -88,6 +94,12 @@ public class ReviewService {
         entity.setDiligenceUsedLeverage(request.diligenceUsedLeverage());
         entity.setDiligencePriorityFirst(request.diligencePriorityFirst());
         entity.setDiligenceSmarterRoute(request.diligenceSmarterRoute());
+        entity.setDiligenceRightlyPlanned(request.diligenceRightlyPlanned());
+        entity.setDiligenceRightlyPerformed(request.diligenceRightlyPerformed());
+        entity.setDiligenceExpeditious(request.diligenceExpeditious());
+        entity.setDiligenceEfficient(request.diligenceEfficient());
+        entity.setDiligenceQualityOutcome(request.diligenceQualityOutcome());
+        entity.setDiligenceScorePercent(computeDiligenceScore(request));
         entity.setDiligenceNote(request.diligenceNote());
         return mapper.toResponse(entity);
     }
@@ -107,20 +119,45 @@ public class ReviewService {
     }
 
     /**
-     * FR-16: the diligence checklist is answered as a whole or skipped as a
-     * whole — a half-answered checklist would silently read as "not met" on
-     * the unanswered questions.
+     * FR-16 / FR-53: the diligence checklist is answered as a whole or
+     * skipped as a whole — a half-answered checklist would silently read as
+     * "not met" on the unanswered questions. Widened from five checks to
+     * ten by FR-53 (BR-42); the rule itself is unchanged.
      */
     private void validateDiligenceChecklist(ReviewRequest request) {
+        List<Boolean> answers = diligenceAnswers(request);
+        long answered = answers.stream().filter(Objects::nonNull).count();
+        if (answered != 0 && answered != answers.size()) {
+            throw new BusinessRuleException("Answer every diligence question, or skip the whole checklist.");
+        }
+    }
+
+    /**
+     * FR-53: met-count / 10 * 100 once every check is answered; null while
+     * the checklist is skipped (validateDiligenceChecklist already rejected
+     * any half-answered state before this runs).
+     */
+    private Integer computeDiligenceScore(ReviewRequest request) {
+        List<Boolean> answers = diligenceAnswers(request);
+        if (answers.stream().anyMatch(Objects::isNull)) {
+            return null;
+        }
+        long metCount = answers.stream().filter(Boolean::booleanValue).count();
+        return (int) (metCount * 100 / answers.size());
+    }
+
+    private List<Boolean> diligenceAnswers(ReviewRequest request) {
         List<Boolean> answers = new ArrayList<>();
         answers.add(request.diligenceClearVision());
         answers.add(request.diligenceWorkedPlan());
         answers.add(request.diligenceUsedLeverage());
         answers.add(request.diligencePriorityFirst());
         answers.add(request.diligenceSmarterRoute());
-        long answered = answers.stream().filter(Objects::nonNull).count();
-        if (answered != 0 && answered != answers.size()) {
-            throw new BusinessRuleException("Answer every diligence question, or skip the whole checklist.");
-        }
+        answers.add(request.diligenceRightlyPlanned());
+        answers.add(request.diligenceRightlyPerformed());
+        answers.add(request.diligenceExpeditious());
+        answers.add(request.diligenceEfficient());
+        answers.add(request.diligenceQualityOutcome());
+        return answers;
     }
 }

@@ -14,6 +14,8 @@ import CardHeader from '@mui/material/CardHeader';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -37,9 +39,24 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useSearchParams } from 'react-router';
 import { useUrlFilter } from '../hooks/useUrlFilter';
-import type { Dream, Goal, IdealPartnerProfile, OfferType, Partner, PartnerRequest, PartnerStatus, PartnerSupportType, TaskItem, VisionArea, VisionStep } from '../types/vision';
-import { offerTypeLabels, partnerStatusLabels, partnerSupportTypeLabels } from '../utils/enumLabels';
+import type { Dream, Goal, IdealPartnerProfile, OfferType, Partner, PartnerMotivator, PartnerRequest, PartnerStatus, PartnerSupportType, TaskItem, VisionArea, VisionStep, WorkStyleArchetype } from '../types/vision';
+import {
+  INTEGRITY_CHECKLIST_QUESTIONS, offerTypeLabels, partnerMotivatorLabels, partnerStatusLabels,
+  partnerSupportTypeLabels, type IntegrityFlagKey,
+} from '../utils/enumLabels';
+import { workStyleArchetypeLabels } from '../utils/workStyleAssessment';
 import { PageSection } from './PageSection';
+
+// FR-50.1: unchecked by default — "no concerns flagged" is the common case.
+const EMPTY_INTEGRITY_FLAGS: Record<IntegrityFlagKey, boolean> = {
+  flagDishonesty: false,
+  flagAnger: false,
+  flagPoorJudgment: false,
+  flagOutsizedReward: false,
+  flagFlatteryPressure: false,
+  flagGossip: false,
+  flagDisregardBoundaries: false,
+};
 
 export function PartnersPage() {
   const { token } = useAuth();
@@ -120,6 +137,14 @@ export function PartnersPage() {
   const [relatedStepId, setRelatedStepId] = useState('');
   const [relatedTaskId, setRelatedTaskId] = useState('');
   const [notes, setNotes] = useState('');
+  const [primaryMotivator, setPrimaryMotivator] = useState<PartnerMotivator | ''>('');
+  const [workStyleType, setWorkStyleType] = useState<WorkStyleArchetype | ''>('');
+  const [integrityFlags, setIntegrityFlags] = useState<Record<IntegrityFlagKey, boolean>>(EMPTY_INTEGRITY_FLAGS);
+  const [riskOverrideNote, setRiskOverrideNote] = useState('');
+  // FR-50.2: null until the BR-39 gate has cleared for the partner being
+  // edited (or when creating a new one) — that's when the checklist below
+  // is shown; once vetted, it never re-fires.
+  const [editingVettedAt, setEditingVettedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -148,8 +173,20 @@ export function PartnersPage() {
     };
   }
 
+  // FR-50.2: the checklist only applies the first time a FINANCIAL/TECHNICAL
+  // partner moves to Active — once vetted (editingVettedAt set), it never
+  // re-fires, matching BR-39's "does not re-apply" behavior.
+  const showIntegrityChecklist = !editingVettedAt
+    && status === 'ACTIVE'
+    && (supportType === 'FINANCIAL' || supportType === 'TECHNICAL');
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    const anyFlagChecked = INTEGRITY_CHECKLIST_QUESTIONS.some((question) => integrityFlags[question.key]);
+    if (showIntegrityChecklist && anyFlagChecked && !riskOverrideNote.trim()) {
+      crud.setError('This partner has one or more integrity concerns flagged. Record why you are proceeding anyway before moving them to Active.');
+      return false;
+    }
     const success = await crud.save({
       name,
       role,
@@ -166,6 +203,16 @@ export function PartnersPage() {
       relatedStepId: optionalNumber(relatedStepId),
       relatedTaskId: optionalNumber(relatedTaskId),
       notes,
+      primaryMotivator: primaryMotivator || undefined,
+      flagDishonesty: integrityFlags.flagDishonesty,
+      flagAnger: integrityFlags.flagAnger,
+      flagPoorJudgment: integrityFlags.flagPoorJudgment,
+      flagOutsizedReward: integrityFlags.flagOutsizedReward,
+      flagFlatteryPressure: integrityFlags.flagFlatteryPressure,
+      flagGossip: integrityFlags.flagGossip,
+      flagDisregardBoundaries: integrityFlags.flagDisregardBoundaries,
+      riskOverrideNote: riskOverrideNote || undefined,
+      workStyleType: workStyleType || undefined,
     });
     if (success) {
       setName('');
@@ -175,6 +222,10 @@ export function PartnersPage() {
       setPhone('');
       setStrength('');
       setNotes('');
+      setPrimaryMotivator('');
+      setIntegrityFlags(EMPTY_INTEGRITY_FLAGS);
+      setRiskOverrideNote('');
+      setWorkStyleType('');
     }
     return success;
   }
@@ -196,6 +247,19 @@ export function PartnersPage() {
     setRelatedStepId(partner.relatedStepId ? String(partner.relatedStepId) : '');
     setRelatedTaskId(partner.relatedTaskId ? String(partner.relatedTaskId) : '');
     setNotes(partner.notes ?? '');
+    setPrimaryMotivator(partner.primaryMotivator ?? '');
+    setIntegrityFlags({
+      flagDishonesty: Boolean(partner.flagDishonesty),
+      flagAnger: Boolean(partner.flagAnger),
+      flagPoorJudgment: Boolean(partner.flagPoorJudgment),
+      flagOutsizedReward: Boolean(partner.flagOutsizedReward),
+      flagFlatteryPressure: Boolean(partner.flagFlatteryPressure),
+      flagGossip: Boolean(partner.flagGossip),
+      flagDisregardBoundaries: Boolean(partner.flagDisregardBoundaries),
+    });
+    setRiskOverrideNote(partner.riskOverrideNote ?? '');
+    setEditingVettedAt(partner.vettedAt ?? null);
+    setWorkStyleType(partner.workStyleType ?? '');
   }
 
   function cancelEdit() {
@@ -215,12 +279,27 @@ export function PartnersPage() {
     setRelatedStepId('');
     setRelatedTaskId('');
     setNotes('');
+    setPrimaryMotivator('');
+    setIntegrityFlags(EMPTY_INTEGRITY_FLAGS);
+    setRiskOverrideNote('');
+    setEditingVettedAt(null);
+    setWorkStyleType('');
   }
 
   // Board drag/dropdown move. There is no status PATCH endpoint for partners,
   // so the move sends a full update built from the loaded entity.
   async function handleMove(partner: Partner, nextStatus: PartnerStatus) {
     if (!token || partner.status === nextStatus) {
+      return;
+    }
+    // FR-50.2: a FINANCIAL/TECHNICAL partner's first move to Active needs the
+    // checklist answered, which a silent drag can't collect — open the edit
+    // form (pre-set to Active) instead of completing the move directly.
+    const needsVetting = nextStatus === 'ACTIVE' && !partner.vettedAt
+      && (partner.supportType === 'FINANCIAL' || partner.supportType === 'TECHNICAL');
+    if (needsVetting) {
+      startEdit(partner);
+      setStatus('ACTIVE');
       return;
     }
     try {
@@ -232,6 +311,7 @@ export function PartnersPage() {
         phone: partner.phone,
         strength: partner.strength,
         supportType: partner.supportType,
+        offerType: partner.offerType ?? undefined,
         relatedVisionAreaId: partner.relatedVisionAreaId,
         relatedDreamId: partner.relatedDreamId,
         relatedGoalId: partner.relatedGoalId,
@@ -239,6 +319,16 @@ export function PartnersPage() {
         relatedTaskId: partner.relatedTaskId,
         status: nextStatus,
         notes: partner.notes,
+        primaryMotivator: partner.primaryMotivator ?? undefined,
+        flagDishonesty: partner.flagDishonesty,
+        flagAnger: partner.flagAnger,
+        flagPoorJudgment: partner.flagPoorJudgment,
+        flagOutsizedReward: partner.flagOutsizedReward,
+        flagFlatteryPressure: partner.flagFlatteryPressure,
+        flagGossip: partner.flagGossip,
+        flagDisregardBoundaries: partner.flagDisregardBoundaries,
+        riskOverrideNote: partner.riskOverrideNote,
+        workStyleType: partner.workStyleType ?? undefined,
       });
       await crud.reload();
     } catch (moveError) {
@@ -331,6 +421,30 @@ export function PartnersPage() {
         <span className="field-hint">What this partner most likely responds to in exchange for their help.</span>
       </label>
       <label>
+        Primary Motivator
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': "Primary Motivator" }} displayEmpty value={primaryMotivator} onChange={(event) => setPrimaryMotivator(event.target.value as PartnerMotivator | '')}>
+            <MenuItem value="">None</MenuItem>
+            {(['FINANCIAL_GAIN', 'AVOIDING_LOSS', 'SHARED_VISION', 'RECOGNITION', 'OTHER'] as const).map((value) => (
+              <MenuItem value={value} key={value}>{partnerMotivatorLabels[value]}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <span className="field-hint">What drives this partner, as distinct from what you're offering them.</span>
+      </label>
+      <label>
+        Work Style
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': "Work Style" }} displayEmpty value={workStyleType} onChange={(event) => setWorkStyleType(event.target.value as WorkStyleArchetype | '')}>
+            <MenuItem value="">None</MenuItem>
+            {(['DRIVER', 'CONNECTOR', 'STEADIER', 'PLANNER'] as const).map((value) => (
+              <MenuItem value={value} key={value}>{workStyleArchetypeLabels[value]}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <span className="field-hint">Your own estimate of their style (FR-49.3) — not a self-report from them.</span>
+      </label>
+      <label>
         Status
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as PartnerStatus)}>
@@ -340,6 +454,37 @@ export function PartnersPage() {
           </Select>
         </FormControl>
       </label>
+      {showIntegrityChecklist && (
+        <div className="field-full diligence-checklist">
+          <strong>Before you move this partner to Active…</strong>
+          <p>
+            Check anything that concerns you. If nothing does, moving to Active needs no extra step. If something
+            does, you'll need to record why you're proceeding anyway.
+          </p>
+          {INTEGRITY_CHECKLIST_QUESTIONS.map((question) => (
+            <div className="diligence-row" key={question.key}>
+              <span>{question.label}</span>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={integrityFlags[question.key] ? 'yes' : 'no'}
+                onChange={(_event, value) => setIntegrityFlags((current) => ({
+                  ...current,
+                  [question.key]: value === 'yes',
+                }))}
+                aria-label={question.label}
+              >
+                <ToggleButton value="no">No concern</ToggleButton>
+                <ToggleButton value="yes">Flag it</ToggleButton>
+              </ToggleButtonGroup>
+            </div>
+          ))}
+          <label>
+            Why proceed anyway (required only if something is flagged above)
+            <Textarea value={riskOverrideNote} onChange={(event) => setRiskOverrideNote(event.target.value)} />
+          </label>
+        </div>
+      )}
       <label>
         Vision Area
         <FormControl fullWidth size="small">

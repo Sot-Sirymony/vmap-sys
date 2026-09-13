@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { Rocket, Target } from 'lucide-react';
+import { Rocket, Target, TriangleAlert } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
 import { listSteps } from '../api/stepApi';
 import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
@@ -42,10 +42,10 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
-import type { Dream, Goal, GoalRequest, Priority, VisionArea, WorkStatus } from '../types/vision';
+import type { Dream, Goal, GoalRequest, Priority, ScheduleMode, VisionArea, WorkStatus } from '../types/vision';
 import { moonshotViolet } from '../theme';
 import { goalRequest } from '../utils/entityRequests';
-import { priorityLabels } from '../utils/enumLabels';
+import { priorityLabels, scheduleModeLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
@@ -88,6 +88,7 @@ export function GoalsPage() {
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
   const [moonshot, setMoonshot] = useState(false);
   const [moonshotVision, setMoonshotVision] = useState('');
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
   // In the URL, not component state: the dashboard links straight into a
   // filtered view, and a filtered list stays shareable and bookmarkable.
   const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
@@ -167,6 +168,7 @@ export function GoalsPage() {
       status,
       moonshot,
       moonshotVision: moonshot ? moonshotVision : undefined,
+      scheduleMode,
     });
     if (success) {
       setTitle('');
@@ -174,6 +176,7 @@ export function GoalsPage() {
       setSuccessCriteria('');
       setMoonshot(false);
       setMoonshotVision('');
+      setScheduleMode('BOTTOM_UP');
     }
     return success;
   }
@@ -189,6 +192,7 @@ export function GoalsPage() {
     setStatus(goal.status);
     setMoonshot(goal.moonshot);
     setMoonshotVision(goal.moonshotVision ?? '');
+    setScheduleMode(goal.scheduleMode);
   }
 
   function cancelEdit() {
@@ -201,6 +205,7 @@ export function GoalsPage() {
     setStatus('NOT_STARTED');
     setMoonshot(false);
     setMoonshotVision('');
+    setScheduleMode('BOTTOM_UP');
   }
 
   async function archiveImpactMessage(goal: Goal) {
@@ -269,6 +274,7 @@ export function GoalsPage() {
         priority: 'MEDIUM',
         status: 'NOT_STARTED',
         moonshot: false,
+        scheduleMode: 'BOTTOM_UP',
       });
       await crud.reload();
     } catch (addError) {
@@ -374,6 +380,13 @@ export function GoalsPage() {
                 </Box>
               </Tooltip>
             )}
+            {goal.scheduleOverrun && (
+              <Tooltip title={goal.scheduleOverrunDetail || 'A step runs past this goal\'s fixed target date.'} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)' }} role="img" aria-label="Schedule overrun">
+                  <TriangleAlert size={16} />
+                </Box>
+              </Tooltip>
+            )}
             {goal.title}
           </Box>
           <Breadcrumbs crumbs={goalCrumbs(goal)} />
@@ -474,6 +487,20 @@ export function GoalsPage() {
           </span>
         </label>
       )}
+      <label className="field-full">
+        Target date scheduling
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={scheduleMode} onChange={(event) => setScheduleMode(event.target.value as ScheduleMode)}>
+            <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
+            <MenuItem value="TOP_DOWN_FIXED">{scheduleModeLabels.TOP_DOWN_FIXED}</MenuItem>
+          </Select>
+        </FormControl>
+        <span className="field-hint">
+          {scheduleMode === 'BOTTOM_UP'
+            ? "This goal's target date must be on or after its steps' target dates — set from the bottom up."
+            : 'A real external deadline that cannot move. Steps running past it are flagged, not blocked.'}
+        </span>
+      </label>
       <label className="field-full">
         Description
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
@@ -602,6 +629,13 @@ export function GoalsPage() {
                   <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
                     <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Moonshot goal">
                       <Rocket size={16} />
+                    </Box>
+                  </Tooltip>
+                )}
+                {goal.scheduleOverrun && (
+                  <Tooltip title={goal.scheduleOverrunDetail || 'A step runs past this goal\'s fixed target date.'} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)', mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Schedule overrun">
+                      <TriangleAlert size={16} />
                     </Box>
                   </Tooltip>
                 )}

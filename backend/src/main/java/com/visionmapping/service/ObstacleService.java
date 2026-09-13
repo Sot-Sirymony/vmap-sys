@@ -60,6 +60,12 @@ public class ObstacleService {
                 .solution(request.solution())
                 .rootCause(request.rootCause())
                 .creativeAlternatives(request.creativeAlternatives())
+                .conflictIncident(request.conflictIncident())
+                .conflictCost(request.conflictCost())
+                .conflictOtherPerspective(request.conflictOtherPerspective())
+                .conflictLesson(request.conflictLesson())
+                .conflictPrivateNote(request.conflictPrivateNote())
+                .conflictNextAction(request.conflictNextAction())
                 .requiredPartner(lookup.optionalPartner(request.requiredPartnerId()))
                 .status(request.status())
                 .build();
@@ -104,6 +110,12 @@ public class ObstacleService {
         entity.setSolution(request.solution());
         entity.setRootCause(request.rootCause());
         entity.setCreativeAlternatives(request.creativeAlternatives());
+        entity.setConflictIncident(request.conflictIncident());
+        entity.setConflictCost(request.conflictCost());
+        entity.setConflictOtherPerspective(request.conflictOtherPerspective());
+        entity.setConflictLesson(request.conflictLesson());
+        entity.setConflictPrivateNote(request.conflictPrivateNote());
+        entity.setConflictNextAction(request.conflictNextAction());
         entity.setRequiredPartner(lookup.optionalPartner(request.requiredPartnerId()));
         entity.setStatus(request.status());
         prepareObstacle(entity);

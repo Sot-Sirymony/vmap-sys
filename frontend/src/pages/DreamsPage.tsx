@@ -11,7 +11,7 @@ import FormControl from '@mui/material/FormControl';
 import Tooltip from '@mui/material/Tooltip';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import { MoonStar, Rocket } from 'lucide-react';
+import { MoonStar, Rocket, TriangleAlert } from 'lucide-react';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
@@ -38,10 +38,10 @@ import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
-import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, VisionArea } from '../types/vision';
+import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, ScheduleMode, VisionArea } from '../types/vision';
 import { moonshotViolet } from '../theme';
 import { dreamRequest } from '../utils/entityRequests';
-import { dreamStatusLabels, dreamTypeLabels, priorityLabels } from '../utils/enumLabels';
+import { dreamStatusLabels, dreamTypeLabels, priorityLabels, scheduleModeLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
@@ -74,6 +74,7 @@ export function DreamsPage() {
   const [status, setStatus] = useState<DreamStatus>('ACTIVE');
   const [moonshot, setMoonshot] = useState(false);
   const [moonshotVision, setMoonshotVision] = useState('');
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   // In the URL, not component state: the dashboard links straight into a
@@ -149,6 +150,7 @@ export function DreamsPage() {
       status,
       moonshot,
       moonshotVision: moonshot ? moonshotVision : undefined,
+      scheduleMode,
     });
     if (success) {
       setTitle('');
@@ -157,6 +159,7 @@ export function DreamsPage() {
       setSuccessDefinition('');
       setMoonshot(false);
       setMoonshotVision('');
+      setScheduleMode('BOTTOM_UP');
     }
     return success;
   }
@@ -174,6 +177,7 @@ export function DreamsPage() {
     setStatus(dream.status);
     setMoonshot(dream.moonshot);
     setMoonshotVision(dream.moonshotVision ?? '');
+    setScheduleMode(dream.scheduleMode);
   }
 
   function cancelEdit() {
@@ -188,6 +192,7 @@ export function DreamsPage() {
     setStatus('ACTIVE');
     setMoonshot(false);
     setMoonshotVision('');
+    setScheduleMode('BOTTOM_UP');
   }
 
   // Board drag/dropdown move. There is no status PATCH endpoint for dreams, so
@@ -284,6 +289,14 @@ export function DreamsPage() {
               <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
                 <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot dream">
                   <Rocket size={16} />
+                </Box>
+              </Tooltip>
+            )}
+            {dream.scheduleOverrun && (
+              // FR-51.2: fixed top-down deadline, but a goal now runs past it — informational only.
+              <Tooltip title={dream.scheduleOverrunDetail || 'A goal runs past this dream\'s fixed target date.'} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)' }} role="img" aria-label="Schedule overrun">
+                  <TriangleAlert size={16} />
                 </Box>
               </Tooltip>
             )}
@@ -422,6 +435,20 @@ export function DreamsPage() {
           </span>
         </label>
       )}
+      <label className="field-full">
+        Target date scheduling
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={scheduleMode} onChange={(event) => setScheduleMode(event.target.value as ScheduleMode)}>
+            <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
+            <MenuItem value="TOP_DOWN_FIXED">{scheduleModeLabels.TOP_DOWN_FIXED}</MenuItem>
+          </Select>
+        </FormControl>
+        <span className="field-hint">
+          {scheduleMode === 'BOTTOM_UP'
+            ? "This dream's target date must be on or after its goals' target dates — set from the bottom up."
+            : 'A real external deadline that cannot move. Goals running past it are flagged, not blocked.'}
+        </span>
+      </label>
       <label className="field-full">
         Description
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
@@ -583,6 +610,13 @@ export function DreamsPage() {
                   <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
                     <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Moonshot dream">
                       <Rocket size={16} />
+                    </Box>
+                  </Tooltip>
+                )}
+                {dream.scheduleOverrun && (
+                  <Tooltip title={dream.scheduleOverrunDetail || 'A goal runs past this dream\'s fixed target date.'} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)', mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Schedule overrun">
+                      <TriangleAlert size={16} />
                     </Box>
                   </Tooltip>
                 )}

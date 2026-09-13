@@ -54,13 +54,20 @@ const REVIEW_GUIDES: Record<ReviewType, string[]> = {
   ],
 };
 
-// FR-16.1: original wording; answered all-or-none (enforced here and server-side).
+// FR-16.1 / FR-53: original wording; answered all-or-none (enforced here and
+// server-side). FR-53 widened the checklist from five checks to ten,
+// covering execution quality alongside the original planning-quality ones.
 const DILIGENCE_QUESTIONS = [
   { key: 'diligenceClearVision', label: 'My vision for this area is still clear and specific' },
   { key: 'diligenceWorkedPlan', label: 'I worked from a plan instead of just reacting' },
   { key: 'diligenceUsedLeverage', label: 'I used tools or partners where they beat solo effort' },
   { key: 'diligencePriorityFirst', label: 'The highest-priority work got my best hours' },
   { key: 'diligenceSmarterRoute', label: 'Nothing I am doing the hard way has an obvious smarter route' },
+  { key: 'diligenceRightlyPlanned', label: 'I planned this properly before starting, with input where I needed it' },
+  { key: 'diligenceRightlyPerformed', label: 'I did the work to a standard I would stand behind' },
+  { key: 'diligenceExpeditious', label: 'I moved on this promptly rather than letting it sit' },
+  { key: 'diligenceEfficient', label: 'I used my time and tools well, without waste' },
+  { key: 'diligenceQualityOutcome', label: 'The result is actually solid, not just finished' },
 ] as const;
 
 type DiligenceKey = (typeof DILIGENCE_QUESTIONS)[number]['key'];
@@ -80,6 +87,11 @@ const EMPTY_DILIGENCE: Record<DiligenceKey, boolean | null> = {
   diligenceUsedLeverage: null,
   diligencePriorityFirst: null,
   diligenceSmarterRoute: null,
+  diligenceRightlyPlanned: null,
+  diligenceRightlyPerformed: null,
+  diligenceExpeditious: null,
+  diligenceEfficient: null,
+  diligenceQualityOutcome: null,
 };
 
 export function ReviewsPage() {
@@ -152,6 +164,11 @@ export function ReviewsPage() {
       diligenceUsedLeverage: includeChecklist ? diligence.diligenceUsedLeverage : undefined,
       diligencePriorityFirst: includeChecklist ? diligence.diligencePriorityFirst : undefined,
       diligenceSmarterRoute: includeChecklist ? diligence.diligenceSmarterRoute : undefined,
+      diligenceRightlyPlanned: includeChecklist ? diligence.diligenceRightlyPlanned : undefined,
+      diligenceRightlyPerformed: includeChecklist ? diligence.diligenceRightlyPerformed : undefined,
+      diligenceExpeditious: includeChecklist ? diligence.diligenceExpeditious : undefined,
+      diligenceEfficient: includeChecklist ? diligence.diligenceEfficient : undefined,
+      diligenceQualityOutcome: includeChecklist ? diligence.diligenceQualityOutcome : undefined,
       diligenceNote: includeChecklist ? diligenceNote || undefined : undefined,
     });
     if (success) {
@@ -183,6 +200,11 @@ export function ReviewsPage() {
       diligenceUsedLeverage: review.diligenceUsedLeverage ?? null,
       diligencePriorityFirst: review.diligencePriorityFirst ?? null,
       diligenceSmarterRoute: review.diligenceSmarterRoute ?? null,
+      diligenceRightlyPlanned: review.diligenceRightlyPlanned ?? null,
+      diligenceRightlyPerformed: review.diligenceRightlyPerformed ?? null,
+      diligenceExpeditious: review.diligenceExpeditious ?? null,
+      diligenceEfficient: review.diligenceEfficient ?? null,
+      diligenceQualityOutcome: review.diligenceQualityOutcome ?? null,
     });
     setDiligenceNote(review.diligenceNote ?? '');
   }
@@ -245,7 +267,12 @@ export function ReviewsPage() {
       key: 'diligence',
       label: 'Diligence',
       sortValue: (review) => review.diligenceClearVision != null,
-      render: (review) => (review.diligenceClearVision != null ? 'Done' : '-'),
+      render: (review) => {
+        if (review.diligenceClearVision == null) {
+          return '-';
+        }
+        return review.diligenceScorePercent != null ? `Done (${review.diligenceScorePercent}%)` : 'Done';
+      },
     },
     {
       key: 'status',
@@ -273,6 +300,11 @@ export function ReviewsPage() {
   const formDreams = relatedVisionAreaId
     ? dreams.filter((dream) => String(dream.visionAreaId) === relatedVisionAreaId)
     : dreams;
+
+  // FR-53: a live count, mirroring the "N of 3" hint FR-32 gave the
+  // creative-alternatives field — feedback while filling the checklist in,
+  // not just a rejection after submit.
+  const diligenceAnsweredCount = DILIGENCE_QUESTIONS.filter((question) => diligence[question.key] !== null).length;
 
   function handleVisionAreaChange(nextAreaId: string) {
     setRelatedVisionAreaId(nextAreaId);
@@ -329,7 +361,12 @@ export function ReviewsPage() {
       {checklistApplies && (
         <div className="field-full diligence-checklist">
           <strong>Diligence checkup</strong>
-          <p>Answer all five, or leave the whole checkup empty to skip it.</p>
+          <p>
+            Answer all ten, or leave the whole checkup empty to skip it.
+            {diligenceAnsweredCount > 0 && diligenceAnsweredCount < DILIGENCE_QUESTIONS.length && (
+              <> <span className="field-hint">({diligenceAnsweredCount} of {DILIGENCE_QUESTIONS.length} answered so far)</span></>
+            )}
+          </p>
           {DILIGENCE_QUESTIONS.map((question) => (
             <div className="diligence-row" key={question.key}>
               <span>{question.label}</span>

@@ -1,6 +1,7 @@
 package com.visionmapping.dto.request;
 
 import com.visionmapping.entity.enums.Priority;
+import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.WorkStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,6 +17,7 @@ public record GoalRequest(
         LocalDate targetDate,
         @NotNull WorkStatus status,
         boolean moonshot,
-        @Size(max = 3000) String moonshotVision
+        @Size(max = 3000) String moonshotVision,
+        @NotNull ScheduleMode scheduleMode
 ) {
 }

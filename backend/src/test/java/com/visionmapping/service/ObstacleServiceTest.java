@@ -79,6 +79,7 @@ class ObstacleServiceTest {
     private ObstacleRequest request(ObstacleStatus status, String rootCause, String creativeAlternatives) {
         return new ObstacleRequest(null, null, null, null, "Stalled progress", null,
                 ObstacleType.TIME, Severity.MEDIUM, "worked around it for now", rootCause, creativeAlternatives,
+                null, null, null, null, null, null,
                 null, status);
     }
 

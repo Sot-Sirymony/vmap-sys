@@ -15,6 +15,7 @@ import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.Priority;
+import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.service.DreamService;
 import com.visionmapping.service.VisionAreaService;
@@ -102,7 +103,8 @@ class HierarchyImport {
                     reader.dateOrNull(8),
                     reader.enumValue(DreamStatus.class, 9, STATUS),
                     false,
-                    null);
+                    null,
+                    ScheduleMode.BOTTOM_UP);
             long newId = dreamService.createDream(request).id();
             mapWorkbookId(reader, newDreamIds, newId);
         });
@@ -120,7 +122,8 @@ class HierarchyImport {
                     reader.dateOrNull(6),
                     reader.enumValue(WorkStatus.class, 7, STATUS),
                     false,
-                    null);
+                    null,
+                    ScheduleMode.BOTTOM_UP);
             long newId = goalService.createGoal(request).id();
             mapWorkbookId(reader, newGoalIds, newId);
         });

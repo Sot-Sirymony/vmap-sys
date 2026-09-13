@@ -10,6 +10,7 @@ import com.visionmapping.entity.enums.ThemePreset;
 import com.visionmapping.entity.enums.UiDensity;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
+import com.visionmapping.entity.enums.WorkStyleArchetype;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -128,4 +129,28 @@ public class AppUser extends BaseAuditableEntity {
     @Builder.Default
     @Column(name = "reduce_motion", nullable = false)
     private boolean reduceMotion = false;
+
+    // FR-49.2: a one-time, retakeable work-style self-assessment. All six
+    // fields are nullable together — a user who never takes it has no
+    // profile at all, not a half-filled one. Diagnostic metadata only
+    // (BR-38): never blocks saving a user, partner, or Ideal Partner Profile.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "work_style_dominant", length = 20)
+    private WorkStyleArchetype workStyleDominant;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "work_style_secondary", length = 20)
+    private WorkStyleArchetype workStyleSecondary;
+
+    @Column(name = "work_style_pace_fast_score")
+    private Integer workStylePaceFastScore;
+
+    @Column(name = "work_style_pace_deliberate_score")
+    private Integer workStylePaceDeliberateScore;
+
+    @Column(name = "work_style_focus_task_score")
+    private Integer workStyleFocusTaskScore;
+
+    @Column(name = "work_style_focus_people_score")
+    private Integer workStyleFocusPeopleScore;
 }

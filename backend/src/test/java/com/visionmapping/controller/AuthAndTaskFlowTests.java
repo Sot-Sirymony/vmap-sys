@@ -95,7 +95,8 @@ class AuthAndTaskFlowTests {
                 "dreamType", "LONG_TERM",
                 "priority", "HIGH",
                 "targetDate", LocalDate.now().plusMonths(3).toString(),
-                "status", "ACTIVE"
+                "status", "ACTIVE",
+                "scheduleMode", "BOTTOM_UP"
         ));
         long goalId = postAndId("/api/goals", token, Map.of(
                 "dreamId", dreamId,
@@ -104,7 +105,8 @@ class AuthAndTaskFlowTests {
                 "successCriteria", "Mentor approves topic",
                 "priority", "HIGH",
                 "targetDate", LocalDate.now().plusMonths(2).toString(),
-                "status", "NOT_STARTED"
+                "status", "NOT_STARTED",
+                "scheduleMode", "BOTTOM_UP"
         ));
         long stepId = postAndId("/api/steps", token, Map.of(
                 "goalId", goalId,

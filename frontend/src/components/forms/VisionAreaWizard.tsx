@@ -87,6 +87,7 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated }: VisionAr
         priority: 'MEDIUM',
         status: 'IDEA',
         moonshot: false,
+        scheduleMode: 'BOTTOM_UP',
       });
       setAddedDreams((dreams) => [...dreams, dreamTitle.trim()]);
       setDreamTitle('');

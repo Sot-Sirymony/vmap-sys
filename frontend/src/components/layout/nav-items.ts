@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Compass,
   FileSpreadsheet,
+  Fingerprint,
   Footprints,
   Handshake,
   KeyRound,
@@ -64,6 +65,7 @@ export const navGroups: NavGroup[] = [
     label: 'Support',
     items: [
       { to: '/partners', label: 'Partners', icon: Handshake },
+      { to: '/work-style', label: 'Work Style', icon: Fingerprint },
       { to: '/communication', label: 'Communication', icon: Send },
       { to: '/reviews', label: 'Reviews', icon: ClipboardList },
       { to: '/insights', label: 'Insights', icon: Lightbulb },

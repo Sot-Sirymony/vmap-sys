@@ -103,6 +103,10 @@ public class CommunicationMessageService {
         entity.setBenefitToPartner(request.benefitToPartner());
         entity.setWordPicture(request.wordPicture());
         entity.setExpectedOutcome(request.expectedOutcome());
+        entity.setObjectionsAndAnswers(request.objectionsAndAnswers());
+        entity.setSocialProof(request.socialProof());
+        entity.setValueComparison(request.valueComparison());
+        entity.setCallToAction(request.callToAction());
         entity.setMessageBody(request.messageBody());
         entity.setStatus(request.status());
         entity.setFollowUpDate(request.followUpDate());

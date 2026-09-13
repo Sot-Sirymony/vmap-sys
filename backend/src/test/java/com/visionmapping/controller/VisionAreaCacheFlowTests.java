@@ -112,7 +112,8 @@ class VisionAreaCacheFlowTests {
                                 "dreamType", "SHORT_TERM",
                                 "priority", "MEDIUM",
                                 "targetDate", java.time.LocalDate.now().plusMonths(1).toString(),
-                                "status", "ACTIVE"
+                                "status", "ACTIVE",
+                                "scheduleMode", "BOTTOM_UP"
                         ))))
                 .andExpect(status().isCreated());
     }

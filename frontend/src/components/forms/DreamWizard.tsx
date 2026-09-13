@@ -72,6 +72,7 @@ export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, 
         targetDate: targetDate || undefined,
         status: 'ACTIVE',
         moonshot: false,
+        scheduleMode: 'BOTTOM_UP',
       });
       setCreatedDream(dream);
       setStep(3);
@@ -106,6 +107,7 @@ export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, 
         priority: 'MEDIUM',
         status: 'NOT_STARTED',
         moonshot: false,
+        scheduleMode: 'BOTTOM_UP',
       });
       setAddedGoals((goals) => [...goals, goalTitle.trim()]);
       setGoalTitle('');

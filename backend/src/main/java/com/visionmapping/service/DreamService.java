@@ -11,14 +11,21 @@ import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
+import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.enums.DreamStatus;
+import com.visionmapping.entity.enums.ScheduleMode;
+import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.DreamRepository;
+import com.visionmapping.repository.GoalRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -38,12 +45,13 @@ public class DreamService {
     private final PermanentDeleteCascade permanentDeleteCascade;
     private final VisionMappingMapper mapper;
     private final DreamRepository dreamRepository;
+    private final GoalRepository goalRepository;
 
     @Cacheable(CacheConfig.DREAM_LIST_CACHE)
     @Transactional(readOnly = true)
     public List<DreamResponse> listDreams(boolean includeArchived) {
         return findAllForUser(dreamRepository, lookup.userId(), includeArchived).stream()
-                .map(mapper::toResponse)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -64,14 +72,15 @@ public class DreamService {
                 .status(request.status())
                 .moonshot(request.moonshot())
                 .moonshotVision(request.moonshotVision())
+                .scheduleMode(request.scheduleMode())
                 .build();
-        return mapper.toResponse(dreamRepository.save(entity));
+        return toResponse(dreamRepository.save(entity));
     }
 
     @Cacheable(CacheConfig.DREAM_CACHE)
     @Transactional(readOnly = true)
     public DreamResponse getDream(Long id) {
-        return mapper.toResponse(lookup.dream(id));
+        return toResponse(lookup.dream(id));
     }
 
     public DreamResponse updateDream(Long id, DreamRequest request) {
@@ -87,13 +96,15 @@ public class DreamService {
         entity.setStatus(request.status());
         entity.setMoonshot(request.moonshot());
         entity.setMoonshotVision(request.moonshotVision());
-        return mapper.toResponse(entity);
+        entity.setScheduleMode(request.scheduleMode());
+        validateScheduleCascade(entity);
+        return toResponse(entity);
     }
 
     public DreamResponse updateDreamStatus(Long id, String status) {
         Dream entity = lookup.dream(id);
         entity.setStatus(parseEnum(DreamStatus.class, status));
-        return mapper.toResponse(entity);
+        return toResponse(entity);
     }
 
     public void archiveDream(Long id) {
@@ -116,5 +127,44 @@ public class DreamService {
         Dream dream = lookup.dream(id);
         requireArchived(dream.isArchived(), "Dream");
         permanentDeleteCascade.deleteDream(dream);
+    }
+
+    // FR-51: the latest targetDate among this dream's own non-archived goals
+    // that actually have one set (a goal with no date yet never counts).
+    private LocalDate latestActiveGoalDate(Dream dream) {
+        return goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), dream.getUser().getId()).stream()
+                .map(Goal::getTargetDate)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    // BR-40: unless TOP_DOWN_FIXED, a dream's target date must not precede
+    // its latest active goal's target date. Only runs where targetDate is
+    // actually set on both sides — a blank date on either side skips the
+    // check rather than forcing one in.
+    private void validateScheduleCascade(Dream dream) {
+        if (dream.getTargetDate() == null || dream.getScheduleMode() != ScheduleMode.BOTTOM_UP) {
+            return;
+        }
+        LocalDate latestGoalDate = latestActiveGoalDate(dream);
+        if (latestGoalDate != null && dream.getTargetDate().isBefore(latestGoalDate)) {
+            throw new BusinessRuleException(
+                    "This dream's target date (%s) is earlier than one of its goals' target date (%s). Move the dream's date later, adjust the goal, or switch this dream to a fixed top-down deadline."
+                            .formatted(dream.getTargetDate(), latestGoalDate));
+        }
+    }
+
+    // FR-51: overrun is informational only — true when TOP_DOWN_FIXED lets a
+    // parent date stand even though a child's date now runs past it.
+    private DreamResponse toResponse(Dream entity) {
+        LocalDate latestGoalDate = latestActiveGoalDate(entity);
+        boolean overrun = entity.getScheduleMode() == ScheduleMode.TOP_DOWN_FIXED
+                && entity.getTargetDate() != null && latestGoalDate != null
+                && entity.getTargetDate().isBefore(latestGoalDate);
+        String detail = overrun
+                ? "A goal's target date (%s) is after this dream's fixed target date (%s).".formatted(latestGoalDate, entity.getTargetDate())
+                : null;
+        return mapper.toResponse(entity, overrun, detail);
     }
 }

@@ -1,8 +1,10 @@
 package com.visionmapping.dto.request;
 
 import com.visionmapping.entity.enums.OfferType;
+import com.visionmapping.entity.enums.PartnerMotivator;
 import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
+import com.visionmapping.entity.enums.WorkStyleArchetype;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,6 +25,16 @@ public record PartnerRequest(
         Long relatedStepId,
         Long relatedTaskId,
         @NotNull PartnerStatus status,
-        @Size(max = 3000) String notes
+        @Size(max = 3000) String notes,
+        Boolean flagDishonesty,
+        Boolean flagAnger,
+        Boolean flagPoorJudgment,
+        Boolean flagOutsizedReward,
+        Boolean flagFlatteryPressure,
+        Boolean flagGossip,
+        Boolean flagDisregardBoundaries,
+        @Size(max = 1000) String riskOverrideNote,
+        PartnerMotivator primaryMotivator,
+        WorkStyleArchetype workStyleType
 ) {
 }
