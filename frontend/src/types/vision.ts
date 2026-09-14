@@ -427,6 +427,10 @@ export type Obstacle = {
   conflictStayedOnIncident?: boolean | null;
   conflictNoThreatsOrSarcasm?: boolean | null;
   conflictDefinedWinWin?: boolean | null;
+  // FR-60.1: diagnostic only — see BR-49.
+  criticismOverstated?: string;
+  criticismDelivery?: string;
+  criticismSubstance?: string;
   requiredPartnerId?: number;
   status: ObstacleStatus;
   archived: boolean;

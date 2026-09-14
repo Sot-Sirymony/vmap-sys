@@ -136,6 +136,18 @@ public class Obstacle extends BaseAuditableEntity {
     @Column(name = "conflict_defined_win_win")
     private Boolean conflictDefinedWinWin;
 
+    // FR-60.1: incoming-criticism triage on PARTNER-type obstacles.
+    // Diagnostic only (BR-49) — never gates status, same as every other
+    // worksheet field above.
+    @Column(name = "criticism_overstated", length = 2000)
+    private String criticismOverstated;
+
+    @Column(name = "criticism_delivery", length = 2000)
+    private String criticismDelivery;
+
+    @Column(name = "criticism_substance", length = 2000)
+    private String criticismSubstance;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "required_partner_id")
     private Partner requiredPartner;

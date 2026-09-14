@@ -34,7 +34,7 @@ import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type {
   Dream, ExpectationAgreement, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity,
@@ -55,6 +55,7 @@ const statuses: ObstacleStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'ACCEPTED
 
 export function ObstaclesPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const crud = useCrudEntity<Obstacle, ObstacleRequest>({
     token,
     entityLabel: 'obstacles',
@@ -118,6 +119,9 @@ export function ObstaclesPage() {
   const [conflictChecklistAnswers, setConflictChecklistAnswers] = useState<Record<ConflictChecklistKey, boolean | null>>(
     EMPTY_CONFLICT_CHECKLIST_ANSWERS,
   );
+  const [criticismOverstated, setCriticismOverstated] = useState('');
+  const [criticismDelivery, setCriticismDelivery] = useState('');
+  const [criticismSubstance, setCriticismSubstance] = useState('');
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
@@ -175,6 +179,9 @@ export function ObstaclesPage() {
       conflictStayedOnIncident: conflictChecklistAnswers.conflictStayedOnIncident ?? undefined,
       conflictNoThreatsOrSarcasm: conflictChecklistAnswers.conflictNoThreatsOrSarcasm ?? undefined,
       conflictDefinedWinWin: conflictChecklistAnswers.conflictDefinedWinWin ?? undefined,
+      criticismOverstated,
+      criticismDelivery,
+      criticismSubstance,
       requiredPartnerId: optionalNumber(requiredPartnerId),
       status,
     });
@@ -194,6 +201,9 @@ export function ObstaclesPage() {
       setConflictExpectationAgreed('');
       setEditingExpectationReleasedAt(null);
       setConflictChecklistAnswers(EMPTY_CONFLICT_CHECKLIST_ANSWERS);
+      setCriticismOverstated('');
+      setCriticismDelivery('');
+      setCriticismSubstance('');
     }
     return success;
   }
@@ -225,6 +235,9 @@ export function ObstaclesPage() {
       conflictNoThreatsOrSarcasm: obstacle.conflictNoThreatsOrSarcasm ?? null,
       conflictDefinedWinWin: obstacle.conflictDefinedWinWin ?? null,
     });
+    setCriticismOverstated(obstacle.criticismOverstated ?? '');
+    setCriticismDelivery(obstacle.criticismDelivery ?? '');
+    setCriticismSubstance(obstacle.criticismSubstance ?? '');
     setObstacleType(obstacle.obstacleType);
     setSeverity(obstacle.severity);
     setStatus(obstacle.status);
@@ -252,6 +265,9 @@ export function ObstaclesPage() {
     setConflictExpectationAgreed('');
     setEditingExpectationReleasedAt(null);
     setConflictChecklistAnswers(EMPTY_CONFLICT_CHECKLIST_ANSWERS);
+    setCriticismOverstated('');
+    setCriticismDelivery('');
+    setCriticismSubstance('');
     setObstacleType('KNOWLEDGE');
     setSeverity('MEDIUM');
     setStatus('OPEN');
@@ -272,6 +288,18 @@ export function ObstaclesPage() {
     } finally {
       setReleasingExpectation(false);
     }
+  }
+
+  // FR-60.2: a shortcut, not an automation — opens the Task board's create
+  // form pre-filled, but nothing is created until the user submits it there.
+  // With no linked Step, the form's own step selector asks the user to pick
+  // one (FR-60.2's "asks the user to pick one first").
+  function handleTurnCriticismIntoTask() {
+    const params = new URLSearchParams({ create: 'task', title: criticismSubstance });
+    if (relatedStepId) {
+      params.set('parent', relatedStepId);
+    }
+    navigate(`/tasks?${params.toString()}`);
   }
 
   // FR-36.2: keep the resurfaced list in step with what's being edited/typed.
@@ -322,6 +350,9 @@ export function ObstaclesPage() {
         conflictStayedOnIncident: obstacle.conflictStayedOnIncident ?? undefined,
         conflictNoThreatsOrSarcasm: obstacle.conflictNoThreatsOrSarcasm ?? undefined,
         conflictDefinedWinWin: obstacle.conflictDefinedWinWin ?? undefined,
+        criticismOverstated: obstacle.criticismOverstated,
+        criticismDelivery: obstacle.criticismDelivery,
+        criticismSubstance: obstacle.criticismSubstance,
         requiredPartnerId: obstacle.requiredPartnerId,
         status: nextStatus,
       });
@@ -632,6 +663,27 @@ export function ObstaclesPage() {
                 : `${CONFLICT_CHECKLIST_QUESTIONS.filter((question) => conflictChecklistAnswers[question.key] !== null).length} of ${CONFLICT_CHECKLIST_QUESTIONS.length} answered.`}
             </span>
           </div>
+          <strong className="field-full">Mining criticism you received</strong>
+          <label className="field-full">
+            Overstated — what was exaggerated or absolute, and can be set aside
+            <Textarea value={criticismOverstated} onChange={(event) => setCriticismOverstated(event.target.value)} />
+          </label>
+          <label className="field-full">
+            Delivery — what was about tone or timing, not substance
+            <Textarea value={criticismDelivery} onChange={(event) => setCriticismDelivery(event.target.value)} />
+          </label>
+          <label className="field-full">
+            Substance — the one actionable truth worth keeping, if any
+            <Textarea value={criticismSubstance} onChange={(event) => setCriticismSubstance(event.target.value)} />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!criticismSubstance.trim()}
+              onClick={handleTurnCriticismIntoTask}
+            >
+              Turn this into a task
+            </Button>
+          </label>
         </div>
       )}
     </>

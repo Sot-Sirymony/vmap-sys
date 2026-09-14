@@ -34,6 +34,10 @@ public record ObstacleRequest(
         Boolean conflictStayedOnIncident,
         Boolean conflictNoThreatsOrSarcasm,
         Boolean conflictDefinedWinWin,
+        // FR-60.1: diagnostic only — see BR-49.
+        @Size(max = 2000) String criticismOverstated,
+        @Size(max = 2000) String criticismDelivery,
+        @Size(max = 2000) String criticismSubstance,
         Long requiredPartnerId,
         @NotNull ObstacleStatus status
 ) {

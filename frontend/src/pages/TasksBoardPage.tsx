@@ -179,8 +179,10 @@ export function TasksBoardPage() {
     setFilterBatch({ dueFrom: iso(today), dueTo: iso(end) });
   }
 
-  // Arrived from a step's "Add task" shortcut: pre-select that step and open the
-  // create form, then strip the params so a refresh doesn't reopen it.
+  // Arrived from a step's "Add task" shortcut (or FR-60.2's "turn into a
+  // task" from an obstacle's criticism triage): pre-select that step and
+  // open the create form, optionally pre-filling the title, then strip the
+  // params so a refresh doesn't reopen it.
   useEffect(() => {
     if (searchParams.get('create') !== 'task') {
       return;
@@ -189,10 +191,15 @@ export function TasksBoardPage() {
     if (parent) {
       setStepId(parent);
     }
+    const prefillTitle = searchParams.get('title');
+    if (prefillTitle) {
+      setTitle(prefillTitle);
+    }
     setAutoOpenCreate(true);
     const next = new URLSearchParams(searchParams);
     next.delete('create');
     next.delete('parent');
+    next.delete('title');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);

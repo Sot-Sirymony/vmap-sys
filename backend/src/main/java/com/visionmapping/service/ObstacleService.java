@@ -75,6 +75,9 @@ public class ObstacleService {
                 .conflictStayedOnIncident(request.conflictStayedOnIncident())
                 .conflictNoThreatsOrSarcasm(request.conflictNoThreatsOrSarcasm())
                 .conflictDefinedWinWin(request.conflictDefinedWinWin())
+                .criticismOverstated(request.criticismOverstated())
+                .criticismDelivery(request.criticismDelivery())
+                .criticismSubstance(request.criticismSubstance())
                 .requiredPartner(lookup.optionalPartner(request.requiredPartnerId()))
                 .status(request.status())
                 .build();
@@ -131,6 +134,9 @@ public class ObstacleService {
         entity.setConflictStayedOnIncident(request.conflictStayedOnIncident());
         entity.setConflictNoThreatsOrSarcasm(request.conflictNoThreatsOrSarcasm());
         entity.setConflictDefinedWinWin(request.conflictDefinedWinWin());
+        entity.setCriticismOverstated(request.criticismOverstated());
+        entity.setCriticismDelivery(request.criticismDelivery());
+        entity.setCriticismSubstance(request.criticismSubstance());
         entity.setRequiredPartner(lookup.optionalPartner(request.requiredPartnerId()));
         entity.setStatus(request.status());
         prepareObstacle(entity);

@@ -82,6 +82,7 @@ class ObstacleServiceTest {
                 null, null, null, null, null, null,
                 null, null,
                 null, null, null, null,
+                null, null, null,
                 null, status);
     }
 
@@ -92,6 +93,7 @@ class ObstacleServiceTest {
                 null, null, null, null, null, null,
                 null, null,
                 noCharacterAttacks, stayedOnIncident, noThreatsOrSarcasm, definedWinWin,
+                null, null, null,
                 null, status);
     }
 

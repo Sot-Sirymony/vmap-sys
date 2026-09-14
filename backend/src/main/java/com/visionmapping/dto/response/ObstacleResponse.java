@@ -36,6 +36,10 @@ public record ObstacleResponse(
         Boolean conflictStayedOnIncident,
         Boolean conflictNoThreatsOrSarcasm,
         Boolean conflictDefinedWinWin,
+        // FR-60.1: diagnostic only — see BR-49.
+        String criticismOverstated,
+        String criticismDelivery,
+        String criticismSubstance,
         Long requiredPartnerId,
         ObstacleStatus status,
         boolean archived,

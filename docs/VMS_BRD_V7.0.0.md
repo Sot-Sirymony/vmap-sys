@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V7.0.0 |
 | **Version** | 7.0.0 (In progress) |
 | **Date** | 2026-09-14 |
-| **Status** | 🔶 In progress. Written from a gap analysis comparing V1.0.0 → V6.0.0 against Chapters 7–15 of *The Richest Man Who Ever Lived* (character, conflict, criticism, prudence, and wisdom). ✅ **FR-61** (Expectation Diagnosis) and ✅ **FR-62** (Conflict Engagement Checklist) shipped 2026-09-14. FR-59, FR-60, FR-63 remain proposed — not yet built. |
+| **Status** | 🔶 In progress. Written from a gap analysis comparing V1.0.0 → V6.0.0 against Chapters 7–15 of *The Richest Man Who Ever Lived* (character, conflict, criticism, prudence, and wisdom). ✅ **FR-61** (Expectation Diagnosis) and ✅ **FR-62** (Conflict Engagement Checklist) shipped 2026-09-14; ✅ **FR-60** (Incoming Criticism Triage) shipped 2026-09-15. FR-59, FR-63 remain proposed — not yet built. |
 | **Baseline** | Builds on VMS_BRD_V6.0.0 (all FR-1…FR-58 remain in force) |
 | **Concept source** | *The Richest Man Who Ever Lived* (Steven K. Scott), used as conceptual reference only, as in V5–V6. **No copyrighted text, named proprietary frameworks, or scripture is reproduced anywhere in this document or in the product** — see *Originality note* below for what that changed. |
 
@@ -164,7 +164,31 @@ blocked, or overdue.
 
 ---
 
-## FR-60 Incoming Criticism Triage *(Effort: M)*
+## FR-60 Incoming Criticism Triage — ✅ Done 2026-09-15 *(Effort: M)*
+
+**Shipped (2026-09-15):** Built third in the Build Order, claiming `V33`
+exactly as sketched when this document was drafted — no reassignment this
+time. Three nullable `VARCHAR(2000)` columns on `Obstacle`, wired through
+`createObstacle`/`updateObstacle` with no new validation, since BR-49 is
+diagnostic-only and needed no `prepareObstacle` change at all. The backend
+never restricts these fields to `PARTNER`-type obstacles (confirmed by a
+test that sets `criticismSubstance` on a `DECISION`-type obstacle and gets
+it back unchanged) — the `PARTNER`-only scoping in FR-60.1 is a frontend
+UI decision only, exactly the same precedent FR-54's original worksheet
+already set. FR-60.2's "Turn this into a task" shortcut needed one small
+extension to an *existing* mechanism rather than a new endpoint:
+`TasksBoardPage.tsx` already supported `?create=task&parent=<stepId>` (from
+a Step's own "Add task" shortcut); it now also reads an optional `?title=`
+param to pre-fill the title field, then strips all three params so a
+refresh doesn't reopen the form. `ObstaclesPage.tsx`'s
+`handleTurnCriticismIntoTask` builds that URL from the Substance text and
+the obstacle's `relatedStepId` (omitting `parent` entirely when there is no
+linked Step, which naturally satisfies FR-60.2's "asks the user to pick one
+first" — the Task form's own step selector already requires a choice).
+Verified: backend 213/213 (3 new `ObstacleCriticismTriageFlowTests` cases),
+frontend `tsc -b`/build/349 tests all green. Live-verified against the
+running dev server: a `PARTNER` obstacle round-trips all three triage
+fields verbatim; leaving them blank changes nothing else about the record.
 
 A structured way to process criticism *received* — separating what's real
 from what's just loud — extending the same `PARTNER`-type Obstacle
@@ -203,7 +227,7 @@ disconnected tool.
 
 **Data model / migration**
 
-- `V33__obstacle_criticism_triage.sql` *(provisional — see Migrations table)*: additive, nullable columns on
+- `V33__obstacle_criticism_triage.sql`: additive, nullable columns on
   `obstacles` — `criticism_overstated`, `criticism_delivery`,
   `criticism_substance` (all `VARCHAR(2000)`).
 
@@ -448,7 +472,7 @@ read-only on purpose.
 | # | Rule | Status |
 |---|---|---|
 | BR-48 | The contribution nudge (FR-59.4) is advisory only: it never blocks, delays, or reverses a Goal/Dream's transition to `COMPLETED`, and logging a gratitude entry is never required to complete anything. | Not started |
-| BR-49 | The criticism-triage fields (FR-60.1) and the "turn into a task" shortcut (FR-60.2) are diagnostic only: they never change an Obstacle's status, severity, or any FR-32/BR-25/BR-26 rule, and converting Substance into a Task is always an explicit, user-initiated save — never automatic. | Not started |
+| BR-49 | The criticism-triage fields (FR-60.1) and the "turn into a task" shortcut (FR-60.2) are diagnostic only: they never change an Obstacle's status, severity, or any FR-32/BR-25/BR-26 rule, and converting Substance into a Task is always an explicit, user-initiated save — never automatic. | ✅ Done 2026-09-15 |
 | BR-50 | `Obstacle.expectationReleasedAt` is set exactly once per Obstacle and never re-fires or reverses; the expectation fields and the release action are diagnostic only and never change status, severity, or any FR-32/BR-25/BR-26 rule. | ✅ Done 2026-09-14 |
 | BR-51 | A `PARTNER`-type Obstacle cannot transition to `Resolved` unless all four FR-62.1 checklist items are answered, alongside BR-25's existing `rootCause` requirement. The answers themselves never gate the transition — only their completeness does. | ✅ Done 2026-09-14 |
 | BR-52 | Principle resurfacing on an Obstacle (FR-63.2) is informational only — it never blocks creating, editing, or resolving an Obstacle, matching FR-37.2's "surface, don't nag" precedent. | Not started |
@@ -458,15 +482,14 @@ read-only on purpose.
 `V31` shipped with FR-61 and `V32` with FR-62 (built first and second per
 the Build Order), claiming the slots originally sketched below for FR-59
 and FR-60 respectively — the same kind of reassignment V5.0.0 and V6.0.0
-both saw. `V33` through `V35` remain provisional and will be assigned to
-whichever FR actually lands in that slot next, not necessarily the FR each
-currently names.
+both saw. `V33` shipped with FR-60 exactly where originally sketched (no
+reassignment needed this time). `V34` and `V35` remain provisional.
 
 | Migration | Purpose | Type | Status |
 |---|---|---|---|
 | `V31__obstacle_expectation_release.sql` | Expectation fields + release timestamp on `obstacles` (FR-61) | Additive, nullable | ✅ Done 2026-09-14 |
 | `V32__obstacle_conflict_checklist.sql` | Four conduct-check booleans on `obstacles` (FR-62) | Additive, nullable | ✅ Done 2026-09-14 |
-| `V33__obstacle_criticism_triage.sql` *(provisional)* | Three criticism-triage fields on `obstacles` (FR-60) | Additive, nullable | Not started |
+| `V33__obstacle_criticism_triage.sql` | Three criticism-triage fields on `obstacles` (FR-60) | Additive, nullable | ✅ Done 2026-09-15 |
 | `V34__gratitude_entries.sql` *(provisional)* | New `gratitude_entries` table (FR-59) | New table | Not started |
 | `V35__wisdom_principles.sql` *(provisional)* | New `wisdom_principles` table (FR-63) | New table | Not started |
 
@@ -476,7 +499,7 @@ currently names.
 |---|---|---|---|---|
 | 1 | FR-61 Expectation Diagnosis | Smallest; two fields + a timestamp on the worksheet FR-54 already ships | S | ✅ Done 2026-09-14 |
 | 2 | FR-62 Conflict Engagement Checklist | Same worksheet block as FR-61; independent fields, natural to land alongside it | S | ✅ Done 2026-09-14 |
-| 3 | FR-60 Incoming Criticism Triage | Same worksheet block again, plus the one cross-feature link (Task creation shortcut) | M | Not started |
+| 3 | FR-60 Incoming Criticism Triage | Same worksheet block again, plus the one cross-feature link (Task creation shortcut) | M | ✅ Done 2026-09-15 |
 | 4 | FR-59 Gratitude & Contribution Log | Independent of the worksheet work above; its own table and dashboard card | M | Not started |
 | 5 | FR-63 Principle Repository | Independent new surface; benefits from landing last so its Obstacle-resurfacing mapping can reuse whatever `obstacleType` conventions the worksheet work above settles on | M | Not started |
 
