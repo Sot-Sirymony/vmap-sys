@@ -15,6 +15,8 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.service.support.EntityLookup;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -37,6 +39,7 @@ public class ObstacleService {
     private final EntityLookup lookup;
     private final VisionMappingMapper mapper;
     private final ObstacleRepository obstacleRepository;
+    private final Clock clock;
 
     @Cacheable(CacheConfig.OBSTACLE_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -66,6 +69,8 @@ public class ObstacleService {
                 .conflictLesson(request.conflictLesson())
                 .conflictPrivateNote(request.conflictPrivateNote())
                 .conflictNextAction(request.conflictNextAction())
+                .conflictExpectation(request.conflictExpectation())
+                .conflictExpectationAgreed(request.conflictExpectationAgreed())
                 .requiredPartner(lookup.optionalPartner(request.requiredPartnerId()))
                 .status(request.status())
                 .build();
@@ -116,9 +121,23 @@ public class ObstacleService {
         entity.setConflictLesson(request.conflictLesson());
         entity.setConflictPrivateNote(request.conflictPrivateNote());
         entity.setConflictNextAction(request.conflictNextAction());
+        entity.setConflictExpectation(request.conflictExpectation());
+        entity.setConflictExpectationAgreed(request.conflictExpectationAgreed());
         entity.setRequiredPartner(lookup.optionalPartner(request.requiredPartnerId()));
         entity.setStatus(request.status());
         prepareObstacle(entity);
+        return mapper.toResponse(entity);
+    }
+
+    /**
+     * FR-61.2: a one-time personal marker, not a status change. Idempotent —
+     * calling this again after it's already set changes nothing (BR-50).
+     */
+    public ObstacleResponse releaseExpectation(Long id) {
+        Obstacle entity = lookup.obstacle(id);
+        if (entity.getExpectationReleasedAt() == null) {
+            entity.setExpectationReleasedAt(Instant.now(clock));
+        }
         return mapper.toResponse(entity);
     }
 

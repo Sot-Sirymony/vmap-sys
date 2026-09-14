@@ -47,6 +47,8 @@ export type PartnerMotivator = 'FINANCIAL_GAIN' | 'AVOIDING_LOSS' | 'SHARED_VISI
 export type CommunicationStatus = 'DRAFT' | 'SENT' | 'FOLLOWED_UP' | 'REPLIED' | 'CLOSED';
 export type ReviewType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY';
 export type ObstacleType = 'KNOWLEDGE' | 'SKILL' | 'TIME' | 'MONEY' | 'MOTIVATION' | 'PARTNER' | 'SYSTEM' | 'DECISION' | 'OTHER';
+// FR-61.1: whether the other person actually agreed to the expectation held.
+export type ExpectationAgreement = 'YES' | 'NO' | 'UNSURE';
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type ObstacleStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ACCEPTED';
 // FR-51: how a dream's or goal's target date relates to its children's dates.
@@ -413,12 +415,18 @@ export type Obstacle = {
   // FR-54.2 / BR-43: never sent to Excel export.
   conflictPrivateNote?: string;
   conflictNextAction?: string;
+  // FR-61.1: diagnostic only — see BR-50.
+  conflictExpectation?: string;
+  conflictExpectationAgreed?: ExpectationAgreement | null;
+  // FR-61.2: non-null once released; never re-fires afterward. Set only via
+  // the dedicated release-expectation action, never sent in a request.
+  expectationReleasedAt?: string | null;
   requiredPartnerId?: number;
   status: ObstacleStatus;
   archived: boolean;
 };
 
-export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived'>;
+export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived' | 'expectationReleasedAt'>;
 
 // FR-38: in-app issue & improvement reporting.
 export type ReportType = 'BUG' | 'IMPROVEMENT' | 'QUESTION' | 'OTHER';

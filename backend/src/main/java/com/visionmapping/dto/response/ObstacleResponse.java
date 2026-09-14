@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.entity.enums.ExpectationAgreement;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
@@ -25,6 +26,11 @@ public record ObstacleResponse(
         // FR-54.2 / BR-43: never included in any Excel export sheet.
         String conflictPrivateNote,
         String conflictNextAction,
+        // FR-61: diagnostic only — see BR-50.
+        String conflictExpectation,
+        ExpectationAgreement conflictExpectationAgreed,
+        // FR-61.2: non-null once released; never re-fires afterward.
+        Instant expectationReleasedAt,
         Long requiredPartnerId,
         ObstacleStatus status,
         boolean archived,

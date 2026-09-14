@@ -1,7 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
-import { archiveObstacle, permanentlyDeleteObstacle, createObstacle, listObstacles, listRelatedObstacles, restoreObstacle, updateObstacle } from '../api/obstacleApi';
+import {
+  archiveObstacle, permanentlyDeleteObstacle, createObstacle, listObstacles, listRelatedObstacles, releaseExpectation,
+  restoreObstacle, updateObstacle,
+} from '../api/obstacleApi';
 import { listPartners } from '../api/partnerApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
@@ -10,6 +13,8 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
 import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
@@ -31,7 +36,10 @@ import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useSearchParams } from 'react-router';
 import { useUrlFilter } from '../hooks/useUrlFilter';
-import type { Dream, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity, TaskItem, VisionStep } from '../types/vision';
+import type {
+  Dream, ExpectationAgreement, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity,
+  TaskItem, VisionStep,
+} from '../types/vision';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { obstacleStatusLabels, obstacleTypeLabels, priorityLabels, severityLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
@@ -97,6 +105,13 @@ export function ObstaclesPage() {
   const [conflictLesson, setConflictLesson] = useState('');
   const [conflictPrivateNote, setConflictPrivateNote] = useState('');
   const [conflictNextAction, setConflictNextAction] = useState('');
+  const [conflictExpectation, setConflictExpectation] = useState('');
+  const [conflictExpectationAgreed, setConflictExpectationAgreed] = useState<ExpectationAgreement | ''>('');
+  // FR-61.2: null until "Release this expectation" has been used for the
+  // obstacle being edited — that's when the timestamp note replaces the
+  // action button; once set, it never re-fires.
+  const [editingExpectationReleasedAt, setEditingExpectationReleasedAt] = useState<string | null>(null);
+  const [releasingExpectation, setReleasingExpectation] = useState(false);
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
@@ -148,6 +163,8 @@ export function ObstaclesPage() {
       conflictLesson,
       conflictPrivateNote,
       conflictNextAction,
+      conflictExpectation,
+      conflictExpectationAgreed: conflictExpectationAgreed || undefined,
       requiredPartnerId: optionalNumber(requiredPartnerId),
       status,
     });
@@ -163,6 +180,9 @@ export function ObstaclesPage() {
       setConflictLesson('');
       setConflictPrivateNote('');
       setConflictNextAction('');
+      setConflictExpectation('');
+      setConflictExpectationAgreed('');
+      setEditingExpectationReleasedAt(null);
     }
     return success;
   }
@@ -185,6 +205,9 @@ export function ObstaclesPage() {
     setConflictLesson(obstacle.conflictLesson ?? '');
     setConflictPrivateNote(obstacle.conflictPrivateNote ?? '');
     setConflictNextAction(obstacle.conflictNextAction ?? '');
+    setConflictExpectation(obstacle.conflictExpectation ?? '');
+    setConflictExpectationAgreed(obstacle.conflictExpectationAgreed ?? '');
+    setEditingExpectationReleasedAt(obstacle.expectationReleasedAt ?? null);
     setObstacleType(obstacle.obstacleType);
     setSeverity(obstacle.severity);
     setStatus(obstacle.status);
@@ -208,9 +231,29 @@ export function ObstaclesPage() {
     setConflictLesson('');
     setConflictPrivateNote('');
     setConflictNextAction('');
+    setConflictExpectation('');
+    setConflictExpectationAgreed('');
+    setEditingExpectationReleasedAt(null);
     setObstacleType('KNOWLEDGE');
     setSeverity('MEDIUM');
     setStatus('OPEN');
+  }
+
+  // FR-61.2: idempotent on the server, but the button still disables itself
+  // mid-flight so a double-click can't fire two overlapping requests.
+  async function handleReleaseExpectation() {
+    if (!token || crud.editingId === null) {
+      return;
+    }
+    setReleasingExpectation(true);
+    try {
+      const updated = await releaseExpectation(token, crud.editingId);
+      setEditingExpectationReleasedAt(updated.expectationReleasedAt ?? null);
+    } catch (releaseError) {
+      crud.setError(releaseError instanceof Error ? releaseError.message : 'Unable to release this expectation.');
+    } finally {
+      setReleasingExpectation(false);
+    }
   }
 
   // FR-36.2: keep the resurfaced list in step with what's being edited/typed.
@@ -255,6 +298,8 @@ export function ObstaclesPage() {
         conflictLesson: obstacle.conflictLesson,
         conflictPrivateNote: obstacle.conflictPrivateNote,
         conflictNextAction: obstacle.conflictNextAction,
+        conflictExpectation: obstacle.conflictExpectation,
+        conflictExpectationAgreed: obstacle.conflictExpectationAgreed ?? undefined,
         requiredPartnerId: obstacle.requiredPartnerId,
         status: nextStatus,
       });
@@ -499,6 +544,40 @@ export function ObstaclesPage() {
             One concrete next action
             <Textarea value={conflictNextAction} onChange={(event) => setConflictNextAction(event.target.value)} />
           </label>
+          <label className="field-full">
+            What did you expect to happen — spoken or not?
+            <Textarea value={conflictExpectation} onChange={(event) => setConflictExpectation(event.target.value)} />
+          </label>
+          <label className="field-full">
+            Did the other person actually agree to this expectation?
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={conflictExpectationAgreed || null}
+              onChange={(_event, value: ExpectationAgreement | null) => setConflictExpectationAgreed(value ?? '')}
+              aria-label="Did the other person actually agree to this expectation?"
+            >
+              <ToggleButton value="YES">Yes</ToggleButton>
+              <ToggleButton value="NO">No</ToggleButton>
+              <ToggleButton value="UNSURE">Unsure</ToggleButton>
+            </ToggleButtonGroup>
+          </label>
+          <div className="field-full inline-meta">
+            {editingExpectationReleasedAt ? (
+              <span className="field-hint">
+                Expectation released — a one-time marker, and it doesn't change anything else about this obstacle.
+              </span>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={crud.editingId === null || releasingExpectation}
+                onClick={() => void handleReleaseExpectation()}
+              >
+                {releasingExpectation ? 'Releasing…' : 'Release this expectation'}
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </>

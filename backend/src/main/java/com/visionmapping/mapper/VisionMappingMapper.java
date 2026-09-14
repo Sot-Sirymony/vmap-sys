@@ -128,7 +128,8 @@ public class VisionMappingMapper {
                 entity.getObstacleType(), entity.getSeverity(), entity.getSolution(), entity.getRootCause(),
                 entity.getCreativeAlternatives(), entity.getConflictIncident(), entity.getConflictCost(),
                 entity.getConflictOtherPerspective(), entity.getConflictLesson(), entity.getConflictPrivateNote(),
-                entity.getConflictNextAction(), id(entity.getRequiredPartner()),
+                entity.getConflictNextAction(), entity.getConflictExpectation(), entity.getConflictExpectationAgreed(),
+                entity.getExpectationReleasedAt(), id(entity.getRequiredPartner()),
                 entity.getStatus(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 

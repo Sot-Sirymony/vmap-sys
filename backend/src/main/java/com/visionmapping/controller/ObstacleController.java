@@ -58,6 +58,11 @@ public class ObstacleController {
         return service.updateObstacleStatus(id, request.status());
     }
 
+    @PostMapping("/{id}/release-expectation")
+    public ObstacleResponse releaseExpectation(@PathVariable Long id) {
+        return service.releaseExpectation(id);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

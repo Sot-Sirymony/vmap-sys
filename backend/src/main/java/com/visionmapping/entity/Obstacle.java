@@ -1,5 +1,6 @@
 package com.visionmapping.entity;
 
+import com.visionmapping.entity.enums.ExpectationAgreement;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
@@ -14,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -103,6 +105,21 @@ public class Obstacle extends BaseAuditableEntity {
 
     @Column(name = "conflict_next_action", length = 2000)
     private String conflictNextAction;
+
+    // FR-61.1: the specific expectation behind the conflict, and whether it
+    // was ever actually agreed to. Diagnostic only (BR-50) — never gates
+    // status, same as the FR-54 worksheet fields above.
+    @Column(name = "conflict_expectation", length = 2000)
+    private String conflictExpectation;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "conflict_expectation_agreed", length = 10)
+    private ExpectationAgreement conflictExpectationAgreed;
+
+    // FR-61.2: set exactly once, the first time "Release this expectation"
+    // is used; never re-fires or reverses (BR-50).
+    @Column(name = "expectation_released_at")
+    private Instant expectationReleasedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "required_partner_id")

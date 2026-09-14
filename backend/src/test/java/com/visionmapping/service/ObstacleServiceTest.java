@@ -63,7 +63,7 @@ class ObstacleServiceTest {
         EntityLookup lookup = new EntityLookup(userScope, visionAreaRepository, dreamRepository, goalRepository,
                 visionStepRepository, taskItemRepository, partnerRepository, communicationMessageRepository,
                 reviewRepository, obstacleRepository, progressLogRepository);
-        service = new ObstacleService(lookup, new VisionMappingMapper(), obstacleRepository);
+        service = new ObstacleService(lookup, new VisionMappingMapper(), obstacleRepository, java.time.Clock.systemDefaultZone());
 
         testUser = AppUser.builder()
                 .id(1L)
@@ -80,6 +80,7 @@ class ObstacleServiceTest {
         return new ObstacleRequest(null, null, null, null, "Stalled progress", null,
                 ObstacleType.TIME, Severity.MEDIUM, "worked around it for now", rootCause, creativeAlternatives,
                 null, null, null, null, null, null,
+                null, null,
                 null, status);
     }
 
@@ -178,5 +179,27 @@ class ObstacleServiceTest {
         ObstacleResponse response = service.updateObstacleStatus(10L, "RESOLVED");
 
         assertThat(response.status()).isEqualTo(ObstacleStatus.RESOLVED);
+    }
+
+    @Test
+    void releasingAnUnreleasedExpectationStampsATimestamp() {
+        Obstacle stored = existing(ObstacleStatus.OPEN);
+        when(obstacleRepository.findById(10L)).thenReturn(Optional.of(stored));
+
+        ObstacleResponse response = service.releaseExpectation(10L);
+
+        assertThat(response.expectationReleasedAt()).isNotNull();
+    }
+
+    @Test
+    void releasingAnAlreadyReleasedExpectationDoesNotReStampIt() {
+        Obstacle stored = existing(ObstacleStatus.OPEN);
+        var firstStamp = java.time.Instant.parse("2026-01-01T00:00:00Z");
+        stored.setExpectationReleasedAt(firstStamp);
+        when(obstacleRepository.findById(10L)).thenReturn(Optional.of(stored));
+
+        ObstacleResponse response = service.releaseExpectation(10L);
+
+        assertThat(response.expectationReleasedAt()).isEqualTo(firstStamp);
     }
 }

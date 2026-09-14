@@ -47,3 +47,12 @@ export function permanentlyDeleteObstacle(token: string, id: number) {
     token,
   });
 }
+
+// FR-61.2: a one-time personal marker — idempotent on the server, safe to
+// call again.
+export function releaseExpectation(token: string, id: number) {
+  return apiClient<Obstacle>(`/obstacles/${id}/release-expectation`, {
+    method: 'POST',
+    token,
+  });
+}

@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.entity.enums.ExpectationAgreement;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
@@ -25,6 +26,9 @@ public record ObstacleRequest(
         @Size(max = 2000) String conflictLesson,
         @Size(max = 2000) String conflictPrivateNote,
         @Size(max = 2000) String conflictNextAction,
+        // FR-61.1: diagnostic only — see BR-50.
+        @Size(max = 2000) String conflictExpectation,
+        ExpectationAgreement conflictExpectationAgreed,
         Long requiredPartnerId,
         @NotNull ObstacleStatus status
 ) {
