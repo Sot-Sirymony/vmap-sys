@@ -41,7 +41,10 @@ import type {
   TaskItem, VisionStep,
 } from '../types/vision';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
-import { obstacleStatusLabels, obstacleTypeLabels, priorityLabels, severityLabels } from '../utils/enumLabels';
+import {
+  CONFLICT_CHECKLIST_QUESTIONS, EMPTY_CONFLICT_CHECKLIST_ANSWERS, isConflictChecklistComplete, obstacleStatusLabels,
+  obstacleTypeLabels, priorityLabels, severityLabels, type ConflictChecklistKey,
+} from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { severityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
@@ -112,6 +115,9 @@ export function ObstaclesPage() {
   // action button; once set, it never re-fires.
   const [editingExpectationReleasedAt, setEditingExpectationReleasedAt] = useState<string | null>(null);
   const [releasingExpectation, setReleasingExpectation] = useState(false);
+  const [conflictChecklistAnswers, setConflictChecklistAnswers] = useState<Record<ConflictChecklistKey, boolean | null>>(
+    EMPTY_CONFLICT_CHECKLIST_ANSWERS,
+  );
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
@@ -165,6 +171,10 @@ export function ObstaclesPage() {
       conflictNextAction,
       conflictExpectation,
       conflictExpectationAgreed: conflictExpectationAgreed || undefined,
+      conflictNoCharacterAttacks: conflictChecklistAnswers.conflictNoCharacterAttacks ?? undefined,
+      conflictStayedOnIncident: conflictChecklistAnswers.conflictStayedOnIncident ?? undefined,
+      conflictNoThreatsOrSarcasm: conflictChecklistAnswers.conflictNoThreatsOrSarcasm ?? undefined,
+      conflictDefinedWinWin: conflictChecklistAnswers.conflictDefinedWinWin ?? undefined,
       requiredPartnerId: optionalNumber(requiredPartnerId),
       status,
     });
@@ -183,6 +193,7 @@ export function ObstaclesPage() {
       setConflictExpectation('');
       setConflictExpectationAgreed('');
       setEditingExpectationReleasedAt(null);
+      setConflictChecklistAnswers(EMPTY_CONFLICT_CHECKLIST_ANSWERS);
     }
     return success;
   }
@@ -208,6 +219,12 @@ export function ObstaclesPage() {
     setConflictExpectation(obstacle.conflictExpectation ?? '');
     setConflictExpectationAgreed(obstacle.conflictExpectationAgreed ?? '');
     setEditingExpectationReleasedAt(obstacle.expectationReleasedAt ?? null);
+    setConflictChecklistAnswers({
+      conflictNoCharacterAttacks: obstacle.conflictNoCharacterAttacks ?? null,
+      conflictStayedOnIncident: obstacle.conflictStayedOnIncident ?? null,
+      conflictNoThreatsOrSarcasm: obstacle.conflictNoThreatsOrSarcasm ?? null,
+      conflictDefinedWinWin: obstacle.conflictDefinedWinWin ?? null,
+    });
     setObstacleType(obstacle.obstacleType);
     setSeverity(obstacle.severity);
     setStatus(obstacle.status);
@@ -234,6 +251,7 @@ export function ObstaclesPage() {
     setConflictExpectation('');
     setConflictExpectationAgreed('');
     setEditingExpectationReleasedAt(null);
+    setConflictChecklistAnswers(EMPTY_CONFLICT_CHECKLIST_ANSWERS);
     setObstacleType('KNOWLEDGE');
     setSeverity('MEDIUM');
     setStatus('OPEN');
@@ -300,6 +318,10 @@ export function ObstaclesPage() {
         conflictNextAction: obstacle.conflictNextAction,
         conflictExpectation: obstacle.conflictExpectation,
         conflictExpectationAgreed: obstacle.conflictExpectationAgreed ?? undefined,
+        conflictNoCharacterAttacks: obstacle.conflictNoCharacterAttacks ?? undefined,
+        conflictStayedOnIncident: obstacle.conflictStayedOnIncident ?? undefined,
+        conflictNoThreatsOrSarcasm: obstacle.conflictNoThreatsOrSarcasm ?? undefined,
+        conflictDefinedWinWin: obstacle.conflictDefinedWinWin ?? undefined,
         requiredPartnerId: obstacle.requiredPartnerId,
         status: nextStatus,
       });
@@ -577,6 +599,38 @@ export function ObstaclesPage() {
                 {releasingExpectation ? 'Releasing…' : 'Release this expectation'}
               </Button>
             )}
+          </div>
+          <div className="field-full diligence-checklist">
+            <strong>Before you mark this Resolved…</strong>
+            <p>
+              A "No" here never blocks anything — only leaving one unanswered does, and only for a Resolved
+              transition.
+            </p>
+            {CONFLICT_CHECKLIST_QUESTIONS.map((question) => (
+              <div className="diligence-row" key={question.key}>
+                <span>{question.label}</span>
+                <ToggleButtonGroup
+                  size="small"
+                  exclusive
+                  value={conflictChecklistAnswers[question.key] === null ? '' : conflictChecklistAnswers[question.key] ? 'yes' : 'no'}
+                  onChange={(_event, value) => {
+                    if (value === null) {
+                      return;
+                    }
+                    setConflictChecklistAnswers((current) => ({ ...current, [question.key]: value === 'yes' }));
+                  }}
+                  aria-label={question.label}
+                >
+                  <ToggleButton value="no">No</ToggleButton>
+                  <ToggleButton value="yes">Yes</ToggleButton>
+                </ToggleButtonGroup>
+              </div>
+            ))}
+            <span className="field-hint">
+              {isConflictChecklistComplete(conflictChecklistAnswers)
+                ? 'All four answered — Resolved is unblocked.'
+                : `${CONFLICT_CHECKLIST_QUESTIONS.filter((question) => conflictChecklistAnswers[question.key] !== null).length} of ${CONFLICT_CHECKLIST_QUESTIONS.length} answered.`}
+            </span>
           </div>
         </div>
       )}

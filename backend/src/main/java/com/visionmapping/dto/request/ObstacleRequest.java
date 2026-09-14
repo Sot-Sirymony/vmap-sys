@@ -29,6 +29,11 @@ public record ObstacleRequest(
         // FR-61.1: diagnostic only — see BR-50.
         @Size(max = 2000) String conflictExpectation,
         ExpectationAgreement conflictExpectationAgreed,
+        // FR-62.1: completeness (not content) gates Resolved — see BR-51.
+        Boolean conflictNoCharacterAttacks,
+        Boolean conflictStayedOnIncident,
+        Boolean conflictNoThreatsOrSarcasm,
+        Boolean conflictDefinedWinWin,
         Long requiredPartnerId,
         @NotNull ObstacleStatus status
 ) {

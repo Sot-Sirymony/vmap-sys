@@ -71,6 +71,10 @@ public class ObstacleService {
                 .conflictNextAction(request.conflictNextAction())
                 .conflictExpectation(request.conflictExpectation())
                 .conflictExpectationAgreed(request.conflictExpectationAgreed())
+                .conflictNoCharacterAttacks(request.conflictNoCharacterAttacks())
+                .conflictStayedOnIncident(request.conflictStayedOnIncident())
+                .conflictNoThreatsOrSarcasm(request.conflictNoThreatsOrSarcasm())
+                .conflictDefinedWinWin(request.conflictDefinedWinWin())
                 .requiredPartner(lookup.optionalPartner(request.requiredPartnerId()))
                 .status(request.status())
                 .build();
@@ -123,6 +127,10 @@ public class ObstacleService {
         entity.setConflictNextAction(request.conflictNextAction());
         entity.setConflictExpectation(request.conflictExpectation());
         entity.setConflictExpectationAgreed(request.conflictExpectationAgreed());
+        entity.setConflictNoCharacterAttacks(request.conflictNoCharacterAttacks());
+        entity.setConflictStayedOnIncident(request.conflictStayedOnIncident());
+        entity.setConflictNoThreatsOrSarcasm(request.conflictNoThreatsOrSarcasm());
+        entity.setConflictDefinedWinWin(request.conflictDefinedWinWin());
         entity.setRequiredPartner(lookup.optionalPartner(request.requiredPartnerId()));
         entity.setStatus(request.status());
         prepareObstacle(entity);
@@ -172,6 +180,21 @@ public class ObstacleService {
             throw new BusinessRuleException(
                     "Accepted obstacles must include at least " + MIN_CREATIVE_ALTERNATIVES + " creative alternatives.");
         }
+        // FR-62.2 / BR-51: completeness, not content — a "No" answer never
+        // blocks; only a blank one does.
+        if (entity.getStatus() == ObstacleStatus.RESOLVED
+                && entity.getObstacleType() == ObstacleType.PARTNER
+                && !conflictChecklistComplete(entity)) {
+            throw new BusinessRuleException(
+                    "Resolved PARTNER obstacles must also complete all four conflict engagement checklist items.");
+        }
+    }
+
+    private static boolean conflictChecklistComplete(Obstacle entity) {
+        return entity.getConflictNoCharacterAttacks() != null
+                && entity.getConflictStayedOnIncident() != null
+                && entity.getConflictNoThreatsOrSarcasm() != null
+                && entity.getConflictDefinedWinWin() != null;
     }
 
     /** One alternative per line; blank lines don't count toward the minimum. */

@@ -121,6 +121,21 @@ public class Obstacle extends BaseAuditableEntity {
     @Column(name = "expectation_released_at")
     private Instant expectationReleasedAt;
 
+    // FR-62.1: a four-item conduct checklist, required before a PARTNER-type
+    // obstacle can be marked Resolved (BR-51) — completeness gates the
+    // transition, never the answers themselves.
+    @Column(name = "conflict_no_character_attacks")
+    private Boolean conflictNoCharacterAttacks;
+
+    @Column(name = "conflict_stayed_on_incident")
+    private Boolean conflictStayedOnIncident;
+
+    @Column(name = "conflict_no_threats_or_sarcasm")
+    private Boolean conflictNoThreatsOrSarcasm;
+
+    @Column(name = "conflict_defined_win_win")
+    private Boolean conflictDefinedWinWin;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "required_partner_id")
     private Partner requiredPartner;

@@ -172,6 +172,30 @@ export const EMPTY_DECISION_ANSWERS: Record<DecisionChecklistKey, boolean | null
 
 export type IntegrityFlagKey = (typeof INTEGRITY_CHECKLIST_QUESTIONS)[number]['key'];
 
+// FR-62.1: four original conduct checks. Answering "No" is still answered
+// (FR-62.2) — only a blank answer blocks a PARTNER obstacle's Resolved
+// transition (BR-51).
+export const CONFLICT_CHECKLIST_QUESTIONS = [
+  { key: 'conflictNoCharacterAttacks', label: 'Avoided attacking character or name-calling' },
+  { key: 'conflictStayedOnIncident', label: 'Stayed on this specific incident, not past ones' },
+  { key: 'conflictNoThreatsOrSarcasm', label: 'Avoided threats, ultimatums, or sarcasm' },
+  { key: 'conflictDefinedWinWin', label: 'Named an outcome that works for both sides, not just one' },
+] as const;
+
+export type ConflictChecklistKey = (typeof CONFLICT_CHECKLIST_QUESTIONS)[number]['key'];
+
+/** FR-62.2: "answered" means every item has a value, regardless of what it is. */
+export function isConflictChecklistComplete(answers: Record<ConflictChecklistKey, boolean | null>): boolean {
+  return CONFLICT_CHECKLIST_QUESTIONS.every((question) => answers[question.key] !== null);
+}
+
+export const EMPTY_CONFLICT_CHECKLIST_ANSWERS: Record<ConflictChecklistKey, boolean | null> = {
+  conflictNoCharacterAttacks: null,
+  conflictStayedOnIncident: null,
+  conflictNoThreatsOrSarcasm: null,
+  conflictDefinedWinWin: null,
+};
+
 export const communicationStatusLabels: Record<CommunicationStatus, string> = {
   DRAFT: 'Draft',
   SENT: 'Sent',

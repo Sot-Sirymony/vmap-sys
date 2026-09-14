@@ -421,6 +421,12 @@ export type Obstacle = {
   // FR-61.2: non-null once released; never re-fires afterward. Set only via
   // the dedicated release-expectation action, never sent in a request.
   expectationReleasedAt?: string | null;
+  // FR-62.1: completeness (not content) gates Resolved for PARTNER-type
+  // obstacles — see BR-51.
+  conflictNoCharacterAttacks?: boolean | null;
+  conflictStayedOnIncident?: boolean | null;
+  conflictNoThreatsOrSarcasm?: boolean | null;
+  conflictDefinedWinWin?: boolean | null;
   requiredPartnerId?: number;
   status: ObstacleStatus;
   archived: boolean;

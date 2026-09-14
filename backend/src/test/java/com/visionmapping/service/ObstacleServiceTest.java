@@ -81,12 +81,28 @@ class ObstacleServiceTest {
                 ObstacleType.TIME, Severity.MEDIUM, "worked around it for now", rootCause, creativeAlternatives,
                 null, null, null, null, null, null,
                 null, null,
+                null, null, null, null,
+                null, status);
+    }
+
+    private ObstacleRequest partnerRequest(ObstacleStatus status, String rootCause, Boolean noCharacterAttacks,
+            Boolean stayedOnIncident, Boolean noThreatsOrSarcasm, Boolean definedWinWin) {
+        return new ObstacleRequest(null, null, null, null, "Disagreement with a mentor", null,
+                ObstacleType.PARTNER, Severity.MEDIUM, "worked around it for now", rootCause, null,
+                null, null, null, null, null, null,
+                null, null,
+                noCharacterAttacks, stayedOnIncident, noThreatsOrSarcasm, definedWinWin,
                 null, status);
     }
 
     private Obstacle existing(ObstacleStatus status) {
         return Obstacle.builder().id(10L).user(testUser).title("Stalled progress")
                 .obstacleType(ObstacleType.TIME).severity(Severity.MEDIUM).status(status).archived(false).build();
+    }
+
+    private Obstacle partnerExisting(ObstacleStatus status) {
+        return Obstacle.builder().id(11L).user(testUser).title("Disagreement with a mentor")
+                .obstacleType(ObstacleType.PARTNER).severity(Severity.MEDIUM).status(status).archived(false).build();
     }
 
     @Test
@@ -201,5 +217,48 @@ class ObstacleServiceTest {
         ObstacleResponse response = service.releaseExpectation(10L);
 
         assertThat(response.expectationReleasedAt()).isEqualTo(firstStamp);
+    }
+
+    @Test
+    void resolvingPartnerObstacleWithIncompleteChecklistThrows() {
+        assertThatThrownBy(() -> service.createObstacle(
+                partnerRequest(ObstacleStatus.RESOLVED, "Underestimated the timeline", true, true, true, null)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Resolved PARTNER obstacles must also complete all four conflict engagement checklist items.");
+    }
+
+    @Test
+    void resolvingPartnerObstacleWithCompleteChecklistSucceedsEvenWithANoAnswer() {
+        when(obstacleRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ObstacleResponse response = service.createObstacle(
+                partnerRequest(ObstacleStatus.RESOLVED, "Underestimated the timeline", true, false, true, true));
+
+        assertThat(response.status()).isEqualTo(ObstacleStatus.RESOLVED);
+    }
+
+    @Test
+    void resolvingNonPartnerObstacleIsUnaffectedByTheChecklist() {
+        when(obstacleRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ObstacleResponse response = service.createObstacle(
+                request(ObstacleStatus.RESOLVED, "Underestimated the timeline", null));
+
+        assertThat(response.status()).isEqualTo(ObstacleStatus.RESOLVED);
+    }
+
+    @Test
+    void quickStatusChangeToResolvedEnforcesTheChecklistForPartnerObstacles() {
+        Obstacle stored = partnerExisting(ObstacleStatus.OPEN);
+        stored.setRootCause("Underestimated the timeline");
+        stored.setConflictNoCharacterAttacks(true);
+        stored.setConflictStayedOnIncident(true);
+        stored.setConflictNoThreatsOrSarcasm(true);
+        // conflictDefinedWinWin left unanswered
+        when(obstacleRepository.findById(11L)).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> service.updateObstacleStatus(11L, "RESOLVED"))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Resolved PARTNER obstacles must also complete all four conflict engagement checklist items.");
     }
 }

@@ -31,6 +31,11 @@ public record ObstacleResponse(
         ExpectationAgreement conflictExpectationAgreed,
         // FR-61.2: non-null once released; never re-fires afterward.
         Instant expectationReleasedAt,
+        // FR-62.1: completeness (not content) gates Resolved — see BR-51.
+        Boolean conflictNoCharacterAttacks,
+        Boolean conflictStayedOnIncident,
+        Boolean conflictNoThreatsOrSarcasm,
+        Boolean conflictDefinedWinWin,
         Long requiredPartnerId,
         ObstacleStatus status,
         boolean archived,
