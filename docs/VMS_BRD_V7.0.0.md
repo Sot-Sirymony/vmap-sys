@@ -4,7 +4,7 @@
 |---|---|
 | **Document** | VMS_BRD_V7.0.0 |
 | **Version** | 7.0.0 (In progress) |
-| **Date** | 2026-09-14 |
+| **Date** | 2026-09-15 |
 | **Status** | 🔶 In progress. Written from a gap analysis comparing V1.0.0 → V6.0.0 against Chapters 7–15 of *The Richest Man Who Ever Lived* (character, conflict, criticism, prudence, and wisdom). ✅ **FR-61** (Expectation Diagnosis) and ✅ **FR-62** (Conflict Engagement Checklist) shipped 2026-09-14; ✅ **FR-60** (Incoming Criticism Triage) shipped 2026-09-15. FR-59, FR-63 remain proposed — not yet built. |
 | **Baseline** | Builds on VMS_BRD_V6.0.0 (all FR-1…FR-58 remain in force) |
 | **Concept source** | *The Richest Man Who Ever Lived* (Steven K. Scott), used as conceptual reference only, as in V5–V6. **No copyrighted text, named proprietary frameworks, or scripture is reproduced anywhere in this document or in the product** — see *Originality note* below for what that changed. |
