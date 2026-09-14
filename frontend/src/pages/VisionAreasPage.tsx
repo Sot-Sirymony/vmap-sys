@@ -298,6 +298,7 @@ export function VisionAreasPage() {
       {wizardOpen && (
         <VisionAreaWizard
           token={token ?? ''}
+          existingNames={crud.items.filter((area) => !area.archived).map((area) => area.name)}
           onClose={() => setWizardOpen(false)}
           onSkip={() => {
             setWizardOpen(false);

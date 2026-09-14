@@ -45,8 +45,8 @@ public class VisionMappingMapper {
     public DreamResponse toResponse(Dream entity, boolean scheduleOverrun, String scheduleOverrunDetail) {
         return new DreamResponse(entity.getId(), entity.getCode(), entity.getVisionArea().getId(), entity.getTitle(),
                 entity.getDescription(), entity.getWhyImportant(), entity.getSuccessDefinition(), entity.getDreamType(),
-                entity.getPriority(), entity.getTargetDate(), entity.getStatus(), entity.isMoonshot(),
-                entity.getMoonshotVision(), entity.getScheduleMode(), scheduleOverrun, scheduleOverrunDetail,
+                entity.getPriority(), entity.getLetterRank(), entity.getTargetDate(), entity.getStatus(), entity.isMoonshot(),
+                entity.getMoonshotVision(), entity.getImageUrl(), entity.getScheduleMode(), scheduleOverrun, scheduleOverrunDetail,
                 entity.getDecisionSkippedResearch(), entity.getDecisionAssumedNoChange(),
                 entity.getDecisionTrustedUnverifiedClaim(), entity.getDecisionJudgedByAppearance(),
                 entity.getDecisionUnderTimePressure(), entity.getDecisionNoOutsideInput(),

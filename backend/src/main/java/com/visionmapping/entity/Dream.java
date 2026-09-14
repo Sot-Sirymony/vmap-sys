@@ -67,6 +67,11 @@ public class Dream extends BaseAuditableEntity {
     @Column(nullable = false, length = 40)
     private Priority priority;
 
+    // FR-57: an optional intra-area label (BR-46) — a single uppercase
+    // letter, never a strict order; ties within a Vision Area are allowed.
+    @Column(name = "letter_rank", length = 1)
+    private String letterRank;
+
     @Column(name = "target_date")
     private LocalDate targetDate;
 
@@ -80,6 +85,11 @@ public class Dream extends BaseAuditableEntity {
 
     @Column(name = "moonshot_vision", length = 3000)
     private String moonshotVision;
+
+    // FR-56: an optional link to an image representing the dream's
+    // fulfilled state (BR-45) — a URL, never an upload; no file storage.
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
 
     // FR-51: BOTTOM_UP (default) requires this dream's targetDate to be no
     // earlier than its latest active goal's targetDate (BR-40).

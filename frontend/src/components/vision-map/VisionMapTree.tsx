@@ -1,5 +1,6 @@
 import { FormEvent, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb, Rocket } from 'lucide-react';
+import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
@@ -194,10 +195,12 @@ export function VisionMapTree({
   const [dreamSuccessDefinition, setDreamSuccessDefinition] = useState('');
   const [dreamTypeField, setDreamTypeField] = useState<DreamType>('LONG_TERM');
   const [dreamPriority, setDreamPriority] = useState<Priority>('HIGH');
+  const [dreamLetterRank, setDreamLetterRank] = useState('');
   const [dreamTargetDate, setDreamTargetDate] = useState('');
   const [dreamStatusField, setDreamStatusField] = useState<DreamStatus>('ACTIVE');
   const [dreamMoonshot, setDreamMoonshot] = useState(false);
   const [dreamMoonshotVision, setDreamMoonshotVision] = useState('');
+  const [dreamImageUrl, setDreamImageUrl] = useState('');
   const [dreamScheduleMode, setDreamScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
   const [dreamDecisionAnswers, setDreamDecisionAnswers] = useState<Record<DecisionChecklistKey, boolean | null>>(EMPTY_DECISION_ANSWERS);
   // FR-55.4: null until the BR-44 gate has cleared for this dream — that's
@@ -391,10 +394,12 @@ export function VisionMapTree({
     setDreamSuccessDefinition(dream.successDefinition ?? '');
     setDreamTypeField(dream.dreamType);
     setDreamPriority(dream.priority);
+    setDreamLetterRank(dream.letterRank ?? '');
     setDreamTargetDate(dream.targetDate ?? '');
     setDreamStatusField(dream.status);
     setDreamMoonshot(dream.moonshot);
     setDreamMoonshotVision(dream.moonshotVision ?? '');
+    setDreamImageUrl(dream.imageUrl ?? '');
     setDreamScheduleMode(dream.scheduleMode);
     setDreamDecisionAnswers({
       decisionSkippedResearch: dream.decisionSkippedResearch ?? null,
@@ -435,10 +440,12 @@ export function VisionMapTree({
         successDefinition: dreamSuccessDefinition,
         dreamType: dreamTypeField,
         priority: dreamPriority,
+        letterRank: dreamLetterRank || undefined,
         targetDate: dreamTargetDate || undefined,
         status: dreamStatusField,
         moonshot: dreamMoonshot,
         moonshotVision: dreamMoonshot ? dreamMoonshotVision : undefined,
+        imageUrl: dreamImageUrl.trim() || undefined,
         scheduleMode: dreamScheduleMode,
         decisionSkippedResearch: dreamDecisionAnswers.decisionSkippedResearch ?? undefined,
         decisionAssumedNoChange: dreamDecisionAnswers.decisionAssumedNoChange ?? undefined,
@@ -992,6 +999,15 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
+            Rank within this area
+            <Input
+              value={dreamLetterRank}
+              onChange={(event) => setDreamLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+              placeholder="e.g. A"
+              maxLength={1}
+            />
+          </label>
+          <label>
             Status
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Status' }} value={dreamStatusField} onChange={(event) => setDreamStatusField(event.target.value as DreamStatus)}>
@@ -1011,6 +1027,10 @@ export function VisionMapTree({
               <Textarea value={dreamMoonshotVision} onChange={(event) => setDreamMoonshotVision(event.target.value)} />
             </label>
           )}
+          <label className="field-full">
+            Visual anchor (image link)
+            <Input type="url" value={dreamImageUrl} onChange={(event) => setDreamImageUrl(event.target.value)} placeholder="https://..." />
+          </label>
           <label className="field-full">
             Target date scheduling
             <FormControl fullWidth size="small">
@@ -1285,6 +1305,15 @@ export function VisionMapTree({
       <div className="map-node map-node--dream" role="none">
         <div className={`map-row${dream.archived ? ' map-row--archived' : ''}`} {...rowShellProps(dreamRow)}>
           {chevron(dreamRow)}
+          {dream.imageUrl && (
+            <Box
+              component="img"
+              src={dream.imageUrl}
+              alt=""
+              sx={{ width: 36, height: 36, borderRadius: 1.5, objectFit: 'cover', flexShrink: 0 }}
+              onError={(event) => { event.currentTarget.style.display = 'none'; }}
+            />
+          )}
           <div className="map-main">
             <p className="map-area"><span className="area-dot" style={{ backgroundColor: visionAreaDotColor(dream.visionAreaId) }} aria-hidden="true" /> {visionAreaName}</p>
             <div className="map-line">
@@ -1298,6 +1327,7 @@ export function VisionMapTree({
                   sx={{ bgcolor: moonshotTint, color: moonshotVioletDeep, fontWeight: 700, '& .MuiChip-icon': { color: moonshotViolet } }}
                 />
               )}
+              {dream.letterRank && <Chip size="small" variant="outlined" label={`Rank ${dream.letterRank}`} />}
               <PriorityBadge priority={dream.priority} />
             </div>
             {dream.successDefinition && <p className="map-meta">Success looks like: {dream.successDefinition}</p>}

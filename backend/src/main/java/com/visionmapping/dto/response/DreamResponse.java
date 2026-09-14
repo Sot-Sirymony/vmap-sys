@@ -17,10 +17,14 @@ public record DreamResponse(
         String successDefinition,
         DreamType dreamType,
         Priority priority,
+        // FR-57: optional intra-area label — a letter, not a strict order.
+        String letterRank,
         LocalDate targetDate,
         DreamStatus status,
         boolean moonshot,
         String moonshotVision,
+        // FR-56: optional link to an image representing the fulfilled dream.
+        String imageUrl,
         ScheduleMode scheduleMode,
         // FR-51: computed, never persisted — true only when scheduleMode is
         // TOP_DOWN_FIXED and this dream's targetDate is earlier than its

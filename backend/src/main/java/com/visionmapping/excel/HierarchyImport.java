@@ -100,9 +100,11 @@ class HierarchyImport {
                     reader.textOrNull(5),
                     reader.enumValue(DreamType.class, 6, TYPE),
                     reader.enumValue(Priority.class, 7, PRIORITY),
+                    null,
                     reader.dateOrNull(8),
                     reader.enumValue(DreamStatus.class, 9, STATUS),
                     false,
+                    null,
                     null,
                     ScheduleMode.BOTTOM_UP,
                     null, null, null, null, null, null, null, null);

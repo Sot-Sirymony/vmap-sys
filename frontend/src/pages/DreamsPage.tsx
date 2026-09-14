@@ -75,10 +75,12 @@ export function DreamsPage() {
   const [successDefinition, setSuccessDefinition] = useState('');
   const [dreamType, setDreamType] = useState<DreamType>('LONG_TERM');
   const [priority, setPriority] = useState<Priority>('HIGH');
+  const [letterRank, setLetterRank] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<DreamStatus>('ACTIVE');
   const [moonshot, setMoonshot] = useState(false);
   const [moonshotVision, setMoonshotVision] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('BOTTOM_UP');
   const [decisionAnswers, setDecisionAnswers] = useState<Record<DecisionChecklistKey, boolean | null>>(EMPTY_DECISION_ANSWERS);
   // FR-55.4: null until the BR-44 gate has cleared for the dream being
@@ -92,6 +94,7 @@ export function DreamsPage() {
   const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
   const [filterDreamType, setFilterDreamType] = useUrlFilter('type');
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterLetterRank, setFilterLetterRank] = useUrlFilter('letterRank');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
   const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
   const [filterMoonshotOnly, setFilterMoonshotOnly] = useUrlFlag('moonshot');
@@ -167,10 +170,12 @@ export function DreamsPage() {
       successDefinition,
       dreamType,
       priority,
+      letterRank: letterRank || undefined,
       targetDate: targetDate || undefined,
       status,
       moonshot,
       moonshotVision: moonshot ? moonshotVision : undefined,
+      imageUrl: imageUrl.trim() || undefined,
       scheduleMode,
       decisionSkippedResearch: decisionAnswers.decisionSkippedResearch ?? undefined,
       decisionAssumedNoChange: decisionAnswers.decisionAssumedNoChange ?? undefined,
@@ -186,8 +191,10 @@ export function DreamsPage() {
       setDescription('');
       setWhyImportant('');
       setSuccessDefinition('');
+      setLetterRank('');
       setMoonshot(false);
       setMoonshotVision('');
+      setImageUrl('');
       setScheduleMode('BOTTOM_UP');
       setDecisionAnswers(EMPTY_DECISION_ANSWERS);
       setEditingDecisionGateClearedAt(null);
@@ -204,10 +211,12 @@ export function DreamsPage() {
     setSuccessDefinition(dream.successDefinition ?? '');
     setDreamType(dream.dreamType);
     setPriority(dream.priority);
+    setLetterRank(dream.letterRank ?? '');
     setTargetDate(dream.targetDate ?? '');
     setStatus(dream.status);
     setMoonshot(dream.moonshot);
     setMoonshotVision(dream.moonshotVision ?? '');
+    setImageUrl(dream.imageUrl ?? '');
     setScheduleMode(dream.scheduleMode);
     setDecisionAnswers({
       decisionSkippedResearch: dream.decisionSkippedResearch ?? null,
@@ -230,10 +239,12 @@ export function DreamsPage() {
     setSuccessDefinition('');
     setDreamType('LONG_TERM');
     setPriority('HIGH');
+    setLetterRank('');
     setTargetDate('');
     setStatus('ACTIVE');
     setMoonshot(false);
     setMoonshotVision('');
+    setImageUrl('');
     setScheduleMode('BOTTOM_UP');
     setDecisionAnswers(EMPTY_DECISION_ANSWERS);
     setEditingDecisionGateClearedAt(null);
@@ -282,6 +293,9 @@ export function DreamsPage() {
     if (filterPriority && dream.priority !== filterPriority) {
       return false;
     }
+    if (filterLetterRank && dream.letterRank !== filterLetterRank) {
+      return false;
+    }
     if (filterStatus && dream.status !== filterStatus) {
       return false;
     }
@@ -295,9 +309,17 @@ export function DreamsPage() {
   });
 
   const hasFilters = Boolean(
-    searchTerm || filterVisionAreaId || filterDreamType || filterPriority || filterStatus
+    searchTerm || filterVisionAreaId || filterDreamType || filterPriority || filterLetterRank || filterStatus
       || filterOverdueOnly || filterMoonshotOnly,
   );
+
+  // FR-57.4: only letters actually in use are offered, so the dropdown
+  // doesn't show 26 mostly-empty options.
+  const letterRankOptions = Array.from(
+    new Set(crud.items.map((dream) => dream.letterRank).filter((letter): letter is string => Boolean(letter))),
+  )
+    .sort()
+    .map((letter) => ({ value: letter, label: letter }));
 
   // FR-23.1-style ancestry: shows which vision area a dream belongs to,
   // navigable, the same pattern the Tasks board uses under each row's title.
@@ -340,6 +362,15 @@ export function DreamsPage() {
       render: (dream) => (
         <>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+            {dream.imageUrl && (
+              <Box
+                component="img"
+                src={dream.imageUrl}
+                alt=""
+                sx={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                onError={(event) => { event.currentTarget.style.display = 'none'; }}
+              />
+            )}
             {dream.moonshot && (
               <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
                 <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot dream">
@@ -366,6 +397,12 @@ export function DreamsPage() {
       label: 'Priority',
       sortValue: (dream) => priorityRank(dream.priority),
       render: (dream) => <PriorityBadge priority={dream.priority} />,
+    },
+    {
+      key: 'letterRank',
+      label: 'Rank',
+      sortValue: (dream) => dream.letterRank ?? '',
+      render: (dream) => dream.letterRank ?? '—',
     },
     {
       key: 'status',
@@ -443,6 +480,19 @@ export function DreamsPage() {
         </FormControl>
       </label>
       <label>
+        Rank within this area
+        <Input
+          value={letterRank}
+          onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+          placeholder="e.g. A"
+          maxLength={1}
+        />
+        <span className="field-hint">
+          Optional. A, B, C… — assigned after listing everything, to mark which dreams in this area come first. Ties
+          are fine; nothing enforces a unique order.
+        </span>
+      </label>
+      <label>
         Status
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as DreamStatus)}>
@@ -490,6 +540,19 @@ export function DreamsPage() {
           </span>
         </label>
       )}
+      <label className="field-full">
+        Visual anchor (image link)
+        <Input
+          type="url"
+          value={imageUrl}
+          onChange={(event) => setImageUrl(event.target.value)}
+          placeholder="https://..."
+        />
+        <span className="field-hint">
+          Optional. A link to a picture of what achieving this dream looks like — no upload, just paste a link to an
+          image hosted elsewhere.
+        </span>
+      </label>
       <label className="field-full">
         Target date scheduling
         <FormControl fullWidth size="small">
@@ -598,7 +661,7 @@ export function DreamsPage() {
           { key: 'completed', label: 'completed', count: crud.items.filter((dream) => dream.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
         ]}
       />
-      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamType, filterPriority, filterStatus, filterOverdueOnly, filterMoonshotOnly].filter(Boolean).length}>
+      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamType, filterPriority, filterLetterRank, filterStatus, filterOverdueOnly, filterMoonshotOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="dreams" />
         <FilterSelect
           label="Vision Area"
@@ -618,6 +681,14 @@ export function DreamsPage() {
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
+        {letterRankOptions.length > 0 && (
+          <FilterSelect
+            label="Rank"
+            value={filterLetterRank}
+            onChange={setFilterLetterRank}
+            options={letterRankOptions}
+          />
+        )}
         <FilterSelect
           label="Status"
           value={filterStatus}
@@ -665,7 +736,7 @@ export function DreamsPage() {
             emptyMessage={hasFilters ? 'No dreams match these filters.' : 'No dreams yet.'}
             defaultSortKey="priority"
             defaultSortDirection="desc"
-            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamType}|${filterPriority}|${filterStatus}|${filterOverdueOnly}|${filterMoonshotOnly}`}
+            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamType}|${filterPriority}|${filterLetterRank}|${filterStatus}|${filterOverdueOnly}|${filterMoonshotOnly}`}
             rowClassName={(dream) => (dream.archived ? 'row-archived' : '')}
             selection={{
               selectedIds,
@@ -715,6 +786,7 @@ export function DreamsPage() {
               <p>{dream.code} · {goalCounts.get(dream.id) ?? 0} goal(s){dream.targetDate ? <> · Target <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} /></> : ''}</p>
               <div className="inline-meta">
                 <PriorityBadge priority={dream.priority} />
+                {dream.letterRank && <span>Rank {dream.letterRank}</span>}
                 <span>{dreamTypeLabels[dream.dreamType]}</span>
               </div>
             </>

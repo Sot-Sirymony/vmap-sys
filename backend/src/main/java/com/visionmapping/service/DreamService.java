@@ -76,10 +76,12 @@ public class DreamService {
                 .successDefinition(request.successDefinition())
                 .dreamType(request.dreamType())
                 .priority(request.priority())
+                .letterRank(request.letterRank())
                 .targetDate(request.targetDate())
                 .status(request.status())
                 .moonshot(request.moonshot())
                 .moonshotVision(request.moonshotVision())
+                .imageUrl(request.imageUrl())
                 .scheduleMode(request.scheduleMode())
                 .decisionSkippedResearch(request.decisionSkippedResearch())
                 .decisionAssumedNoChange(request.decisionAssumedNoChange())
@@ -109,10 +111,12 @@ public class DreamService {
         entity.setSuccessDefinition(request.successDefinition());
         entity.setDreamType(request.dreamType());
         entity.setPriority(request.priority());
+        entity.setLetterRank(request.letterRank());
         entity.setTargetDate(request.targetDate());
         entity.setStatus(request.status());
         entity.setMoonshot(request.moonshot());
         entity.setMoonshotVision(request.moonshotVision());
+        entity.setImageUrl(request.imageUrl());
         entity.setScheduleMode(request.scheduleMode());
         entity.setDecisionSkippedResearch(request.decisionSkippedResearch());
         entity.setDecisionAssumedNoChange(request.decisionAssumedNoChange());

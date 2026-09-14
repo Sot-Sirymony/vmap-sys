@@ -83,10 +83,16 @@ export type Dream = {
   successDefinition?: string;
   dreamType: DreamType;
   priority: Priority;
+  // FR-57 / BR-46: optional intra-area label, a single uppercase letter.
+  // A rank label, not a strict order — ties within a Vision Area are fine.
+  letterRank?: string | null;
   targetDate?: string;
   status: DreamStatus;
   moonshot: boolean;
   moonshotVision?: string;
+  // FR-56 / BR-45: optional link to an image representing the fulfilled
+  // dream. A URL only — no file upload/storage involved.
+  imageUrl?: string | null;
   scheduleMode: ScheduleMode;
   // FR-51: computed — true only when scheduleMode is TOP_DOWN_FIXED and a
   // goal's target date now runs past this dream's fixed target date.
@@ -116,10 +122,12 @@ export type DreamRequest = {
   successDefinition?: string;
   dreamType: DreamType;
   priority: Priority;
+  letterRank?: string | null;
   targetDate?: string;
   status: DreamStatus;
   moonshot: boolean;
   moonshotVision?: string;
+  imageUrl?: string | null;
   scheduleMode: ScheduleMode;
   decisionSkippedResearch?: boolean | null;
   decisionAssumedNoChange?: boolean | null;

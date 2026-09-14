@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CheckCircle2, Compass, MoonStar } from 'lucide-react';
+import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -13,6 +14,13 @@ import { Modal } from '../common/Modal';
 import { Textarea } from '../common/Textarea';
 import type { Priority, VisionArea } from '../../types/vision';
 
+// FR-58.1: this product's own already-established category vocabulary
+// (CLAUDE.md's own Vision Area examples), reused here as starter
+// suggestions rather than inventing a second, book-derived list.
+const STARTER_AREA_SUGGESTIONS = [
+  'Career', 'Health', 'Family', 'Finance', 'Education', 'Business', 'Spiritual', 'Relationship', 'Research', 'Leadership',
+];
+
 type VisionAreaWizardProps = {
   token: string;
   onClose: () => void;
@@ -20,6 +28,11 @@ type VisionAreaWizardProps = {
   onSkip: () => void;
   /** Fired after the area (and any first dream) are saved, so the page reloads. */
   onCreated: (area: VisionArea) => void;
+  /**
+   * FR-58.3: names of the user's existing, non-archived Vision Areas — used
+   * only to mark a suggestion as already-added; never disables clicking it.
+   */
+  existingNames?: string[];
 };
 
 /**
@@ -30,7 +43,7 @@ type VisionAreaWizardProps = {
  * first Dream inline. Only name is required (the backend's rule); the vision
  * statement is coaching, never a save gate (FR-33.3).
  */
-export function VisionAreaWizard({ token, onClose, onSkip, onCreated }: VisionAreaWizardProps) {
+export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNames = [] }: VisionAreaWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [error, setError] = useState('');
@@ -122,6 +135,27 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated }: VisionAr
             <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus placeholder="e.g. Career, Health, Family" />
             <span className="field-hint">A major, ongoing part of your life or work — everything else builds under it.</span>
           </label>
+          <div className="field-full wizard-suggestions">
+            <span className="field-hint">
+              Common starting points — a balanced first plan usually covers more than one:
+            </span>
+            <div className="inline-meta">
+              {STARTER_AREA_SUGGESTIONS.map((suggestion) => {
+                const alreadyAdded = existingNames.some(
+                  (existing) => existing.toLowerCase() === suggestion.toLowerCase(),
+                );
+                return (
+                  <Chip
+                    key={suggestion}
+                    size="small"
+                    variant={alreadyAdded ? 'filled' : 'outlined'}
+                    label={alreadyAdded ? `${suggestion} ✓` : suggestion}
+                    onClick={() => setName(suggestion)}
+                  />
+                );
+              })}
+            </div>
+          </div>
           <label>
             How important is it right now?
             <FormControl fullWidth size="small">

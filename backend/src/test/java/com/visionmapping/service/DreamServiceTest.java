@@ -107,8 +107,8 @@ class DreamServiceTest {
     private com.visionmapping.dto.request.DreamRequest requestFrom(Dream dream) {
         return new com.visionmapping.dto.request.DreamRequest(dream.getVisionArea().getId(), dream.getTitle(),
                 dream.getDescription(), dream.getWhyImportant(), dream.getSuccessDefinition(), dream.getDreamType(),
-                dream.getPriority(), dream.getTargetDate(), dream.getStatus(), dream.isMoonshot(),
-                dream.getMoonshotVision(), dream.getScheduleMode(),
+                dream.getPriority(), dream.getLetterRank(), dream.getTargetDate(), dream.getStatus(), dream.isMoonshot(),
+                dream.getMoonshotVision(), dream.getImageUrl(), dream.getScheduleMode(),
                 dream.getDecisionSkippedResearch(), dream.getDecisionAssumedNoChange(),
                 dream.getDecisionTrustedUnverifiedClaim(), dream.getDecisionJudgedByAppearance(),
                 dream.getDecisionUnderTimePressure(), dream.getDecisionNoOutsideInput(),
