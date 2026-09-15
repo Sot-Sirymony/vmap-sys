@@ -76,4 +76,9 @@ public class GoalController {
         return service.goalArchiveImpact(id);
     }
 
+    @GetMapping("/{id}/has-linked-partner")
+    public boolean hasLinkedPartner(@PathVariable Long id) {
+        return service.hasLinkedPartner(id);
+    }
+
 }

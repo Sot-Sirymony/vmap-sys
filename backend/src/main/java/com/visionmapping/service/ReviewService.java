@@ -1,14 +1,18 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.ReviewRequest;
 import com.visionmapping.dto.response.ReviewResponse;
+import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.entity.Review;
+import com.visionmapping.entity.enums.GratitudeCategory;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
+import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.ReviewRepository;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.ArrayList;
@@ -31,6 +35,7 @@ public class ReviewService {
     private final EntityLookup lookup;
     private final VisionMappingMapper mapper;
     private final ReviewRepository reviewRepository;
+    private final GratitudeEntryRepository gratitudeEntryRepository;
 
     @Cacheable(CacheConfig.REVIEW_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -67,7 +72,9 @@ public class ReviewService {
                 .diligenceScorePercent(computeDiligenceScore(request))
                 .diligenceNote(request.diligenceNote())
                 .build();
-        return mapper.toResponse(reviewRepository.save(entity));
+        ReviewResponse response = mapper.toResponse(reviewRepository.save(entity));
+        maybeLogGratitude(request);
+        return response;
     }
 
     @Cacheable(CacheConfig.REVIEW_CACHE)
@@ -101,7 +108,9 @@ public class ReviewService {
         entity.setDiligenceQualityOutcome(request.diligenceQualityOutcome());
         entity.setDiligenceScorePercent(computeDiligenceScore(request));
         entity.setDiligenceNote(request.diligenceNote());
-        return mapper.toResponse(entity);
+        ReviewResponse response = mapper.toResponse(entity);
+        maybeLogGratitude(request);
+        return response;
     }
 
     public void archiveReview(Long id) {
@@ -116,6 +125,24 @@ public class ReviewService {
         Review review = lookup.review(id);
         requireArchived(review.isArchived(), "Review");
         reviewRepository.delete(review);
+    }
+
+    /**
+     * FR-59.3: the prompt is transient — never stored on the Review itself —
+     * so a non-blank note logs a fresh OTHER-category GratitudeEntry on
+     * every save it appears in, create or update alike. Leaving it blank
+     * has no effect, matching BR-42's diligence gate staying untouched.
+     */
+    private void maybeLogGratitude(ReviewRequest request) {
+        if (isBlank(request.gratitudeNote())) {
+            return;
+        }
+        GratitudeEntry entry = GratitudeEntry.builder()
+                .user(lookup.currentUser())
+                .category(GratitudeCategory.OTHER)
+                .description(request.gratitudeNote())
+                .build();
+        gratitudeEntryRepository.save(entry);
     }
 
     /**

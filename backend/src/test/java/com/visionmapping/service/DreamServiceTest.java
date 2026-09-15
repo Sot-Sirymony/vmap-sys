@@ -284,4 +284,13 @@ class DreamServiceTest {
         assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
         assertThat(dream.getDecisionGateClearedAt()).isEqualTo(java.time.Instant.parse("2026-01-01T00:00:00Z"));
     }
+
+    @Test
+    void hasLinkedPartnerReflectsTheRepositoryCheck() {
+        Dream dream = dream(40L, LocalDate.of(2026, 6, 1), ScheduleMode.BOTTOM_UP);
+        when(dreamRepository.findById(40L)).thenReturn(Optional.of(dream));
+        when(partnerRepository.existsAnyPartnerForDream(1L, 40L)).thenReturn(true);
+
+        assertThat(service.hasLinkedPartner(40L)).isTrue();
+    }
 }

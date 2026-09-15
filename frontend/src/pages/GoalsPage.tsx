@@ -44,6 +44,7 @@ import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../compone
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, Goal, GoalRequest, Priority, ScheduleMode, VisionArea, WorkStatus } from '../types/vision';
 import { moonshotViolet } from '../theme';
+import { nudgeContributionForGoal } from '../utils/contributionNudge';
 import { goalRequest } from '../utils/entityRequests';
 import { priorityLabels, scheduleModeLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
@@ -158,6 +159,10 @@ export function GoalsPage() {
     if (!dreamId) {
       return false;
     }
+    // FR-59.4: captured before the save so we know whether this is actually
+    // a transition INTO Completed, not just "is Completed."
+    const editingId = crud.editingId;
+    const previousStatus = editingId != null ? crud.items.find((item) => item.id === editingId)?.status : undefined;
     const success = await crud.save({
       dreamId: Number(dreamId),
       title,
@@ -177,6 +182,9 @@ export function GoalsPage() {
       setMoonshot(false);
       setMoonshotVision('');
       setScheduleMode('BOTTOM_UP');
+      if (token && editingId != null && previousStatus !== 'COMPLETED' && status === 'COMPLETED') {
+        void nudgeContributionForGoal({ token, goalId: editingId, showToast, navigate });
+      }
     }
     return success;
   }
@@ -290,6 +298,9 @@ export function GoalsPage() {
     try {
       await updateGoalStatus(token, goal.id, nextStatus);
       await crud.reload();
+      if (nextStatus === 'COMPLETED') {
+        void nudgeContributionForGoal({ token, goalId: goal.id, showToast, navigate });
+      }
     } catch (moveError) {
       crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update goal status.');
     }

@@ -120,6 +120,9 @@ export function ReviewsPage() {
   const [nextActions, setNextActions] = useState('');
   const [diligence, setDiligence] = useState<Record<DiligenceKey, boolean | null>>(EMPTY_DILIGENCE);
   const [diligenceNote, setDiligenceNote] = useState('');
+  // FR-59.3: transient — never stored on the Review, so it always starts
+  // blank (including on edit) and clears itself right after a successful save.
+  const [gratitudeNote, setGratitudeNote] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterReviewType, setFilterReviewType] = useState('');
@@ -170,6 +173,7 @@ export function ReviewsPage() {
       diligenceEfficient: includeChecklist ? diligence.diligenceEfficient : undefined,
       diligenceQualityOutcome: includeChecklist ? diligence.diligenceQualityOutcome : undefined,
       diligenceNote: includeChecklist ? diligenceNote || undefined : undefined,
+      gratitudeNote: gratitudeNote.trim() || undefined,
     });
     if (success) {
       setSummary('');
@@ -179,6 +183,7 @@ export function ReviewsPage() {
       setNextActions('');
       setDiligence(EMPTY_DILIGENCE);
       setDiligenceNote('');
+      setGratitudeNote('');
     }
     return success;
   }
@@ -207,6 +212,7 @@ export function ReviewsPage() {
       diligenceQualityOutcome: review.diligenceQualityOutcome ?? null,
     });
     setDiligenceNote(review.diligenceNote ?? '');
+    setGratitudeNote('');
   }
 
   function cancelEdit() {
@@ -222,6 +228,7 @@ export function ReviewsPage() {
     setNextActions('');
     setDiligence(EMPTY_DILIGENCE);
     setDiligenceNote('');
+    setGratitudeNote('');
   }
 
   const filteredReviews = crud.items.filter((review) => {
@@ -410,6 +417,13 @@ export function ReviewsPage() {
       <label className="field-full">
         Next Actions
         <Textarea value={nextActions} onChange={(event) => setNextActions(event.target.value)} />
+      </label>
+      <label className="field-full">
+        What's something you're grateful for this period?
+        <Textarea value={gratitudeNote} onChange={(event) => setGratitudeNote(event.target.value)} />
+        <span className="field-hint">
+          Optional. Answering logs it to your gratitude list; leaving it blank changes nothing about this review.
+        </span>
       </label>
     </>
   );

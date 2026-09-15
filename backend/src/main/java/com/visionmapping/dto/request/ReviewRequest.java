@@ -26,6 +26,9 @@ public record ReviewRequest(
         Boolean diligenceExpeditious,
         Boolean diligenceEfficient,
         Boolean diligenceQualityOutcome,
-        @Size(max = 2000) String diligenceNote
+        @Size(max = 2000) String diligenceNote,
+        // FR-59.3: optional — if answered, spawns a Person-agnostic (OTHER
+        // category) GratitudeEntry; never persisted on the Review itself.
+        @Size(max = 2000) String gratitudeNote
 ) {
 }

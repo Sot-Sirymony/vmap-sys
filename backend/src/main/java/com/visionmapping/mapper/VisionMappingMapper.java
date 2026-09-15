@@ -2,6 +2,7 @@ package com.visionmapping.mapper;
 
 import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DreamResponse;
+import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
 import com.visionmapping.dto.response.IssueReportResponse;
 import com.visionmapping.dto.response.GoalResponse;
@@ -16,6 +17,7 @@ import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.entity.IdealPartnerProfile;
 import com.visionmapping.entity.IssueReport;
 import com.visionmapping.entity.Obstacle;
@@ -98,6 +100,12 @@ public class VisionMappingMapper {
     public IdealPartnerProfileResponse toResponse(IdealPartnerProfile entity) {
         return new IdealPartnerProfileResponse(entity.getId(), entity.getStep().getId(), entity.getRequiredExperience(),
                 entity.getCharacterTraits(), entity.getMotivation(), entity.getOfferInReturn(), entity.isArchived(),
+                entity.getCreatedAt(), entity.getUpdatedAt());
+    }
+
+    public GratitudeEntryResponse toResponse(GratitudeEntry entity) {
+        return new GratitudeEntryResponse(entity.getId(), entity.getCategory(), entity.getDescription(),
+                id(entity.getRelatedDream()), id(entity.getRelatedGoal()), entity.isArchived(),
                 entity.getCreatedAt(), entity.getUpdatedAt());
     }
 

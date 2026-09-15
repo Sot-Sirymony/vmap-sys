@@ -40,7 +40,8 @@ public record DashboardSummaryResponse(
         long moonshotGoals,
         long moonshotDreams,
         Attention attention,
-        EnergyBudget energyBudget
+        EnergyBudget energyBudget,
+        Gratitude gratitude
 ) {
 
     /** Weekly sample of the running average task progress. */
@@ -54,6 +55,10 @@ public record DashboardSummaryResponse(
      * energising than draining, negative when it's a net drain.
      */
     public record EnergyBudget(long charge, long neutral, long drain, long net) {
+    }
+
+    /** FR-59.2: the dashboard card — a rolling 7-day count plus the 2-3 most recent entries. */
+    public record Gratitude(long countThisWeek, List<GratitudeEntryResponse> recent) {
     }
 
     /** Average goal progress for one vision area, pre-sorted lowest first. */

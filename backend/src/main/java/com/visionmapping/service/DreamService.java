@@ -102,6 +102,13 @@ public class DreamService {
         return toResponse(lookup.dream(id));
     }
 
+    /** FR-59.4: backs the completion-time contribution nudge — never gates anything (BR-48). */
+    @Transactional(readOnly = true)
+    public boolean hasLinkedPartner(Long id) {
+        Dream entity = lookup.dream(id);
+        return partnerRepository.existsAnyPartnerForDream(entity.getUser().getId(), entity.getId());
+    }
+
     public DreamResponse updateDream(Long id, DreamRequest request) {
         Dream entity = lookup.dream(id);
         entity.setVisionArea(lookup.visionArea(request.visionAreaId()));

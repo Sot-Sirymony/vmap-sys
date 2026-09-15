@@ -4,6 +4,7 @@ import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
+import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
@@ -25,6 +26,7 @@ import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.ProgressLogRepository;
@@ -73,6 +75,7 @@ public class DashboardService {
     private static final int STARVATION_WINDOW_DAYS = 14;
     private static final int DAYS_PER_WEEK = 7;
     private static final int TOP_PRIORITY_TASK_LIMIT = 5;
+    private static final int RECENT_GRATITUDE_ENTRY_LIMIT = 3;
     private static final int KPI_PROGRESS_SCALE = 2;
     private static final int AREA_PROGRESS_SCALE = 0;
 
@@ -88,6 +91,7 @@ public class DashboardService {
     private final ReviewRepository reviewRepository;
     private final ObstacleRepository obstacleRepository;
     private final ProgressLogRepository progressLogRepository;
+    private final GratitudeEntryRepository gratitudeEntryRepository;
     private final Clock clock;
 
     /** Every unarchived record of the user, already narrowed to one area when the caller asked for it. */
@@ -159,8 +163,28 @@ public class DashboardService {
                 data.goals().stream().filter(Goal::isMoonshot).count(),
                 data.dreams().stream().filter(Dream::isMoonshot).count(),
                 buildAttention(data),
-                buildEnergyBudget(data.tasks(), today)
+                buildEnergyBudget(data.tasks(), today),
+                buildGratitude(today)
         );
+    }
+
+    /**
+     * FR-59.2: not scoped to `visionAreaId` — gratitude entries aren't a
+     * vision-area concept, so the dashboard card always reflects the whole
+     * account, the same way `attention` and `energyBudget` are user-scoped
+     * data computed independently of the area filter.
+     */
+    private DashboardSummaryResponse.Gratitude buildGratitude(LocalDate today) {
+        Instant since = today.minusDays(DAYS_PER_WEEK).atStartOfDay(clock.getZone()).toInstant();
+        long countThisWeek = gratitudeEntryRepository
+                .findByUser_IdAndArchivedFalseAndCreatedAtAfterOrderByCreatedAtDesc(lookup.userId(), since)
+                .size();
+        List<GratitudeEntryResponse> recent = gratitudeEntryRepository
+                .findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(lookup.userId()).stream()
+                .limit(RECENT_GRATITUDE_ENTRY_LIMIT)
+                .map(mapper::toResponse)
+                .toList();
+        return new DashboardSummaryResponse.Gratitude(countThisWeek, recent);
     }
 
     /**

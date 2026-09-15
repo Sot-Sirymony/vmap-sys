@@ -391,7 +391,11 @@ export type Review = {
   archived: boolean;
 };
 
-export type ReviewRequest = Omit<Review, 'id' | 'archived' | 'diligenceScorePercent'>;
+export type ReviewRequest = Omit<Review, 'id' | 'archived' | 'diligenceScorePercent'> & {
+  // FR-59.3: transient — spawns a GratitudeEntry when non-blank, never
+  // stored on the Review itself, so it's never part of the `Review` type.
+  gratitudeNote?: string;
+};
 
 export type Obstacle = {
   id: number;
@@ -437,6 +441,22 @@ export type Obstacle = {
 };
 
 export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived' | 'expectationReleasedAt'>;
+
+// FR-59.1: what kind of thing a gratitude entry is about.
+export type GratitudeCategory = 'GIFT' | 'HEALTH' | 'PERSON' | 'OTHER';
+
+export type GratitudeEntry = {
+  id: number;
+  category: GratitudeCategory;
+  description: string;
+  relatedDreamId?: number;
+  relatedGoalId?: number;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GratitudeEntryRequest = Omit<GratitudeEntry, 'id' | 'archived' | 'createdAt' | 'updatedAt'>;
 
 // FR-38: in-app issue & improvement reporting.
 export type ReportType = 'BUG' | 'IMPROVEMENT' | 'QUESTION' | 'OTHER';
@@ -558,6 +578,13 @@ export type DashboardSummary = {
   moonshotDreams: number;
   attention: DashboardAttention;
   energyBudget: DashboardEnergyBudget;
+  gratitude: DashboardGratitude;
+};
+
+/** FR-59.2: a rolling 7-day count plus the 2-3 most recent entries. */
+export type DashboardGratitude = {
+  countThisWeek: number;
+  recent: GratitudeEntry[];
 };
 
 /** FR-34.2: this week's tasks by energy demand, CHARGE and DRAIN netted into `net`. */

@@ -39,6 +39,27 @@ public interface PartnerRepository extends JpaRepository<Partner, Long>, UserSco
             @Param("supportTypes") List<PartnerSupportType> supportTypes);
 
     /**
+     * FR-59.4: any non-archived partner at all (no supportType restriction),
+     * linked directly to the dream or via one of its non-archived goals —
+     * the same "directly, or via a Goal" linkage FR-55's Gate B already
+     * uses, minus the ADVISOR/MENTOR filter.
+     */
+    @Query("""
+            select count(p) > 0 from Partner p
+            left join p.relatedDream d
+            left join p.relatedGoal g
+            left join g.dream gd
+            where p.user.id = :userId
+              and p.archived = false
+              and ((d.id = :dreamId)
+                or (gd.id = :dreamId and g.archived = false))
+            """)
+    boolean existsAnyPartnerForDream(@Param("userId") Long userId, @Param("dreamId") Long dreamId);
+
+    /** FR-59.4: a Goal only ever gets a partner linked to it directly. */
+    boolean existsByUser_IdAndRelatedGoal_IdAndArchivedFalse(Long userId, Long goalId);
+
+    /**
      * One query for the partner list: free-text search plus the dropdown filters.
      * Every filter is optional — null means "don't filter on this" — so the page
      * contents and the total count stay correct for any combination of them.

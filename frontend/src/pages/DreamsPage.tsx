@@ -37,11 +37,13 @@ import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { useUrlFilter, useUrlFlag } from '../hooks/useUrlFilter';
 import type { Dream, DreamRequest, DreamStatus, DreamType, Priority, ScheduleMode, VisionArea } from '../types/vision';
 import { moonshotViolet } from '../theme';
+import { nudgeContributionForDream } from '../utils/contributionNudge';
 import { dreamRequest } from '../utils/entityRequests';
 import {
   DECISION_CHECKLIST_QUESTIONS, dreamStatusLabels, dreamTypeLabels, EMPTY_DECISION_ANSWERS, isDecisionChecklistComplete,
@@ -55,6 +57,7 @@ import { PageSection } from './PageSection';
 export function DreamsPage() {
   const { token } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const crud = useCrudEntity<Dream, DreamRequest>({
     token,
     entityLabel: 'dreams',
@@ -162,6 +165,10 @@ export function DreamsPage() {
     if (!visionAreaId) {
       return false;
     }
+    // FR-59.4: captured before the save so we know whether this is actually
+    // a transition INTO Completed, not just "is Completed."
+    const editingId = crud.editingId;
+    const previousStatus = editingId != null ? crud.items.find((item) => item.id === editingId)?.status : undefined;
     const success = await crud.save({
       visionAreaId: Number(visionAreaId),
       title,
@@ -198,6 +205,9 @@ export function DreamsPage() {
       setScheduleMode('BOTTOM_UP');
       setDecisionAnswers(EMPTY_DECISION_ANSWERS);
       setEditingDecisionGateClearedAt(null);
+      if (token && editingId != null && previousStatus !== 'COMPLETED' && status === 'COMPLETED') {
+        void nudgeContributionForDream({ token, dreamId: editingId, showToast, navigate });
+      }
     }
     return success;
   }
@@ -270,6 +280,9 @@ export function DreamsPage() {
     try {
       await updateDream(token, dream.id, { ...dreamRequest(dream), status: nextStatus });
       await crud.reload();
+      if (nextStatus === 'COMPLETED') {
+        void nudgeContributionForDream({ token, dreamId: dream.id, showToast, navigate });
+      }
     } catch (moveError) {
       crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update dream status.');
     }

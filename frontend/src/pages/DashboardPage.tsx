@@ -10,6 +10,7 @@ import { AttentionPanel } from '../components/dashboard/AttentionPanel';
 import { DashboardSummary } from '../components/dashboard/DashboardSummary';
 import { EnergyBudgetCard } from '../components/dashboard/EnergyBudgetCard';
 import { GettingStarted } from '../components/dashboard/GettingStarted';
+import { GratitudeCard } from '../components/dashboard/GratitudeCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -119,12 +120,15 @@ export function DashboardPage() {
   // tile already carries that range explicitly.
   const scopeSuffix = filterVisionAreaId ? `&visionAreaId=${filterVisionAreaId}` : '';
 
-  useEffect(() => {
+  // Extracted so the gratitude card's quick-add/archive can refresh the
+  // summary in place, the same payload the initial load already fetches.
+  function reloadSummary(showSpinner: boolean) {
     if (!token) {
       return;
     }
-
-    setLoading(true);
+    if (showSpinner) {
+      setLoading(true);
+    }
     getDashboardSummary(token, filterVisionAreaId, from, to)
       .then((summaryData) => {
         setSummary(summaryData);
@@ -132,6 +136,11 @@ export function DashboardPage() {
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load dashboard.'))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    reloadSummary(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, filterVisionAreaId, from, to]);
 
   // The dropdown always offers every area, even while the dashboard is scoped to
@@ -238,6 +247,7 @@ export function DashboardPage() {
         visionAreaId={filterVisionAreaId}
       />
       <EnergyBudgetCard budget={summary?.energyBudget} />
+      <GratitudeCard token={token} gratitude={summary?.gratitude} onChanged={() => reloadSummary(false)} />
       {/* The comp pairs the priority-task list with the dreams donut in one row. */}
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, alignItems: 'stretch' }}>
       <Card>

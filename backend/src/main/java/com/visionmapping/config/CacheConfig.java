@@ -6,6 +6,7 @@ import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
+import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
 import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.dto.response.PartnerResponse;
@@ -72,6 +73,8 @@ public class CacheConfig implements CachingConfigurer {
     public static final String COMMUNICATION_MESSAGE_CACHE = "communicationMessage";
     public static final String IDEAL_PARTNER_PROFILE_CACHE = "idealPartnerProfile";
     public static final String IDEAL_PARTNER_PROFILE_LIST_CACHE = "idealPartnerProfileList";
+    public static final String GRATITUDE_ENTRY_CACHE = "gratitudeEntry";
+    public static final String GRATITUDE_ENTRY_LIST_CACHE = "gratitudeEntryList";
 
     /** Backstop for missed evictions; explicit eviction is the primary freshness mechanism. */
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
@@ -114,7 +117,9 @@ public class CacheConfig implements CachingConfigurer {
                 Map.entry(PROGRESS_LOG_LIST_CACHE, listCache(objectMapper, ProgressLogResponse.class)),
                 Map.entry(COMMUNICATION_MESSAGE_CACHE, dtoCache(objectMapper, CommunicationMessageResponse.class)),
                 Map.entry(IDEAL_PARTNER_PROFILE_CACHE, dtoCache(objectMapper, IdealPartnerProfileResponse.class)),
-                Map.entry(IDEAL_PARTNER_PROFILE_LIST_CACHE, listCache(objectMapper, IdealPartnerProfileResponse.class)));
+                Map.entry(IDEAL_PARTNER_PROFILE_LIST_CACHE, listCache(objectMapper, IdealPartnerProfileResponse.class)),
+                Map.entry(GRATITUDE_ENTRY_CACHE, dtoCache(objectMapper, GratitudeEntryResponse.class)),
+                Map.entry(GRATITUDE_ENTRY_LIST_CACHE, listCache(objectMapper, GratitudeEntryResponse.class)));
         return builder -> builder.withInitialCacheConfigurations(configs);
     }
 

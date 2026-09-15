@@ -4,10 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.visionmapping.dto.request.ReviewRequest;
 import com.visionmapping.entity.AppUser;
+import com.visionmapping.entity.GratitudeEntry;
+import com.visionmapping.entity.enums.GratitudeCategory;
 import com.visionmapping.entity.enums.ReviewType;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
@@ -16,6 +20,7 @@ import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.ProgressLogRepository;
@@ -51,6 +56,7 @@ class ReviewServiceTest {
     @Mock private ReviewRepository reviewRepository;
     @Mock private ObstacleRepository obstacleRepository;
     @Mock private ProgressLogRepository progressLogRepository;
+    @Mock private GratitudeEntryRepository gratitudeEntryRepository;
 
     private ReviewService service;
 
@@ -59,7 +65,7 @@ class ReviewServiceTest {
         EntityLookup lookup = new EntityLookup(userScope, visionAreaRepository, dreamRepository, goalRepository,
                 visionStepRepository, taskItemRepository, partnerRepository, communicationMessageRepository,
                 reviewRepository, obstacleRepository, progressLogRepository);
-        service = new ReviewService(lookup, new VisionMappingMapper(), reviewRepository);
+        service = new ReviewService(lookup, new VisionMappingMapper(), reviewRepository, gratitudeEntryRepository);
         AppUser user = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         lenient().when(userScope.currentUser()).thenReturn(user);
@@ -69,7 +75,7 @@ class ReviewServiceTest {
     void partialDiligenceChecklistIsRejected() {
         ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                true, true, null, null, null, null, null, null, null, null, null);
+                true, true, null, null, null, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createReview(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -80,7 +86,7 @@ class ReviewServiceTest {
     void partialAmongTheFiveNewFr53ChecksIsAlsoRejected() {
         ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                true, true, true, true, true, true, null, null, null, null, null);
+                true, true, true, true, true, true, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createReview(request))
                 .isInstanceOf(BusinessRuleException.class)
@@ -93,10 +99,10 @@ class ReviewServiceTest {
 
         ReviewRequest full = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                true, false, true, true, false, true, true, true, true, true, "Tempo weeks slipped");
+                true, false, true, true, false, true, true, true, true, true, "Tempo weeks slipped", null);
         ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null);
 
         assertThat(service.createReview(full).diligenceWorkedPlan()).isFalse();
         assertThat(service.createReview(skipped).diligenceClearVision()).isNull();
@@ -109,12 +115,40 @@ class ReviewServiceTest {
         // 7 of 10 true -> 70%.
         ReviewRequest full = new ReviewRequest(ReviewType.MONTHLY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                true, true, true, true, true, true, true, false, false, false, null);
+                true, true, true, true, true, true, true, false, false, false, null, null);
         ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
                 "Summary", null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null);
 
         assertThat(service.createReview(full).diligenceScorePercent()).isEqualTo(70);
         assertThat(service.createReview(skipped).diligenceScorePercent()).isNull();
+    }
+
+    @Test
+    void answeringTheGratitudePromptLogsAnOtherCategoryEntry() {
+        when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(gratitudeEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+                "Summary", null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, "A good week overall");
+
+        service.createReview(request);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(GratitudeEntry.class);
+        verify(gratitudeEntryRepository).save(captor.capture());
+        assertThat(captor.getValue().getCategory()).isEqualTo(GratitudeCategory.OTHER);
+        assertThat(captor.getValue().getDescription()).isEqualTo("A good week overall");
+    }
+
+    @Test
+    void leavingTheGratitudePromptBlankLogsNothing() {
+        when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+                "Summary", null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null);
+
+        service.createReview(request);
+
+        verify(gratitudeEntryRepository, never()).save(any());
     }
 }

@@ -18,6 +18,7 @@ import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
@@ -50,6 +51,7 @@ public class GoalService {
     private final VisionMappingMapper mapper;
     private final GoalRepository goalRepository;
     private final VisionStepRepository visionStepRepository;
+    private final PartnerRepository partnerRepository;
 
     @Cacheable(CacheConfig.GOAL_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -85,6 +87,13 @@ public class GoalService {
     @Transactional(readOnly = true)
     public GoalResponse getGoal(Long id) {
         return toResponse(lookup.goal(id));
+    }
+
+    /** FR-59.4: backs the completion-time contribution nudge — never gates anything (BR-48). */
+    @Transactional(readOnly = true)
+    public boolean hasLinkedPartner(Long id) {
+        Goal entity = lookup.goal(id);
+        return partnerRepository.existsByUser_IdAndRelatedGoal_IdAndArchivedFalse(entity.getUser().getId(), entity.getId());
     }
 
     public GoalResponse updateGoal(Long id, GoalRequest request) {

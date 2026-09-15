@@ -54,3 +54,8 @@ export function permanentlyDeleteGoal(token: string, id: number) {
     token,
   });
 }
+
+// FR-59.4: backs the completion-time contribution nudge.
+export function goalHasLinkedPartner(token: string, id: number) {
+  return apiClient<boolean>(`/goals/${id}/has-linked-partner`, { token });
+}

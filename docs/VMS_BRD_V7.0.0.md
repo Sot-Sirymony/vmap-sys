@@ -5,7 +5,7 @@
 | **Document** | VMS_BRD_V7.0.0 |
 | **Version** | 7.0.0 (In progress) |
 | **Date** | 2026-09-15 |
-| **Status** | 🔶 In progress. Written from a gap analysis comparing V1.0.0 → V6.0.0 against Chapters 7–15 of *The Richest Man Who Ever Lived* (character, conflict, criticism, prudence, and wisdom). ✅ **FR-61** (Expectation Diagnosis) and ✅ **FR-62** (Conflict Engagement Checklist) shipped 2026-09-14; ✅ **FR-60** (Incoming Criticism Triage) shipped 2026-09-15. FR-59, FR-63 remain proposed — not yet built. |
+| **Status** | 🔶 In progress. Written from a gap analysis comparing V1.0.0 → V6.0.0 against Chapters 7–15 of *The Richest Man Who Ever Lived* (character, conflict, criticism, prudence, and wisdom). ✅ **FR-61** (Expectation Diagnosis) and ✅ **FR-62** (Conflict Engagement Checklist) shipped 2026-09-14; ✅ **FR-60** (Incoming Criticism Triage) shipped 2026-09-15; ✅ **FR-59** (Gratitude & Contribution Log) shipped 2026-09-16. Only FR-63 remains proposed — not yet built. |
 | **Baseline** | Builds on VMS_BRD_V6.0.0 (all FR-1…FR-58 remain in force) |
 | **Concept source** | *The Richest Man Who Ever Lived* (Steven K. Scott), used as conceptual reference only, as in V5–V6. **No copyrighted text, named proprietary frameworks, or scripture is reproduced anywhere in this document or in the product** — see *Originality note* below for what that changed. |
 
@@ -99,7 +99,56 @@ once and resurfaced later — not just reconstructed after the next mistake.
 
 ---
 
-## FR-59 Gratitude & Contribution Log *(Effort: M)*
+## FR-59 Gratitude & Contribution Log — ✅ Done 2026-09-16 *(Effort: M)*
+
+**Shipped (2026-09-16):** Built last in the Build Order (after FR-61/62/60),
+claiming `V34` exactly as sketched once the three worksheet FRs had claimed
+`V31`–`V33`. A genuinely new entity/table rather than an extension —
+`GratitudeEntry` gets its own repository, DTOs, mapper method, service, and
+`/api/gratitude-entries` controller (full CRUD, mirroring
+`IdealPartnerProfileService`'s minimal-lookup pattern rather than
+`EntityLookup`, since nothing else needs to reference a gratitude entry).
+FR-59.3's Review prompt is transient by design: `ReviewRequest.gratitudeNote`
+is never persisted on `Review` — `ReviewService.maybeLogGratitude` spawns an
+`OTHER`-category `GratitudeEntry` as a side effect of `createReview`/
+`updateReview` whenever it's non-blank, so answering it on every edit logs
+again (matching a "retype each time" quick-capture field, not a stored
+setting). FR-59.2's dashboard card computes a rolling 7-day count (not a
+calendar-week boundary) and caps "recent" at 3, added to
+`DashboardSummaryResponse` as a new `Gratitude` record — computed
+independently of the `visionAreaId` scope filter, the same way `attention`
+and `energyBudget` already are. FR-59.4's nudge deliberately avoided adding
+a computed field to the already-widely-used `DreamResponse`/`GoalResponse`
+records: two narrow new endpoints
+(`GET /dreams/{id}/has-linked-partner`, `GET /goals/{id}/has-linked-partner`)
+back it instead, backed by one new `PartnerRepository` query each (the
+Dream one reusing FR-55 Gate B's "directly, or via a Goal" join shape minus
+the ADVISOR/MENTOR filter). Frontend: a `GratitudeCard` on the dashboard
+(quick-add + recent list + per-entry remove, refreshing the summary in
+place via an extracted `reloadSummary` function); the Review form gained an
+always-blank-on-edit gratitude textarea; `DreamsPage.tsx` and
+`GoalsPage.tsx` each check the new endpoint on both their `handleSubmit`
+(comparing against the pre-save status from `crud.items`) and `handleMove`
+paths, firing a `showToast` with an "Add partner" action only on the actual
+OPEN→COMPLETED transition — fails open (treats a network error as "has a
+partner") so a hiccup never nags where there's nothing to nag about.
+`PartnersPage.tsx`'s existing `?create=partner` mechanism gained
+`relatedDreamId`/`relatedGoalId` query-param support so that action lands
+pre-linked, the same extension pattern FR-60 used on `TasksBoardPage.tsx`.
+**Scoped out:** `VisionMapTree.tsx`'s quick-status dropdown does not carry
+this nudge (only the two list pages' `handleSubmit`/`handleMove` do) — a
+deliberate proportionality call, not an oversight, matching this document's
+own precedent of scoping FR-63's resurfacing to Obstacles only. Verified:
+backend 233/233 (7 new `GratitudeEntryServiceTest` cases, 2 new gratitude
+cases in `DashboardServiceTest`, 2 new gratitude cases in
+`ReviewServiceTest`, 1 new `hasLinkedPartner` case each in `DreamServiceTest`/
+`GoalServiceTest`, 7 new `GratitudeEntryFlowTests` integration cases),
+frontend `tsc -b`/build/349 tests all green. Live-verified against the
+running dev server: a created entry appears in both the list endpoint and
+the dashboard's `gratitude` field within the same request cycle; a Review
+saved with a gratitude note produces a matching `OTHER`-category entry;
+`has-linked-partner` flips from `false` to `true` immediately after linking
+a Partner to the Dream.
 
 A lightweight, optional log for what's already going well and who helped —
 the counterweight to a system that otherwise only tracks what's unfinished,
@@ -145,7 +194,7 @@ blocked, or overdue.
 
 **Data model / migration**
 
-- `V34__gratitude_entries.sql` *(provisional — see Migrations table)*: a new table, `gratitude_entries` — `id`,
+- `V34__gratitude_entries.sql`: a new table, `gratitude_entries` — `id`,
   `user_id`, `category` (`GIFT`/`HEALTH`/`PERSON`/`OTHER`), `description`
   (`VARCHAR(2000)`, required), `related_dream_id` (nullable FK),
   `related_goal_id` (nullable FK), `archived`, `created_at`, `updated_at`.
@@ -471,7 +520,7 @@ read-only on purpose.
 
 | # | Rule | Status |
 |---|---|---|
-| BR-48 | The contribution nudge (FR-59.4) is advisory only: it never blocks, delays, or reverses a Goal/Dream's transition to `COMPLETED`, and logging a gratitude entry is never required to complete anything. | Not started |
+| BR-48 | The contribution nudge (FR-59.4) is advisory only: it never blocks, delays, or reverses a Goal/Dream's transition to `COMPLETED`, and logging a gratitude entry is never required to complete anything. | ✅ Done 2026-09-16 |
 | BR-49 | The criticism-triage fields (FR-60.1) and the "turn into a task" shortcut (FR-60.2) are diagnostic only: they never change an Obstacle's status, severity, or any FR-32/BR-25/BR-26 rule, and converting Substance into a Task is always an explicit, user-initiated save — never automatic. | ✅ Done 2026-09-15 |
 | BR-50 | `Obstacle.expectationReleasedAt` is set exactly once per Obstacle and never re-fires or reverses; the expectation fields and the release action are diagnostic only and never change status, severity, or any FR-32/BR-25/BR-26 rule. | ✅ Done 2026-09-14 |
 | BR-51 | A `PARTNER`-type Obstacle cannot transition to `Resolved` unless all four FR-62.1 checklist items are answered, alongside BR-25's existing `rootCause` requirement. The answers themselves never gate the transition — only their completeness does. | ✅ Done 2026-09-14 |
@@ -482,15 +531,16 @@ read-only on purpose.
 `V31` shipped with FR-61 and `V32` with FR-62 (built first and second per
 the Build Order), claiming the slots originally sketched below for FR-59
 and FR-60 respectively — the same kind of reassignment V5.0.0 and V6.0.0
-both saw. `V33` shipped with FR-60 exactly where originally sketched (no
-reassignment needed this time). `V34` and `V35` remain provisional.
+both saw. `V33` shipped with FR-60 and `V34` with FR-59, both exactly where
+originally sketched (no further reassignment once the first two items
+jumped the queue). `V35` remains provisional.
 
 | Migration | Purpose | Type | Status |
 |---|---|---|---|
 | `V31__obstacle_expectation_release.sql` | Expectation fields + release timestamp on `obstacles` (FR-61) | Additive, nullable | ✅ Done 2026-09-14 |
 | `V32__obstacle_conflict_checklist.sql` | Four conduct-check booleans on `obstacles` (FR-62) | Additive, nullable | ✅ Done 2026-09-14 |
 | `V33__obstacle_criticism_triage.sql` | Three criticism-triage fields on `obstacles` (FR-60) | Additive, nullable | ✅ Done 2026-09-15 |
-| `V34__gratitude_entries.sql` *(provisional)* | New `gratitude_entries` table (FR-59) | New table | Not started |
+| `V34__gratitude_entries.sql` | New `gratitude_entries` table (FR-59) | New table | ✅ Done 2026-09-16 |
 | `V35__wisdom_principles.sql` *(provisional)* | New `wisdom_principles` table (FR-63) | New table | Not started |
 
 ## Build Order
@@ -500,7 +550,7 @@ reassignment needed this time). `V34` and `V35` remain provisional.
 | 1 | FR-61 Expectation Diagnosis | Smallest; two fields + a timestamp on the worksheet FR-54 already ships | S | ✅ Done 2026-09-14 |
 | 2 | FR-62 Conflict Engagement Checklist | Same worksheet block as FR-61; independent fields, natural to land alongside it | S | ✅ Done 2026-09-14 |
 | 3 | FR-60 Incoming Criticism Triage | Same worksheet block again, plus the one cross-feature link (Task creation shortcut) | M | ✅ Done 2026-09-15 |
-| 4 | FR-59 Gratitude & Contribution Log | Independent of the worksheet work above; its own table and dashboard card | M | Not started |
+| 4 | FR-59 Gratitude & Contribution Log | Independent of the worksheet work above; its own table and dashboard card | M | ✅ Done 2026-09-16 |
 | 5 | FR-63 Principle Repository | Independent new surface; benefits from landing last so its Obstacle-resurfacing mapping can reuse whatever `obstacleType` conventions the worksheet work above settles on | M | Not started |
 
 ## Non-Functional Notes

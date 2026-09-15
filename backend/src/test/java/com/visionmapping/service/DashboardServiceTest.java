@@ -1,6 +1,8 @@
 package com.visionmapping.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -8,6 +10,7 @@ import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
@@ -15,6 +18,7 @@ import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.EnergyDemand;
+import com.visionmapping.entity.enums.GratitudeCategory;
 import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
@@ -26,6 +30,7 @@ import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.ProgressLogRepository;
@@ -69,6 +74,7 @@ class DashboardServiceTest {
     @Mock private ReviewRepository reviewRepository;
     @Mock private ObstacleRepository obstacleRepository;
     @Mock private ProgressLogRepository progressLogRepository;
+    @Mock private GratitudeEntryRepository gratitudeEntryRepository;
 
     private DashboardService service;
     private AppUser testUser;
@@ -81,7 +87,8 @@ class DashboardServiceTest {
         ProgressCalculator progress = new ProgressCalculator(visionStepRepository, taskItemRepository);
         service = new DashboardService(lookup, progress, new VisionMappingMapper(), visionAreaRepository,
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
-                reviewRepository, obstacleRepository, progressLogRepository, Clock.systemDefaultZone());
+                reviewRepository, obstacleRepository, progressLogRepository, gratitudeEntryRepository,
+                Clock.systemDefaultZone());
 
         testUser = AppUser.builder()
                 .id(1L)
@@ -539,5 +546,38 @@ class DashboardServiceTest {
         assertThat(summary.progressTrend()).isNotEmpty();
         assertThat(summary.progressTrend().get(summary.progressTrend().size() - 1).progress())
                 .isEqualByComparingTo("40.00");
+    }
+
+    @Test
+    void gratitudeCardReportsThisWeeksCountAndRecentEntries() {
+        GratitudeEntry recent = GratitudeEntry.builder()
+                .id(1L).user(testUser).category(GratitudeCategory.PERSON).description("A mentor's advice")
+                .archived(false).build();
+
+        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseAndCreatedAtAfterOrderByCreatedAtDesc(eq(1L), any(Instant.class)))
+                .thenReturn(List.of(recent));
+        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of(recent));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.gratitude().countThisWeek()).isEqualTo(1);
+        assertThat(summary.gratitude().recent()).hasSize(1);
+        assertThat(summary.gratitude().recent().get(0).description()).isEqualTo("A mentor's advice");
+    }
+
+    @Test
+    void gratitudeCardCapsRecentEntriesAtThree() {
+        List<GratitudeEntry> entries = List.of(
+                GratitudeEntry.builder().id(1L).user(testUser).category(GratitudeCategory.OTHER).description("One").archived(false).build(),
+                GratitudeEntry.builder().id(2L).user(testUser).category(GratitudeCategory.OTHER).description("Two").archived(false).build(),
+                GratitudeEntry.builder().id(3L).user(testUser).category(GratitudeCategory.OTHER).description("Three").archived(false).build(),
+                GratitudeEntry.builder().id(4L).user(testUser).category(GratitudeCategory.OTHER).description("Four").archived(false).build());
+
+        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L)).thenReturn(entries);
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.gratitude().recent()).hasSize(3);
     }
 }

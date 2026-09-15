@@ -79,7 +79,7 @@ class GoalServiceTest {
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, idealPartnerProfileRepository);
         service = new GoalService(lookup, archiveCascade, permanentDeleteCascade,
-                new VisionMappingMapper(), goalRepository, visionStepRepository);
+                new VisionMappingMapper(), goalRepository, visionStepRepository, partnerRepository);
         testUser = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         lenient().when(userScope.currentUser()).thenReturn(testUser);
@@ -191,5 +191,15 @@ class GoalServiceTest {
         assertThat(goal.getStatus()).isEqualTo(WorkStatus.IN_PROGRESS);
         assertThat(step.isArchived()).isTrue();
         assertThat(task.isArchived()).isTrue();
+    }
+
+    @Test
+    void hasLinkedPartnerReflectsTheRepositoryCheck() {
+        Dream dream = dream(1L, visionArea(1L));
+        Goal goal = goal(40L, dream, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
+        when(goalRepository.findById(40L)).thenReturn(Optional.of(goal));
+        when(partnerRepository.existsByUser_IdAndRelatedGoal_IdAndArchivedFalse(1L, 40L)).thenReturn(true);
+
+        assertThat(service.hasLinkedPartner(40L)).isTrue();
     }
 }

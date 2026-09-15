@@ -106,15 +106,26 @@ export function PartnersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Opened by the command palette / 'n' shortcut (FR-29); param stripped so
+  // Opened by the command palette / 'n' shortcut (FR-29), or by FR-59.4's
+  // completion nudge with a Dream/Goal to pre-link; params stripped so a
   // refresh doesn't reopen it.
   useEffect(() => {
     if (searchParams.get('create') !== 'partner') {
       return;
     }
+    const dreamId = searchParams.get('relatedDreamId');
+    if (dreamId) {
+      setRelatedDreamId(dreamId);
+    }
+    const goalId = searchParams.get('relatedGoalId');
+    if (goalId) {
+      setRelatedGoalId(goalId);
+    }
     setCreateOpen(true);
     const next = new URLSearchParams(searchParams);
     next.delete('create');
+    next.delete('relatedDreamId');
+    next.delete('relatedGoalId');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);

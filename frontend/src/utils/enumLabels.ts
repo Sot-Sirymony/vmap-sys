@@ -3,6 +3,7 @@ import type {
   DreamStatus,
   DreamType,
   EnergyDemand,
+  GratitudeCategory,
   LifecycleStatus,
   IssueReportStatus,
   ObstacleStatus,
@@ -209,6 +210,14 @@ export const reviewTypeLabels: Record<ReviewType, string> = {
   WEEKLY: 'Weekly',
   MONTHLY: 'Monthly',
   QUARTERLY: 'Quarterly',
+};
+
+// FR-59.1: what kind of thing a gratitude entry is about.
+export const gratitudeCategoryLabels: Record<GratitudeCategory, string> = {
+  GIFT: 'Gift',
+  HEALTH: 'Health',
+  PERSON: 'Person',
+  OTHER: 'Other',
 };
 
 export const obstacleTypeLabels: Record<ObstacleType, string> = {
