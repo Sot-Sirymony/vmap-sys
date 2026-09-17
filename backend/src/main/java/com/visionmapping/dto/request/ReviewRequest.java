@@ -2,12 +2,15 @@ package com.visionmapping.dto.request;
 
 import com.visionmapping.entity.enums.ReviewType;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public record ReviewRequest(
         @NotNull ReviewType reviewType,
         @NotNull LocalDateTime reviewDate,
+        // Optional, a single uppercase letter; ties allowed — see Dream.letterRank (FR-57).
+        @Pattern(regexp = "^[A-Z]$", message = "Letter rank must be exactly one uppercase letter (A-Z).") String letterRank,
         Long relatedVisionAreaId,
         Long relatedDreamId,
         @Size(max = 3000) String summary,

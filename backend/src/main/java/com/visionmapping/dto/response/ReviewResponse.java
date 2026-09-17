@@ -8,6 +8,7 @@ public record ReviewResponse(
         Long id,
         ReviewType reviewType,
         LocalDateTime reviewDate,
+        String letterRank,
         Long relatedVisionAreaId,
         Long relatedDreamId,
         String summary,

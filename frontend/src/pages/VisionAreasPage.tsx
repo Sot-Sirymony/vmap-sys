@@ -72,10 +72,12 @@ export function VisionAreasPage() {
   const [description, setDescription] = useState('');
   const [visionStatement, setVisionStatement] = useState('');
   const [priority, setPriority] = useState<Priority>('HIGH');
+  const [letterRank, setLetterRank] = useState('');
   const [status, setStatus] = useState<LifecycleStatus>('ACTIVE');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('');
+  const [filterLetterRank, setFilterLetterRank] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-vision-areas', 'list');
   // Count of live dreams per area, for the Dreams column. Loaded here rather than
@@ -106,11 +108,12 @@ export function VisionAreasPage() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const success = await crud.save({ name, description, visionStatement, priority, status });
+    const success = await crud.save({ name, description, visionStatement, priority, letterRank: letterRank || undefined, status });
     if (success) {
       setName('');
       setDescription('');
       setVisionStatement('');
+      setLetterRank('');
     }
     return success;
   }
@@ -121,6 +124,7 @@ export function VisionAreasPage() {
     setDescription(area.description ?? '');
     setVisionStatement(area.visionStatement ?? '');
     setPriority(area.priority);
+    setLetterRank(area.letterRank ?? '');
     setStatus(area.status);
   }
 
@@ -130,6 +134,7 @@ export function VisionAreasPage() {
     setDescription('');
     setVisionStatement('');
     setPriority('HIGH');
+    setLetterRank('');
     setStatus('ACTIVE');
   }
 
@@ -145,6 +150,7 @@ export function VisionAreasPage() {
         description: area.description,
         visionStatement: area.visionStatement,
         priority: area.priority,
+        letterRank: area.letterRank ?? undefined,
         status: nextStatus,
       });
       await crud.reload();
@@ -165,13 +171,24 @@ export function VisionAreasPage() {
     if (filterPriority && area.priority !== filterPriority) {
       return false;
     }
+    if (filterLetterRank && area.letterRank !== filterLetterRank) {
+      return false;
+    }
     if (filterStatus && area.status !== filterStatus) {
       return false;
     }
     return matchesSearch(searchTerm, area.code, area.name, area.description);
   });
 
-  const hasFilters = Boolean(searchTerm || filterPriority || filterStatus);
+  const hasFilters = Boolean(searchTerm || filterPriority || filterLetterRank || filterStatus);
+
+  // FR-57.4-style: only letters actually in use are offered, so the dropdown
+  // doesn't show 26 mostly-empty options.
+  const letterRankOptions = Array.from(
+    new Set(crud.items.map((area) => area.letterRank).filter((letter): letter is string => Boolean(letter))),
+  )
+    .sort()
+    .map((letter) => ({ value: letter, label: letter }));
 
   // Shared by the table's action column and the list view's cards, so both
   // offer the same row actions.
@@ -214,6 +231,12 @@ export function VisionAreasPage() {
       render: (area) => <PriorityBadge priority={area.priority} />,
     },
     {
+      key: 'letterRank',
+      label: 'Rank',
+      sortValue: (area) => area.letterRank ?? '',
+      render: (area) => area.letterRank ?? '—',
+    },
+    {
       key: 'status',
       label: 'Status',
       sortValue: (area) => area.status,
@@ -249,6 +272,19 @@ export function VisionAreasPage() {
             <MenuItem value="CRITICAL">Critical</MenuItem>
           </Select>
         </FormControl>
+      </label>
+      <label>
+        Rank
+        <Input
+          value={letterRank}
+          onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+          placeholder="e.g. A"
+          maxLength={1}
+        />
+        <span className="field-hint">
+          Optional. A, B, C… — assigned after listing everything, to mark which areas come first. Ties are fine;
+          nothing enforces a unique order.
+        </span>
       </label>
       <label>
         Status
@@ -314,7 +350,7 @@ export function VisionAreasPage() {
       )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
-      <FilterPanel activeCount={[searchTerm, filterPriority, filterStatus].filter(Boolean).length}>
+      <FilterPanel activeCount={[searchTerm, filterPriority, filterLetterRank, filterStatus].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="vision areas" />
         <FilterSelect
           label="Priority"
@@ -322,6 +358,14 @@ export function VisionAreasPage() {
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
+        {letterRankOptions.length > 0 && (
+          <FilterSelect
+            label="Rank"
+            value={filterLetterRank}
+            onChange={setFilterLetterRank}
+            options={letterRankOptions}
+          />
+        )}
         <FilterSelect
           label="Status"
           value={filterStatus}
@@ -337,7 +381,7 @@ export function VisionAreasPage() {
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label="Vision area view" />
       </div>
-      {!crud.loading && crud.items.length === 0 && !searchTerm && !filterPriority && !filterStatus ? (
+      {!crud.loading && crud.items.length === 0 && !searchTerm && !filterPriority && !filterLetterRank && !filterStatus ? (
         <EmptyState
           headline="No vision areas yet"
           icon={Compass}
@@ -355,7 +399,7 @@ export function VisionAreasPage() {
               emptyMessage={hasFilters ? 'No vision areas match these filters.' : 'No vision areas yet.'}
               defaultSortKey="priority"
               defaultSortDirection="desc"
-              pageResetKey={`${searchTerm}|${filterPriority}|${filterStatus}`}
+              pageResetKey={`${searchTerm}|${filterPriority}|${filterLetterRank}|${filterStatus}`}
               rowClassName={(area) => (area.archived ? 'row-archived' : '')}
               selection={{
                 selectedIds,

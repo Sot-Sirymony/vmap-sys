@@ -11,6 +11,7 @@ public record VisionAreaResponse(
         String description,
         String visionStatement,
         Priority priority,
+        String letterRank,
         LifecycleStatus status,
         boolean archived,
         Instant createdAt,

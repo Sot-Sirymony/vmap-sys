@@ -111,6 +111,7 @@ export function ReviewsPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [reviewType, setReviewType] = useState<ReviewType>('WEEKLY');
   const [reviewDate, setReviewDate] = useState(nowForDateTimeInput());
+  const [letterRank, setLetterRank] = useState('');
   const [relatedVisionAreaId, setRelatedVisionAreaId] = useState('');
   const [relatedDreamId, setRelatedDreamId] = useState('');
   const [summary, setSummary] = useState('');
@@ -126,6 +127,7 @@ export function ReviewsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterReviewType, setFilterReviewType] = useState('');
+  const [filterLetterRank, setFilterLetterRank] = useState('');
   const [filterVisionAreaId, setFilterVisionAreaId] = useState('');
   const [filterDreamId, setFilterDreamId] = useState('');
 
@@ -155,6 +157,7 @@ export function ReviewsPage() {
     const success = await crud.save({
       reviewType,
       reviewDate,
+      letterRank: letterRank || undefined,
       relatedVisionAreaId: optionalNumber(relatedVisionAreaId),
       relatedDreamId: optionalNumber(relatedDreamId),
       summary,
@@ -192,6 +195,7 @@ export function ReviewsPage() {
     crud.startEdit(review.id);
     setReviewType(review.reviewType);
     setReviewDate(review.reviewDate);
+    setLetterRank(review.letterRank ?? '');
     setRelatedVisionAreaId(review.relatedVisionAreaId ? String(review.relatedVisionAreaId) : '');
     setRelatedDreamId(review.relatedDreamId ? String(review.relatedDreamId) : '');
     setSummary(review.summary ?? '');
@@ -219,6 +223,7 @@ export function ReviewsPage() {
     crud.cancelEdit();
     setReviewType('WEEKLY');
     setReviewDate(nowForDateTimeInput());
+    setLetterRank('');
     setRelatedVisionAreaId('');
     setRelatedDreamId('');
     setSummary('');
@@ -233,6 +238,9 @@ export function ReviewsPage() {
 
   const filteredReviews = crud.items.filter((review) => {
     if (filterReviewType && review.reviewType !== filterReviewType) {
+      return false;
+    }
+    if (filterLetterRank && review.letterRank !== filterLetterRank) {
       return false;
     }
     if (filterVisionAreaId && String(review.relatedVisionAreaId ?? '') !== filterVisionAreaId) {
@@ -254,7 +262,15 @@ export function ReviewsPage() {
     );
   });
 
-  const hasFilters = Boolean(searchTerm || filterReviewType || filterVisionAreaId || filterDreamId);
+  const hasFilters = Boolean(searchTerm || filterReviewType || filterLetterRank || filterVisionAreaId || filterDreamId);
+
+  // FR-57.4-style: only letters actually in use are offered, so the dropdown
+  // doesn't show 26 mostly-empty options.
+  const letterRankOptions = Array.from(
+    new Set(crud.items.map((review) => review.letterRank).filter((letter): letter is string => Boolean(letter))),
+  )
+    .sort()
+    .map((letter) => ({ value: letter, label: letter }));
 
   const columns: DataTableColumn<Review>[] = [
     {
@@ -264,6 +280,12 @@ export function ReviewsPage() {
       render: (review) => <StatusBadge status={review.reviewType} />,
     },
     { key: 'reviewDate', label: 'Date', sortValue: (review) => review.reviewDate, render: (review) => review.reviewDate },
+    {
+      key: 'letterRank',
+      label: 'Rank',
+      sortValue: (review) => review.letterRank ?? '',
+      render: (review) => review.letterRank ?? '—',
+    },
     {
       key: 'summary',
       label: 'Summary',
@@ -338,6 +360,18 @@ export function ReviewsPage() {
       <label>
         Date
         <Input type="datetime-local" step={1} value={reviewDate} onChange={(event) => setReviewDate(event.target.value)} required />
+      </label>
+      <label>
+        Rank
+        <Input
+          value={letterRank}
+          onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+          placeholder="e.g. A"
+          maxLength={1}
+        />
+        <span className="field-hint">
+          Optional. A, B, C… — assigned after listing everything. Ties are fine; nothing enforces a unique order.
+        </span>
       </label>
       <label>
         Vision Area
@@ -442,7 +476,7 @@ export function ReviewsPage() {
       </CrudModalForm>
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
-      <FilterPanel activeCount={[searchTerm, filterReviewType, filterVisionAreaId, filterDreamId].filter(Boolean).length}>
+      <FilterPanel activeCount={[searchTerm, filterReviewType, filterLetterRank, filterVisionAreaId, filterDreamId].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="reviews" />
         <FilterSelect
           label="Review Type"
@@ -450,6 +484,14 @@ export function ReviewsPage() {
           onChange={setFilterReviewType}
           options={optionsFromLabels(reviewTypeLabels)}
         />
+        {letterRankOptions.length > 0 && (
+          <FilterSelect
+            label="Rank"
+            value={filterLetterRank}
+            onChange={setFilterLetterRank}
+            options={letterRankOptions}
+          />
+        )}
         <FilterSelect
           label="Vision Area"
           value={filterVisionAreaId}
@@ -470,7 +512,7 @@ export function ReviewsPage() {
           rows={filteredReviews}
           columns={columns}
           emptyMessage={hasFilters ? 'No reviews match these filters.' : 'No reviews yet.'}
-          pageResetKey={`${searchTerm}|${filterReviewType}|${filterVisionAreaId}|${filterDreamId}`}
+          pageResetKey={`${searchTerm}|${filterReviewType}|${filterLetterRank}|${filterVisionAreaId}|${filterDreamId}`}
           defaultSortKey="reviewDate"
           defaultSortDirection="desc"
           rowClassName={(review) => (review.archived ? 'row-archived' : '')}

@@ -6,6 +6,7 @@ import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record ObstacleRequest(
@@ -17,6 +18,8 @@ public record ObstacleRequest(
         @Size(max = 3000) String description,
         @NotNull ObstacleType obstacleType,
         @NotNull Severity severity,
+        // Optional, a single uppercase letter; ties allowed — see Dream.letterRank (FR-57).
+        @Pattern(regexp = "^[A-Z]$", message = "Letter rank must be exactly one uppercase letter (A-Z).") String letterRank,
         @Size(max = 3000) String solution,
         @Size(max = 3000) String rootCause,
         @Size(max = 3000) String creativeAlternatives,

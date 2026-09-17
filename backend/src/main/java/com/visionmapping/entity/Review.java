@@ -43,6 +43,12 @@ public class Review extends BaseAuditableEntity {
     @Column(name = "review_date", nullable = false)
     private LocalDateTime reviewDate;
 
+    // Same pattern as Dream.letterRank (FR-57): an optional single
+    // uppercase letter, a label not a strict order — ties allowed, never
+    // gates anything.
+    @Column(name = "letter_rank", length = 1)
+    private String letterRank;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "related_vision_area_id")
     private VisionArea relatedVisionArea;

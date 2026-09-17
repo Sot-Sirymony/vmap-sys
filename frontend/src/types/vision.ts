@@ -63,6 +63,9 @@ export type VisionArea = {
   description?: string;
   visionStatement?: string;
   priority: Priority;
+  // Same pattern as Dream.letterRank (FR-57): optional single uppercase
+  // letter, a label not a strict order — ties allowed.
+  letterRank?: string | null;
   status: LifecycleStatus;
   archived: boolean;
 };
@@ -72,6 +75,7 @@ export type VisionAreaRequest = {
   description?: string;
   visionStatement?: string;
   priority: Priority;
+  letterRank?: string | null;
   status: LifecycleStatus;
 };
 
@@ -149,6 +153,9 @@ export type Goal = {
   description?: string;
   successCriteria?: string;
   priority: Priority;
+  // Same pattern as Dream.letterRank (FR-57): optional single uppercase
+  // letter, a label not a strict order — ties allowed.
+  letterRank?: string | null;
   targetDate?: string;
   status: WorkStatus;
   progressPercent: number;
@@ -168,6 +175,7 @@ export type GoalRequest = {
   description?: string;
   successCriteria?: string;
   priority: Priority;
+  letterRank?: string | null;
   targetDate?: string;
   status: WorkStatus;
   moonshot: boolean;
@@ -209,6 +217,9 @@ export type TaskItem = {
   description?: string;
   owner: string;
   priority: Priority;
+  // Same pattern as Dream.letterRank (FR-57): optional single uppercase
+  // letter, a label not a strict order — ties allowed.
+  letterRank?: string | null;
   startDate?: string;
   dueDate: string;
   status: WorkStatus;
@@ -227,6 +238,7 @@ export type TaskItemRequest = {
   description?: string;
   owner: string;
   priority: Priority;
+  letterRank?: string | null;
   startDate?: string;
   dueDate: string;
   status: WorkStatus;
@@ -365,6 +377,9 @@ export type Review = {
   id: number;
   reviewType: ReviewType;
   reviewDate: string;
+  // Same pattern as Dream.letterRank (FR-57): optional single uppercase
+  // letter, a label not a strict order — ties allowed.
+  letterRank?: string | null;
   relatedVisionAreaId?: number;
   relatedDreamId?: number;
   summary?: string;
@@ -407,6 +422,9 @@ export type Obstacle = {
   description?: string;
   obstacleType: ObstacleType;
   severity: Severity;
+  // Same pattern as Dream.letterRank (FR-57): optional single uppercase
+  // letter, a label not a strict order — ties allowed.
+  letterRank?: string | null;
   solution?: string;
   rootCause?: string;
   creativeAlternatives?: string;

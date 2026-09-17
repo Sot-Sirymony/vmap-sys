@@ -15,6 +15,7 @@ public record TaskItemResponse(
         String description,
         String owner,
         Priority priority,
+        String letterRank,
         LocalDate startDate,
         LocalDate dueDate,
         WorkStatus status,

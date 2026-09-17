@@ -98,6 +98,7 @@ export function TasksBoardPage() {
   // FR-22.2: owner defaults to the signed-in user; still editable.
   const [owner, setOwner] = useState(user?.fullName ?? '');
   const [priority, setPriority] = useState<Priority>('HIGH');
+  const [letterRank, setLetterRank] = useState('');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
@@ -114,6 +115,7 @@ export function TasksBoardPage() {
   // filtered board, and a filtered board stays shareable and bookmarkable.
   const [filterOwner, setFilterOwner] = useUrlFilter('owner');
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterLetterRank, setFilterLetterRank] = useUrlFilter('letterRank');
   const [filterVisionAreaId] = useUrlFilter('visionAreaId');
   const [filterDreamId] = useUrlFilter('dreamId');
   const [filterGoalId, setFilterGoalId] = useUrlFilter('goalId');
@@ -250,6 +252,7 @@ export function TasksBoardPage() {
       description,
       owner,
       priority,
+      letterRank: letterRank || undefined,
       startDate: startDate || undefined,
       dueDate,
       status,
@@ -277,6 +280,7 @@ export function TasksBoardPage() {
       energyNudge.maybeNudge(dueDate, energyDemand, crud.editingId, crud.items);
       setTitle('');
       setDescription('');
+      setLetterRank('');
       setBlockerReason('');
       setBlockerCategory('');
       setNextAction('');
@@ -317,6 +321,7 @@ export function TasksBoardPage() {
     setDescription(task.description ?? '');
     setOwner(task.owner);
     setPriority(task.priority);
+    setLetterRank(task.letterRank ?? '');
     setStartDate(task.startDate ?? '');
     setDueDate(task.dueDate);
     setStatus(task.status);
@@ -335,6 +340,7 @@ export function TasksBoardPage() {
     setDescription('');
     setOwner(user?.fullName ?? '');
     setPriority('HIGH');
+    setLetterRank('');
     setStartDate('');
     setDueDate('');
     setStatus('NOT_STARTED');
@@ -366,6 +372,9 @@ export function TasksBoardPage() {
       return false;
     }
     if (filterPriority && task.priority !== filterPriority) {
+      return false;
+    }
+    if (filterLetterRank && task.letterRank !== filterLetterRank) {
       return false;
     }
     if (filterStatus && task.status !== filterStatus) {
@@ -407,6 +416,14 @@ export function TasksBoardPage() {
     return true;
   });
 
+  // FR-57.4-style: only letters actually in use are offered, so the dropdown
+  // doesn't show 26 mostly-empty options.
+  const letterRankOptions = Array.from(
+    new Set(crud.items.map((task) => task.letterRank).filter((letter): letter is string => Boolean(letter))),
+  )
+    .sort()
+    .map((letter) => ({ value: letter, label: letter }));
+
   // FR-23.1 acceptance: from any task row, its step, goal, dream, and area
   // are each one click away.
   function taskCrumbs(task: TaskItem) {
@@ -442,6 +459,12 @@ export function TasksBoardPage() {
       label: 'Priority',
       sortValue: (task) => priorityRank(task.priority),
       render: (task) => <PriorityBadge priority={task.priority} />,
+    },
+    {
+      key: 'letterRank',
+      label: 'Rank',
+      sortValue: (task) => task.letterRank ?? '',
+      render: (task) => task.letterRank ?? '—',
     },
     {
       key: 'status',
@@ -510,6 +533,19 @@ export function TasksBoardPage() {
             <MenuItem value="CRITICAL">Critical</MenuItem>
           </Select>
         </FormControl>
+      </label>
+      <label>
+        Rank
+        <Input
+          value={letterRank}
+          onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+          placeholder="e.g. A"
+          maxLength={1}
+        />
+        <span className="field-hint">
+          Optional. A, B, C… — assigned after listing everything, to mark which tasks under this step come first.
+          Ties are fine; nothing enforces a unique order.
+        </span>
       </label>
       <label>
         Status
@@ -623,7 +659,7 @@ export function TasksBoardPage() {
           { key: 'preset-week', label: '· Due this week', count: crud.items.filter((task) => { const d = new Date(`${task.dueDate}T00:00:00`); const now = new Date(); const end = new Date(now); end.setDate(now.getDate() + 7); return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= end && task.status !== 'COMPLETED'; }).length, active: Boolean(filterDueFrom && filterDueTo), onClick: applyDueThisWeek },
         ]}
       />
-      <FilterPanel activeCount={[searchTerm, filterOwner, filterPriority, filterStatus, filterVisionAreaId, filterDreamId, filterGoalId, filterDueFrom, filterDueTo, filterOverdueOnly].filter(Boolean).length}>
+      <FilterPanel activeCount={[searchTerm, filterOwner, filterPriority, filterLetterRank, filterStatus, filterVisionAreaId, filterDreamId, filterGoalId, filterDueFrom, filterDueTo, filterOverdueOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="tasks" />
         <label>
           Owner
@@ -635,6 +671,14 @@ export function TasksBoardPage() {
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
+        {letterRankOptions.length > 0 && (
+          <FilterSelect
+            label="Rank"
+            value={filterLetterRank}
+            onChange={setFilterLetterRank}
+            options={letterRankOptions}
+          />
+        )}
         <FilterSelect
           label="Status"
           value={filterStatus}
@@ -718,7 +762,7 @@ export function TasksBoardPage() {
               emptyMessage="No tasks match these filters."
               defaultSortKey="priority"
               defaultSortDirection="desc"
-              pageResetKey={`${searchTerm}|${filterOwner}|${filterPriority}|${filterStatus}|${filterVisionAreaId}|${filterDreamId}|${filterGoalId}|${filterDueFrom}|${filterDueTo}|${filterOverdueOnly}|${filterStepId ?? ''}`}
+              pageResetKey={`${searchTerm}|${filterOwner}|${filterPriority}|${filterLetterRank}|${filterStatus}|${filterVisionAreaId}|${filterDreamId}|${filterGoalId}|${filterDueFrom}|${filterDueTo}|${filterOverdueOnly}|${filterStepId ?? ''}`}
               rowClassName={(task) => (task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : task.status === 'COMPLETED' ? 'row-done' : '')}
               selection={{
                 selectedIds,

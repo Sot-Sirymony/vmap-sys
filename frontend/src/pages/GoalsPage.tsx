@@ -85,6 +85,7 @@ export function GoalsPage() {
   const [description, setDescription] = useState('');
   const [successCriteria, setSuccessCriteria] = useState('');
   const [priority, setPriority] = useState<Priority>('HIGH');
+  const [letterRank, setLetterRank] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
   const [moonshot, setMoonshot] = useState(false);
@@ -96,6 +97,7 @@ export function GoalsPage() {
   const [filterDreamId, setFilterDreamId] = useUrlFilter('dreamId');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
+  const [filterLetterRank, setFilterLetterRank] = useUrlFilter('letterRank');
   const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
   const [filterMoonshotOnly, setFilterMoonshotOnly] = useUrlFlag('moonshot');
   // Target-date range (BRD C-6). Inclusive on both ends; either bound may be
@@ -169,6 +171,7 @@ export function GoalsPage() {
       description,
       successCriteria,
       priority,
+      letterRank: letterRank || undefined,
       targetDate: targetDate || undefined,
       status,
       moonshot,
@@ -179,6 +182,7 @@ export function GoalsPage() {
       setTitle('');
       setDescription('');
       setSuccessCriteria('');
+      setLetterRank('');
       setMoonshot(false);
       setMoonshotVision('');
       setScheduleMode('BOTTOM_UP');
@@ -196,6 +200,7 @@ export function GoalsPage() {
     setDescription(goal.description ?? '');
     setSuccessCriteria(goal.successCriteria ?? '');
     setPriority(goal.priority);
+    setLetterRank(goal.letterRank ?? '');
     setTargetDate(goal.targetDate ?? '');
     setStatus(goal.status);
     setMoonshot(goal.moonshot);
@@ -209,6 +214,7 @@ export function GoalsPage() {
     setDescription('');
     setSuccessCriteria('');
     setPriority('HIGH');
+    setLetterRank('');
     setTargetDate('');
     setStatus('NOT_STARTED');
     setMoonshot(false);
@@ -240,6 +246,9 @@ export function GoalsPage() {
     if (filterPriority && goal.priority !== filterPriority) {
       return false;
     }
+    if (filterLetterRank && goal.letterRank !== filterLetterRank) {
+      return false;
+    }
     if (filterOverdueOnly && !isOverdue(goal.targetDate, goal.status)) {
       return false;
     }
@@ -258,6 +267,14 @@ export function GoalsPage() {
     }
     return true;
   });
+
+  // FR-57.4-style: only letters actually in use are offered, so the dropdown
+  // doesn't show 26 mostly-empty options.
+  const letterRankOptions = Array.from(
+    new Set(crud.items.map((goal) => goal.letterRank).filter((letter): letter is string => Boolean(letter))),
+  )
+    .sort()
+    .map((letter) => ({ value: letter, label: letter }));
 
   // FR-22.1 quick-add: title + parent only; defaults keep BR-16 satisfied.
   // An active dream filter takes over as the parent so the row creates under
@@ -411,6 +428,12 @@ export function GoalsPage() {
       render: (goal) => <PriorityBadge priority={goal.priority} />,
     },
     {
+      key: 'letterRank',
+      label: 'Rank',
+      sortValue: (goal) => goal.letterRank ?? '',
+      render: (goal) => goal.letterRank ?? '—',
+    },
+    {
       key: 'status',
       label: 'Status',
       sortValue: (goal) => workStatusRank(goal.status),
@@ -460,6 +483,19 @@ export function GoalsPage() {
             <MenuItem value="CRITICAL">Critical</MenuItem>
           </Select>
         </FormControl>
+      </label>
+      <label>
+        Rank
+        <Input
+          value={letterRank}
+          onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+          placeholder="e.g. A"
+          maxLength={1}
+        />
+        <span className="field-hint">
+          Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come first.
+          Ties are fine; nothing enforces a unique order.
+        </span>
       </label>
       <label>
         Status
@@ -553,7 +589,7 @@ export function GoalsPage() {
           { key: 'completed', label: 'completed', count: crud.items.filter((goal) => goal.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
         ]}
       />
-      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamId, filterStatus, filterPriority, filterOverdueOnly, filterMoonshotOnly, filterTargetFrom, filterTargetTo].filter(Boolean).length}>
+      <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamId, filterStatus, filterPriority, filterLetterRank, filterOverdueOnly, filterMoonshotOnly, filterTargetFrom, filterTargetTo].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="goals" />
         <FilterSelect
           label="Vision Area"
@@ -579,6 +615,14 @@ export function GoalsPage() {
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
+        {letterRankOptions.length > 0 && (
+          <FilterSelect
+            label="Rank"
+            value={filterLetterRank}
+            onChange={setFilterLetterRank}
+            options={letterRankOptions}
+          />
+        )}
         <label>
           Target from
           <Input type="date" value={filterTargetFrom} onChange={(event) => setFilterTargetFrom(event.target.value)} />
@@ -673,7 +717,7 @@ export function GoalsPage() {
             emptyMessage="No goals match these filters."
             defaultSortKey="priority"
             defaultSortDirection="desc"
-            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamId}|${filterStatus}|${filterPriority}|${filterOverdueOnly}|${filterMoonshotOnly}|${filterTargetFrom}|${filterTargetTo}`}
+            pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamId}|${filterStatus}|${filterPriority}|${filterLetterRank}|${filterOverdueOnly}|${filterMoonshotOnly}|${filterTargetFrom}|${filterTargetTo}`}
             rowClassName={(goal) => (goal.archived ? 'row-archived' : isOverdue(goal.targetDate, goal.status) ? 'row-overdue' : '')}
             selection={{
               selectedIds,

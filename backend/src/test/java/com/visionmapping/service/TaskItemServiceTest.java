@@ -212,7 +212,7 @@ class TaskItemServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         when(taskItemRepository.findByUser_Id(1L)).thenReturn(List.of());
 
-        TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null,
+        TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "   ", null, null);
 
         assertThatThrownBy(() -> service.createTask(request))
@@ -230,7 +230,7 @@ class TaskItemServiceTest {
         when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of());
         when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of());
 
-        TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null,
+        TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "Waiting on mentor", null, null);
 
         TaskItemResponse response = service.createTask(request);
@@ -246,7 +246,7 @@ class TaskItemServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         lenient().when(taskItemRepository.findByUser_Id(1L)).thenReturn(List.of());
 
-        TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null,
+        TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.NOT_STARTED, BigDecimal.valueOf(-5), null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createTask(request))
@@ -261,7 +261,7 @@ class TaskItemServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         lenient().when(taskItemRepository.findByUser_Id(1L)).thenReturn(List.of());
 
-        TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null,
+        TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.NOT_STARTED, BigDecimal.valueOf(150), null, null, null, null, null);
 
         assertThatThrownBy(() -> service.createTask(request))
@@ -279,7 +279,7 @@ class TaskItemServiceTest {
         when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of());
         when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of());
 
-        TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null,
+        TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.COMPLETED, BigDecimal.valueOf(40), null, null, null, null, null);
 
         TaskItemResponse response = service.createTask(request);

@@ -124,6 +124,7 @@ export function ObstaclesPage() {
   const [criticismSubstance, setCriticismSubstance] = useState('');
   const [obstacleType, setObstacleType] = useState<ObstacleType>('KNOWLEDGE');
   const [severity, setSeverity] = useState<Severity>('MEDIUM');
+  const [letterRank, setLetterRank] = useState('');
   const [status, setStatus] = useState<ObstacleStatus>('OPEN');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,6 +133,7 @@ export function ObstaclesPage() {
   // shareable and bookmarkable.
   const [filterObstacleType, setFilterObstacleType] = useUrlFilter('type');
   const [filterSeverity, setFilterSeverity] = useUrlFilter('severity');
+  const [filterLetterRank, setFilterLetterRank] = useUrlFilter('letterRank');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
   const [filterDreamId, setFilterDreamId] = useUrlFilter('dreamId');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -164,6 +166,7 @@ export function ObstaclesPage() {
       description,
       obstacleType,
       severity,
+      letterRank: letterRank || undefined,
       solution,
       rootCause,
       creativeAlternatives,
@@ -188,6 +191,7 @@ export function ObstaclesPage() {
     if (success) {
       setTitle('');
       setDescription('');
+      setLetterRank('');
       setSolution('');
       setRootCause('');
       setCreativeAlternatives('');
@@ -240,6 +244,7 @@ export function ObstaclesPage() {
     setCriticismSubstance(obstacle.criticismSubstance ?? '');
     setObstacleType(obstacle.obstacleType);
     setSeverity(obstacle.severity);
+    setLetterRank(obstacle.letterRank ?? '');
     setStatus(obstacle.status);
   }
 
@@ -270,6 +275,7 @@ export function ObstaclesPage() {
     setCriticismSubstance('');
     setObstacleType('KNOWLEDGE');
     setSeverity('MEDIUM');
+    setLetterRank('');
     setStatus('OPEN');
   }
 
@@ -335,6 +341,7 @@ export function ObstaclesPage() {
         description: obstacle.description,
         obstacleType: obstacle.obstacleType,
         severity: obstacle.severity,
+        letterRank: obstacle.letterRank ?? undefined,
         solution: obstacle.solution,
         rootCause: obstacle.rootCause,
         creativeAlternatives: obstacle.creativeAlternatives,
@@ -384,6 +391,9 @@ export function ObstaclesPage() {
     if (filterSeverity && obstacle.severity !== filterSeverity) {
       return false;
     }
+    if (filterLetterRank && obstacle.letterRank !== filterLetterRank) {
+      return false;
+    }
     if (filterStatus && obstacle.status !== filterStatus) {
       return false;
     }
@@ -400,8 +410,16 @@ export function ObstaclesPage() {
   });
 
   const hasFilters = Boolean(
-    searchTerm || filterObstacleType || filterSeverity || filterStatus || filterDreamId,
+    searchTerm || filterObstacleType || filterSeverity || filterLetterRank || filterStatus || filterDreamId,
   );
+
+  // FR-57.4-style: only letters actually in use are offered, so the dropdown
+  // doesn't show 26 mostly-empty options.
+  const letterRankOptions = Array.from(
+    new Set(crud.items.map((obstacle) => obstacle.letterRank).filter((letter): letter is string => Boolean(letter))),
+  )
+    .sort()
+    .map((letter) => ({ value: letter, label: letter }));
 
   const columns: DataTableColumn<Obstacle>[] = [
     { key: 'title', label: 'Title', sortValue: (obstacle) => obstacle.title, sx: { fontWeight: 500 }, render: (obstacle) => obstacle.title },
@@ -422,6 +440,12 @@ export function ObstaclesPage() {
       label: 'Severity',
       sortValue: (obstacle) => severityRank(obstacle.severity),
       render: (obstacle) => <StatusBadge status={obstacle.severity} />,
+    },
+    {
+      key: 'letterRank',
+      label: 'Rank',
+      sortValue: (obstacle) => obstacle.letterRank ?? '',
+      render: (obstacle) => obstacle.letterRank ?? '—',
     },
     {
       key: 'status',
@@ -468,6 +492,18 @@ export function ObstaclesPage() {
             {severities.map((value) => <MenuItem value={value} key={value}>{priorityLabels[value]}</MenuItem>)}
           </Select>
         </FormControl>
+      </label>
+      <label>
+        Rank
+        <Input
+          value={letterRank}
+          onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+          placeholder="e.g. A"
+          maxLength={1}
+        />
+        <span className="field-hint">
+          Optional. A, B, C… — assigned after listing everything. Ties are fine; nothing enforces a unique order.
+        </span>
       </label>
       <label>
         Status
@@ -718,7 +754,7 @@ export function ObstaclesPage() {
           { key: 'resolved', label: 'resolved', count: crud.items.filter((obstacle) => obstacle.status === 'RESOLVED').length, tone: 'positive', active: filterStatus === 'RESOLVED', onClick: () => setFilterStatus(filterStatus === 'RESOLVED' ? '' : 'RESOLVED') },
         ]}
       />
-      <FilterPanel activeCount={[searchTerm, filterObstacleType, filterSeverity, filterStatus, filterDreamId].filter(Boolean).length}>
+      <FilterPanel activeCount={[searchTerm, filterObstacleType, filterSeverity, filterLetterRank, filterStatus, filterDreamId].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
         <FilterSelect
           label="Type"
@@ -732,6 +768,14 @@ export function ObstaclesPage() {
           onChange={setFilterSeverity}
           options={optionsFromLabels(severityLabels)}
         />
+        {letterRankOptions.length > 0 && (
+          <FilterSelect
+            label="Rank"
+            value={filterLetterRank}
+            onChange={setFilterLetterRank}
+            options={letterRankOptions}
+          />
+        )}
         <FilterSelect
           label="Status"
           value={filterStatus}
@@ -777,7 +821,7 @@ export function ObstaclesPage() {
           emptyMessage={hasFilters ? 'No obstacles match these filters.' : 'No obstacles yet.'}
           defaultSortKey="severity"
           defaultSortDirection="desc"
-          pageResetKey={`${searchTerm}|${filterObstacleType}|${filterSeverity}|${filterStatus}|${filterDreamId}`}
+          pageResetKey={`${searchTerm}|${filterObstacleType}|${filterSeverity}|${filterLetterRank}|${filterStatus}|${filterDreamId}`}
           rowClassName={(obstacle) => (obstacle.archived ? 'row-archived' : '')}
           selection={{
             selectedIds,

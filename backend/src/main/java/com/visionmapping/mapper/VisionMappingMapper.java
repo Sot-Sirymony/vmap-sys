@@ -34,7 +34,7 @@ public class VisionMappingMapper {
 
     public VisionAreaResponse toResponse(VisionArea entity) {
         return new VisionAreaResponse(entity.getId(), entity.getCode(), entity.getName(), entity.getDescription(),
-                entity.getVisionStatement(), entity.getPriority(), entity.getStatus(), entity.isArchived(),
+                entity.getVisionStatement(), entity.getPriority(), entity.getLetterRank(), entity.getStatus(), entity.isArchived(),
                 entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
@@ -65,7 +65,7 @@ public class VisionMappingMapper {
     // as the Dream overload above.
     public GoalResponse toResponse(Goal entity, boolean scheduleOverrun, String scheduleOverrunDetail) {
         return new GoalResponse(entity.getId(), entity.getCode(), entity.getDream().getId(), entity.getTitle(),
-                entity.getDescription(), entity.getSuccessCriteria(), entity.getPriority(), entity.getTargetDate(),
+                entity.getDescription(), entity.getSuccessCriteria(), entity.getPriority(), entity.getLetterRank(), entity.getTargetDate(),
                 entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
                 entity.isMoonshot(), entity.getMoonshotVision(), entity.getScheduleMode(), scheduleOverrun,
                 scheduleOverrunDetail, entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
@@ -80,7 +80,7 @@ public class VisionMappingMapper {
 
     public TaskItemResponse toResponse(TaskItem entity) {
         return new TaskItemResponse(entity.getId(), entity.getCode(), entity.getStep().getId(), entity.getTitle(),
-                entity.getDescription(), entity.getOwner(), entity.getPriority(), entity.getStartDate(), entity.getDueDate(),
+                entity.getDescription(), entity.getOwner(), entity.getPriority(), entity.getLetterRank(), entity.getStartDate(), entity.getDueDate(),
                 entity.getStatus(), entity.getProgressPercent(), entity.getEstimatedHours(), entity.getActualHours(),
                 entity.getBlockerReason(), entity.getNextAction(), entity.getEnergyDemand(), entity.getCompletedAt(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
@@ -120,7 +120,7 @@ public class VisionMappingMapper {
     }
 
     public ReviewResponse toResponse(Review entity) {
-        return new ReviewResponse(entity.getId(), entity.getReviewType(), entity.getReviewDate(),
+        return new ReviewResponse(entity.getId(), entity.getReviewType(), entity.getReviewDate(), entity.getLetterRank(),
                 id(entity.getRelatedVisionArea()), id(entity.getRelatedDream()), entity.getSummary(),
                 entity.getCompletedTasks(), entity.getDelayedTasks(), entity.getBlockedTasks(), entity.getLessonsLearned(),
                 entity.getNextActions(), entity.getDiligenceClearVision(), entity.getDiligenceWorkedPlan(),
@@ -133,7 +133,7 @@ public class VisionMappingMapper {
     public ObstacleResponse toResponse(Obstacle entity) {
         return new ObstacleResponse(entity.getId(), id(entity.getRelatedDream()), id(entity.getRelatedGoal()),
                 id(entity.getRelatedStep()), id(entity.getRelatedTask()), entity.getTitle(), entity.getDescription(),
-                entity.getObstacleType(), entity.getSeverity(), entity.getSolution(), entity.getRootCause(),
+                entity.getObstacleType(), entity.getSeverity(), entity.getLetterRank(), entity.getSolution(), entity.getRootCause(),
                 entity.getCreativeAlternatives(), entity.getConflictIncident(), entity.getConflictCost(),
                 entity.getConflictOtherPerspective(), entity.getConflictLesson(), entity.getConflictPrivateNote(),
                 entity.getConflictNextAction(), entity.getConflictExpectation(), entity.getConflictExpectationAgreed(),

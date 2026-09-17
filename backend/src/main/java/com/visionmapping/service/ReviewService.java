@@ -51,6 +51,7 @@ public class ReviewService {
                 .user(lookup.currentUser())
                 .reviewType(request.reviewType())
                 .reviewDate(request.reviewDate())
+                .letterRank(request.letterRank())
                 .relatedVisionArea(lookup.optionalVisionArea(request.relatedVisionAreaId()))
                 .relatedDream(lookup.optionalDream(request.relatedDreamId()))
                 .summary(request.summary())
@@ -88,6 +89,7 @@ public class ReviewService {
         Review entity = lookup.review(id);
         entity.setReviewType(request.reviewType());
         entity.setReviewDate(request.reviewDate());
+        entity.setLetterRank(request.letterRank());
         entity.setRelatedVisionArea(lookup.optionalVisionArea(request.relatedVisionAreaId()));
         entity.setRelatedDream(lookup.optionalDream(request.relatedDreamId()));
         entity.setSummary(request.summary());

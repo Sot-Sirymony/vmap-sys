@@ -73,7 +73,7 @@ class ReviewServiceTest {
 
     @Test
     void partialDiligenceChecklistIsRejected() {
-        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 true, true, null, null, null, null, null, null, null, null, null, null);
 
@@ -84,7 +84,7 @@ class ReviewServiceTest {
 
     @Test
     void partialAmongTheFiveNewFr53ChecksIsAlsoRejected() {
-        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 true, true, true, true, true, true, null, null, null, null, null, null);
 
@@ -97,10 +97,10 @@ class ReviewServiceTest {
     void fullOrSkippedDiligenceChecklistIsAccepted() {
         when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ReviewRequest full = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+        ReviewRequest full = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 true, false, true, true, false, true, true, true, true, true, "Tempo weeks slipped", null);
-        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
+        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null);
 
@@ -113,10 +113,10 @@ class ReviewServiceTest {
         when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         // 7 of 10 true -> 70%.
-        ReviewRequest full = new ReviewRequest(ReviewType.MONTHLY, LocalDateTime.now(), null, null,
+        ReviewRequest full = new ReviewRequest(ReviewType.MONTHLY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 true, true, true, true, true, true, true, false, false, false, null, null);
-        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null,
+        ReviewRequest skipped = new ReviewRequest(ReviewType.DAILY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null);
 
@@ -128,7 +128,7 @@ class ReviewServiceTest {
     void answeringTheGratitudePromptLogsAnOtherCategoryEntry() {
         when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(gratitudeEntryRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, "A good week overall");
 
@@ -143,7 +143,7 @@ class ReviewServiceTest {
     @Test
     void leavingTheGratitudePromptBlankLogsNothing() {
         when(reviewRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null,
+        ReviewRequest request = new ReviewRequest(ReviewType.WEEKLY, LocalDateTime.now(), null, null, null,
                 "Summary", null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null);
 

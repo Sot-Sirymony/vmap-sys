@@ -78,7 +78,7 @@ class ObstacleServiceTest {
 
     private ObstacleRequest request(ObstacleStatus status, String rootCause, String creativeAlternatives) {
         return new ObstacleRequest(null, null, null, null, "Stalled progress", null,
-                ObstacleType.TIME, Severity.MEDIUM, "worked around it for now", rootCause, creativeAlternatives,
+                ObstacleType.TIME, Severity.MEDIUM, null, "worked around it for now", rootCause, creativeAlternatives,
                 null, null, null, null, null, null,
                 null, null,
                 null, null, null, null,
@@ -89,7 +89,7 @@ class ObstacleServiceTest {
     private ObstacleRequest partnerRequest(ObstacleStatus status, String rootCause, Boolean noCharacterAttacks,
             Boolean stayedOnIncident, Boolean noThreatsOrSarcasm, Boolean definedWinWin) {
         return new ObstacleRequest(null, null, null, null, "Disagreement with a mentor", null,
-                ObstacleType.PARTNER, Severity.MEDIUM, "worked around it for now", rootCause, null,
+                ObstacleType.PARTNER, Severity.MEDIUM, null, "worked around it for now", rootCause, null,
                 null, null, null, null, null, null,
                 null, null,
                 noCharacterAttacks, stayedOnIncident, noThreatsOrSarcasm, definedWinWin,

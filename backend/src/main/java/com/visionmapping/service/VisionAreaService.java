@@ -55,6 +55,7 @@ public class VisionAreaService {
                 .description(request.description())
                 .visionStatement(request.visionStatement())
                 .priority(request.priority())
+                .letterRank(request.letterRank())
                 .status(request.status())
                 .build();
         return mapper.toResponse(visionAreaRepository.save(entity));
@@ -72,6 +73,7 @@ public class VisionAreaService {
         entity.setDescription(request.description());
         entity.setVisionStatement(request.visionStatement());
         entity.setPriority(request.priority());
+        entity.setLetterRank(request.letterRank());
         entity.setStatus(request.status());
         return mapper.toResponse(entity);
     }

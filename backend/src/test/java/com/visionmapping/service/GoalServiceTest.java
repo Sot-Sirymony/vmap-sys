@@ -103,7 +103,7 @@ class GoalServiceTest {
 
     private com.visionmapping.dto.request.GoalRequest requestFrom(Goal goal) {
         return new com.visionmapping.dto.request.GoalRequest(goal.getDream().getId(), goal.getTitle(),
-                goal.getDescription(), goal.getSuccessCriteria(), goal.getPriority(), goal.getTargetDate(),
+                goal.getDescription(), goal.getSuccessCriteria(), goal.getPriority(), goal.getLetterRank(), goal.getTargetDate(),
                 goal.getStatus(), goal.isMoonshot(), goal.getMoonshotVision(), goal.getScheduleMode());
     }
 

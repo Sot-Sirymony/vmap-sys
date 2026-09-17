@@ -59,6 +59,12 @@ public class Goal extends BaseAuditableEntity {
     @Column(nullable = false, length = 40)
     private Priority priority;
 
+    // Same pattern as Dream.letterRank (FR-57): an optional single
+    // uppercase letter, a label not a strict order — ties allowed, never
+    // gates anything.
+    @Column(name = "letter_rank", length = 1)
+    private String letterRank;
+
     @Column(name = "target_date")
     private LocalDate targetDate;
 

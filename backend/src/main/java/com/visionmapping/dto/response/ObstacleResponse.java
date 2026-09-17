@@ -16,6 +16,7 @@ public record ObstacleResponse(
         String description,
         ObstacleType obstacleType,
         Severity severity,
+        String letterRank,
         String solution,
         String rootCause,
         String creativeAlternatives,

@@ -60,6 +60,7 @@ public class ObstacleService {
                 .description(request.description())
                 .obstacleType(request.obstacleType())
                 .severity(request.severity())
+                .letterRank(request.letterRank())
                 .solution(request.solution())
                 .rootCause(request.rootCause())
                 .creativeAlternatives(request.creativeAlternatives())
@@ -119,6 +120,7 @@ public class ObstacleService {
         entity.setDescription(request.description());
         entity.setObstacleType(request.obstacleType());
         entity.setSeverity(request.severity());
+        entity.setLetterRank(request.letterRank());
         entity.setSolution(request.solution());
         entity.setRootCause(request.rootCause());
         entity.setCreativeAlternatives(request.creativeAlternatives());

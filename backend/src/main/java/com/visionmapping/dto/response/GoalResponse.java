@@ -15,6 +15,7 @@ public record GoalResponse(
         String description,
         String successCriteria,
         Priority priority,
+        String letterRank,
         LocalDate targetDate,
         WorkStatus status,
         BigDecimal progressPercent,

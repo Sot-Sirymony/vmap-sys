@@ -7,6 +7,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,6 +18,8 @@ public record TaskItemRequest(
         @Size(max = 3000) String description,
         @NotBlank @Size(max = 160) String owner,
         @NotNull Priority priority,
+        // Optional, a single uppercase letter; ties allowed — see Dream.letterRank (FR-57).
+        @Pattern(regexp = "^[A-Z]$", message = "Letter rank must be exactly one uppercase letter (A-Z).") String letterRank,
         LocalDate startDate,
         @NotNull LocalDate dueDate,
         @NotNull WorkStatus status,

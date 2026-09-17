@@ -72,6 +72,7 @@ public class TaskItemService {
                 .description(request.description())
                 .owner(request.owner())
                 .priority(request.priority())
+                .letterRank(request.letterRank())
                 .startDate(request.startDate())
                 .dueDate(request.dueDate())
                 .status(request.status())
@@ -103,6 +104,7 @@ public class TaskItemService {
         entity.setDescription(request.description());
         entity.setOwner(request.owner());
         entity.setPriority(request.priority());
+        entity.setLetterRank(request.letterRank());
         entity.setStartDate(request.startDate());
         entity.setDueDate(request.dueDate());
         entity.setStatus(request.status());

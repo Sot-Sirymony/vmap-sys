@@ -72,6 +72,7 @@ public class GoalService {
                 .description(request.description())
                 .successCriteria(request.successCriteria())
                 .priority(request.priority())
+                .letterRank(request.letterRank())
                 .targetDate(request.targetDate())
                 .status(request.status())
                 .progressPercent(ZERO)
@@ -103,6 +104,7 @@ public class GoalService {
         entity.setDescription(request.description());
         entity.setSuccessCriteria(request.successCriteria());
         entity.setPriority(request.priority());
+        entity.setLetterRank(request.letterRank());
         entity.setTargetDate(request.targetDate());
         entity.setStatus(request.status());
         entity.setMoonshot(request.moonshot());

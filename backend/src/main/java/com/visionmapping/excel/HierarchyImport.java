@@ -83,6 +83,7 @@ class HierarchyImport {
                     reader.textOrNull(3),
                     null,
                     reader.enumValue(Priority.class, 4, PRIORITY),
+                    null,
                     reader.enumValue(LifecycleStatus.class, 5, STATUS));
             long newId = visionAreaService.createVisionArea(request).id();
             mapWorkbookId(reader, newVisionAreaIds, newId);
@@ -122,6 +123,7 @@ class HierarchyImport {
                     null,
                     reader.textOrNull(4),
                     reader.enumValue(Priority.class, 5, PRIORITY),
+                    null,
                     reader.dateOrNull(6),
                     reader.enumValue(WorkStatus.class, 7, STATUS),
                     false,
@@ -167,6 +169,7 @@ class HierarchyImport {
                     null,
                     reader.requiredText(4, "Owner"),
                     reader.enumValue(Priority.class, 5, PRIORITY),
+                    null,
                     reader.dateOrNull(6),
                     reader.requiredDate(7, "Due Date"),
                     status,
