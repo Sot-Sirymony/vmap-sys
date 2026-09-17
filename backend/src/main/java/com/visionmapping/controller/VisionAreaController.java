@@ -1,5 +1,6 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.dto.request.SimpleReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
@@ -52,6 +53,13 @@ public class VisionAreaController {
     @PatchMapping("/{id}/status")
     public VisionAreaResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return service.updateVisionAreaStatus(id, request.status());
+    }
+
+    // No parent scope — a vision area is the top of the hierarchy.
+    @PatchMapping("/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorder(@Valid @RequestBody SimpleReorderRequest request) {
+        service.reorderVisionAreas(request.orderedIds());
     }
 
     @DeleteMapping("/{id}")

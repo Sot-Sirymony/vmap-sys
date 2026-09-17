@@ -31,7 +31,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -91,9 +93,25 @@ public class DreamService {
                 .decisionNoOutsideInput(request.decisionNoOutsideInput())
                 .decisionChasedEasyReward(request.decisionChasedEasyReward())
                 .decisionDismissedDisagreeingAdvice(request.decisionDismissedDisagreeingAdvice())
+                .sortOrder(dreamRepository.findByVisionArea_IdAndUser_IdAndArchivedFalse(visionArea.getId(), user.getId()).size())
                 .build();
         validateDecisionGate(entity);
         return toResponse(dreamRepository.save(entity));
+    }
+
+    // Drag-and-drop reorder: orderedDreamIds must be exactly this vision
+    // area's current non-archived dreams, just reshuffled — otherwise a
+    // stray or missing id would silently orphan a dream's position.
+    public void reorderDreams(Long visionAreaId, List<Long> orderedDreamIds) {
+        VisionArea visionArea = lookup.visionArea(visionAreaId);
+        List<Dream> siblings = dreamRepository.findByVisionArea_IdAndUser_IdAndArchivedFalse(visionArea.getId(), lookup.userId());
+        Map<Long, Dream> byId = siblings.stream().collect(Collectors.toMap(Dream::getId, dream -> dream));
+        if (orderedDreamIds.size() != siblings.size() || !byId.keySet().containsAll(orderedDreamIds)) {
+            throw new BusinessRuleException("The given order must include exactly this vision area's current dreams.");
+        }
+        for (int index = 0; index < orderedDreamIds.size(); index++) {
+            byId.get(orderedDreamIds.get(index)).setSortOrder(index);
+        }
     }
 
     @Cacheable(CacheConfig.DREAM_CACHE)

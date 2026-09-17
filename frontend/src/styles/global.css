@@ -1062,6 +1062,18 @@ button:focus-visible,
   box-shadow: inset 3px 0 0 #d13438;
 }
 
+.data-table tr.row--reorderable {
+  cursor: grab;
+}
+
+.data-table tr.row--dragging {
+  opacity: 0.5;
+}
+
+.data-table tr.row--drag-over td:first-child {
+  box-shadow: inset 0 2px 0 var(--ring);
+}
+
 .list-card--overdue {
   box-shadow: inset 3px 0 0 #d13438;
 }

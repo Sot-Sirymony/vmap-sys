@@ -13,6 +13,7 @@ public record VisionAreaResponse(
         Priority priority,
         String letterRank,
         LifecycleStatus status,
+        Integer sortOrder,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

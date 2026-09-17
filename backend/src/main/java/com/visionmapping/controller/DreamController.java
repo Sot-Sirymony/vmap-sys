@@ -1,6 +1,7 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.DreamRequest;
+import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DreamResponse;
@@ -52,6 +53,12 @@ public class DreamController {
     @PatchMapping("/{id}/status")
     public DreamResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return service.updateDreamStatus(id, request.status());
+    }
+
+    @PatchMapping("/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorder(@Valid @RequestBody ReorderRequest request) {
+        service.reorderDreams(request.parentId(), request.orderedIds());
     }
 
     @DeleteMapping("/{id}")

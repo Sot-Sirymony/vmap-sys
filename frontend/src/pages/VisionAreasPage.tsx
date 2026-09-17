@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
-import { archiveVisionArea, permanentlyDeleteVisionArea, createVisionArea, getVisionAreaArchiveImpact, listVisionAreas, restoreVisionArea, updateVisionArea } from '../api/visionAreaApi';
+import { archiveVisionArea, permanentlyDeleteVisionArea, createVisionArea, getVisionAreaArchiveImpact, listVisionAreas, reorderVisionAreas, restoreVisionArea, updateVisionArea } from '../api/visionAreaApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
@@ -171,6 +171,32 @@ export function VisionAreasPage() {
     }
   }
 
+  // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
+  // are every non-archived area, ordered by its current position.
+  async function handleReorderAreas(draggedId: number, targetId: number) {
+    if (!token) {
+      return;
+    }
+    const orderedIds = crud.items
+      .filter((area) => !area.archived)
+      .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id)
+      .map((area) => area.id);
+    const fromIndex = orderedIds.indexOf(draggedId);
+    const toIndex = orderedIds.indexOf(targetId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const nextOrder = [...orderedIds];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, draggedId);
+    try {
+      await reorderVisionAreas(token, nextOrder);
+      await crud.reload();
+    } catch (reorderError) {
+      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder vision areas.');
+    }
+  }
+
   async function archiveImpactMessage(area: VisionArea) {
     if (!token) {
       return 'Archive this vision area?';
@@ -223,6 +249,12 @@ export function VisionAreasPage() {
   }
 
   const columns: DataTableColumn<VisionArea>[] = [
+    {
+      key: 'position',
+      label: 'Order',
+      sortValue: (area) => area.sortOrder ?? Number.MAX_SAFE_INTEGER,
+      render: (area) => (area.sortOrder != null ? area.sortOrder + 1 : '—'),
+    },
     { key: 'code', label: 'Code', sortValue: (area) => area.code, render: (area) => area.code },
     {
       key: 'name',
@@ -409,8 +441,9 @@ export function VisionAreasPage() {
               rows={filteredAreas}
               columns={columns}
               emptyMessage={hasFilters ? 'No vision areas match these filters.' : 'No vision areas yet.'}
-              defaultSortKey="priority"
-              defaultSortDirection="desc"
+              defaultSortKey="position"
+              defaultSortDirection="asc"
+              reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderAreas(draggedId, targetId) }}
               pageResetKey={`${searchTerm}|${filterPriority}|${filterLetterRank}|${filterStatus}`}
               rowClassName={(area) => (area.archived ? 'row-archived' : '')}
               selection={{

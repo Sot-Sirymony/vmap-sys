@@ -12,12 +12,15 @@ import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.enums.LifecycleStatus;
+import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -57,8 +60,24 @@ public class VisionAreaService {
                 .priority(request.priority())
                 .letterRank(request.letterRank())
                 .status(request.status())
+                .sortOrder(visionAreaRepository.findByUser_IdAndArchivedFalse(user.getId()).size())
                 .build();
         return mapper.toResponse(visionAreaRepository.save(entity));
+    }
+
+    // Drag-and-drop reorder: orderedIds must be exactly this user's current
+    // non-archived vision areas, just reshuffled — otherwise a stray or
+    // missing id would silently orphan an area's position. No parent scope
+    // here — a vision area is the top of the hierarchy.
+    public void reorderVisionAreas(List<Long> orderedIds) {
+        List<VisionArea> siblings = visionAreaRepository.findByUser_IdAndArchivedFalse(lookup.userId());
+        Map<Long, VisionArea> byId = siblings.stream().collect(Collectors.toMap(VisionArea::getId, area -> area));
+        if (orderedIds.size() != siblings.size() || !byId.keySet().containsAll(orderedIds)) {
+            throw new BusinessRuleException("The given order must include exactly this user's current vision areas.");
+        }
+        for (int index = 0; index < orderedIds.size(); index++) {
+            byId.get(orderedIds.get(index)).setSortOrder(index);
+        }
     }
 
     @Cacheable(CacheConfig.VISION_AREA_CACHE)

@@ -67,6 +67,9 @@ export type VisionArea = {
   // letter, a label not a strict order — ties allowed.
   letterRank?: string | null;
   status: LifecycleStatus;
+  // Display order among this user's vision areas, for drag-and-drop reorder.
+  // Server-managed only — never sent in a request.
+  sortOrder?: number | null;
   archived: boolean;
 };
 
@@ -117,6 +120,9 @@ export type Dream = {
   decisionDismissedDisagreeingAdvice?: boolean | null;
   // FR-55.4: non-null once BR-44's gate has cleared; never re-fires after.
   decisionGateClearedAt?: string | null;
+  // Display order among this vision area's dreams, for drag-and-drop
+  // reorder. Server-managed only — never sent in a request.
+  sortOrder?: number | null;
   archived: boolean;
 };
 

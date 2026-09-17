@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useStoredState } from '../../hooks/useStoredState';
 import Checkbox from '@mui/material/Checkbox';
@@ -43,6 +43,18 @@ export type DataTableSelection<T> = {
 };
 
 /**
+ * Opt-in drag-and-drop row reorder. Only active while the table is sorted
+ * ascending by `columnKey` (its "natural" position order — a different
+ * column sort would make dragging mean something else) and all rows fit on
+ * one page (dragging can't reach a row on another page). Desktop only: the
+ * narrow/card layout below sm doesn't support native HTML5 drag.
+ */
+export type DataTableReorder = {
+  columnKey: string;
+  onReorder: (draggedId: number, targetId: number) => void;
+};
+
+/**
  * Server-driven paging and sorting. Rows are then rendered as given: the table
  * does not re-sort or re-slice them, because the server already did.
  */
@@ -76,6 +88,7 @@ type DataTableProps<T> = {
   pageResetKey?: string | number;
   /** Persist the rows-per-page choice under this key (FR-23.3). */
   storageKey?: string;
+  reorder?: DataTableReorder;
 };
 
 function compare(left: SortValue, right: SortValue) {
@@ -113,10 +126,13 @@ export function DataTable<T extends { id: number }>({
   defaultRowsPerPage = 10,
   pageResetKey,
   storageKey,
+  reorder,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | undefined>(defaultSortKey);
   const [sortDirection, setSortDirection] = useState<SortDirection>(defaultSortDirection);
   const [page, setPage] = useState(0);
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
   // FR-23.3: with a storageKey, the rows-per-page choice survives reloads.
   const [rowsPerPage, setRowsPerPage] = useStoredState(storageKey ? `vms-rows-${storageKey}` : null, defaultRowsPerPage);
 
@@ -145,6 +161,50 @@ export function DataTable<T extends { id: number }>({
   const visibleRows = serverPaging
     ? sortedRows
     : sortedRows.slice(safePage * currentRowsPerPage, safePage * currentRowsPerPage + currentRowsPerPage);
+
+  // See DataTableReorder: only while sorted ascending by its column, not
+  // server-paged, and every row fits on this one page.
+  const reorderActive = Boolean(
+    reorder && !serverPaging && sortKey === reorder.columnKey && sortDirection === 'asc' && totalRows <= currentRowsPerPage,
+  );
+
+  function rowDragProps(rowId: number) {
+    if (!reorderActive || !reorder) {
+      return {};
+    }
+    return {
+      draggable: true,
+      onDragStart: () => setDraggedId(rowId),
+      onDragOver: (event: DragEvent) => {
+        if (draggedId === null || draggedId === rowId) {
+          return;
+        }
+        event.preventDefault();
+        setDragOverId(rowId);
+      },
+      onDragLeave: () => setDragOverId((current) => (current === rowId ? null : current)),
+      onDrop: (event: DragEvent) => {
+        event.preventDefault();
+        const sourceId = draggedId;
+        setDraggedId(null);
+        setDragOverId(null);
+        if (sourceId !== null && sourceId !== rowId) {
+          reorder.onReorder(sourceId, rowId);
+        }
+      },
+      onDragEnd: () => {
+        setDraggedId(null);
+        setDragOverId(null);
+      },
+    };
+  }
+
+  function rowDragClassName(rowId: number): string {
+    if (!reorderActive) {
+      return '';
+    }
+    return `row--reorderable${draggedId === rowId ? ' row--dragging' : ''}${dragOverId === rowId ? ' row--drag-over' : ''}`;
+  }
 
   function handleSort(key: string) {
     const nextDirection: SortDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc';
@@ -303,8 +363,9 @@ export function DataTable<T extends { id: number }>({
             {visibleRows.map((row) => (
               <TableRow
                 key={row.id}
-                className={rowClassName?.(row) ?? ''}
+                className={`${rowClassName?.(row) ?? ''} ${rowDragClassName(row.id)}`.trim()}
                 selected={selection?.selectedIds.has(row.id) ?? false}
+                {...rowDragProps(row.id)}
               >
                 {selection && (
                   <TableCell padding="checkbox">

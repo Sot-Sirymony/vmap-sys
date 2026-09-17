@@ -131,6 +131,12 @@ public class Dream extends BaseAuditableEntity {
     @Column(name = "decision_gate_cleared_at")
     private Instant decisionGateClearedAt;
 
+    // Display order among this vision area's dreams, for drag-and-drop
+    // reorder on the Dreams page. 0-based; null on legacy rows until the
+    // first reorder (or a fresh create) sets it.
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     @Column(nullable = false)
     private boolean archived;
 }

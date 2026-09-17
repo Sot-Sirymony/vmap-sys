@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { archiveIdealPartnerProfile, createIdealPartnerProfile, listIdealPartnerProfiles, updateIdealPartnerProfile } from '../api/idealPartnerProfileApi';
-import { archiveStep, permanentlyDeleteStep, createStep, getStepArchiveImpact, listSteps, restoreStep, updateStep } from '../api/stepApi';
+import { archiveStep, permanentlyDeleteStep, createStep, getStepArchiveImpact, listSteps, reorderSteps, restoreStep, updateStep } from '../api/stepApi';
 import { getWorkStyleProfile } from '../api/workStyleProfileApi';
 import { listTasks } from '../api/taskApi';
 import { listVisionAreas } from '../api/visionAreaApi';
@@ -304,6 +304,37 @@ export function StepsPage() {
       await crud.reload();
     } catch (moveError) {
       crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update step status.');
+    }
+  }
+
+  // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
+  // are the dragged step's own goal's non-archived steps, ordered by
+  // sequenceNumber — Step reuses that existing field rather than gaining a
+  // second order column. Dropping onto a step from a different goal is a
+  // no-op — reordering only makes sense within the same parent.
+  async function handleReorderSteps(draggedId: number, targetId: number) {
+    const dragged = crud.items.find((item) => item.id === draggedId);
+    const target = crud.items.find((item) => item.id === targetId);
+    if (!token || !dragged || !target || dragged.goalId !== target.goalId) {
+      return;
+    }
+    const orderedIds = crud.items
+      .filter((item) => item.goalId === dragged.goalId && !item.archived)
+      .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.id - b.id)
+      .map((item) => item.id);
+    const fromIndex = orderedIds.indexOf(draggedId);
+    const toIndex = orderedIds.indexOf(targetId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const nextOrder = [...orderedIds];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, draggedId);
+    try {
+      await reorderSteps(token, dragged.goalId, nextOrder);
+      await crud.reload();
+    } catch (reorderError) {
+      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder steps.');
     }
   }
 
@@ -638,8 +669,9 @@ export function StepsPage() {
             rows={filteredSteps}
             columns={columns}
             emptyMessage="No steps match these filters."
-            defaultSortKey="priority"
-            defaultSortDirection="desc"
+            defaultSortKey="sequenceNumber"
+            defaultSortDirection="asc"
+            reorder={{ columnKey: 'sequenceNumber', onReorder: (draggedId, targetId) => void handleReorderSteps(draggedId, targetId) }}
             pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterGoalId}|${filterStatus}|${filterPriority}|${filterOverdueOnly}`}
             rowClassName={(step) => (step.archived ? 'row-archived' : isOverdue(step.targetDate, step.status) ? 'row-overdue' : '')}
             selection={{

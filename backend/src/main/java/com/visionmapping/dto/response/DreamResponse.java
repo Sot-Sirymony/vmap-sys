@@ -42,6 +42,7 @@ public record DreamResponse(
         // FR-55.4: non-null once BR-44's gate has cleared for this dream;
         // the gate never re-fires afterward.
         Instant decisionGateClearedAt,
+        Integer sortOrder,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

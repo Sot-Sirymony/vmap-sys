@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { Rocket, Target, TriangleAlert } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
 import { listSteps } from '../api/stepApi';
-import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
+import { archiveGoal, permanentlyDeleteGoal, createGoal, getGoalArchiveImpact, listGoals, reorderGoals, restoreGoal, updateGoal, updateGoalStatus } from '../api/goalApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -222,6 +222,36 @@ export function GoalsPage() {
     setScheduleMode('BOTTOM_UP');
   }
 
+  // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
+  // are the dragged goal's own dream's non-archived goals, ordered by
+  // current position. Dropping onto a goal from a different dream is a
+  // no-op — reordering only makes sense within the same parent.
+  async function handleReorderGoals(draggedId: number, targetId: number) {
+    const dragged = crud.items.find((item) => item.id === draggedId);
+    const target = crud.items.find((item) => item.id === targetId);
+    if (!token || !dragged || !target || dragged.dreamId !== target.dreamId) {
+      return;
+    }
+    const orderedIds = crud.items
+      .filter((item) => item.dreamId === dragged.dreamId && !item.archived)
+      .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id)
+      .map((item) => item.id);
+    const fromIndex = orderedIds.indexOf(draggedId);
+    const toIndex = orderedIds.indexOf(targetId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const nextOrder = [...orderedIds];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, draggedId);
+    try {
+      await reorderGoals(token, dragged.dreamId, nextOrder);
+      await crud.reload();
+    } catch (reorderError) {
+      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder goals.');
+    }
+  }
+
   async function archiveImpactMessage(goal: Goal) {
     if (!token) {
       return 'Archive this goal?';
@@ -392,6 +422,12 @@ export function GoalsPage() {
   }
 
   const columns: DataTableColumn<Goal>[] = [
+    {
+      key: 'position',
+      label: 'Order',
+      sortValue: (goal) => goal.sortOrder ?? Number.MAX_SAFE_INTEGER,
+      render: (goal) => (goal.sortOrder != null ? goal.sortOrder + 1 : '—'),
+    },
     { key: 'code', label: 'Code', sortValue: (goal) => goal.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (goal) => goal.code },
     {
       key: 'title',
@@ -715,8 +751,9 @@ export function GoalsPage() {
             rows={filteredGoals}
             columns={columns}
             emptyMessage="No goals match these filters."
-            defaultSortKey="priority"
-            defaultSortDirection="desc"
+            defaultSortKey="position"
+            defaultSortDirection="asc"
+            reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderGoals(draggedId, targetId) }}
             pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamId}|${filterStatus}|${filterPriority}|${filterLetterRank}|${filterOverdueOnly}|${filterMoonshotOnly}|${filterTargetFrom}|${filterTargetTo}`}
             rowClassName={(goal) => (goal.archived ? 'row-archived' : isOverdue(goal.targetDate, goal.status) ? 'row-overdue' : '')}
             selection={{

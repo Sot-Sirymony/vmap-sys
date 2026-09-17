@@ -22,6 +22,16 @@ export function updateDream(token: string, id: number, request: DreamRequest) {
   });
 }
 
+// Drag-and-drop reorder: orderedIds is the full, reshuffled set of this
+// vision area's dreams.
+export function reorderDreams(token: string, visionAreaId: number, orderedIds: number[]) {
+  return apiClient<void>('/dreams/reorder', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ parentId: visionAreaId, orderedIds }),
+  });
+}
+
 export function archiveDream(token: string, id: number) {
   return apiClient<void>(`/dreams/${id}`, {
     method: 'DELETE',

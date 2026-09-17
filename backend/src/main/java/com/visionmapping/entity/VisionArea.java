@@ -64,6 +64,12 @@ public class VisionArea extends BaseAuditableEntity {
     @Column(nullable = false, length = 40)
     private LifecycleStatus status;
 
+    // Display order among this user's vision areas, for drag-and-drop
+    // reorder on the Vision Areas page. 0-based; null on legacy rows until
+    // the first reorder (or a fresh create) sets it.
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     @Column(nullable = false)
     private boolean archived;
 }

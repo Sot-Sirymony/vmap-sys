@@ -34,8 +34,8 @@ public class VisionMappingMapper {
 
     public VisionAreaResponse toResponse(VisionArea entity) {
         return new VisionAreaResponse(entity.getId(), entity.getCode(), entity.getName(), entity.getDescription(),
-                entity.getVisionStatement(), entity.getPriority(), entity.getLetterRank(), entity.getStatus(), entity.isArchived(),
-                entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.getVisionStatement(), entity.getPriority(), entity.getLetterRank(), entity.getStatus(),
+                entity.getSortOrder(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public DreamResponse toResponse(Dream entity) {
@@ -53,7 +53,7 @@ public class VisionMappingMapper {
                 entity.getDecisionTrustedUnverifiedClaim(), entity.getDecisionJudgedByAppearance(),
                 entity.getDecisionUnderTimePressure(), entity.getDecisionNoOutsideInput(),
                 entity.getDecisionChasedEasyReward(), entity.getDecisionDismissedDisagreeingAdvice(),
-                entity.getDecisionGateClearedAt(),
+                entity.getDecisionGateClearedAt(), entity.getSortOrder(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 

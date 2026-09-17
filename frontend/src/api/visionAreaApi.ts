@@ -22,6 +22,16 @@ export function updateVisionArea(token: string, id: number, request: VisionAreaR
   });
 }
 
+// Drag-and-drop reorder: orderedIds is the full, reshuffled set of this
+// user's vision areas — no parent to scope by.
+export function reorderVisionAreas(token: string, orderedIds: number[]) {
+  return apiClient<void>('/vision-areas/reorder', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ orderedIds }),
+  });
+}
+
 export function archiveVisionArea(token: string, id: number) {
   return apiClient<void>(`/vision-areas/${id}`, {
     method: 'DELETE',

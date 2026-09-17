@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, restoreDream, updateDream } from '../api/dreamApi';
+import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, reorderDreams, restoreDream, updateDream } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import Box from '@mui/material/Box';
@@ -299,6 +299,36 @@ export function DreamsPage() {
     }
   }
 
+  // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
+  // are the dragged dream's own vision area's non-archived dreams, ordered
+  // by current position. Dropping onto a dream from a different vision area
+  // is a no-op — reordering only makes sense within the same parent.
+  async function handleReorderDreams(draggedId: number, targetId: number) {
+    const dragged = crud.items.find((item) => item.id === draggedId);
+    const target = crud.items.find((item) => item.id === targetId);
+    if (!token || !dragged || !target || dragged.visionAreaId !== target.visionAreaId) {
+      return;
+    }
+    const orderedIds = crud.items
+      .filter((item) => item.visionAreaId === dragged.visionAreaId && !item.archived)
+      .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id)
+      .map((item) => item.id);
+    const fromIndex = orderedIds.indexOf(draggedId);
+    const toIndex = orderedIds.indexOf(targetId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const nextOrder = [...orderedIds];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, draggedId);
+    try {
+      await reorderDreams(token, dragged.visionAreaId, nextOrder);
+      await crud.reload();
+    } catch (reorderError) {
+      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder dreams.');
+    }
+  }
+
   async function archiveImpactMessage(dream: Dream) {
     if (!token) {
       return 'Archive this dream?';
@@ -376,6 +406,12 @@ export function DreamsPage() {
   }
 
   const columns: DataTableColumn<Dream>[] = [
+    {
+      key: 'position',
+      label: 'Order',
+      sortValue: (dream) => dream.sortOrder ?? Number.MAX_SAFE_INTEGER,
+      render: (dream) => (dream.sortOrder != null ? dream.sortOrder + 1 : '—'),
+    },
     { key: 'code', label: 'Code', sortValue: (dream) => dream.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (dream) => dream.code },
     {
       key: 'title',
@@ -758,8 +794,9 @@ export function DreamsPage() {
             rows={filteredDreams}
             columns={columns}
             emptyMessage={hasFilters ? 'No dreams match these filters.' : 'No dreams yet.'}
-            defaultSortKey="priority"
-            defaultSortDirection="desc"
+            defaultSortKey="position"
+            defaultSortDirection="asc"
+            reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderDreams(draggedId, targetId) }}
             pageResetKey={`${searchTerm}|${filterVisionAreaId}|${filterDreamType}|${filterPriority}|${filterLetterRank}|${filterStatus}|${filterOverdueOnly}|${filterMoonshotOnly}`}
             rowClassName={(dream) => (dream.archived ? 'row-archived' : '')}
             selection={{

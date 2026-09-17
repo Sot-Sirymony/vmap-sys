@@ -6,7 +6,7 @@ import { listGoals } from '../api/goalApi';
 import { listIdealPartnerProfiles } from '../api/idealPartnerProfileApi';
 import { listSteps } from '../api/stepApi';
 import { listVisionAreas } from '../api/visionAreaApi';
-import { archiveTask, permanentlyDeleteTask, createTask, listTasks, restoreTask, updateTask, updateTaskStatus } from '../api/taskApi';
+import { archiveTask, permanentlyDeleteTask, createTask, listTasks, reorderTasks, restoreTask, updateTask, updateTaskStatus } from '../api/taskApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Checkbox from '@mui/material/Checkbox';
@@ -424,6 +424,38 @@ export function TasksBoardPage() {
     .sort()
     .map((letter) => ({ value: letter, label: letter }));
 
+  // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
+  // are the dragged task's own step's non-archived tasks, ordered by
+  // current position. Dropping onto a task from a different step is a
+  // no-op — reordering only makes sense within the same parent. The Board
+  // view's drag gesture already means "change status" (StatusBoard), so
+  // this only wires into the List view's table.
+  async function handleReorderTasks(draggedId: number, targetId: number) {
+    const dragged = crud.items.find((item) => item.id === draggedId);
+    const target = crud.items.find((item) => item.id === targetId);
+    if (!token || !dragged || !target || dragged.stepId !== target.stepId) {
+      return;
+    }
+    const orderedIds = crud.items
+      .filter((item) => item.stepId === dragged.stepId && !item.archived)
+      .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id)
+      .map((item) => item.id);
+    const fromIndex = orderedIds.indexOf(draggedId);
+    const toIndex = orderedIds.indexOf(targetId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const nextOrder = [...orderedIds];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, draggedId);
+    try {
+      await reorderTasks(token, dragged.stepId, nextOrder);
+      await crud.reload();
+    } catch (reorderError) {
+      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder tasks.');
+    }
+  }
+
   // FR-23.1 acceptance: from any task row, its step, goal, dream, and area
   // are each one click away.
   function taskCrumbs(task: TaskItem) {
@@ -440,6 +472,12 @@ export function TasksBoardPage() {
   }
 
   const taskColumns: DataTableColumn<TaskItem>[] = [
+    {
+      key: 'position',
+      label: 'Order',
+      sortValue: (task) => task.sortOrder ?? Number.MAX_SAFE_INTEGER,
+      render: (task) => (task.sortOrder != null ? task.sortOrder + 1 : '—'),
+    },
     {
       key: 'title',
       label: 'Task',
@@ -760,8 +798,9 @@ export function TasksBoardPage() {
               rows={visibleTasks}
               columns={taskColumns}
               emptyMessage="No tasks match these filters."
-              defaultSortKey="priority"
-              defaultSortDirection="desc"
+              defaultSortKey="position"
+              defaultSortDirection="asc"
+              reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderTasks(draggedId, targetId) }}
               pageResetKey={`${searchTerm}|${filterOwner}|${filterPriority}|${filterLetterRank}|${filterStatus}|${filterVisionAreaId}|${filterDreamId}|${filterGoalId}|${filterDueFrom}|${filterDueTo}|${filterOverdueOnly}|${filterStepId ?? ''}`}
               rowClassName={(task) => (task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : task.status === 'COMPLETED' ? 'row-done' : '')}
               selection={{
