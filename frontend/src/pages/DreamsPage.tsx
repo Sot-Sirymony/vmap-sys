@@ -102,30 +102,41 @@ export function DreamsPage() {
   const [filterOverdueOnly, setFilterOverdueOnly] = useUrlFlag('overdue');
   const [filterMoonshotOnly, setFilterMoonshotOnly] = useUrlFlag('moonshot');
   const [searchParams, setSearchParams] = useSearchParams();
-  // FR-21.3: creation goes through the coaching wizard by default; the flat
-  // form remains for edits and for "skip the guide".
+  // FR-21.3: creation goes through the coaching wizard for first-timers; once
+  // someone already has a dream, they know the drill and the flat form —
+  // reachable via the wizard's own "skip" too — is faster.
   const [wizardOpen, setWizardOpen] = useState(false);
   const [flatCreateOpen, setFlatCreateOpen] = useState(false);
   const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-dreams', 'list');
 
+  function openCreateFlow() {
+    if (crud.items.length > 0) {
+      setFlatCreateOpen(true);
+    } else {
+      setWizardOpen(true);
+    }
+  }
+
   // Arrived from a vision area's "Add dream" shortcut or the dashboard's
-  // getting-started checklist: pre-select the area and open the wizard, then
-  // strip the params so a refresh doesn't reopen it.
+  // getting-started checklist: pre-select the area and open the guide (new
+  // users) or the flat form (returning users), then strip the params so a
+  // refresh doesn't reopen it. Waits for the list to load first so an
+  // existing user's dreams aren't still empty when the decision is made.
   useEffect(() => {
-    if (searchParams.get('create') !== 'dream') {
+    if (searchParams.get('create') !== 'dream' || crud.loading) {
       return;
     }
     const parent = searchParams.get('parent');
     if (parent) {
       setVisionAreaId(parent);
     }
-    setWizardOpen(true);
+    openCreateFlow();
     const next = new URLSearchParams(searchParams);
     next.delete('create');
     next.delete('parent');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, crud.loading]);
 
   useEffect(() => {
     if (!token) {
@@ -627,7 +638,7 @@ export function DreamsPage() {
       title="Dreams"
       subtitle="Capture meaningful outcomes and prepare them for goals."
       actions={
-        <Button type="button" onClick={() => setWizardOpen(true)} disabled={visionAreas.length === 0}>
+        <Button type="button" onClick={openCreateFlow} disabled={visionAreas.length === 0}>
           Create dream
         </Button>
       }

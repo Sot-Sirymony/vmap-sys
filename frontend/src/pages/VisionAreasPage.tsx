@@ -56,18 +56,30 @@ export function VisionAreasPage() {
   const [flatCreateOpen, setFlatCreateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Arrived from the dashboard's getting-started checklist: open the wizard,
-  // then strip the param so a refresh doesn't reopen it.
+  // The step-by-step guide is for first-timers only — once someone already
+  // has a vision area, they know the drill and the flat form is faster.
+  function openCreateFlow() {
+    if (crud.items.length > 0) {
+      setFlatCreateOpen(true);
+    } else {
+      setWizardOpen(true);
+    }
+  }
+
+  // Arrived from the dashboard's getting-started checklist: open the guide
+  // (new users) or the flat form (returning users), then strip the param so
+  // a refresh doesn't reopen it. Waits for the list to load first so an
+  // existing user's areas aren't still empty when the decision is made.
   useEffect(() => {
-    if (searchParams.get('create') !== 'area') {
+    if (searchParams.get('create') !== 'area' || crud.loading) {
       return;
     }
-    setWizardOpen(true);
+    openCreateFlow();
     const next = new URLSearchParams(searchParams);
     next.delete('create');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, crud.loading]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [visionStatement, setVisionStatement] = useState('');
@@ -316,7 +328,7 @@ export function VisionAreasPage() {
     <PageSection
       title="Vision Areas"
       subtitle="Organize the major areas of life or work."
-      actions={<Button type="button" onClick={() => setWizardOpen(true)}>Create vision area</Button>}
+      actions={<Button type="button" onClick={openCreateFlow}>Create vision area</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
