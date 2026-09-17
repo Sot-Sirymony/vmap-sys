@@ -1,4 +1,4 @@
-import { FormEvent, useRef, useState } from 'react';
+import { DragEvent, FormEvent, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb, Rocket } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
@@ -12,13 +12,13 @@ import {
   archiveDream, getDreamArchiveImpact, permanentlyDeleteDream, restoreDream, updateDream,
 } from '../../api/dreamApi';
 import {
-  archiveGoal, createGoal, getGoalArchiveImpact, permanentlyDeleteGoal, restoreGoal, updateGoal, updateGoalStatus,
+  archiveGoal, createGoal, getGoalArchiveImpact, permanentlyDeleteGoal, reorderGoals, restoreGoal, updateGoal, updateGoalStatus,
 } from '../../api/goalApi';
 import {
-  archiveStep, createStep, getStepArchiveImpact, permanentlyDeleteStep, restoreStep, updateStep,
+  archiveStep, createStep, getStepArchiveImpact, permanentlyDeleteStep, reorderSteps, restoreStep, updateStep,
 } from '../../api/stepApi';
 import {
-  archiveTask, createTask, permanentlyDeleteTask, restoreTask, updateTask, updateTaskStatus,
+  archiveTask, createTask, permanentlyDeleteTask, reorderTasks, restoreTask, updateTask, updateTaskStatus,
 } from '../../api/taskApi';
 import { useAuth } from '../../context/AuthContext';
 import { useStoredState } from '../../hooks/useStoredState';
@@ -123,7 +123,11 @@ export function VisionMapTree({
   const filtering = Boolean(priorityFilter || statusFilter);
   // The dream's own progress and quick-add sequencing always read the full,
   // unfiltered set — a view filter narrows what's shown, not what exists.
-  const dreamGoals = goals.filter((goal) => goal.dreamId === dream.id);
+  // Sorted by sortOrder (drag-and-drop reorder), nulls last, id as a stable
+  // tie-break for legacy rows that predate the field.
+  const dreamGoals = goals
+    .filter((goal) => goal.dreamId === dream.id)
+    .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id);
 
   // A row matches directly against both filters (either may be empty, in
   // which case it's ignored). A goal/step is also included when it isn't a
@@ -133,8 +137,12 @@ export function VisionMapTree({
     return (!priorityFilter || priority === priorityFilter) && (!statusFilter || status === statusFilter);
   }
 
+  // Sorted by sortOrder (drag-and-drop reorder), nulls last, id as a stable
+  // tie-break for legacy rows that predate the field.
   function tasksForStep(stepId: number): TaskItem[] {
-    return tasks.filter((task) => task.stepId === stepId);
+    return tasks
+      .filter((task) => task.stepId === stepId)
+      .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id);
   }
 
   function taskMatches(task: TaskItem): boolean {
@@ -156,8 +164,13 @@ export function VisionMapTree({
     return all.filter(taskMatches);
   }
 
+  // Sorted by sequenceNumber (drag-and-drop reorder reuses this existing
+  // field rather than adding a second order column), id as a stable
+  // tie-break.
   function stepsForGoal(goalId: number): VisionStep[] {
-    return steps.filter((step) => step.goalId === goalId);
+    return steps
+      .filter((step) => step.goalId === goalId)
+      .sort((a, b) => a.sequenceNumber - b.sequenceNumber || a.id - b.id);
   }
 
   function goalQualifies(goal: Goal): boolean {
@@ -182,6 +195,13 @@ export function VisionMapTree({
   const [error, setError] = useState('');
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const addRefs = useRef(new Map<string, HTMLInputElement>());
+
+  // Drag-and-drop reorder (goals within a dream, steps within a goal, tasks
+  // within a step) — native HTML5 DnD, no extra dependency. draggedKey is
+  // the row currently being dragged; dragOverKey is whichever row it's
+  // hovering, for the drop-target outline.
+  const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   // --- Full edit modals: one shared field set per entity kind, repopulated
   // whenever a row's "Edit" action opens it (only one modal is open at a
@@ -213,6 +233,7 @@ export function VisionMapTree({
   const [goalDescription, setGoalDescription] = useState('');
   const [goalSuccessCriteria, setGoalSuccessCriteria] = useState('');
   const [goalPriority, setGoalPriority] = useState<Priority>('HIGH');
+  const [goalLetterRank, setGoalLetterRank] = useState('');
   const [goalTargetDate, setGoalTargetDate] = useState('');
   const [goalStatus, setGoalStatus] = useState<WorkStatus>('NOT_STARTED');
   const [goalMoonshot, setGoalMoonshot] = useState(false);
@@ -235,6 +256,7 @@ export function VisionMapTree({
   const [taskDescription, setTaskDescription] = useState('');
   const [taskOwner, setTaskOwner] = useState('');
   const [taskPriority, setTaskPriority] = useState<Priority>('HIGH');
+  const [taskLetterRank, setTaskLetterRank] = useState('');
   const [taskStartDate, setTaskStartDate] = useState('');
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskStatus, setTaskStatus] = useState<WorkStatus>('NOT_STARTED');
@@ -385,6 +407,36 @@ export function VisionMapTree({
     }
   }
 
+  // Drag-and-drop reorder: siblingIds is the full current order for that
+  // parent; dragging draggedId onto targetId moves it to targetId's slot and
+  // shifts the rest, then the whole reshuffled order is sent to the server.
+  async function reorderSiblings(kind: 'goal' | 'step' | 'task', parentId: number, siblingIds: number[], draggedId: number, targetId: number) {
+    if (draggedId === targetId) {
+      return;
+    }
+    const fromIndex = siblingIds.indexOf(draggedId);
+    const toIndex = siblingIds.indexOf(targetId);
+    if (fromIndex === -1 || toIndex === -1) {
+      return;
+    }
+    const nextOrder = [...siblingIds];
+    nextOrder.splice(fromIndex, 1);
+    nextOrder.splice(toIndex, 0, draggedId);
+    setError('');
+    try {
+      if (kind === 'goal') {
+        await reorderGoals(token, parentId, nextOrder);
+      } else if (kind === 'step') {
+        await reorderSteps(token, parentId, nextOrder);
+      } else {
+        await reorderTasks(token, parentId, nextOrder);
+      }
+      await onDataChange();
+    } catch (reorderError) {
+      setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder.');
+    }
+  }
+
   // --- Dream edit / archive / restore / delete ---
 
   function openDreamEdit() {
@@ -515,6 +567,7 @@ export function VisionMapTree({
     setGoalDescription(goal.description ?? '');
     setGoalSuccessCriteria(goal.successCriteria ?? '');
     setGoalPriority(goal.priority);
+    setGoalLetterRank(goal.letterRank ?? '');
     setGoalTargetDate(goal.targetDate ?? '');
     setGoalStatus(goal.status);
     setGoalMoonshot(goal.moonshot);
@@ -540,6 +593,7 @@ export function VisionMapTree({
         description: goalDescription,
         successCriteria: goalSuccessCriteria,
         priority: goalPriority,
+        letterRank: goalLetterRank || undefined,
         targetDate: goalTargetDate || undefined,
         status: goalStatus,
         moonshot: goalMoonshot,
@@ -692,6 +746,7 @@ export function VisionMapTree({
     setTaskDescription(task.description ?? '');
     setTaskOwner(task.owner);
     setTaskPriority(task.priority);
+    setTaskLetterRank(task.letterRank ?? '');
     setTaskStartDate(task.startDate ?? '');
     setTaskDueDate(task.dueDate);
     setTaskStatus(task.status);
@@ -723,6 +778,7 @@ export function VisionMapTree({
         description: taskDescription,
         owner: taskOwner,
         priority: taskPriority,
+        letterRank: taskLetterRank || undefined,
         startDate: taskStartDate || undefined,
         dueDate: taskDueDate,
         status: taskStatus,
@@ -842,8 +898,11 @@ export function VisionMapTree({
     }
   }
 
-  function rowShellProps(row: RowInfo) {
-    return {
+  // drag, when given, makes this row draggable among its siblings — see
+  // reorderSiblings. Omitted for the dream row (no siblings here), a
+  // filtered view (siblingIds wouldn't be the full set), or an archived row.
+  function rowShellProps(row: RowInfo, drag?: { kind: 'goal' | 'step' | 'task'; parentId: number; id: number; siblingIds: number[] }) {
+    const base = {
       role: 'treeitem',
       'aria-level': row.level + 1,
       'aria-selected': focusedKey === row.key,
@@ -859,6 +918,46 @@ export function VisionMapTree({
       },
       onFocus: () => setFocusedKey(row.key),
     };
+    if (!drag) {
+      return base;
+    }
+    return {
+      ...base,
+      draggable: true,
+      onDragStart: (event: DragEvent<HTMLDivElement>) => {
+        event.dataTransfer.effectAllowed = 'move';
+        setDraggedKey(row.key);
+      },
+      onDragOver: (event: DragEvent<HTMLDivElement>) => {
+        if (!draggedKey || draggedKey === row.key) {
+          return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        setDragOverKey(row.key);
+      },
+      onDragLeave: () => {
+        setDragOverKey((current) => (current === row.key ? null : current));
+      },
+      onDrop: (event: DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        const sourceKey = draggedKey;
+        setDraggedKey(null);
+        setDragOverKey(null);
+        if (!sourceKey || sourceKey === row.key) {
+          return;
+        }
+        void reorderSiblings(drag.kind, drag.parentId, drag.siblingIds, Number(sourceKey.slice(1)), drag.id);
+      },
+      onDragEnd: () => {
+        setDraggedKey(null);
+        setDragOverKey(null);
+      },
+    };
+  }
+
+  function dragRowClass(key: string): string {
+    return `${draggedKey === key ? ' map-row--dragging' : ''}${dragOverKey === key ? ' map-row--drag-over' : ''}`;
   }
 
   function chevron(row: RowInfo) {
@@ -960,7 +1059,7 @@ export function VisionMapTree({
   return (
     <div>
       {error && <p className="map-error" role="alert">{error}</p>}
-      <p className="map-hint">↑↓ move · → ← expand / collapse · Enter rename · N add child</p>
+      <p className="map-hint">↑↓ move · → ← expand / collapse · Enter rename · N add child · drag a row to reorder it among its siblings</p>
       {energyNudge.dialog}
 
       {editingDream && (
@@ -1112,6 +1211,19 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
+            Rank
+            <Input
+              value={goalLetterRank}
+              onChange={(event) => setGoalLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+              placeholder="e.g. A"
+              maxLength={1}
+            />
+            <span className="field-hint">
+              Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come
+              first. Ties are fine; nothing enforces a unique order.
+            </span>
+          </label>
+          <label>
             Status
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Status' }} value={goalStatus} onChange={(event) => setGoalStatus(event.target.value as WorkStatus)}>
@@ -1229,6 +1341,19 @@ export function VisionMapTree({
                 {PRIORITY_OPTIONS.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
               </Select>
             </FormControl>
+          </label>
+          <label>
+            Rank
+            <Input
+              value={taskLetterRank}
+              onChange={(event) => setTaskLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
+              placeholder="e.g. A"
+              maxLength={1}
+            />
+            <span className="field-hint">
+              Optional. A, B, C… — assigned after listing everything, to mark which tasks under this step come
+              first. Ties are fine; nothing enforces a unique order.
+            </span>
           </label>
           <label>
             Status
@@ -1358,9 +1483,12 @@ export function VisionMapTree({
               if (!goalRow) {
                 return null;
               }
+              const goalDrag = !filtering && !goal.archived
+                ? { kind: 'goal' as const, parentId: dream.id, id: goal.id, siblingIds: dreamGoals.map((item) => item.id) }
+                : undefined;
               return (
                 <div className="map-node map-node--goal" role="none" key={goal.id}>
-                  <div className={`map-row${goal.archived ? ' map-row--archived' : ''}`} {...rowShellProps(goalRow)}>
+                  <div className={`map-row${goal.archived ? ' map-row--archived' : ''}${dragRowClass(goalKey)}`} {...rowShellProps(goalRow, goalDrag)}>
                     {chevron(goalRow)}
                     <div className="map-main">
                       <div className="map-line">
@@ -1398,9 +1526,12 @@ export function VisionMapTree({
                         if (!stepRow) {
                           return null;
                         }
+                        const stepDrag = !filtering && !step.archived
+                          ? { kind: 'step' as const, parentId: goal.id, id: step.id, siblingIds: allGoalSteps.map((item) => item.id) }
+                          : undefined;
                         return (
                           <div className="map-node map-node--step" role="none" key={step.id}>
-                            <div className={`map-row${step.archived ? ' map-row--archived' : ''}`} {...rowShellProps(stepRow)}>
+                            <div className={`map-row${step.archived ? ' map-row--archived' : ''}${dragRowClass(stepKey)}`} {...rowShellProps(stepRow, stepDrag)}>
                               {chevron(stepRow)}
                               <div className="map-main">
                                 <div className="map-line">
@@ -1430,11 +1561,14 @@ export function VisionMapTree({
                                   if (!taskRow) {
                                     return null;
                                   }
+                                  const taskDrag = !filtering && !task.archived
+                                    ? { kind: 'task' as const, parentId: step.id, id: task.id, siblingIds: tasksForStep(step.id).map((item) => item.id) }
+                                    : undefined;
                                   return (
                                     <div className="map-node map-node--task" role="none" key={task.id}>
                                       <div
-                                        className={`map-row${task.status === 'COMPLETED' ? ' map-row--done' : ''}${task.archived ? ' map-row--archived' : ''}`}
-                                        {...rowShellProps(taskRow)}
+                                        className={`map-row${task.status === 'COMPLETED' ? ' map-row--done' : ''}${task.archived ? ' map-row--archived' : ''}${dragRowClass(taskKey)}`}
+                                        {...rowShellProps(taskRow, taskDrag)}
                                       >
                                         <span className="map-chevron map-chevron--spacer" />
                                         <div className="map-main">

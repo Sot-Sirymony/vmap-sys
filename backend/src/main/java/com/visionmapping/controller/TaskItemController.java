@@ -1,5 +1,6 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.response.TaskItemResponse;
@@ -51,6 +52,12 @@ public class TaskItemController {
     @PatchMapping("/{id}/status")
     public TaskItemResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return service.updateTaskStatus(id, request.status());
+    }
+
+    @PatchMapping("/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorder(@Valid @RequestBody ReorderRequest request) {
+        service.reorderTasks(request.parentId(), request.orderedIds());
     }
 
     @DeleteMapping("/{id}")

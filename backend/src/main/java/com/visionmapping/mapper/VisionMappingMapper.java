@@ -68,7 +68,7 @@ public class VisionMappingMapper {
                 entity.getDescription(), entity.getSuccessCriteria(), entity.getPriority(), entity.getLetterRank(), entity.getTargetDate(),
                 entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
                 entity.isMoonshot(), entity.getMoonshotVision(), entity.getScheduleMode(), scheduleOverrun,
-                scheduleOverrunDetail, entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+                scheduleOverrunDetail, entity.getSortOrder(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public VisionStepResponse toResponse(VisionStep entity) {
@@ -83,7 +83,7 @@ public class VisionMappingMapper {
                 entity.getDescription(), entity.getOwner(), entity.getPriority(), entity.getLetterRank(), entity.getStartDate(), entity.getDueDate(),
                 entity.getStatus(), entity.getProgressPercent(), entity.getEstimatedHours(), entity.getActualHours(),
                 entity.getBlockerReason(), entity.getNextAction(), entity.getEnergyDemand(), entity.getCompletedAt(),
-                entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.getSortOrder(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public PartnerResponse toResponse(Partner entity) {

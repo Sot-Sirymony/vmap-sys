@@ -1,5 +1,6 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.VisionStepRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
@@ -52,6 +53,12 @@ public class VisionStepController {
     @PatchMapping("/{id}/status")
     public VisionStepResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return service.updateStepStatus(id, request.status(), request.manualOverride());
+    }
+
+    @PatchMapping("/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorder(@Valid @RequestBody ReorderRequest request) {
+        service.reorderSteps(request.parentId(), request.orderedIds());
     }
 
     @DeleteMapping("/{id}")

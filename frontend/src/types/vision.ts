@@ -166,6 +166,9 @@ export type Goal = {
   // step's target date now runs past this goal's fixed target date.
   scheduleOverrun: boolean;
   scheduleOverrunDetail?: string;
+  // Display order among this dream's goals, for the Vision Map tree's
+  // drag-and-drop reorder. Server-managed only — never sent in a request.
+  sortOrder?: number | null;
   archived: boolean;
 };
 
@@ -229,6 +232,9 @@ export type TaskItem = {
   blockerReason?: string;
   nextAction?: string;
   energyDemand?: EnergyDemand;
+  // Display order among this step's tasks, for the Vision Map tree's
+  // drag-and-drop reorder. Server-managed only — never sent in a request.
+  sortOrder?: number | null;
   archived: boolean;
 };
 

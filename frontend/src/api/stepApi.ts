@@ -22,6 +22,16 @@ export function updateStep(token: string, id: number, request: VisionStepRequest
   });
 }
 
+// Vision Map drag-and-drop: orderedIds is the full, reshuffled set of this
+// goal's steps.
+export function reorderSteps(token: string, goalId: number, orderedIds: number[]) {
+  return apiClient<void>('/steps/reorder', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ parentId: goalId, orderedIds }),
+  });
+}
+
 export function archiveStep(token: string, id: number) {
   return apiClient<void>(`/steps/${id}`, {
     method: 'DELETE',

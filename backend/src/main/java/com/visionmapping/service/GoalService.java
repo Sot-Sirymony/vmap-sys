@@ -28,7 +28,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -80,6 +82,7 @@ public class GoalService {
                 .moonshot(request.moonshot())
                 .moonshotVision(request.moonshotVision())
                 .scheduleMode(request.scheduleMode())
+                .sortOrder(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), user.getId()).size())
                 .build();
         return toResponse(goalRepository.save(entity));
     }
@@ -123,6 +126,21 @@ public class GoalService {
             entity.setManualProgressOverride(true);
         }
         return toResponse(entity);
+    }
+
+    // Vision Map drag-and-drop: orderedGoalIds must be exactly this dream's
+    // current non-archived goals, just reshuffled — otherwise a stray or
+    // missing id would silently orphan a goal's position.
+    public void reorderGoals(Long dreamId, List<Long> orderedGoalIds) {
+        Dream dream = lookup.dream(dreamId);
+        List<Goal> siblings = goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), lookup.userId());
+        Map<Long, Goal> byId = siblings.stream().collect(Collectors.toMap(Goal::getId, goal -> goal));
+        if (orderedGoalIds.size() != siblings.size() || !byId.keySet().containsAll(orderedGoalIds)) {
+            throw new BusinessRuleException("The given order must include exactly this dream's current goals.");
+        }
+        for (int index = 0; index < orderedGoalIds.size(); index++) {
+            byId.get(orderedGoalIds.get(index)).setSortOrder(index);
+        }
     }
 
     public void archiveGoal(Long id) {

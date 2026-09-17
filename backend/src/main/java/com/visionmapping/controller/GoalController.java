@@ -1,6 +1,7 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.GoalRequest;
+import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.GoalResponse;
@@ -52,6 +53,12 @@ public class GoalController {
     @PatchMapping("/{id}/status")
     public GoalResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
         return service.updateGoalStatus(id, request.status(), request.manualOverride());
+    }
+
+    @PatchMapping("/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorder(@Valid @RequestBody ReorderRequest request) {
+        service.reorderGoals(request.parentId(), request.orderedIds());
     }
 
     @DeleteMapping("/{id}")

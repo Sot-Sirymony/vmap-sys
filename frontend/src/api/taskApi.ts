@@ -36,6 +36,16 @@ export function updateTaskStatus(token: string, id: number, status: string) {
   });
 }
 
+// Vision Map drag-and-drop: orderedIds is the full, reshuffled set of this
+// step's tasks.
+export function reorderTasks(token: string, stepId: number, orderedIds: number[]) {
+  return apiClient<void>('/tasks/reorder', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ parentId: stepId, orderedIds }),
+  });
+}
+
 export function restoreTask(token: string, id: number) {
   return apiClient<void>(`/tasks/${id}/restore`, {
     method: 'POST',

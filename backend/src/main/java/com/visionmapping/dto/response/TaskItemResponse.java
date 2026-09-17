@@ -26,6 +26,7 @@ public record TaskItemResponse(
         String nextAction,
         EnergyDemand energyDemand,
         Instant completedAt,
+        Integer sortOrder,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

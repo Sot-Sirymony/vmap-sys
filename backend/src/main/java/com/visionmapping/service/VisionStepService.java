@@ -27,7 +27,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -115,6 +117,23 @@ public class VisionStepService {
         }
         progress.recalculateGoal(entity.getGoal());
         return mapper.toResponse(entity);
+    }
+
+    // Vision Map drag-and-drop: orderedStepIds must be exactly this goal's
+    // current non-archived steps, just reshuffled — otherwise a stray or
+    // missing id would silently orphan a step's position. Reuses
+    // sequenceNumber (1-based, matching its existing convention) rather than
+    // adding a second order column.
+    public void reorderSteps(Long goalId, List<Long> orderedStepIds) {
+        Goal goal = lookup.goal(goalId);
+        List<VisionStep> siblings = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), lookup.userId());
+        Map<Long, VisionStep> byId = siblings.stream().collect(Collectors.toMap(VisionStep::getId, step -> step));
+        if (orderedStepIds.size() != siblings.size() || !byId.keySet().containsAll(orderedStepIds)) {
+            throw new BusinessRuleException("The given order must include exactly this goal's current steps.");
+        }
+        for (int index = 0; index < orderedStepIds.size(); index++) {
+            byId.get(orderedStepIds.get(index)).setSequenceNumber(index + 1);
+        }
     }
 
     public void archiveStep(Long id) {

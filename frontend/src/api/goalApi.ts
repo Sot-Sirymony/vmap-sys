@@ -37,6 +37,16 @@ export function updateGoalStatus(token: string, id: number, status: string) {
   });
 }
 
+// Vision Map drag-and-drop: orderedIds is the full, reshuffled set of this
+// dream's goals.
+export function reorderGoals(token: string, dreamId: number, orderedIds: number[]) {
+  return apiClient<void>('/goals/reorder', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ parentId: dreamId, orderedIds }),
+  });
+}
+
 export function restoreGoal(token: string, id: number) {
   return apiClient<void>(`/goals/${id}/restore`, {
     method: 'POST',

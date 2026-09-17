@@ -28,6 +28,7 @@ public record GoalResponse(
         // latest active step's targetDate.
         boolean scheduleOverrun,
         String scheduleOverrunDetail,
+        Integer sortOrder,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

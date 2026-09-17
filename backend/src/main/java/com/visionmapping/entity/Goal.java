@@ -93,6 +93,12 @@ public class Goal extends BaseAuditableEntity {
     @Column(name = "schedule_mode", nullable = false, length = 20)
     private ScheduleMode scheduleMode = ScheduleMode.BOTTOM_UP;
 
+    // Display order among this dream's goals, for the Vision Map tree's
+    // drag-and-drop reorder. 0-based; null on legacy rows until the first
+    // reorder (or a fresh create) sets it — callers fall back to id order.
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
     @Column(nullable = false)
     private boolean archived;
 }

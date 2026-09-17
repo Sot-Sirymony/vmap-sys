@@ -27,6 +27,8 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -82,6 +84,7 @@ public class TaskItemService {
                 .blockerReason(request.blockerReason())
                 .nextAction(request.nextAction())
                 .energyDemand(request.energyDemand())
+                .sortOrder(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId()).size())
                 .build();
         prepareTask(entity);
         TaskItem saved = taskItemRepository.save(entity);
@@ -129,6 +132,21 @@ public class TaskItemService {
         progress.recalculateStep(entity.getStep());
         logProgressChange(entity, progressBefore);
         return mapper.toResponse(entity);
+    }
+
+    // Vision Map drag-and-drop: orderedTaskIds must be exactly this step's
+    // current non-archived tasks, just reshuffled — otherwise a stray or
+    // missing id would silently orphan a task's position.
+    public void reorderTasks(Long stepId, List<Long> orderedTaskIds) {
+        VisionStep step = lookup.step(stepId);
+        List<TaskItem> siblings = taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), lookup.userId());
+        Map<Long, TaskItem> byId = siblings.stream().collect(Collectors.toMap(TaskItem::getId, task -> task));
+        if (orderedTaskIds.size() != siblings.size() || !byId.keySet().containsAll(orderedTaskIds)) {
+            throw new BusinessRuleException("The given order must include exactly this step's current tasks.");
+        }
+        for (int index = 0; index < orderedTaskIds.size(); index++) {
+            byId.get(orderedTaskIds.get(index)).setSortOrder(index);
+        }
     }
 
     public void archiveTask(Long id) {
