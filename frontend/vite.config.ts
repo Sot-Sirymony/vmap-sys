@@ -23,6 +23,35 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // React/router/MUI change on our own release cadence, not the
+        // browser's own cache lifetime, and they're already part of the
+        // eager entry bundle every page depends on either way — naming
+        // them their own chunk just means a deploy that only touches app
+        // code no longer busts the cache for library code that didn't
+        // change. Everything else (recharts, per-page code) is left to
+        // Rollup's own chunking so the existing lazy-route splitting
+        // (see App.tsx) keeps recharts out of this eager graph.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined;
+          }
+          if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
+            return 'vendor-react';
+          }
+          if (id.includes('react-router')) {
+            return 'vendor-router';
+          }
+          if (id.includes('@mui') || id.includes('@emotion')) {
+            return 'vendor-mui';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',

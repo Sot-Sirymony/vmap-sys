@@ -1435,6 +1435,7 @@ export function VisionMapTree({
               component="img"
               src={dream.imageUrl}
               alt=""
+              loading="lazy"
               sx={{ width: 36, height: 36, borderRadius: 1.5, objectFit: 'cover', flexShrink: 0 }}
               onError={(event) => { event.currentTarget.style.display = 'none'; }}
             />

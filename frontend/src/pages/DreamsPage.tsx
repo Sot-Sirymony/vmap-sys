@@ -432,6 +432,7 @@ export function DreamsPage() {
                 component="img"
                 src={dream.imageUrl}
                 alt=""
+                loading="lazy"
                 sx={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                 onError={(event) => { event.currentTarget.style.display = 'none'; }}
               />
