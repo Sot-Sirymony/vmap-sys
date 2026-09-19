@@ -98,6 +98,7 @@ public class ObstacleService {
      * are one click away when facing a similar obstacle. Read-only and
      * user-scoped (BR-30); excludes the obstacle being viewed and archived rows.
      */
+    @Cacheable(CacheConfig.OBSTACLE_LIST_CACHE)
     @Transactional(readOnly = true)
     public List<ObstacleResponse> relatedObstacles(Long id) {
         Obstacle target = lookup.obstacle(id);

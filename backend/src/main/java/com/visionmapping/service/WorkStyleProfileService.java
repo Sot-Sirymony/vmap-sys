@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.WorkStyleAssessmentRequest;
 import com.visionmapping.dto.response.WorkStyleProfileResponse;
 import com.visionmapping.entity.AppUser;
@@ -7,6 +8,7 @@ import com.visionmapping.entity.enums.WorkStyleArchetype;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.util.UserScope;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class WorkStyleProfileService {
     private final UserScope userScope;
     private final AppUserRepository appUserRepository;
 
+    @Cacheable(CacheConfig.WORK_STYLE_PROFILE_CACHE)
     @Transactional(readOnly = true)
     public WorkStyleProfileResponse getMyProfile() {
         return toResponse(userScope.currentUser());

@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.AppearancePreferencesRequest;
 import com.visionmapping.dto.response.AppearancePreferencesResponse;
 import com.visionmapping.entity.AppUser;
@@ -14,6 +15,7 @@ import com.visionmapping.entity.enums.UiDensity;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.util.UserScope;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +39,7 @@ public class AppearancePreferenceService {
     private final UserScope userScope;
     private final AppUserRepository appUserRepository;
 
+    @Cacheable(CacheConfig.APPEARANCE_PREFERENCE_CACHE)
     @Transactional(readOnly = true)
     public AppearancePreferencesResponse getMyPreferences() {
         return toResponse(userScope.currentUser());

@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.GoalSynergyLinkRequest;
 import com.visionmapping.dto.response.GoalSynergyLinkResponse;
 import com.visionmapping.entity.Goal;
@@ -11,6 +12,7 @@ import com.visionmapping.service.support.EntityLookup;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class GoalSynergyLinkService {
     private final EntityLookup lookup;
     private final GoalSynergyLinkRepository repository;
 
+    @Cacheable(CacheConfig.GOAL_SYNERGY_LINK_LIST_CACHE)
     @Transactional(readOnly = true)
     public List<GoalSynergyLinkResponse> listLinks(Long goalId) {
         Goal goal = lookup.goal(goalId); // ownership check (BR-29 user scope)

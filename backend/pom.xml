@@ -54,6 +54,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- Enables LettucePoolingConnectionFactory: Spring Boot switches on
+             pooling automatically once this is on the classpath, so
+             concurrent cache reads/writes use several physical connections
+             instead of funneling through Lettuce's one shared connection. -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>

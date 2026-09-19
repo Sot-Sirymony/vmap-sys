@@ -6,6 +6,7 @@ import static com.visionmapping.service.support.ServiceSupport.nextCode;
 import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
+import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.IssueReportRequest;
 import com.visionmapping.dto.response.IssueReportResponse;
 import com.visionmapping.entity.AppUser;
@@ -21,6 +22,7 @@ import com.visionmapping.repository.IssueReportRepository;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,7 @@ public class IssueReportService {
     private final IssueReportRepository issueReportRepository;
 
     /** FR-38.3: the caller's own reports, newest first. */
+    @Cacheable(CacheConfig.ISSUE_REPORT_LIST_CACHE)
     @Transactional(readOnly = true)
     public List<IssueReportResponse> listMyReports(boolean includeArchived) {
         return findAllForUser(issueReportRepository, lookup.userId(), includeArchived).stream()
@@ -83,7 +86,15 @@ public class IssueReportService {
         return mapper.toResponse(issueReportRepository.save(entity));
     }
 
-    /** The owner sees their own report; an admin sees any report. */
+    /**
+     * The owner sees their own report; an admin sees any report. Safe to
+     * cache despite that cross-user reach: the key is scoped to the viewer,
+     * not the report's owner, so there is no cross-user leakage — the only
+     * trade-off is that an admin's status change is invisible to the report's
+     * owner for up to the cache TTL, matching FR-38.5 (no notification is
+     * sent on resolution either way).
+     */
+    @Cacheable(CacheConfig.ISSUE_REPORT_CACHE)
     @Transactional(readOnly = true)
     public IssueReportResponse getReport(Long id) {
         return mapper.toResponse(accessibleReport(id));

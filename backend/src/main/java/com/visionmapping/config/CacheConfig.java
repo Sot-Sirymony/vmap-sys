@@ -2,12 +2,15 @@ package com.visionmapping.config;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.visionmapping.dto.response.AppearancePreferencesResponse;
 import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.GoalResponse;
+import com.visionmapping.dto.response.GoalSynergyLinkResponse;
 import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
+import com.visionmapping.dto.response.IssueReportResponse;
 import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.dto.response.PartnerResponse;
 import com.visionmapping.dto.response.ProgressLogResponse;
@@ -15,6 +18,7 @@ import com.visionmapping.dto.response.ReviewResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
+import com.visionmapping.dto.response.WorkStyleProfileResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +79,15 @@ public class CacheConfig implements CachingConfigurer {
     public static final String IDEAL_PARTNER_PROFILE_LIST_CACHE = "idealPartnerProfileList";
     public static final String GRATITUDE_ENTRY_CACHE = "gratitudeEntry";
     public static final String GRATITUDE_ENTRY_LIST_CACHE = "gratitudeEntryList";
+    // Single-row-per-user reads, fetched on nearly every page load — worth
+    // caching even though there's no "list" counterpart.
+    public static final String WORK_STYLE_PROFILE_CACHE = "workStyleProfile";
+    public static final String APPEARANCE_PREFERENCE_CACHE = "appearancePreference";
+    // Small, bounded, per-parent reads — same low-risk shape as the caches
+    // above, just added later.
+    public static final String GOAL_SYNERGY_LINK_LIST_CACHE = "goalSynergyLinkList";
+    public static final String ISSUE_REPORT_CACHE = "issueReport";
+    public static final String ISSUE_REPORT_LIST_CACHE = "issueReportList";
 
     /** Backstop for missed evictions; explicit eviction is the primary freshness mechanism. */
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
@@ -119,7 +132,12 @@ public class CacheConfig implements CachingConfigurer {
                 Map.entry(IDEAL_PARTNER_PROFILE_CACHE, dtoCache(objectMapper, IdealPartnerProfileResponse.class)),
                 Map.entry(IDEAL_PARTNER_PROFILE_LIST_CACHE, listCache(objectMapper, IdealPartnerProfileResponse.class)),
                 Map.entry(GRATITUDE_ENTRY_CACHE, dtoCache(objectMapper, GratitudeEntryResponse.class)),
-                Map.entry(GRATITUDE_ENTRY_LIST_CACHE, listCache(objectMapper, GratitudeEntryResponse.class)));
+                Map.entry(GRATITUDE_ENTRY_LIST_CACHE, listCache(objectMapper, GratitudeEntryResponse.class)),
+                Map.entry(WORK_STYLE_PROFILE_CACHE, dtoCache(objectMapper, WorkStyleProfileResponse.class)),
+                Map.entry(APPEARANCE_PREFERENCE_CACHE, dtoCache(objectMapper, AppearancePreferencesResponse.class)),
+                Map.entry(GOAL_SYNERGY_LINK_LIST_CACHE, listCache(objectMapper, GoalSynergyLinkResponse.class)),
+                Map.entry(ISSUE_REPORT_CACHE, dtoCache(objectMapper, IssueReportResponse.class)),
+                Map.entry(ISSUE_REPORT_LIST_CACHE, listCache(objectMapper, IssueReportResponse.class)));
         return builder -> builder.withInitialCacheConfigurations(configs);
     }
 

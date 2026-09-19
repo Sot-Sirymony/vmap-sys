@@ -62,6 +62,16 @@ spring:
       url: ${REDIS_URL:redis://localhost:6379}
       timeout: 500ms
       connect-timeout: 500ms
+      # commons-pool2 on the classpath switches this on automatically; sized
+      # and timed out explicitly to match the "dead Redis is cheap" philosophy
+      # above instead of Spring Boot's defaults (max-wait blocks indefinitely).
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 16
+          max-idle: 16
+          min-idle: 2
+          max-wait: 500ms
   datasource:
     url: jdbc:postgresql://localhost:5432/vision_mapping
     username: ${DB_USERNAME:postgres}
@@ -94,6 +104,13 @@ spring:
       url: ${REDIS_URL:redis://localhost:6379}
       timeout: 500ms
       connect-timeout: 500ms
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 16
+          max-idle: 16
+          min-idle: 2
+          max-wait: 500ms
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USERNAME}
