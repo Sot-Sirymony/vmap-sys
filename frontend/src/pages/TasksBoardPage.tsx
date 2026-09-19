@@ -223,6 +223,15 @@ export function TasksBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  // An active step filter is a strong hint of which step the next task
+  // belongs under.
+  function openCreateTask() {
+    if (filterStepId) {
+      setStepId(filterStepId);
+    }
+    setCreateOpen(true);
+  }
+
   // FR-22.1/22.2 quick-add: owner defaults to the signed-in user; the due
   // date — which no default can supply — is asked inline (BR-16).
   async function handleQuickAdd(title: string, dueDate?: string) {
@@ -667,7 +676,7 @@ export function TasksBoardPage() {
     <PageSection
       title="Tasks Board"
       subtitle="Manage executable work by status."
-      actions={<Button type="button" onClick={() => setCreateOpen(true)} disabled={steps.length === 0}>Create task</Button>}
+      actions={<Button type="button" onClick={openCreateTask} disabled={steps.length === 0}>Create task</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}

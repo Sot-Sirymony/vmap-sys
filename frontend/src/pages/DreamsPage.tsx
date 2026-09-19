@@ -110,6 +110,11 @@ export function DreamsPage() {
   const [viewMode, setViewMode] = useStoredState<ViewMode>('vms-view-dreams', 'list');
 
   function openCreateFlow() {
+    // A vision area filter is a strong hint of which one the next dream
+    // belongs under.
+    if (filterVisionAreaId) {
+      setVisionAreaId(filterVisionAreaId);
+    }
     if (crud.items.length > 0) {
       setFlatCreateOpen(true);
     } else {

@@ -250,6 +250,15 @@ export function StepsPage() {
     setStatus('NOT_STARTED');
   }
 
+  // Same idea as the quick-add row below: an active goal filter is a strong
+  // hint of which goal the next step belongs under.
+  function openCreateStep() {
+    if (filterGoalId) {
+      setGoalId(filterGoalId);
+    }
+    setCreateOpen(true);
+  }
+
   // FR-22.1 quick-add: sequence number continues from the goal's last step;
   // defaults keep BR-16 satisfied. An active goal filter takes over as the
   // parent so the row creates under the goal it displays and the new step
@@ -544,7 +553,7 @@ export function StepsPage() {
     <PageSection
       title="Steps"
       subtitle="Break goals into ordered action stages."
-      actions={<Button type="button" onClick={() => setCreateOpen(true)} disabled={goals.length === 0}>Create step</Button>}
+      actions={<Button type="button" onClick={openCreateStep} disabled={goals.length === 0}>Create step</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}

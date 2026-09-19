@@ -306,6 +306,15 @@ export function GoalsPage() {
     .sort()
     .map((letter) => ({ value: letter, label: letter }));
 
+  // Same idea as the quick-add row below: an active dream filter is a strong
+  // hint of which dream the next goal belongs under.
+  function openCreateGoal() {
+    if (filterDreamId) {
+      setDreamId(filterDreamId);
+    }
+    setCreateOpen(true);
+  }
+
   // FR-22.1 quick-add: title + parent only; defaults keep BR-16 satisfied.
   // An active dream filter takes over as the parent so the row creates under
   // the dream it displays and the new goal stays visible in the filtered list.
@@ -595,7 +604,7 @@ export function GoalsPage() {
     <PageSection
       title="Goals"
       subtitle="Define specific results for each dream."
-      actions={<Button type="button" onClick={() => setCreateOpen(true)} disabled={dreams.length === 0}>Create goal</Button>}
+      actions={<Button type="button" onClick={openCreateGoal} disabled={dreams.length === 0}>Create goal</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
