@@ -206,6 +206,27 @@ export function DataTable<T extends { id: number }>({
     return `row--reorderable${draggedId === rowId ? ' row--dragging' : ''}${dragOverId === rowId ? ' row--drag-over' : ''}`;
   }
 
+  // Reorder has three silent-failure conditions (wrong sort column, wrong
+  // direction, too many rows for one page) that otherwise look identical to
+  // "dragging just doesn't work" — spell out which one applies so it's never
+  // a mystery.
+  function reorderStatusMessage(): string | null {
+    if (!reorder) {
+      return null;
+    }
+    if (reorderActive) {
+      return 'Drag a row to move it to a new position.';
+    }
+    if (sortKey !== reorder.columnKey || sortDirection !== 'asc') {
+      const columnLabel = columns.find((column) => column.key === reorder.columnKey)?.label ?? 'its position column';
+      return `Sort by "${columnLabel}" ascending (click its header) to drag rows into a new order.`;
+    }
+    if (totalRows > currentRowsPerPage) {
+      return 'Increase rows per page below so everything fits on one page to drag rows into a new order.';
+    }
+    return null;
+  }
+
   function handleSort(key: string) {
     const nextDirection: SortDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc';
     setSortKey(key);
@@ -280,6 +301,7 @@ export function DataTable<T extends { id: number }>({
     const detailColumns = columns.filter((column) => column !== headerColumn && column !== actionsColumn);
     return (
       <>
+        {reorder && <p className="field-hint">Drag-and-drop reorder needs a wider screen — not available at this size.</p>}
         <div className="table-cards">
           {visibleRows.map((row) => (
             <article className={`table-card ${rowClassName?.(row) ?? ''}`} key={row.id}>
@@ -312,8 +334,11 @@ export function DataTable<T extends { id: number }>({
     );
   }
 
+  const reorderStatus = reorderStatusMessage();
+
   return (
     <>
+      {reorderStatus && <p className="field-hint">{reorderStatus}</p>}
       {selection && totalSelected > 0 && (
         <Toolbar
           className="bulk-actions-bar"
