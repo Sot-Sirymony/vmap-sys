@@ -34,18 +34,27 @@ export default defineConfig({
         // change. Everything else (recharts, per-page code) is left to
         // Rollup's own chunking so the existing lazy-route splitting
         // (see App.tsx) keeps recharts out of this eager graph.
+        //
+        // These all go into ONE chunk, not one each. @mui/@emotion
+        // reference React at module scope, so splitting them into
+        // separate chunks from react/react-router creates a circular
+        // chunk dependency: Rollup can't fully order the load, and one
+        // chunk ends up reading a const/class binding from another
+        // before that chunk finished initializing ("Cannot access 'X'
+        // before initialization" at runtime). Keeping them together
+        // avoids the cross-chunk cycle while still isolating them from
+        // app code for caching purposes.
         manualChunks(id) {
           if (!id.includes('node_modules')) {
             return undefined;
           }
-          if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) {
-            return 'vendor-react';
-          }
-          if (id.includes('react-router')) {
-            return 'vendor-router';
-          }
-          if (id.includes('@mui') || id.includes('@emotion')) {
-            return 'vendor-mui';
+          if (
+            /[\\/](react|react-dom|scheduler)[\\/]/.test(id) ||
+            id.includes('react-router') ||
+            id.includes('@mui') ||
+            id.includes('@emotion')
+          ) {
+            return 'vendor';
           }
           return undefined;
         },
