@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router';
+import { OTHER_CATEGORY_KEY } from './categoryKeys';
 import { Bar, BarChart, CartesianGrid, Pie, PieChart, Rectangle, ResponsiveContainer, Sector, Tooltip, XAxis } from 'recharts';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -25,7 +26,7 @@ const DEFAULT_DONUT_COLORS = [...chartBlueRamp];
  * standing for several categories, so `linkForKey` should send it to the
  * unfiltered list.
  */
-export const OTHER_CATEGORY_KEY = 'OTHER_CATEGORIES';
+export { OTHER_CATEGORY_KEY } from './categoryKeys';
 
 type CategoryBreakdownChartProps = {
   title: string;

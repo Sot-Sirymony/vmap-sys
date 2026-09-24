@@ -101,3 +101,17 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    headers:
+      # Everything Vite emits into /assets carries a content hash in its name,
+      # so a given URL's bytes can never change — a new build writes new names.
+      # That makes them safe to cache permanently, which is what "immutable"
+      # tells the browser: don't even revalidate. Fonts are hashed the same way.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # index.html is the one file whose name never changes, and it is what
+      # points at the hashed bundles. Caching it would pin the browser to an old
+      # deploy's asset names, so it is always revalidated.
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache

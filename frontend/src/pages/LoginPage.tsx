@@ -51,6 +51,14 @@ export function LoginPage() {
     setError('');
     setShowNotice(false);
     setLoading(true);
+    // Start fetching the screen this sign-in is about to land on, in parallel
+    // with the sign-in request rather than after it. The route is lazy, so
+    // without this the browser only discovers it needs that code once the
+    // navigation happens, and the wait is serial: authenticate, then download,
+    // then render. Deliberately not awaited and deliberately silent — it is an
+    // optimisation, and a failed prefetch must not fail a valid login. React
+    // will request the same module again on navigation and get the cached one.
+    void import('./DashboardPage').catch(() => undefined);
     try {
       const response = await login({ email, password });
 

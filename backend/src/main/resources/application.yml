@@ -21,6 +21,15 @@ spring:
 
 server:
   port: ${PORT:8080}
+  # The API's replies are JSON, and the big ones — the dashboard payload, the
+  # full list endpoints the Vision Map and board pages pull — compress to a
+  # fraction of their size. That is bandwidth the browser waits on, traded for
+  # CPU on a half-core instance, so the threshold keeps small replies (most
+  # writes, every error) uncompressed where the gain would not pay for the work.
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/plain,text/css,text/javascript
+    min-response-size: 2KB
 
 app:
   security:

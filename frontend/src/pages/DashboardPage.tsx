@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { getDashboardSummary } from '../api/dashboardApi';
-import { CategoryBreakdownChart, OTHER_CATEGORY_KEY } from '../components/dashboard/CategoryBreakdownChart';
-import { ChartTooltipContent } from '../components/dashboard/ChartTooltipContent';
+import {
+  CategoryBreakdownChart,
+  PartnerPipelineChart,
+  ProgressTrendChart,
+  VisionAreaProgressChart,
+} from '../components/dashboard/charts';
+import { OTHER_CATEGORY_KEY } from '../components/dashboard/categoryKeys';
 import { listVisionAreas } from '../api/visionAreaApi';
 import { FilterSelect, optionsFromEntities } from '../components/common/FilterSelect';
 import { AttentionPanel } from '../components/dashboard/AttentionPanel';
@@ -37,7 +41,7 @@ import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, VisionArea, WorkStatus } from '../types/vision';
-import { chartPrimary, heatmapLevelColors, priorityColor, statusColor } from '../theme';
+import { heatmapLevelColors, priorityColor, statusColor } from '../theme';
 import { obstacleTypeLabels, partnerStatusLabels } from '../utils/enumLabels';
 import { useThemeSettings } from '../context/ThemeModeContext';
 import { PageSection } from './PageSection';
@@ -356,23 +360,7 @@ export function DashboardPage() {
               <EmptyState>No progress logged yet — update a task's progress to start the trend.</EmptyState>
             ) : (
               <Box sx={{ width: '100%', height: 220 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={progressTrend} margin={{ left: 8, right: 16 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} width={40} />
-                    <RechartsTooltip content={<ChartTooltipContent />} />
-                    <Area
-                      dataKey="progress"
-                      name="Average progress %"
-                      type="monotone"
-                      fill={chartPrimary}
-                      fillOpacity={0.15}
-                      stroke={chartPrimary}
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ProgressTrendChart data={progressTrend} />
               </Box>
             )}
           </CardContent>
@@ -384,15 +372,7 @@ export function DashboardPage() {
               <EmptyState>No vision areas yet.</EmptyState>
             ) : (
               <Box sx={{ width: '100%', height: Math.max(220, visionAreaProgress.length * 44) }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={visionAreaProgress} layout="vertical" margin={{ left: 8, right: 16 }}>
-                    <CartesianGrid horizontal={false} />
-                    <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} tickLine={false} axisLine={false} />
-                    <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={120} />
-                    <RechartsTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="progress" name="Progress %" radius={4} fill={chartPrimary} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <VisionAreaProgressChart data={visionAreaProgress} />
               </Box>
             )}
           </CardContent>
@@ -407,24 +387,13 @@ export function DashboardPage() {
           ) : (
             <>
               <Box sx={{ width: '100%', height: 72 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={partnerPipelineData} layout="vertical" margin={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-                    <XAxis type="number" hide />
-                    <YAxis type="category" dataKey="name" hide />
-                    <RechartsTooltip content={<ChartTooltipContent />} />
-                    {PARTNER_STATUS_ORDER.map((status) => (
-                      <Bar
-                        key={status}
-                        dataKey={status}
-                        stackId="pipeline"
-                        name={partnerStatusLabels[status]}
-                        fill={partnerStatusFill(status)}
-                        cursor="pointer"
-                        onClick={() => navigate(`/partners?status=${status}`)}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
+                <PartnerPipelineChart
+                  data={partnerPipelineData}
+                  statuses={PARTNER_STATUS_ORDER}
+                  labelFor={(status) => partnerStatusLabels[status]}
+                  fillFor={partnerStatusFill}
+                  onSelectStatus={(status) => navigate(`/partners?status=${status}`)}
+                />
               </Box>
               <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', justifyContent: 'center', pt: 1.5 }}>
                 {PARTNER_STATUS_ORDER.map((status) => (

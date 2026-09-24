@@ -48,6 +48,23 @@ export default defineConfig({
           if (!id.includes('node_modules')) {
             return undefined;
           }
+          // Recharts and the d3 packages under it are the largest thing the
+          // app ships, and only the dashboard's figures use them. They are
+          // already reached exclusively through lazy imports (see
+          // components/dashboard/charts), so Rollup was giving them a chunk of
+          // their own anyway — but naming it after whichever shared module it
+          // happened to pick made a 345kB chart bundle read as
+          // "ChartTooltipContent" in the build output. Naming it here only
+          // fixes that label; the loading behaviour is unchanged. It depends
+          // on the vendor chunk below and nothing depends on it, so there is
+          // no cross-chunk cycle of the kind described next.
+          if (
+            id.includes('recharts') ||
+            id.includes('victory-vendor') ||
+            /[\\/]d3-[a-z-]+[\\/]/.test(id)
+          ) {
+            return 'charts';
+          }
           if (
             /[\\/](react|react-dom|scheduler)[\\/]/.test(id) ||
             id.includes('react-router') ||

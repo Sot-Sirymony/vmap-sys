@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { clearApiCache } from '../api/apiClient';
 import type { AuthResponse, AuthState } from '../types/auth';
 import type { AppearancePreferences } from '../types/preferences';
 
@@ -53,6 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     appearance,
     isAuthenticated: Boolean(auth.token),
     setSession: (response, remember = true) => {
+      // A different account is signing in; nothing cached for the last one
+      // may be reused, even though the cache keys already include the token.
+      clearApiCache();
       setAppearance(response.appearance ?? null);
       const nextAuth: AuthState = {
         token: response.token,
@@ -73,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuth(nextAuth);
     },
     logout: () => {
+      clearApiCache();
       localStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem(STORAGE_KEY);
       setAppearance(null);

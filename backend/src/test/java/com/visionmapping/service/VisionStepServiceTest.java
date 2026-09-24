@@ -35,6 +35,7 @@ import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
+import com.visionmapping.service.support.Rollups;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.util.List;
@@ -139,7 +140,7 @@ class VisionStepServiceTest {
         TaskItem existingTask = task(30L, complexStep, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(complexStep));
         when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(existingTask));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(complexStep));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(complexStep)));
 
         service.updateStepStatus(20L, "COMPLETED", false);
 
@@ -172,7 +173,7 @@ class VisionStepServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
         lenient().when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(existingTask));
-        lenient().when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        lenient().when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         service.updateStep(20L, requestFrom(step));
 
@@ -188,7 +189,7 @@ class VisionStepServiceTest {
 
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         when(taskItemRepository.findByStep_IdAndUser_Id(20L, 1L)).thenReturn(List.of(task));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(otherStep));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(otherStep)));
 
         service.archiveStep(20L);
 

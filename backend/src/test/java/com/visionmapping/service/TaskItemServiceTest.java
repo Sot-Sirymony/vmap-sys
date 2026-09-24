@@ -39,6 +39,7 @@ import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
+import com.visionmapping.service.support.Rollups;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -129,8 +130,8 @@ class TaskItemServiceTest {
         TaskItem task2 = task(31L, step, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(60));
 
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task1));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(task1, task2));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task1, task2)));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         TaskItemResponse response = service.updateTaskStatus(30L, "COMPLETED");
 
@@ -149,8 +150,8 @@ class TaskItemServiceTest {
         TaskItem task2 = task(31L, step, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
 
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task1));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(task1, task2));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task1, task2)));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         service.updateTaskStatus(30L, "COMPLETED");
 
@@ -167,7 +168,7 @@ class TaskItemServiceTest {
         TaskItem task = task(30L, step, WorkStatus.NOT_STARTED, BigDecimal.valueOf(10));
 
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         service.updateTaskStatus(30L, "IN_PROGRESS");
 
@@ -190,8 +191,8 @@ class TaskItemServiceTest {
         TaskItem task = task(30L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
         task.setArchived(true);
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(task));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task)));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         service.restoreTask(30L);
 
@@ -227,8 +228,8 @@ class TaskItemServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         when(taskItemRepository.findCodesByUserId(1L)).thenReturn(List.of());
         when(taskItemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of());
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of());
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of()));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of()));
 
         TaskItemRequest request = new TaskItemRequest(20L, "Blocked task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.BLOCKED, BigDecimal.TEN, null, null, "Waiting on mentor", null, null);
@@ -276,8 +277,8 @@ class TaskItemServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(step));
         when(taskItemRepository.findCodesByUserId(1L)).thenReturn(List.of());
         when(taskItemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of());
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of());
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of()));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of()));
 
         TaskItemRequest request = new TaskItemRequest(20L, "Task", null, "Owner", Priority.HIGH, null, null,
                 LocalDate.now().plusDays(5), WorkStatus.COMPLETED, BigDecimal.valueOf(40), null, null, null, null, null);
@@ -296,8 +297,8 @@ class TaskItemServiceTest {
         completedTask.setCompletedAt(java.time.Instant.now());
 
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(completedTask));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(completedTask));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(completedTask)));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         TaskItemResponse response = service.updateTaskStatus(30L, "IN_PROGRESS");
 
@@ -312,8 +313,8 @@ class TaskItemServiceTest {
         TaskItem task2 = task(31L, step, WorkStatus.IN_PROGRESS, BigDecimal.valueOf(80));
 
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task1));
-        when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(task2));
-        when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(step));
+        when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task2)));
+        when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
         service.archiveTask(30L);
 

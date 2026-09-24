@@ -5,13 +5,12 @@ import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
+import com.visionmapping.repository.ProgressRollup;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -36,9 +35,9 @@ public class ProgressCalculator {
             recalculateGoal(step.getGoal());
             return;
         }
-        List<TaskItem> tasks = taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), step.getUser().getId());
-        step.setProgressPercent(average(tasks, TaskItem::getProgressPercent));
-        if (!tasks.isEmpty() && tasks.stream().allMatch(task -> task.getStatus() == WorkStatus.COMPLETED)) {
+        ProgressRollup tasks = taskItemRepository.rollUpForStep(step.getId(), step.getUser().getId());
+        step.setProgressPercent(average(tasks));
+        if (tasks.allComplete()) {
             step.setStatus(WorkStatus.COMPLETED);
         }
         recalculateGoal(step.getGoal());
@@ -48,21 +47,19 @@ public class ProgressCalculator {
         if (goal.isManualProgressOverride()) {
             return;
         }
-        List<VisionStep> steps = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), goal.getUser().getId());
-        goal.setProgressPercent(average(steps, VisionStep::getProgressPercent));
-        if (!steps.isEmpty() && steps.stream().allMatch(step -> step.getStatus() == WorkStatus.COMPLETED)) {
+        ProgressRollup steps = visionStepRepository.rollUpForGoal(goal.getId(), goal.getUser().getId());
+        goal.setProgressPercent(average(steps));
+        if (steps.allComplete()) {
             goal.setStatus(WorkStatus.COMPLETED);
         }
     }
 
-    public <T> BigDecimal average(List<T> values, Function<T, BigDecimal> progressGetter) {
-        if (values.isEmpty()) {
+    /** Same rounding the per-row version used: one division at scale 2, HALF_UP. */
+    public BigDecimal average(ProgressRollup rollup) {
+        if (rollup.isEmpty()) {
             return ZERO;
         }
-        return values.stream()
-                .map(progressGetter)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(values.size()), 2, RoundingMode.HALF_UP);
+        return rollup.progressSum().divide(BigDecimal.valueOf(rollup.childCount()), 2, RoundingMode.HALF_UP);
     }
 
     /** A task with no due date (possible via Excel import) is never overdue. */
