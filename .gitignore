@@ -44,3 +44,22 @@ local_db.md
 # Google Stitch MCP API key (never commit).
 google_stitch.md
 **/google_stitch.md
+
+# Production connection details (never commit).
+# Holds the Render Key Value external URL, which embeds its password — unlike
+# the internal URL, that string is a live credential for a service now reachable
+# from outside Render. Matched by filename as well as by path, so it stays
+# ignored if the file is moved or copied.
+production_env.md
+**/production_env.md
+
+# Database dumps (never commit).
+# The region migration runbook writes one of these into the repo root, and a
+# dump is a complete copy of production — every user row and every password
+# hash. Matched by extension so a dump cannot be committed by accident wherever
+# it is written. Deliberately NOT *.sql: the Flyway migrations are .sql files
+# and must stay tracked.
+*.dump
+*.backup
+*.sql.gz
+*.sql.zst
