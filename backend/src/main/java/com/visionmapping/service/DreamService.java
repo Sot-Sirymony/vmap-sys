@@ -69,7 +69,7 @@ public class DreamService {
         AppUser user = lookup.currentUser();
         VisionArea visionArea = lookup.visionArea(request.visionAreaId());
         Dream entity = Dream.builder()
-                .code(nextCode("D", dreamRepository.findByUser_Id(user.getId()), Dream::getCode))
+                .code(nextCode("D", dreamRepository.findCodesByUserId(user.getId())))
                 .user(user)
                 .visionArea(visionArea)
                 .title(request.title())
@@ -93,7 +93,7 @@ public class DreamService {
                 .decisionNoOutsideInput(request.decisionNoOutsideInput())
                 .decisionChasedEasyReward(request.decisionChasedEasyReward())
                 .decisionDismissedDisagreeingAdvice(request.decisionDismissedDisagreeingAdvice())
-                .sortOrder(dreamRepository.findByVisionArea_IdAndUser_IdAndArchivedFalse(visionArea.getId(), user.getId()).size())
+                .sortOrder(Math.toIntExact(dreamRepository.countByVisionArea_IdAndUser_IdAndArchivedFalse(visionArea.getId(), user.getId())))
                 .build();
         validateDecisionGate(entity);
         return toResponse(dreamRepository.save(entity));

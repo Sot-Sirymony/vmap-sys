@@ -67,7 +67,7 @@ public class TaskItemService {
         AppUser user = lookup.currentUser();
         VisionStep step = lookup.step(request.stepId());
         TaskItem entity = TaskItem.builder()
-                .code(nextCode("T", taskItemRepository.findByUser_Id(user.getId()), TaskItem::getCode))
+                .code(nextCode("T", taskItemRepository.findCodesByUserId(user.getId())))
                 .user(user)
                 .step(step)
                 .title(request.title())
@@ -84,7 +84,7 @@ public class TaskItemService {
                 .blockerReason(request.blockerReason())
                 .nextAction(request.nextAction())
                 .energyDemand(request.energyDemand())
-                .sortOrder(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId()).size())
+                .sortOrder(Math.toIntExact(taskItemRepository.countByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId())))
                 .build();
         prepareTask(entity);
         TaskItem saved = taskItemRepository.save(entity);

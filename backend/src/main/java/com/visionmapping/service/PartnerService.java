@@ -66,7 +66,7 @@ public class PartnerService {
     public PartnerResponse createPartner(PartnerRequest request) {
         AppUser user = lookup.currentUser();
         Partner entity = Partner.builder()
-                .code(nextCode("P", partnerRepository.findByUser_Id(user.getId()), Partner::getCode))
+                .code(nextCode("P", partnerRepository.findCodesByUserId(user.getId())))
                 .user(user)
                 .name(request.name())
                 .role(request.role())

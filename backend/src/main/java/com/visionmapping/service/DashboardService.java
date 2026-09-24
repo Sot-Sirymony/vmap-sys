@@ -55,6 +55,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,8 +130,8 @@ public class DashboardService {
      */
     @Cacheable(CacheConfig.DASHBOARD_CACHE)
     public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId, LocalDate periodStart, LocalDate periodEnd) {
-        ScopedData data = loadScopedData(visionAreaId);
         LocalDate today = LocalDate.now(clock);
+        ScopedData data = loadScopedData(visionAreaId, today);
         LocalDate weekEnd = today.plusDays(DAYS_PER_WEEK);
         // The selectable window for the two time-based tiles. Defaults to the
         // current month when the caller passes nothing.
@@ -177,11 +178,10 @@ public class DashboardService {
     private DashboardSummaryResponse.Gratitude buildGratitude(LocalDate today) {
         Instant since = today.minusDays(DAYS_PER_WEEK).atStartOfDay(clock.getZone()).toInstant();
         long countThisWeek = gratitudeEntryRepository
-                .findByUser_IdAndArchivedFalseAndCreatedAtAfterOrderByCreatedAtDesc(lookup.userId(), since)
-                .size();
+                .countByUser_IdAndArchivedFalseAndCreatedAtAfter(lookup.userId(), since);
         List<GratitudeEntryResponse> recent = gratitudeEntryRepository
-                .findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(lookup.userId()).stream()
-                .limit(RECENT_GRATITUDE_ENTRY_LIMIT)
+                .findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(
+                        lookup.userId(), PageRequest.of(0, RECENT_GRATITUDE_ENTRY_LIMIT)).stream()
                 .map(mapper::toResponse)
                 .toList();
         return new DashboardSummaryResponse.Gratitude(countThisWeek, recent);
@@ -214,7 +214,7 @@ public class DashboardService {
         return new DashboardSummaryResponse.EnergyBudget(charge, neutral, drain, charge - drain);
     }
 
-    private ScopedData loadScopedData(Long visionAreaId) {
+    private ScopedData loadScopedData(Long visionAreaId, LocalDate today) {
         Long userId = lookup.userId();
         return new ScopedData(
                 scoped(visionAreaRepository.findByUser_IdAndArchivedFalse(userId), VisionArea::getId, visionAreaId),
@@ -225,7 +225,11 @@ public class DashboardService {
                 scoped(obstacleRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
                 scoped(partnerRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
                 scoped(reviewRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(progressLogRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId));
+                // Only the trend window (plus each task's last pre-window value) —
+                // the log table is the one that grows without bound.
+                scoped(progressLogRepository.findTrendWindow(
+                        userId, trendStart(today).atStartOfDay(clock.getZone()).toInstant()),
+                        DashboardService::areaIdOf, visionAreaId));
     }
 
     /** Keeps only the records belonging to the chosen area; null means keep everything. */
@@ -518,9 +522,14 @@ public class DashboardService {
      */
     private List<DashboardSummaryResponse.TrendPoint> buildProgressTrend(List<ProgressLog> logs, LocalDate today) {
         int totalDays = TREND_WEEKS * DAYS_PER_WEEK;
-        LocalDate start = today.minusDays(totalDays - 1L);
+        LocalDate start = trendStart(today);
         List<BigDecimal> dailyAverages = dailyAverageProgress(groupLogsByTask(logs), start, totalDays);
         return trimLeadingEmptyWeeks(weeklySamples(dailyAverages, start));
+    }
+
+    /** First day of the twelve-week trend window; also the cut-off for which log rows are loaded. */
+    private static LocalDate trendStart(LocalDate today) {
+        return today.minusDays((long) TREND_WEEKS * DAYS_PER_WEEK - 1L);
     }
 
     /** Each task's log entries in the order they were written, so "latest as of a day" is a forward scan. */

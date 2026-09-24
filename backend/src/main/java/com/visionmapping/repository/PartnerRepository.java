@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface PartnerRepository extends JpaRepository<Partner, Long>, UserScopedRepository<Partner> {
+public interface PartnerRepository extends JpaRepository<Partner, Long>, CodedRepository<Partner> {
 
     Page<Partner> findByUser_Id(Long userId, Pageable pageable);
 

@@ -67,7 +67,7 @@ public class GoalService {
         AppUser user = lookup.currentUser();
         Dream dream = lookup.dream(request.dreamId());
         Goal entity = Goal.builder()
-                .code(nextCode("G", goalRepository.findByUser_Id(user.getId()), Goal::getCode))
+                .code(nextCode("G", goalRepository.findCodesByUserId(user.getId())))
                 .user(user)
                 .dream(dream)
                 .title(request.title())
@@ -82,7 +82,7 @@ public class GoalService {
                 .moonshot(request.moonshot())
                 .moonshotVision(request.moonshotVision())
                 .scheduleMode(request.scheduleMode())
-                .sortOrder(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), user.getId()).size())
+                .sortOrder(Math.toIntExact(goalRepository.countByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), user.getId())))
                 .build();
         return toResponse(goalRepository.save(entity));
     }

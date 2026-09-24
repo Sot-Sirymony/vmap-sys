@@ -4,9 +4,12 @@ import com.visionmapping.entity.Goal;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface GoalRepository extends JpaRepository<Goal, Long>, UserScopedRepository<Goal> {
+public interface GoalRepository extends JpaRepository<Goal, Long>, CodedRepository<Goal> {
 
     List<Goal> findByDream_IdAndUser_Id(Long dreamId, Long userId);
 
     List<Goal> findByDream_IdAndUser_IdAndArchivedFalse(Long dreamId, Long userId);
+
+    /** Next sort position in a dream: a count, not a load of every sibling. */
+    long countByDream_IdAndUser_IdAndArchivedFalse(Long dreamId, Long userId);
 }

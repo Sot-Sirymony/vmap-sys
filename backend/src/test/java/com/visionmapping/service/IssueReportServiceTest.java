@@ -103,7 +103,7 @@ class IssueReportServiceTest {
 
     @Test
     void creatingBugWithSeverityOpensReportWithGeneratedCode() {
-        when(issueReportRepository.findByUser_Id(1L)).thenReturn(List.of());
+        when(issueReportRepository.findCodesByUserId(1L)).thenReturn(List.of());
         when(issueReportRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         IssueReportResponse response = service.createReport(request(ReportType.BUG, Severity.HIGH));
@@ -115,7 +115,7 @@ class IssueReportServiceTest {
 
     @Test
     void creatingImprovementWithoutSeveritySucceeds() {
-        when(issueReportRepository.findByUser_Id(1L)).thenReturn(List.of());
+        when(issueReportRepository.findCodesByUserId(1L)).thenReturn(List.of());
         when(issueReportRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         IssueReportResponse response = service.createReport(request(ReportType.IMPROVEMENT, null));

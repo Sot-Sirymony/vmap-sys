@@ -73,7 +73,7 @@ public class IssueReportService {
         AppUser user = lookup.currentUser();
         requireSeverityForBug(request.reportType(), request.severity());
         IssueReport entity = IssueReport.builder()
-                .code(nextCode("IR", issueReportRepository.findByUser_Id(user.getId()), IssueReport::getCode))
+                .code(nextCode("IR", issueReportRepository.findCodesByUserId(user.getId())))
                 .user(user)
                 .reportType(request.reportType())
                 .title(request.title())

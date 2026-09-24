@@ -52,7 +52,7 @@ public class VisionAreaService {
     public VisionAreaResponse createVisionArea(VisionAreaRequest request) {
         AppUser user = lookup.currentUser();
         VisionArea entity = VisionArea.builder()
-                .code(nextCode("VA", visionAreaRepository.findByUser_Id(user.getId()), VisionArea::getCode))
+                .code(nextCode("VA", visionAreaRepository.findCodesByUserId(user.getId())))
                 .user(user)
                 .name(request.name())
                 .description(request.description())
@@ -60,7 +60,7 @@ public class VisionAreaService {
                 .priority(request.priority())
                 .letterRank(request.letterRank())
                 .status(request.status())
-                .sortOrder(visionAreaRepository.findByUser_IdAndArchivedFalse(user.getId()).size())
+                .sortOrder(Math.toIntExact(visionAreaRepository.countByUser_IdAndArchivedFalse(user.getId())))
                 .build();
         return mapper.toResponse(visionAreaRepository.save(entity));
     }

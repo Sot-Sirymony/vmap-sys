@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.visionmapping.dto.response.DashboardSummaryResponse;
@@ -48,6 +50,8 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -250,7 +254,7 @@ class DashboardServiceTest {
         when(goalRepository.findByUser_IdAndArchivedFalse(1L))
                 .thenReturn(List.of(careerStep.getGoal(), healthGoal));
         // Career moved yesterday; Health has an active goal but no recent progress.
-        when(progressLogRepository.findByUser_IdAndArchivedFalse(1L))
+        when(progressLogRepository.findTrendWindow(eq(1L), any(Instant.class)))
                 .thenReturn(List.of(progressLog(40L, careerTask, Instant.now().minus(1, ChronoUnit.DAYS))));
 
         DashboardSummaryResponse summary = service.buildDashboardSummary();
@@ -539,7 +543,7 @@ class DashboardServiceTest {
                 .loggedAt(java.time.Instant.now().minus(java.time.Duration.ofDays(2)))
                 .build();
 
-        when(progressLogRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(log));
+        when(progressLogRepository.findTrendWindow(eq(1L), any(Instant.class))).thenReturn(List.of(log));
 
         DashboardSummaryResponse summary = service.buildDashboardSummary();
 
@@ -554,9 +558,9 @@ class DashboardServiceTest {
                 .id(1L).user(testUser).category(GratitudeCategory.PERSON).description("A mentor's advice")
                 .archived(false).build();
 
-        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseAndCreatedAtAfterOrderByCreatedAtDesc(eq(1L), any(Instant.class)))
-                .thenReturn(List.of(recent));
-        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L))
+        when(gratitudeEntryRepository.countByUser_IdAndArchivedFalseAndCreatedAtAfter(eq(1L), any(Instant.class)))
+                .thenReturn(1L);
+        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(eq(1L), any(Pageable.class)))
                 .thenReturn(List.of(recent));
 
         DashboardSummaryResponse summary = service.buildDashboardSummary();
@@ -567,17 +571,18 @@ class DashboardServiceTest {
     }
 
     @Test
-    void gratitudeCardCapsRecentEntriesAtThree() {
-        List<GratitudeEntry> entries = List.of(
-                GratitudeEntry.builder().id(1L).user(testUser).category(GratitudeCategory.OTHER).description("One").archived(false).build(),
-                GratitudeEntry.builder().id(2L).user(testUser).category(GratitudeCategory.OTHER).description("Two").archived(false).build(),
-                GratitudeEntry.builder().id(3L).user(testUser).category(GratitudeCategory.OTHER).description("Three").archived(false).build(),
-                GratitudeEntry.builder().id(4L).user(testUser).category(GratitudeCategory.OTHER).description("Four").archived(false).build());
+    void gratitudeCardAsksTheDatabaseForOnlyTheThreeMostRecentEntries() {
+        GratitudeEntry newest = GratitudeEntry.builder()
+                .id(1L).user(testUser).category(GratitudeCategory.OTHER).description("One").archived(false).build();
 
-        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L)).thenReturn(entries);
+        // The cap is now part of the query, so the test pins the page request
+        // rather than trimming a full list in memory.
+        when(gratitudeEntryRepository.findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L, PageRequest.of(0, 3)))
+                .thenReturn(List.of(newest));
 
         DashboardSummaryResponse summary = service.buildDashboardSummary();
 
-        assertThat(summary.gratitude().recent()).hasSize(3);
+        assertThat(summary.gratitude().recent()).hasSize(1);
+        verify(gratitudeEntryRepository, never()).findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L);
     }
 }

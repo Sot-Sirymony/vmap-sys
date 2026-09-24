@@ -3,21 +3,18 @@ package com.visionmapping.service.support;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 class ServiceSupportTest {
 
-    private static final Function<String, String> IDENTITY = code -> code;
-
     @Test
     void nextCodeStartsAtOneWhenNoRecordsExist() {
-        assertThat(ServiceSupport.nextCode("G", List.of(), IDENTITY)).isEqualTo("G-001");
+        assertThat(ServiceSupport.nextCode("G", List.of())).isEqualTo("G-001");
     }
 
     @Test
     void nextCodeIncrementsHighestExistingSuffix() {
-        assertThat(ServiceSupport.nextCode("G", List.of("G-001", "G-002", "G-003"), IDENTITY))
+        assertThat(ServiceSupport.nextCode("G", List.of("G-001", "G-002", "G-003")))
                 .isEqualTo("G-004");
     }
 
@@ -28,13 +25,13 @@ class ServiceSupportTest {
      */
     @Test
     void nextCodeSkipsGapsLeftByPermanentDeletes() {
-        assertThat(ServiceSupport.nextCode("G", List.of("G-002", "G-003"), IDENTITY))
+        assertThat(ServiceSupport.nextCode("G", List.of("G-002", "G-003")))
                 .isEqualTo("G-004");
     }
 
     @Test
     void nextCodeIgnoresNullAndNonNumericCodes() {
-        assertThat(ServiceSupport.nextCode("G", java.util.Arrays.asList(null, "imported", "G-ABC", "G-005"), IDENTITY))
+        assertThat(ServiceSupport.nextCode("G", java.util.Arrays.asList(null, "imported", "G-ABC", "G-005")))
                 .isEqualTo("G-006");
     }
 }

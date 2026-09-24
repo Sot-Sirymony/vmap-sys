@@ -3,7 +3,6 @@ package com.visionmapping.service.support;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.UserScopedRepository;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  * Stateless helpers every entity service shares: generating the next display
@@ -29,10 +28,10 @@ public final class ServiceSupport {
      * while higher codes remain, so a count-based code collides with the
      * (user_id, code) unique constraint.
      */
-    public static <T> String nextCode(String prefix, List<T> existing, Function<T, String> codeOf) {
+    public static String nextCode(String prefix, List<String> existingCodes) {
         int max = 0;
-        for (T item : existing) {
-            max = Math.max(max, codeSuffix(codeOf.apply(item)));
+        for (String code : existingCodes) {
+            max = Math.max(max, codeSuffix(code));
         }
         return "%s-%03d".formatted(prefix, max + 1);
     }
