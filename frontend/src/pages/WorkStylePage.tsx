@@ -126,8 +126,12 @@ export function WorkStylePage() {
                     })}
                     aria-label={`Question ${index + 1}`}
                   >
-                    <ToggleButton value="a" sx={{ textAlign: 'left', justifyContent: 'flex-start' }}>{item.a}</ToggleButton>
-                    <ToggleButton value="b" sx={{ textAlign: 'left', justifyContent: 'flex-start' }}>{item.b}</ToggleButton>
+                    <ToggleButton value="a" sx={{ textAlign: 'left', justifyContent: 'flex-start' }}>
+                      <QuizStatement english={item.a} khmer={item.aKm} />
+                    </ToggleButton>
+                    <ToggleButton value="b" sx={{ textAlign: 'left', justifyContent: 'flex-start' }}>
+                      <QuizStatement english={item.b} khmer={item.bKm} />
+                    </ToggleButton>
                   </ToggleButtonGroup>
                 </div>
               ))}
@@ -139,5 +143,17 @@ export function WorkStylePage() {
         </Card>
       )}
     </PageSection>
+  );
+}
+
+/** One quiz statement: the English line with its Khmer translation underneath. */
+function QuizStatement({ english, khmer }: { english: string; khmer: string }) {
+  return (
+    <Stack spacing={0.5} sx={{ textTransform: 'none' }}>
+      <span>{english}</span>
+      <Typography component="span" variant="body2" lang="km" sx={{ color: 'text.secondary', lineHeight: 1.8 }}>
+        {khmer}
+      </Typography>
+    </Stack>
   );
 }

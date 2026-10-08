@@ -7,27 +7,31 @@ export type QuizItem = {
   axis: QuizAxis;
   a: string;
   b: string;
+  /** Khmer translation of `a`, shown under the English. */
+  aKm: string;
+  /** Khmer translation of `b`, shown under the English. */
+  bKm: string;
 };
 
 // pace axis: a = fast-deciding, b = deliberate.
 // focus axis: a = task-oriented, b = people-oriented.
 export const QUIZ_ITEMS: QuizItem[] = [
-  { axis: 'pace', a: "I'd rather decide quickly and adjust later", b: "I'd rather gather more information before deciding" },
-  { axis: 'pace', a: "A rough plan that gets moving beats a perfect plan that's still being drafted", b: "A plan worth having is worth getting right before we start" },
-  { axis: 'pace', a: 'I trust my gut in the moment', b: "I trust a process I've thought through" },
-  { axis: 'pace', a: 'Waiting to act feels like wasted time', b: 'Acting without enough thought feels risky' },
-  { axis: 'pace', a: "I'd rather try something and learn from the result", b: "I'd rather map out the risks before trying" },
-  { axis: 'pace', a: 'Momentum matters more to me than precision', b: 'Precision matters more to me than speed' },
-  { axis: 'pace', a: 'I make most decisions in the room, not after', b: 'I usually want to sleep on a decision' },
-  { axis: 'pace', a: 'Long deliberation frustrates me', b: 'Rushed decisions worry me' },
-  { axis: 'focus', a: 'I focus first on what needs to get done', b: 'I focus first on how the people involved are doing' },
-  { axis: 'focus', a: 'Results are the clearest sign of a good week', b: 'Strong relationships are the clearest sign of a good week' },
-  { axis: 'focus', a: "I'd rather solve the problem than talk through how everyone feels about it", b: "I'd rather talk it through so everyone feels heard" },
-  { axis: 'focus', a: 'Efficiency is what I notice first in a process', b: 'Tone is what I notice first in a room' },
-  { axis: 'focus', a: 'I measure progress by what got checked off', b: 'I measure progress by how the team is holding up' },
-  { axis: 'focus', a: "I'd rather work alone and deliver", b: "I'd rather work with others and connect" },
-  { axis: 'focus', a: 'Getting to the point matters more to me than the small talk first', b: 'The small talk first matters to me as much as the point' },
-  { axis: 'focus', a: 'I judge a meeting by its outcomes', b: 'I judge a meeting by how people left it' },
+  { axis: 'pace', a: "I'd rather decide quickly and adjust later", b: "I'd rather gather more information before deciding", aKm: 'ខ្ញុំចូលចិត្តសម្រេចចិត្តឱ្យរហ័ស ហើយកែតម្រូវនៅពេលក្រោយ', bKm: 'ខ្ញុំចូលចិត្តប្រមូលព័ត៌មានបន្ថែមសិន មុននឹងសម្រេចចិត្ត' },
+  { axis: 'pace', a: "A rough plan that gets moving beats a perfect plan that's still being drafted", b: "A plan worth having is worth getting right before we start", aKm: 'ផែនការសង្ខេបដែលអាចចាប់ផ្តើមអនុវត្តបានភ្លាម ប្រសើរជាងផែនការល្អឥតខ្ចោះដែលនៅតែកំពុងព្រាង', bKm: 'ផែនការដែលមានតម្លៃ គួរតែរៀបចំឱ្យបានត្រឹមត្រូវ មុនពេលយើងចាប់ផ្តើម' },
+  { axis: 'pace', a: 'I trust my gut in the moment', b: "I trust a process I've thought through", aKm: 'ខ្ញុំជឿលើវិចារណញាណរបស់ខ្ញុំនៅពេលនោះ', bKm: 'ខ្ញុំជឿលើដំណើរការដែលខ្ញុំបានគិតពិចារណារួចហើយ' },
+  { axis: 'pace', a: 'Waiting to act feels like wasted time', b: 'Acting without enough thought feels risky', aKm: 'ការរង់ចាំមុននឹងធ្វើសកម្មភាព ហាក់ដូចជាខាតពេលវេលា', bKm: 'ការធ្វើសកម្មភាពដោយមិនបានគិតគ្រប់គ្រាន់ ហាក់ដូចជាមានហានិភ័យ' },
+  { axis: 'pace', a: "I'd rather try something and learn from the result", b: "I'd rather map out the risks before trying", aKm: 'ខ្ញុំចូលចិត្តសាកល្បងធ្វើ ហើយរៀនពីលទ្ធផល', bKm: 'ខ្ញុំចូលចិត្តវិភាគហានិភ័យឱ្យច្បាស់សិន មុននឹងសាកល្បង' },
+  { axis: 'pace', a: 'Momentum matters more to me than precision', b: 'Precision matters more to me than speed', aKm: 'សម្រាប់ខ្ញុំ សន្ទុះនៃការងារសំខាន់ជាងភាពជាក់លាក់', bKm: 'សម្រាប់ខ្ញុំ ភាពជាក់លាក់សំខាន់ជាងល្បឿន' },
+  { axis: 'pace', a: 'I make most decisions in the room, not after', b: 'I usually want to sleep on a decision', aKm: 'ខ្ញុំសម្រេចចិត្តភាគច្រើននៅក្នុងកិច្ចប្រជុំតែម្តង មិនមែនបន្ទាប់ពីនោះទេ', bKm: 'ជាធម្មតា ខ្ញុំចង់ចំណាយពេលមួយយប់គិតសិន មុននឹងសម្រេចចិត្ត' },
+  { axis: 'pace', a: 'Long deliberation frustrates me', b: 'Rushed decisions worry me', aKm: 'ការពិចារណាយូរពេក ធ្វើឱ្យខ្ញុំធុញថប់', bKm: 'ការសម្រេចចិត្តដោយប្រញាប់ប្រញាល់ ធ្វើឱ្យខ្ញុំព្រួយបារម្ភ' },
+  { axis: 'focus', a: 'I focus first on what needs to get done', b: 'I focus first on how the people involved are doing', aKm: 'ខ្ញុំផ្តោតជាមុនលើអ្វីដែលត្រូវធ្វើឱ្យរួចរាល់', bKm: 'ខ្ញុំផ្តោតជាមុនលើស្ថានភាពរបស់មនុស្សដែលពាក់ព័ន្ធ' },
+  { axis: 'focus', a: 'Results are the clearest sign of a good week', b: 'Strong relationships are the clearest sign of a good week', aKm: 'លទ្ធផលការងារ គឺជាសញ្ញាច្បាស់បំផុតនៃសប្តាហ៍ដ៏ល្អមួយ', bKm: 'ទំនាក់ទំនងដ៏រឹងមាំ គឺជាសញ្ញាច្បាស់បំផុតនៃសប្តាហ៍ដ៏ល្អមួយ' },
+  { axis: 'focus', a: "I'd rather solve the problem than talk through how everyone feels about it", b: "I'd rather talk it through so everyone feels heard", aKm: 'ខ្ញុំចូលចិត្តដោះស្រាយបញ្ហាតែម្តង ជាជាងពិភាក្សាអំពីអារម្មណ៍របស់គ្រប់គ្នាចំពោះបញ្ហានោះ', bKm: 'ខ្ញុំចូលចិត្តពិភាក្សាគ្នាឱ្យបានល្អិតល្អន់ ដើម្បីឱ្យគ្រប់គ្នាមានអារម្មណ៍ថាត្រូវបានគេស្តាប់' },
+  { axis: 'focus', a: 'Efficiency is what I notice first in a process', b: 'Tone is what I notice first in a room', aKm: 'ប្រសិទ្ធភាព គឺជាអ្វីដែលខ្ញុំកត់សម្គាល់មុនគេនៅក្នុងដំណើរការការងារ', bKm: 'បរិយាកាស គឺជាអ្វីដែលខ្ញុំកត់សម្គាល់មុនគេនៅពេលចូលក្នុងបន្ទប់' },
+  { axis: 'focus', a: 'I measure progress by what got checked off', b: 'I measure progress by how the team is holding up', aKm: 'ខ្ញុំវាស់វឌ្ឍនភាពតាមការងារដែលបានបញ្ចប់', bKm: 'ខ្ញុំវាស់វឌ្ឍនភាពតាមស្ថានភាពរបស់ក្រុមការងារ' },
+  { axis: 'focus', a: "I'd rather work alone and deliver", b: "I'd rather work with others and connect", aKm: 'ខ្ញុំចូលចិត្តធ្វើការម្នាក់ឯង ហើយផ្តល់លទ្ធផល', bKm: 'ខ្ញុំចូលចិត្តធ្វើការជាមួយអ្នកដទៃ និងកសាងទំនាក់ទំនង' },
+  { axis: 'focus', a: 'Getting to the point matters more to me than the small talk first', b: 'The small talk first matters to me as much as the point', aKm: 'សម្រាប់ខ្ញុំ ការនិយាយចំចំណុចតែម្តង សំខាន់ជាងការជជែកលេងមុន', bKm: 'សម្រាប់ខ្ញុំ ការជជែកលេងបន្តិចមុន សំខាន់ដូចគ្នានឹងខ្លឹមសារសំខាន់ដែរ' },
+  { axis: 'focus', a: 'I judge a meeting by its outcomes', b: 'I judge a meeting by how people left it', aKm: 'ខ្ញុំវាយតម្លៃកិច្ចប្រជុំមួយតាមលទ្ធផលរបស់វា', bKm: 'ខ្ញុំវាយតម្លៃកិច្ចប្រជុំមួយតាមអារម្មណ៍របស់មនុស្សនៅពេលចាកចេញ' },
 ];
 
 /** FR-49.1: turns 16 'a'/'b' picks (one per QUIZ_ITEMS entry) into the four raw scores the backend stores. */
