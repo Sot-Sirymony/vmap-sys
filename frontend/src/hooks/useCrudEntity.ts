@@ -156,6 +156,40 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     }
   }
 
+  /**
+   * Runs one per-id request for each selected row. Unlike archiveMany, a
+   * single failure does not hide the rest: the successes still land, the list
+   * reloads, and the error names how many failed.
+   */
+  async function runForEach(ids: number[], request: (token: string, id: number) => Promise<void>, doneLabel: string, actionLabel: string) {
+    if (!token || ids.length === 0) {
+      return;
+    }
+    const results = await Promise.allSettled(ids.map((id) => request(token, id)));
+    const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+    const succeeded = ids.length - failures.length;
+    await reload();
+    if (succeeded > 0) {
+      showToast(`${doneLabel} ${succeeded} item${succeeded === 1 ? '' : 's'}.`);
+    }
+    if (failures.length > 0) {
+      const reason = failures[0].reason instanceof Error ? ` ${failures[0].reason.message}` : '';
+      setError(`Unable to ${actionLabel} ${failures.length} of ${ids.length} ${entityLabel}.${reason}`);
+    }
+  }
+
+  async function restoreMany(ids: number[]) {
+    if (restore) {
+      await runForEach(ids, restore, 'Restored', 'restore');
+    }
+  }
+
+  async function destroyMany(ids: number[]) {
+    if (permanentlyDelete) {
+      await runForEach(ids, permanentlyDelete, 'Permanently deleted', 'permanently delete');
+    }
+  }
+
   async function destroy(id: number) {
     if (!token || !permanentlyDelete) {
       return;
@@ -191,7 +225,9 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     archive: remove,
     archiveMany: removeMany,
     restore: restoreItem,
+    restoreMany,
     permanentlyDelete: destroy,
+    permanentlyDeleteMany: destroyMany,
     startEdit,
     cancelEdit,
   };

@@ -690,9 +690,18 @@ export function StepsPage() {
               actions: (
                 <BulkArchiveAction
                   selectedIds={selectedIds}
+                  items={crud.items}
                   entityLabel="step(s)"
                   onArchive={async (ids) => {
                     await crud.archiveMany(ids);
+                    setSelectedIds(new Set());
+                  }}
+                  onRestore={async (ids) => {
+                    await crud.restoreMany(ids);
+                    setSelectedIds(new Set());
+                  }}
+                  onDeletePermanently={async (ids) => {
+                    await crud.permanentlyDeleteMany(ids);
                     setSelectedIds(new Set());
                   }}
                 />

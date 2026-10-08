@@ -796,9 +796,18 @@ export function GoalsPage() {
                   <Button type="button" onClick={() => void handleBulkPriority()} disabled={bulkApplying}>Apply</Button>
                   <BulkArchiveAction
                     selectedIds={selectedIds}
+                    items={crud.items}
                     entityLabel="goal(s)"
                     onArchive={async (ids) => {
                       await crud.archiveMany(ids);
+                      setSelectedIds(new Set());
+                    }}
+                    onRestore={async (ids) => {
+                      await crud.restoreMany(ids);
+                      setSelectedIds(new Set());
+                    }}
+                    onDeletePermanently={async (ids) => {
+                      await crud.permanentlyDeleteMany(ids);
                       setSelectedIds(new Set());
                     }}
                   />
