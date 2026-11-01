@@ -71,6 +71,8 @@ public class VisionStepService {
                 .goal(goal)
                 .title(request.title())
                 .description(request.description())
+                // Only the Excel import omits it: an older workbook has no Owner column.
+                .owner(request.owner() != null ? request.owner() : user.getFullName())
                 .sequenceNumber(request.sequenceNumber())
                 .complex(request.complex())
                 .priority(request.priority())
@@ -96,6 +98,7 @@ public class VisionStepService {
         entity.setGoal(lookup.goal(request.goalId()));
         entity.setTitle(request.title());
         entity.setDescription(request.description());
+        entity.setOwner(request.owner());
         entity.setSequenceNumber(request.sequenceNumber());
         entity.setComplex(request.complex());
         entity.setPriority(request.priority());

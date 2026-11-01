@@ -1,4 +1,5 @@
 import type {
+  FearLikelihood,
   CommunicationStatus,
   DreamStatus,
   DreamType,
@@ -90,10 +91,17 @@ export const lifecycleStatusLabels: Record<LifecycleStatus, string> = {
 export const partnerStatusLabels: Record<PartnerStatus, string> = {
   TO_CONTACT: 'To Contact',
   CONTACTED: 'Contacted',
+  AGREED: 'Agreed',
   ACTIVE: 'Active',
   WAITING: 'Waiting',
   DECLINED: 'Declined',
   COMPLETED: 'Completed',
+};
+
+export const fearLikelihoodLabels: Record<FearLikelihood, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
 };
 
 export const partnerSupportTypeLabels: Record<PartnerSupportType, string> = {

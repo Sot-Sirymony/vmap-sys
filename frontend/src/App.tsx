@@ -12,6 +12,14 @@ import { RegisterPage } from './pages/RegisterPage';
 // screen no longer pays to download the charting library. The pages use named
 // exports, so each import maps its name onto the default lazy() expects.
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
+const TodayPage = lazy(() => import('./pages/TodayPage').then((m) => ({ default: m.TodayPage })));
+const JournalPage = lazy(() => import('./pages/JournalPage').then((m) => ({ default: m.JournalPage })));
+const AssessmentPage = lazy(() => import('./pages/AssessmentPage').then((m) => ({ default: m.AssessmentPage })));
+const ModulesPage = lazy(() => import('./pages/ModulesPage').then((m) => ({ default: m.ModulesPage })));
+const ModuleDetailPage = lazy(() => import('./pages/ModuleDetailPage').then((m) => ({ default: m.ModuleDetailPage })));
+const PlanPage = lazy(() => import('./pages/PlanPage').then((m) => ({ default: m.PlanPage })));
+const AccountSettingsPage = lazy(() => import('./pages/AccountSettingsPage').then((m) => ({ default: m.AccountSettingsPage })));
+const ModuleContentPage = lazy(() => import('./pages/ModuleContentPage').then((m) => ({ default: m.ModuleContentPage })));
 const VisionAreasPage = lazy(() => import('./pages/VisionAreasPage').then((m) => ({ default: m.VisionAreasPage })));
 const DreamsPage = lazy(() => import('./pages/DreamsPage').then((m) => ({ default: m.DreamsPage })));
 const DreamDetailPage = lazy(() => import('./pages/DreamDetailPage').then((m) => ({ default: m.DreamDetailPage })));
@@ -51,6 +59,12 @@ export function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="/today" element={<TodayPage />} />
+            <Route path="/journal" element={<JournalPage />} />
+            <Route path="/assessment" element={<AssessmentPage />} />
+            <Route path="/modules" element={<ModulesPage />} />
+            <Route path="/modules/:moduleNumber" element={<ModuleDetailPage />} />
+            <Route path="/plan" element={<PlanPage />} />
             <Route path="/vision-areas" element={<VisionAreasPage />} />
             <Route path="/dreams" element={<DreamsPage />} />
             <Route path="/dreams/:dreamId" element={<DreamDetailPage />} />
@@ -69,6 +83,8 @@ export function App() {
             <Route path="/import-export" element={<ImportExportPage />} />
             {/* FR-39.5 */}
             <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
+            <Route path="/settings/module-content" element={<ModuleContentPage />} />
+            <Route path="/settings/account" element={<AccountSettingsPage />} />
             <Route path="/settings/security" element={<SecuritySettingsPage />} />
           </Route>
         </Route>

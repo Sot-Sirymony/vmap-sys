@@ -71,6 +71,7 @@ export const statusColors = {
   // PartnerStatus
   TO_CONTACT: NEUTRAL_IDLE,
   CONTACTED: BLUE_MOVING,
+  AGREED: BLUE_MOVING,
   DECLINED: RED_NEGATIVE,
 
   // ObstacleStatus
@@ -222,6 +223,7 @@ export const moonshotTint = '#f3edfd';
 export const partnerPipelineColors = {
   TO_CONTACT: statusColors.TO_CONTACT,
   CONTACTED: statusColors.CONTACTED,
+  AGREED: statusColors.AGREED,
   ACTIVE: statusColors.ACTIVE,
   WAITING: statusColors.WAITING,
   DECLINED: statusColors.DECLINED,
@@ -1276,6 +1278,7 @@ function highContrastStatusMap(mode: 'light' | 'dark'): Record<StatusToken, stri
 
     TO_CONTACT: c.neutralIdle,
     CONTACTED: c.blue,
+    AGREED: c.blue,
     DECLINED: c.red,
 
     OPEN: c.orange,

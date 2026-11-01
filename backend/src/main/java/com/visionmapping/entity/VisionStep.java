@@ -51,6 +51,10 @@ public class VisionStep extends BaseAuditableEntity {
     @Column(length = 3000)
     private String description;
 
+    // FR-64: who is responsible for this step.
+    @Column(nullable = false, length = 160)
+    private String owner;
+
     @Column(name = "sequence_number", nullable = false)
     private Integer sequenceNumber;
 

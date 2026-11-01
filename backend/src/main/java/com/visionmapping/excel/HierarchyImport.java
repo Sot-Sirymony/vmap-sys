@@ -141,6 +141,7 @@ class HierarchyImport {
                     parentId,
                     reader.requiredText(3, TITLE),
                     null,
+                    reader.textOrNull(10),
                     reader.intOrDefault(4, 1),
                     reader.bool(5),
                     reader.enumValue(Priority.class, 6, PRIORITY),

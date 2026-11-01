@@ -12,4 +12,11 @@ public interface DreamRepository extends JpaRepository<Dream, Long>, CodedReposi
 
     /** Next sort position in an area: a count, not a load of every sibling. */
     long countByVisionArea_IdAndUser_IdAndArchivedFalse(Long visionAreaId, Long userId);
+
+    boolean existsByUser_IdAndArchivedFalseAndLetterRankIsNotNull(Long userId);
+
+    boolean existsByUser_IdAndArchivedFalseAndCommittedAtIsNotNull(Long userId);
+
+    /** FR-75: dreams written and ranked. */
+    long countByUser_IdAndArchivedFalseAndLetterRankIsNotNull(Long userId);
 }

@@ -1,5 +1,7 @@
 package com.visionmapping.repository;
 
+import java.time.LocalDate;
+import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.entity.TaskItem;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -29,4 +31,16 @@ public interface TaskItemRepository extends JpaRepository<TaskItem, Long>, Coded
 
     /** Next sort position in a step: a count, not a load of every sibling. */
     long countByStep_IdAndUser_IdAndArchivedFalse(Long stepId, Long userId);
+
+    /** FR-67: work due on the date or already overdue, with the dream it serves. */
+    @Query("""
+            select i from TaskItem i join fetch i.step s join fetch s.goal g join fetch g.dream
+            where i.user.id = :userId and i.archived = false
+              and i.dueDate <= :date and i.status not in :excluded
+            """)
+    List<TaskItem> findDueForDailyPlan(@Param("userId") Long userId, @Param("date") LocalDate date, @Param("excluded") List<WorkStatus> excluded);
+
+    /** FR-77: the last time the user touched a task. */
+    @Query("select max(t.updatedAt) from TaskItem t where t.user.id = :userId")
+    java.time.Instant findLastUpdatedAt(@Param("userId") Long userId);
 }

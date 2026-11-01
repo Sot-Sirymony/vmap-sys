@@ -92,7 +92,7 @@ class ProgressLogTrendWindowQueryTests {
                 "targetDate", LocalDate.now().plusMonths(3).toString(), "status", "ACTIVE", "scheduleMode", "BOTTOM_UP"));
         long goal = createdId("/api/goals", token, Map.of("dreamId", dream, "title", "Goal", "description", "d", "successCriteria", "s",
                 "priority", "HIGH", "targetDate", LocalDate.now().plusMonths(2).toString(), "status", "IN_PROGRESS", "scheduleMode", "BOTTOM_UP"));
-        return createdId("/api/steps", token, Map.of("goalId", goal, "title", "Step", "description", "d", "sequenceNumber", 1,
+        return createdId("/api/steps", token, Map.of("owner", "Me", "goalId", goal, "title", "Step", "description", "d", "sequenceNumber", 1,
                 "complex", false, "priority", "HIGH", "targetDate", LocalDate.now().plusWeeks(2).toString(), "status", "NOT_STARTED"));
     }
 

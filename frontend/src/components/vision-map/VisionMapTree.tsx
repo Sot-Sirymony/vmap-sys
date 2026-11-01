@@ -15,7 +15,7 @@ import {
   archiveGoal, createGoal, getGoalArchiveImpact, permanentlyDeleteGoal, reorderGoals, restoreGoal, updateGoal, updateGoalStatus,
 } from '../../api/goalApi';
 import {
-  archiveStep, createStep, getStepArchiveImpact, permanentlyDeleteStep, reorderSteps, restoreStep, updateStep,
+  archiveStep, createStep, getStepArchiveImpact, permanentlyDeleteStep, reorderSteps, restoreStep, updateStep, updateStepStatus,
 } from '../../api/stepApi';
 import {
   archiveTask, createTask, permanentlyDeleteTask, reorderTasks, restoreTask, updateTask, updateTaskStatus,
@@ -244,6 +244,7 @@ export function VisionMapTree({
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
   const [stepTitle, setStepTitle] = useState('');
   const [stepDescription, setStepDescription] = useState('');
+  const [stepOwner, setStepOwner] = useState('');
   const [stepSequenceNumber, setStepSequenceNumber] = useState(1);
   const [stepComplex, setStepComplex] = useState(false);
   const [stepPriority, setStepPriority] = useState<Priority>('HIGH');
@@ -391,10 +392,7 @@ export function VisionMapTree({
       } else if (row.kind === 'goal') {
         await updateGoalStatus(token, id, status);
       } else if (row.kind === 'step') {
-        const step = steps.find((item) => item.id === id);
-        if (step) {
-          await updateStep(token, step.id, { ...stepRequest(step), status: status as WorkStatus });
-        }
+        await updateStepStatus(token, id, status);
       } else {
         await updateTaskStatus(token, id, status);
       }
@@ -657,6 +655,7 @@ export function VisionMapTree({
     setEditingStepId(step.id);
     setStepTitle(step.title);
     setStepDescription(step.description ?? '');
+    setStepOwner(step.owner);
     setStepSequenceNumber(step.sequenceNumber);
     setStepComplex(step.complex);
     setStepPriority(step.priority);
@@ -681,10 +680,11 @@ export function VisionMapTree({
         goalId: step?.goalId ?? 0,
         title: stepTitle,
         description: stepDescription,
+        owner: stepOwner.trim(),
         sequenceNumber: stepSequenceNumber,
         complex: stepComplex,
         priority: stepPriority,
-        targetDate: stepTargetDate || undefined,
+        targetDate: stepTargetDate,
         status: stepStatus,
       };
       await updateStep(token, editingStepId, request);
@@ -1285,8 +1285,12 @@ export function VisionMapTree({
             <Input type="number" min="0" value={stepSequenceNumber} onChange={(event) => setStepSequenceNumber(Number(event.target.value))} required />
           </label>
           <label>
+            Owner
+            <Input value={stepOwner} onChange={(event) => setStepOwner(event.target.value)} required />
+          </label>
+          <label>
             Target Date
-            <Input type="date" value={stepTargetDate} onChange={(event) => setStepTargetDate(event.target.value)} />
+            <Input type="date" value={stepTargetDate} onChange={(event) => setStepTargetDate(event.target.value)} required />
           </label>
           <label>
             Priority
@@ -1616,20 +1620,12 @@ export function VisionMapTree({
                         <MapNudge>No steps yet — what has to happen, in order, to reach this goal?</MapNudge>
                       )}
                       {!goal.archived && (
-                        <TitleAddRow
-                          placeholder="New step title"
-                          level={3}
-                          onAdd={async (title) => {
-                            await createStep(token, {
-                              goalId: goal.id,
-                              title,
-                              sequenceNumber: allGoalSteps.reduce((max, step) => Math.max(max, step.sequenceNumber), 0) + 1,
-                              complex: false,
-                              priority: 'MEDIUM',
-                              status: 'NOT_STARTED',
-                            });
-                            await onDataChange();
-                          }}
+                        <StepAddRow
+                          goalId={goal.id}
+                          nextSequence={allGoalSteps.reduce((max, step) => Math.max(max, step.sequenceNumber), 0) + 1}
+                          token={token}
+                          defaultOwner={user?.fullName ?? ''}
+                          onDataChange={onDataChange}
                           inputRef={registerAdd(goalKey)}
                         />
                       )}
@@ -1709,6 +1705,63 @@ function TitleAddRow({ placeholder, level, onAdd, inputRef }: {
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={placeholder} aria-label={placeholder} inputRef={inputRef} />
         <Button type="submit" variant="secondary" disabled={busy || !title.trim()}>{busy ? 'Adding...' : 'Add'}</Button>
       </form>
+    </div>
+  );
+}
+
+// FR-64: a step needs an owner and a date. Owner defaults to the signed-in
+// user and the date is asked inline, the same way TaskAddRow does it.
+function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, inputRef }: {
+  goalId: number;
+  nextSequence: number;
+  token: string;
+  defaultOwner: string;
+  onDataChange: () => Promise<void>;
+  inputRef: (element: HTMLInputElement | null) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [owner, setOwner] = useState(defaultOwner);
+  const [targetDate, setTargetDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const ready = Boolean(title.trim() && owner.trim() && targetDate);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!ready) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await createStep(token, {
+        goalId,
+        title: title.trim(),
+        owner: owner.trim(),
+        sequenceNumber: nextSequence,
+        complex: false,
+        priority: 'MEDIUM',
+        targetDate,
+        status: 'NOT_STARTED',
+      });
+      setTitle('');
+      await onDataChange();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to add step.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div role="treeitem" aria-level={3} aria-selected={false}>
+      <form className="map-add map-add--task" onSubmit={(event) => void handleSubmit(event)}>
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New step title" aria-label="New step title" inputRef={inputRef} />
+        <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Owner" aria-label="Step owner" />
+        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} aria-label="Step target date" />
+        <Button type="submit" variant="secondary" disabled={busy || !ready}>{busy ? 'Adding...' : 'Add'}</Button>
+      </form>
+      {error && <p className="map-meta" role="alert">{error}</p>}
     </div>
   );
 }

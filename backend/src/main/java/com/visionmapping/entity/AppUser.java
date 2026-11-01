@@ -19,6 +19,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -54,6 +55,16 @@ public class AppUser extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private UserStatus status;
+
+    // FR-77: daily reminders, off until the user turns them on.
+    @Column(name = "reminders_enabled", nullable = false)
+    private boolean remindersEnabled;
+
+    @Column(name = "reminder_time_zone", length = 60)
+    private String reminderTimeZone;
+
+    @Column(name = "last_reminder_on")
+    private LocalDate lastReminderOn;
 
     // FR-39.6: appearance preferences live on the account so a chosen look
     // follows the user across browsers and devices. Every field is non-null

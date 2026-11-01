@@ -6,6 +6,7 @@ import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
+import com.visionmapping.dto.request.DreamCommitmentRequest;
 import com.visionmapping.dto.request.DreamRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DreamResponse;
@@ -160,6 +161,28 @@ public class DreamService {
         Dream entity = lookup.dream(id);
         entity.setStatus(parseEnum(DreamStatus.class, status));
         validateDecisionGate(entity);
+        return toResponse(entity);
+    }
+
+    /**
+     * FR-69: the signed, dated decision to start. It rests on a written reason,
+     * so the dream needs its whyImportant first. An Idea becomes Active through
+     * the same decision gate as any other activation; a dream in any other
+     * status keeps it. Signing again replaces the earlier commitment.
+     */
+    public DreamResponse commitToDream(Long id, DreamCommitmentRequest request) {
+        Dream entity = lookup.dream(id);
+        if (entity.getWhyImportant() == null || entity.getWhyImportant().isBlank()) {
+            throw new BusinessRuleException("Write why this dream matters to you before committing to it.");
+        }
+        entity.setCommitmentSignedName(request.signedName());
+        entity.setCommitmentStartDate(request.startDate());
+        entity.setCommitmentFirstAction(request.firstAction());
+        entity.setCommittedAt(Instant.now(clock));
+        if (entity.getStatus() == DreamStatus.IDEA) {
+            entity.setStatus(DreamStatus.ACTIVE);
+            validateDecisionGate(entity);
+        }
         return toResponse(entity);
     }
 

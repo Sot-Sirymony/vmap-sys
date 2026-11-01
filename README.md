@@ -63,6 +63,13 @@ export PASSWORD_RESET_TTL_MINUTES=30
 
 `DB_PASSWORD` is required — the app fails fast on startup if it isn't set. `JWT_SECRET` should also be overridden with a strong value for anything beyond local development.
 
+## Version 8 Features
+
+Today, Journal, Assessment, Modules, Plan, milestones, plan PDF, data export, account
+deletion, optional daily reminders, and a Khmer language option under Account. See
+[docs/VMS_BRD_V8.0.0.md](docs/VMS_BRD_V8.0.0.md) and [docs/CHANGELOG.md](docs/CHANGELOG.md).
+Daily reminder emails need `MAIL_HOST`, described above.
+
 ## Run Backend
 
 ```bash

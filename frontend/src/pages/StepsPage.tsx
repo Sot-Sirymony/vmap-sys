@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { archiveIdealPartnerProfile, createIdealPartnerProfile, listIdealPartnerProfiles, updateIdealPartnerProfile } from '../api/idealPartnerProfileApi';
-import { archiveStep, permanentlyDeleteStep, createStep, getStepArchiveImpact, listSteps, reorderSteps, restoreStep, updateStep } from '../api/stepApi';
+import { archiveStep, permanentlyDeleteStep, createStep, getStepArchiveImpact, listSteps, reorderSteps, restoreStep, updateStep, updateStepStatus } from '../api/stepApi';
 import { getWorkStyleProfile } from '../api/workStyleProfileApi';
 import { listTasks } from '../api/taskApi';
 import { listVisionAreas } from '../api/visionAreaApi';
@@ -50,7 +50,7 @@ import { ARCHETYPE_GUIDANCE, getComplementarySuggestion, workStyleArchetypeLabel
 import { PageSection } from './PageSection';
 
 export function StepsPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const crud = useCrudEntity<VisionStep, VisionStepRequest>({
     token,
@@ -70,6 +70,7 @@ export function StepsPage() {
   const [quickParentId, setQuickParentId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [owner, setOwner] = useState(user?.fullName ?? '');
   const [sequenceNumber, setSequenceNumber] = useState(1);
   const [complex, setComplex] = useState(false);
   const [priority, setPriority] = useState<Priority>('HIGH');
@@ -212,10 +213,11 @@ export function StepsPage() {
       goalId: Number(goalId),
       title,
       description,
+      owner: owner.trim(),
       sequenceNumber,
       complex,
       priority,
-      targetDate: targetDate || undefined,
+      targetDate,
       status,
     });
     if (success) {
@@ -233,6 +235,7 @@ export function StepsPage() {
     setGoalId(String(step.goalId));
     setTitle(step.title);
     setDescription(step.description ?? '');
+    setOwner(step.owner);
     setSequenceNumber(step.sequenceNumber);
     setComplex(step.complex);
     setPriority(step.priority);
@@ -272,8 +275,8 @@ export function StepsPage() {
     }
   }
 
-  async function handleQuickAdd(title: string) {
-    if (!token || !quickAddParentId) {
+  async function handleQuickAdd(title: string, dueDate?: string) {
+    if (!token || !quickAddParentId || !user) {
       return;
     }
     const goalSteps = crud.items.filter((step) => String(step.goalId) === quickAddParentId);
@@ -282,9 +285,11 @@ export function StepsPage() {
       await createStep(token, {
         goalId: Number(quickAddParentId),
         title,
+        owner: user.fullName,
         sequenceNumber: nextSequence,
         complex: false,
         priority: 'MEDIUM',
+        targetDate: dueDate,
         status: 'NOT_STARTED',
       });
       await crud.reload();
@@ -293,23 +298,13 @@ export function StepsPage() {
     }
   }
 
-  // Board drag/dropdown move. There is no status PATCH endpoint for steps, so
-  // the move sends a full update built from the loaded entity.
+  // Board drag/dropdown move.
   async function handleMove(step: VisionStep, nextStatus: WorkStatus) {
     if (!token || step.status === nextStatus) {
       return;
     }
     try {
-      await updateStep(token, step.id, {
-        goalId: step.goalId,
-        title: step.title,
-        description: step.description,
-        sequenceNumber: step.sequenceNumber,
-        complex: step.complex,
-        priority: step.priority,
-        targetDate: step.targetDate,
-        status: nextStatus,
-      });
+      await updateStepStatus(token, step.id, nextStatus);
       await crud.reload();
     } catch (moveError) {
       crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update step status.');
@@ -509,8 +504,12 @@ export function StepsPage() {
         <Input type="number" min="0" value={sequenceNumber} onChange={(event) => setSequenceNumber(Number(event.target.value))} required />
       </label>
       <label>
+        Owner
+        <Input value={owner} onChange={(event) => setOwner(event.target.value)} required />
+      </label>
+      <label>
         Target Date
-        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
+        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} required />
       </label>
       <label>
         Priority
@@ -626,6 +625,7 @@ export function StepsPage() {
           parentValue={quickAddParentId}
           onParentChange={handleQuickParentChange}
           placeholder="New step title — Enter to add"
+          withDueDate
           onAdd={handleQuickAdd}
         />
       )}

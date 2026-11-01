@@ -1,7 +1,6 @@
 import { updateGoalStatus } from '../api/goalApi';
-import { updateStep } from '../api/stepApi';
+import { updateStepStatus } from '../api/stepApi';
 import type { Goal, TaskItem, VisionStep } from '../types/vision';
-import { stepRequest } from './entityRequests';
 
 type ShowToast = (message: string, options?: { action?: { label: string; onClick: () => void }; duration?: number }) => void;
 
@@ -45,7 +44,7 @@ export function nudgeAfterTaskComplete({ token, completedTaskId, tasks, steps, g
       label: 'Complete step',
       onClick: () => {
         void (async () => {
-          await updateStep(token, step.id, { ...stepRequest(step), status: 'COMPLETED' });
+          await updateStepStatus(token, step.id, 'COMPLETED');
           onApplied();
           nudgeAfterStepComplete({ token, completedStepId: step.id, steps, goals, showToast, onApplied });
         })();

@@ -217,6 +217,33 @@ Task-level progress history.
 Belongs to:
 - TaskItem
 
+## V8 Daily Execution
+
+- **VisionStep** adds `owner`. **Dream** adds `commitmentSignedName`,
+  `commitmentStartDate`, `commitmentFirstAction`, `committedAt`.
+  **Partner** status adds `AGREED`.
+- **FearEntry:** `fear`, `worstCase`, `likelihood` (Low, Medium, High), `firstTest`,
+  optional `relatedDreamId`, `archived`. The dream link clears if the dream is
+  permanently deleted.
+- **AttitudeCheckIn:** `checkInDate`, `score` (1 to 5), `note`. One per user per day.
+- **Habit:** `name`, `archived`. **HabitCheck:** `habitId`, `checkDate`, one per
+  habit per day.
+
+## V8 Assessment and Modules
+
+- **ChainAssessment:** `takenOn` and six scores from 1 to 5. One per user per day.
+- **LearningModule:** `number`, `position`, `stage`, `completionRule`, `linkPath`.
+  **LearningModuleContent:** text per `language`, including form fields as JSON.
+  Both are seeded by migration and read-only for users.
+- **ModuleCompletion:** `moduleNumber`, `rowsJson`, `completedAt`. One per user per module.
+- **Milestone:** `dreamId`, `title`, `achievedOn`, `note`, `archived`. Removed with its
+  dream on permanent delete.
+
+## V8 Reminders
+
+**AppUser** adds `remindersEnabled` (default false), `reminderTimeZone` and
+`lastReminderOn`.
+
 ## Business Rules
 
 - A Dream must belong to a Vision Area.

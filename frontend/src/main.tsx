@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router';
 import { App } from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeModeProvider } from './context/ThemeModeContext';
+import { I18nProvider } from './i18n/I18nContext';
 import { ToastProvider } from './context/ToastContext';
 import './styles/global.css';
 
@@ -16,11 +17,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthProvider>
       <ThemeModeProvider>
-        <BrowserRouter>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </BrowserRouter>
+        <I18nProvider>
+          <BrowserRouter>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </BrowserRouter>
+        </I18nProvider>
       </ThemeModeProvider>
     </AuthProvider>
   </React.StrictMode>,

@@ -1,21 +1,27 @@
 import {
+  BookOpen,
   Bug,
+  CalendarCheck,
   CheckSquare,
   ClipboardList,
   Compass,
   FileSpreadsheet,
   Fingerprint,
   Footprints,
+  Gauge,
+  GraduationCap,
   Handshake,
   KeyRound,
   LayoutDashboard,
   Lightbulb,
+  ListChecks,
   MoonStar,
   Network,
   Palette,
   Send,
   Target,
   TrafficCone,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -37,6 +43,9 @@ export type NavGroup = {
  * Shared by the sidebar and the mobile bottom nav so they can never disagree.
  */
 export function navPathname(pathname: string): string {
+  if (/^\/modules\/\d+/.test(pathname)) {
+    return '/modules';
+  }
   return /^\/dreams\/\d+/.test(pathname) ? '/vision-map' : pathname;
 }
 
@@ -50,15 +59,20 @@ export const navGroups: NavGroup[] = [
       { to: '/vision-areas', label: 'Vision Areas', icon: Compass },
       { to: '/dreams', label: 'Dreams', icon: MoonStar },
       { to: '/vision-map', label: 'Vision Map', icon: Network },
+      { to: '/plan', label: 'Plan', icon: ListChecks },
+      { to: '/modules', label: 'Modules', icon: GraduationCap },
+      { to: '/assessment', label: 'Assessment', icon: Gauge },
     ],
   },
   {
     label: 'Execute',
     items: [
+      { to: '/today', label: 'Today', icon: CalendarCheck },
       { to: '/goals', label: 'Goals', icon: Target },
       { to: '/steps', label: 'Steps', icon: Footprints },
       { to: '/tasks', label: 'Tasks', icon: CheckSquare },
       { to: '/obstacles', label: 'Obstacles', icon: TrafficCone },
+      { to: '/journal', label: 'Journal', icon: BookOpen },
     ],
   },
   {
@@ -75,6 +89,7 @@ export const navGroups: NavGroup[] = [
       // as the header menu, so the header icon isn't the only way to find it.
       { to: '/settings/appearance', label: 'Appearance', icon: Palette },
       { to: '/settings/security', label: 'Security', icon: KeyRound },
+      { to: '/settings/account', label: 'Account', icon: UserCog },
     ],
   },
 ];

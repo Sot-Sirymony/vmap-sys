@@ -36,7 +36,7 @@ export type Insight = {
 export type LifecycleStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED';
 export type DreamStatus = 'IDEA' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED';
 export type DreamType = 'SHORT_TERM' | 'LONG_TERM' | 'LIFETIME';
-export type PartnerStatus = 'TO_CONTACT' | 'CONTACTED' | 'ACTIVE' | 'WAITING' | 'DECLINED' | 'COMPLETED';
+export type PartnerStatus = 'TO_CONTACT' | 'CONTACTED' | 'AGREED' | 'ACTIVE' | 'WAITING' | 'DECLINED' | 'COMPLETED';
 export type PartnerSupportType = 'MENTOR' | 'EXPERT' | 'ADVISOR' | 'COLLEAGUE' | 'FINANCIAL' | 'TECHNICAL' | 'EMOTIONAL' | 'OTHER';
 // FR-15.2: the exchange basis a partner responds to.
 export type OfferType = 'MONEY' | 'SHARED_VISION' | 'RECOGNITION' | 'EXPERIENCE' | 'OTHER';
@@ -120,6 +120,12 @@ export type Dream = {
   decisionDismissedDisagreeingAdvice?: boolean | null;
   // FR-55.4: non-null once BR-44's gate has cleared; never re-fires after.
   decisionGateClearedAt?: string | null;
+  // FR-69: the signed commitment that launches this dream. Server-managed,
+  // set only through the commitment endpoint.
+  commitmentSignedName?: string | null;
+  commitmentStartDate?: string | null;
+  commitmentFirstAction?: string | null;
+  committedAt?: string | null;
   // Display order among this vision area's dreams, for drag-and-drop
   // reorder. Server-managed only — never sent in a request.
   sortOrder?: number | null;
@@ -198,6 +204,7 @@ export type VisionStep = {
   goalId: number;
   title: string;
   description?: string;
+  owner: string;
   sequenceNumber: number;
   complex: boolean;
   priority: Priority;
@@ -211,6 +218,7 @@ export type VisionStepRequest = {
   goalId: number;
   title: string;
   description?: string;
+  owner: string;
   sequenceNumber: number;
   complex: boolean;
   priority: Priority;
@@ -471,6 +479,181 @@ export type Obstacle = {
 };
 
 export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived' | 'expectationReleasedAt'>;
+
+export type DreamCommitmentRequest = {
+  signedName: string;
+  startDate: string;
+  firstAction: string;
+};
+
+// FR-71: higher means the barrier holds the user back less.
+export type ChainAssessment = {
+  id: number;
+  takenOn: string;
+  settlingScore: number;
+  fearScore: number;
+  criticismScore: number;
+  visionScore: number;
+  knowledgeScore: number;
+  resourcesScore: number;
+  averageScore: number;
+};
+
+export type ChainScoreKey = 'settlingScore' | 'fearScore' | 'criticismScore' | 'visionScore' | 'knowledgeScore' | 'resourcesScore';
+
+export type ChainAssessmentRequest = Omit<ChainAssessment, 'id' | 'averageScore'>;
+
+export type ChainAssessmentSummary = {
+  assessments: ChainAssessment[];
+  improvementPercent?: number | null;
+  retakeSuggested: boolean;
+};
+
+// FR-72: the fifteen modules.
+export type ModuleStage = 'BREAK_CHAINS' | 'BOOST' | 'LAUNCH';
+export type ModuleStatus = 'LOCKED' | 'AVAILABLE' | 'COMPLETED';
+export type ModuleField = { key: string; label: string; type: string };
+export type ModuleRow = Record<string, string>;
+
+export type LearningModuleSummary = {
+  number: number;
+  position: number;
+  stage: ModuleStage;
+  title: string;
+  summary: string;
+  status: ModuleStatus;
+  completedAt?: string | null;
+};
+
+export type LearningModuleDetail = LearningModuleSummary & {
+  guidance: string;
+  exerciseInstructions: string;
+  linkPath?: string | null;
+  fields: ModuleField[];
+  rows: ModuleRow[];
+  requirementMessage?: string | null;
+};
+
+// FR-78: an admin's view of one module in one language.
+export type ModuleContent = {
+  number: number;
+  position: number;
+  language: string;
+  translated: boolean;
+  title: string;
+  summary: string;
+  guidance: string;
+  exerciseInstructions: string;
+  fields: ModuleField[];
+};
+
+export type ModuleContentRequest = {
+  title: string;
+  summary: string;
+  guidance: string;
+  exerciseInstructions: string;
+  fieldLabels?: Record<string, string>;
+};
+
+// FR-73: one dream's progress through the guided plan.
+export type PlanStatus = {
+  dreamId: number;
+  stages: { key: string; label: string; done: boolean; detail: string }[];
+  planReady: boolean;
+};
+
+// FR-74: a result reached on the way to a dream.
+export type Milestone = {
+  id: number;
+  dreamId: number;
+  title: string;
+  achievedOn: string;
+  note?: string | null;
+};
+
+export type MilestoneRequest = {
+  dreamId: number;
+  title: string;
+  achievedOn: string;
+  note?: string;
+};
+
+// FR-75: one objective, measured for this user.
+export type ProgressMetric = { id: string; label: string; value: string; target: string; met: boolean };
+export type ProgressMetrics = { metrics: ProgressMetric[] };
+
+// FR-77: emailConfigured is false when the server cannot send mail at all.
+export type ReminderSettings = {
+  enabled: boolean;
+  timeZone?: string | null;
+  emailConfigured: boolean;
+  sendHour: number;
+};
+
+// FR-65: the fear log.
+export type FearLikelihood = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type FearEntry = {
+  id: number;
+  fear: string;
+  worstCase: string;
+  likelihood: FearLikelihood;
+  firstTest: string;
+  relatedDreamId?: number | null;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FearEntryRequest = Pick<FearEntry, 'fear' | 'worstCase' | 'likelihood' | 'firstTest'> & {
+  relatedDreamId?: number;
+};
+
+// FR-65: one attitude score per day.
+export type AttitudeCheckIn = {
+  id: number;
+  checkInDate: string;
+  score: number;
+  note?: string | null;
+};
+
+export type AttitudeCheckInRequest = {
+  score: number;
+  note?: string;
+};
+
+// FR-68: a discipline with its streak, as of the date it was asked for.
+export type Habit = {
+  id: number;
+  name: string;
+  checkedOnDate: boolean;
+  currentStreak: number;
+  archived: boolean;
+};
+
+// FR-67: everything the Today page shows.
+export type DailyPlanItem = {
+  kind: 'STEP' | 'TASK';
+  id: number;
+  code: string;
+  title: string;
+  owner: string;
+  priority: Priority;
+  dueDate: string;
+  status: WorkStatus;
+  overdue: boolean;
+  dreamId: number;
+  dreamTitle: string;
+};
+
+export type DailyPlan = {
+  date: string;
+  items: DailyPlanItem[];
+  attitude?: AttitudeCheckIn | null;
+  habits: Habit[];
+  weeklyReviewDue: boolean;
+  lastWeeklyReviewDate?: string | null;
+};
 
 // FR-59.1: what kind of thing a gratitude entry is about.
 export type GratitudeCategory = 'GIFT' | 'HEALTH' | 'PERSON' | 'OTHER';

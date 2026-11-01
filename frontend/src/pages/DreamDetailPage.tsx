@@ -28,13 +28,14 @@ import { useAuth } from '../context/AuthContext';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
+import { DreamCommitmentCard } from '../components/vision-map/DreamCommitmentCard';
 import { PageSection } from './PageSection';
 
 /** Per-dream rollup for the overview cards. */
 type DreamStats = { goals: number; steps: number; tasks: number; progress: number };
 
 export function DreamDetailPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { dreamId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -266,6 +267,17 @@ export function DreamDetailPage() {
             { label: selectedDream.title },
           ]}
         />
+        {!selectedDream.archived && (
+          <Box sx={{ mb: 2 }}>
+            <DreamCommitmentCard
+              key={selectedDream.id}
+              dream={selectedDream}
+              token={token ?? ''}
+              defaultName={user?.fullName ?? ''}
+              onChanged={load}
+            />
+          </Box>
+        )}
         <VisionMapTree
           dream={selectedDream}
           visionAreaName={selectedArea?.name ?? 'Unassigned'}

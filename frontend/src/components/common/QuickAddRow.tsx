@@ -13,7 +13,7 @@ type QuickAddRowProps = {
   parentValue: string;
   onParentChange: (value: string) => void;
   placeholder: string;
-  /** Tasks require a due date (business rule 5) — asked inline, not defaulted. */
+  /** Steps and tasks require a date (FR-64, business rule 5) — asked inline, not defaulted. */
   withDueDate?: boolean;
   onAdd: (title: string, dueDate?: string) => Promise<void>;
 };

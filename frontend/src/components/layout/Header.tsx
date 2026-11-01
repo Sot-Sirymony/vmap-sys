@@ -18,6 +18,7 @@ import { useSidebarState } from './sidebar-context';
 import { ReportIssueModal } from '../common/ReportIssueModal';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeSettings } from '../../context/ThemeModeContext';
+import { useI18n } from '../../i18n/I18nContext';
 import { listPartners } from '../../api/partnerApi';
 import type { Partner } from '../../types/vision';
 
@@ -128,6 +129,7 @@ function PartnerStack() {
  * two-link breadcrumb trail whose first link was never a destination.
  */
 function ModernTitle({ pathname }: { pathname: string }) {
+  const { t } = useI18n();
   const { user } = useAuth();
   const isDashboard = pathname === '/';
   const firstName = (user?.fullName ?? '').trim().split(/\s+/)[0];
@@ -135,7 +137,7 @@ function ModernTitle({ pathname }: { pathname: string }) {
   if (!isDashboard) {
     return (
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" noWrap>{currentPageLabel(pathname)}</Typography>
+        <Typography variant="subtitle1" noWrap>{t(currentPageLabel(pathname))}</Typography>
       </Box>
     );
   }
@@ -153,6 +155,7 @@ function ModernTitle({ pathname }: { pathname: string }) {
 }
 
 export function Header() {
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const { toggle } = useSidebarState();
@@ -194,7 +197,7 @@ export function Header() {
             <Divider orientation="vertical" flexItem sx={{ height: 20, alignSelf: 'center' }} />
             <Breadcrumbs separator="›" sx={{ flexGrow: 1 }}>
               <Typography variant="body2" color="text.secondary">Vision Mapping</Typography>
-              <Typography variant="body2" color="text.primary">{currentPageLabel(location.pathname)}</Typography>
+              <Typography variant="body2" color="text.primary">{t(currentPageLabel(location.pathname))}</Typography>
             </Breadcrumbs>
           </>
         )}
@@ -204,8 +207,8 @@ export function Header() {
         {/* Modern trades the labelled button for an icon to make room for the
             action cluster; the tooltip and aria-label keep it named. */}
         {modern ? (
-          <Tooltip title="Report an issue">
-            <IconButton size="small" aria-label="Report an issue" onClick={() => setReportOpen(true)}>
+          <Tooltip title={t('Report an issue')}>
+            <IconButton size="small" aria-label={t('Report an issue')} onClick={() => setReportOpen(true)}>
               <Bug size={18} />
             </IconButton>
           </Tooltip>
@@ -217,7 +220,7 @@ export function Header() {
             startIcon={<Bug size={16} />}
             sx={{ textTransform: 'none' }}
           >
-            Report an issue
+            {t('Report an issue')}
           </Button>
         )}
 

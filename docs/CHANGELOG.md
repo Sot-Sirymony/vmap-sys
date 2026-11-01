@@ -66,6 +66,89 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
+
+Implements [VMS_BRD_V8.0.0](VMS_BRD_V8.0.0.md) for personal use. See its
+*Personal-use scope* section for what was dropped and how IDs were renumbered.
+
+### Shipped: Phase 4, Khmer, content editing and checks
+
+- **NFR-03, partial** English and Khmer switch on the Account page, remembered per
+  device. Translated: navigation, Today, Journal, Assessment, Modules, Plan, Account,
+  the commitment and objectives cards, and all 15 modules. Older pages stay in English
+  until translated. Khmer text is a first draft that needs a Khmer speaker's review.
+- **FR-76** The plan PDF now prints Khmer, using the bundled Noto Sans Khmer font.
+- **FR-78** Admins can edit module text and order at `/settings/module-content`.
+- **NFR-02** Automated WCAG A and AA checks (axe) pass on the new pages in English and
+  on Modules and Today in Khmer. This does not replace a manual screen reader test.
+- **NFR-07** Simulated 4G, cold cache, local server: page heading in about 2.4s, and
+  all data settled in about 2.6s, or 3.4s on the Dashboard. Not measured in production.
+- **Fixed** Quick-add rows forced sideways scrolling on the phone-width Vision Map; the
+  account menu's accessible name left out its visible text.
+
+The backend Dockerfile now installs `fontconfig` and `freetype`, which the Khmer PDF
+needs. That image has not been built or run yet.
+
+### Migrations (Phase 4)
+
+`V49__learning_module_content_km`
+
+### Shipped: Phase 3, progress, export and account
+
+- **FR-75** Dashboard card measuring BO-01 to BO-06 for one person.
+- **FR-76** Download a dream's plan as a PDF from the Plan page. The built-in font
+  covers Latin text only, so Khmer text does not print correctly yet.
+- **FR-77** Optional daily reminder email, off by default, in the user's time zone.
+  Needs `MAIL_HOST`; without it nothing is sent and only the fact is logged.
+- **NFR-09** Account page: export all data as JSON, or permanently delete the account
+  after entering the password.
+
+New dependency: OpenPDF. New optional settings: `REMINDERS_TODAY_URL`,
+`REMINDERS_SEND_HOUR`, `REMINDERS_INACTIVE_AFTER_DAYS`, `REMINDERS_CRON`,
+`PROGRESS_TARGET_IMPROVEMENT_PERCENT`, `PROGRESS_TARGET_WEEKLY_COMPLETION_PERCENT`.
+
+### Migrations (Phase 3)
+
+`V48__user_reminders`
+
+### Shipped: Phase 2, assessment, modules and plan
+
+- **FR-71** Assessment page: six barriers scored 1 to 5, compared to the first
+  result as a baseline, with a retake prompt after 12 weeks.
+- **FR-72** Fifteen original modules in journey order, each unlocking the next.
+  Five save their own exercise form; ten are proven by the user's existing data.
+- **FR-73** Plan page: one dream's progress from statement through to people.
+- **FR-74** Milestones recorded per dream.
+
+### Migrations (Phase 2)
+
+`V44__chain_assessments`, `V45__learning_modules`, `V46__module_completions`,
+`V47__milestones`
+
+### Shipped: Phase 1, daily execution
+
+- **FR-64** Steps have an owner, and owner and target date are required when a
+  step is saved in full. Status changes use the PATCH endpoint, so older undated
+  steps can still be moved.
+- **FR-65** Journal page with a fear log and attitude history. Attitude is scored
+  on the Today page.
+- **FR-66** New `AGREED` partner status between Contacted and Active.
+- **FR-67** Today page and `GET /api/daily-plan`: steps and tasks due or overdue.
+- **FR-68** Up to three habits with daily checks and streaks.
+- **FR-69** Signed, dated dream commitment. An Idea becomes Active when signed.
+- **FR-70** Today prompts a weekly review when the last one is 7 or more days old.
+
+The mobile bottom tab for Reviews is replaced by Today. Excel step sheets gain an
+Owner column at the end; older workbooks still import, using the account name.
+Imported rows may keep an empty target date, so a backup always restores.
+
+### Migrations
+
+`V39__step_owner`, `V40__fear_entries`, `V41__attitude_checkins`, `V42__habits`,
+`V43__dream_commitment`
+
+---
+
 ## [4.0.0] — 2026-07-25 (10 of 10 items shipped)
 
 Implements **[VMS_BRD_V4.0.0](VMS_BRD_V4.0.0.md)** (dated 2026-07-25).

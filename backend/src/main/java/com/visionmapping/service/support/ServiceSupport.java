@@ -81,4 +81,14 @@ public final class ServiceSupport {
             throw new BusinessRuleException("Invalid status: " + status);
         }
     }
+
+    /**
+     * Daily records use the client's local date, which can legitimately be one
+     * day ahead of the server's. Anything later than that is not a real "today".
+     */
+    public static void requireNotFutureDay(java.time.LocalDate date, java.time.Clock clock) {
+        if (date.isAfter(java.time.LocalDate.now(clock).plusDays(1))) {
+            throw new BusinessRuleException("This date is in the future.");
+        }
+    }
 }

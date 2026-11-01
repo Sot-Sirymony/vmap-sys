@@ -2,6 +2,8 @@ package com.visionmapping.mapper;
 
 import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DreamResponse;
+import com.visionmapping.dto.response.AttitudeCheckInResponse;
+import com.visionmapping.dto.response.FearEntryResponse;
 import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
 import com.visionmapping.dto.response.IssueReportResponse;
@@ -17,6 +19,8 @@ import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.AttitudeCheckIn;
+import com.visionmapping.entity.FearEntry;
 import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.entity.IdealPartnerProfile;
 import com.visionmapping.entity.IssueReport;
@@ -53,7 +57,8 @@ public class VisionMappingMapper {
                 entity.getDecisionTrustedUnverifiedClaim(), entity.getDecisionJudgedByAppearance(),
                 entity.getDecisionUnderTimePressure(), entity.getDecisionNoOutsideInput(),
                 entity.getDecisionChasedEasyReward(), entity.getDecisionDismissedDisagreeingAdvice(),
-                entity.getDecisionGateClearedAt(), entity.getSortOrder(),
+                entity.getDecisionGateClearedAt(), entity.getCommitmentSignedName(), entity.getCommitmentStartDate(),
+                entity.getCommitmentFirstAction(), entity.getCommittedAt(), entity.getSortOrder(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
@@ -73,7 +78,7 @@ public class VisionMappingMapper {
 
     public VisionStepResponse toResponse(VisionStep entity) {
         return new VisionStepResponse(entity.getId(), entity.getCode(), entity.getGoal().getId(), entity.getTitle(),
-                entity.getDescription(), entity.getSequenceNumber(), entity.isComplex(), entity.getPriority(),
+                entity.getDescription(), entity.getOwner(), entity.getSequenceNumber(), entity.isComplex(), entity.getPriority(),
                 entity.getTargetDate(), entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
@@ -101,6 +106,15 @@ public class VisionMappingMapper {
         return new IdealPartnerProfileResponse(entity.getId(), entity.getStep().getId(), entity.getRequiredExperience(),
                 entity.getCharacterTraits(), entity.getMotivation(), entity.getOfferInReturn(), entity.isArchived(),
                 entity.getCreatedAt(), entity.getUpdatedAt());
+    }
+
+    public FearEntryResponse toResponse(FearEntry entity) {
+        return new FearEntryResponse(entity.getId(), entity.getFear(), entity.getWorstCase(), entity.getLikelihood(),
+                entity.getFirstTest(), id(entity.getRelatedDream()), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+    }
+
+    public AttitudeCheckInResponse toResponse(AttitudeCheckIn entity) {
+        return new AttitudeCheckInResponse(entity.getId(), entity.getCheckInDate(), entity.getScore(), entity.getNote());
     }
 
     public GratitudeEntryResponse toResponse(GratitudeEntry entity) {

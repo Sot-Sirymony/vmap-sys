@@ -19,6 +19,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeSettings } from '@/context/ThemeModeContext';
+import { useI18n } from '@/i18n/I18nContext';
 import { navGroups, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
@@ -151,7 +152,8 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
     <>
       <ButtonBase
         onClick={handleOpen}
-        aria-label={modern ? `${primaryLine} — account menu` : 'Account menu'}
+        // No aria-label: the visible name and email already name this button, and
+        // a separate label must repeat all of that text anyway (WCAG 2.5.3).
         sx={{
           width: '100%',
           display: 'flex',
@@ -216,6 +218,7 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
 }
 
 function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavigate: () => void; modern: boolean }) {
+  const { t } = useI18n();
   const location = useLocation();
   const pathname = navPathname(location.pathname);
 
@@ -235,7 +238,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
                 variant="overline"
                 sx={{ px: 1.5, pt: groupIndex === 0 ? 0.5 : 2, pb: 0.5, color: 'text.secondary', letterSpacing: '0.05em' }}
               >
-                {group.label}
+                {t(group.label)}
               </Typography>
             )}
           <List disablePadding>
@@ -278,12 +281,12 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
             <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 1.5, justifyContent: 'center', color: 'inherit' }}>
               <item.icon size={18} />
             </ListItemIcon>
-            {!collapsed && <ListItemText primary={item.label} slotProps={{ primary: { sx: { fontSize: 'var(--font-body-sm)' } } }} />}
+            {!collapsed && <ListItemText primary={t(item.label)} slotProps={{ primary: { sx: { fontSize: 'var(--font-body-sm)' } } }} />}
           </ListItemButton>
         );
         return (
           <ListItem key={item.to} disablePadding sx={{ display: 'block', mb: 0.5 }}>
-            {collapsed ? <Tooltip title={item.label} placement="right">{button}</Tooltip> : button}
+            {collapsed ? <Tooltip title={t(item.label)} placement="right">{button}</Tooltip> : button}
           </ListItem>
         );
       })}

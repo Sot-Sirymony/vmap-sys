@@ -55,6 +55,18 @@ app:
       per-ip-window-minutes: ${PASSWORD_RESET_LIMIT_IP_WINDOW:60}
   mail:
     from: ${MAIL_FROM:no-reply@visionmapping.app}
+  progress:
+    # FR-75: the targets the personal progress card measures against.
+    target-improvement-percent: ${PROGRESS_TARGET_IMPROVEMENT_PERCENT:25}
+    target-weekly-completion-percent: ${PROGRESS_TARGET_WEEKLY_COMPLETION_PERCENT:60}
+  reminders:
+    # FR-77: checked every 15 minutes, so a brief restart cannot lose a day.
+    cron: ${REMINDERS_CRON:0 */15 * * * *}
+    # The user's local hour from which the day's reminder goes out.
+    send-hour: ${REMINDERS_SEND_HOUR:8}
+    inactive-after-days: ${REMINDERS_INACTIVE_AFTER_DAYS:3}
+    # Optional link to the Today page in the email. Blank leaves the link out.
+    today-url: ${REMINDERS_TODAY_URL:}
 
 ---
 spring:

@@ -131,6 +131,20 @@ public class Dream extends BaseAuditableEntity {
     @Column(name = "decision_gate_cleared_at")
     private Instant decisionGateClearedAt;
 
+    // FR-69: the dated commitment that launches this dream. The passion
+    // statement it rests on is whyImportant, not a second copy of it.
+    @Column(name = "commitment_signed_name", length = 160)
+    private String commitmentSignedName;
+
+    @Column(name = "commitment_start_date")
+    private LocalDate commitmentStartDate;
+
+    @Column(name = "commitment_first_action", length = 1000)
+    private String commitmentFirstAction;
+
+    @Column(name = "committed_at")
+    private Instant committedAt;
+
     // Display order among this vision area's dreams, for drag-and-drop
     // reorder on the Dreams page. 0-based; null on legacy rows until the
     // first reorder (or a fresh create) sets it.

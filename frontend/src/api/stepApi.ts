@@ -22,6 +22,15 @@ export function updateStep(token: string, id: number, request: VisionStepRequest
   });
 }
 
+// Status alone, so moving an older step that has no target date yet still works.
+export function updateStepStatus(token: string, id: number, status: string) {
+  return apiClient<VisionStep>(`/steps/${id}/status`, {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ status, manualOverride: false }),
+  });
+}
+
 // Vision Map drag-and-drop: orderedIds is the full, reshuffled set of this
 // goal's steps.
 export function reorderSteps(token: string, goalId: number, orderedIds: number[]) {

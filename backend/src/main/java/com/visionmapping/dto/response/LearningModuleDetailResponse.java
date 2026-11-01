@@ -1,0 +1,31 @@
+package com.visionmapping.dto.response;
+
+import com.visionmapping.entity.enums.ModuleStage;
+import com.visionmapping.entity.enums.ModuleStatus;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * FR-72. An empty fields list means existing data proves the exercise:
+ * requirementMessage then says what is still missing, or is null once it is met.
+ */
+public record LearningModuleDetailResponse(
+        Integer number,
+        Integer position,
+        ModuleStage stage,
+        String title,
+        String summary,
+        String guidance,
+        String exerciseInstructions,
+        String linkPath,
+        List<Field> fields,
+        List<Map<String, String>> rows,
+        String requirementMessage,
+        ModuleStatus status,
+        Instant completedAt
+) {
+
+    public record Field(String key, String label, String type) {
+    }
+}

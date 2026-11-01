@@ -2522,6 +2522,10 @@ button:focus-visible,
     width: 130px;
   }
 
+  .map-add {
+    flex-wrap: wrap;
+  }
+
   .map-add--task .MuiTextField-root:nth-of-type(2),
   .map-add--task .MuiTextField-root:nth-of-type(3) {
     width: 100%;

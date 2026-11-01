@@ -50,6 +50,7 @@ export const stepRequest = (step: VisionStep): VisionStepRequest => ({
   goalId: step.goalId,
   title: step.title,
   description: step.description,
+  owner: step.owner,
   sequenceNumber: step.sequenceNumber,
   complex: step.complex,
   priority: step.priority,

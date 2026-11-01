@@ -12,10 +12,11 @@ public record VisionStepRequest(
         @NotNull Long goalId,
         @NotBlank @Size(max = 220) String title,
         @Size(max = 3000) String description,
+        @NotBlank @Size(max = 160) String owner,
         @NotNull @PositiveOrZero Integer sequenceNumber,
         boolean complex,
         @NotNull Priority priority,
-        LocalDate targetDate,
+        @NotNull LocalDate targetDate,
         @NotNull WorkStatus status
 ) {
 }

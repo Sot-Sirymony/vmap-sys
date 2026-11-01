@@ -8,6 +8,8 @@ RUN mvn -B clean package -DskipTests
 
 # Run stage
 FROM eclipse-temurin:17-jre-alpine
+# The plan PDF lays out Khmer text through Java's font engine, which needs these.
+RUN apk add --no-cache fontconfig freetype
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 

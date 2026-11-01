@@ -12,6 +12,7 @@ public record VisionStepResponse(
         Long goalId,
         String title,
         String description,
+        String owner,
         Integer sequenceNumber,
         boolean complex,
         Priority priority,

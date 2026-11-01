@@ -414,6 +414,60 @@ database can only ever hold something the UI can render (BR-33). `CUSTOM` is
 computed from a mode/accent pair that matches no preset — it is a result, not
 something a client needs to select.
 
+## Daily Execution (V8)
+
+All dates are the user's local day as `YYYY-MM-DD`. A date more than one day past
+the server's date is rejected for check-ins and habit checks.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/daily-plan?date=` | Due and overdue steps and tasks, attitude, habits, weekly review prompt |
+| GET | `/api/attitude-checkins` | Last 30 check-ins |
+| PUT | `/api/attitude-checkins/{date}` | Save the day's score (1 to 5) and note |
+| GET, POST | `/api/habits?date=` | List habits, or add one (at most 3 active) |
+| PUT | `/api/habits/{id}?date=` | Rename |
+| PUT, DELETE | `/api/habits/{id}/checks/{date}` | Mark or unmark a day |
+| DELETE | `/api/habits/{id}` | Archive (`POST .../restore`, `DELETE .../permanent`) |
+| GET, POST | `/api/fear-entries` | List or add fear log entries |
+| PUT, DELETE | `/api/fear-entries/{id}` | Update or archive (`POST .../restore`, `DELETE .../permanent`) |
+| POST | `/api/dreams/{id}/commitment` | Sign or replace the commitment |
+
+`POST` and `PUT /api/steps` now require `owner` and `targetDate`.
+`PATCH /api/steps/{id}/status` does not. Partner status also accepts `AGREED`.
+
+## Assessment, Modules and Plan (V8)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET, PUT | `/api/chain-assessments` | History with improvement from baseline, or save one day's scores |
+| GET | `/api/modules` | All modules in order, with status for this user |
+| GET | `/api/modules/{number}` | Content, saved rows, and what is missing. **400** while locked |
+| PUT | `/api/modules/{number}/completion` | Save `{ "rows": [...] }`. Data-proven modules send an empty list |
+| GET | `/api/plan-status/{dreamId}` | The six plan stages and `planReady` |
+| GET, POST | `/api/milestones` | List with `?dreamId=`, or add one |
+| DELETE | `/api/milestones/{id}` | Archive |
+
+## Progress and Account (V8)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/progress-metrics?date=` | BO-01 to BO-06 for this user |
+| GET | `/api/dreams/{id}/plan.pdf` | The dream's plan as a PDF |
+| GET, PUT | `/api/account/reminders` | Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh" }` |
+| GET | `/api/account/export` | All of this user's data as JSON. Never includes the password hash |
+| POST | `/api/account/delete` | Permanently delete the account: `{ "password": "..." }`. **400** if wrong |
+
+## Module Content (V8, ADMIN only)
+
+Every other role gets **403**. `GET /api/modules` and `GET /api/modules/{number}` also
+accept `?language=km`; a language with no text falls back to English.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/admin/modules?language=` | All modules' text in one language (`en`, `km`) |
+| PUT | `/api/admin/modules/{number}/content/{language}` | Save text and optional `fieldLabels` |
+| PUT | `/api/admin/modules/order` | `{ "orderedNumbers": [...] }`, every module exactly once |
+
 ## Excel
 
 ### Export

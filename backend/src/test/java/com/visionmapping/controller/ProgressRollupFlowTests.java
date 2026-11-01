@@ -99,7 +99,7 @@ class ProgressRollupFlowTests {
     }
 
     private long createStep(String token, long goalId) throws Exception {
-        return createdId("/api/steps", token, Map.of("goalId", goalId, "title", "Step", "description", "d",
+        return createdId("/api/steps", token, Map.of("owner", "Me", "goalId", goalId, "title", "Step", "description", "d",
                 "sequenceNumber", 1, "complex", false, "priority", "HIGH",
                 "targetDate", LocalDate.now().plusWeeks(2).toString(), "status", "NOT_STARTED"));
     }

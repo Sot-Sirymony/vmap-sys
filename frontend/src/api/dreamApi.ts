@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import type { ArchiveImpact } from '../types/vision';
-import type { Dream, DreamRequest } from '../types/vision';
+import type { Dream, DreamCommitmentRequest, DreamRequest } from '../types/vision';
 
 export function listDreams(token: string, includeArchived = false) {
   return apiClient<Dream[]>(`/dreams?includeArchived=${includeArchived}`, { token });
@@ -8,6 +8,15 @@ export function listDreams(token: string, includeArchived = false) {
 
 export function createDream(token: string, request: DreamRequest) {
   return apiClient<Dream>('/dreams', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(request),
+  });
+}
+
+// FR-69: sign or replace this dream's commitment.
+export function commitToDream(token: string, id: number, request: DreamCommitmentRequest) {
+  return apiClient<Dream>(`/dreams/${id}/commitment`, {
     method: 'POST',
     token,
     body: JSON.stringify(request),

@@ -109,7 +109,7 @@ class AuthAndTaskFlowTests {
                 "scheduleMode", "BOTTOM_UP"
         ));
         long stepId = postAndId("/api/steps", token, Map.of(
-                "goalId", goalId,
+                "owner", "Me", "goalId", goalId,
                 "title", "Select topic",
                 "description", "Choose a focused topic",
                 "sequenceNumber", 1,

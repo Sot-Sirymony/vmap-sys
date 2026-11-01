@@ -137,7 +137,7 @@ class ExcelImportFlowTests {
                 "targetDate", LocalDate.now().plusMonths(3).toString(), "status", "NOT_STARTED",
                 "scheduleMode", "BOTTOM_UP"));
         long stepId = postAndId("/api/steps", token, Map.of(
-                "goalId", goalId, "title", "Search literature", "sequenceNumber", 1, "complex", true,
+                "owner", "Me", "goalId", goalId, "title", "Search literature", "sequenceNumber", 1, "complex", true,
                 "priority", "HIGH", "targetDate", LocalDate.now().plusMonths(2).toString(), "status", "NOT_STARTED"));
         postAndId("/api/tasks", token, Map.of(
                 "stepId", stepId, "title", "Search PubMed", "owner", "Mony", "priority", "HIGH",

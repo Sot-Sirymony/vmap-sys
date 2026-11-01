@@ -12,4 +12,6 @@ public interface GoalRepository extends JpaRepository<Goal, Long>, CodedReposito
 
     /** Next sort position in a dream: a count, not a load of every sibling. */
     long countByDream_IdAndUser_IdAndArchivedFalse(Long dreamId, Long userId);
+
+    boolean existsByUser_IdAndArchivedFalseAndMoonshotTrue(Long userId);
 }

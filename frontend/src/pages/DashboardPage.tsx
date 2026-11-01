@@ -15,6 +15,7 @@ import { DashboardSummary } from '../components/dashboard/DashboardSummary';
 import { EnergyBudgetCard } from '../components/dashboard/EnergyBudgetCard';
 import { GettingStarted } from '../components/dashboard/GettingStarted';
 import { GratitudeCard } from '../components/dashboard/GratitudeCard';
+import { ProgressMetricsCard } from '../components/dashboard/ProgressMetricsCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -47,7 +48,7 @@ import { useThemeSettings } from '../context/ThemeModeContext';
 import { PageSection } from './PageSection';
 
 const PRIORITY_ORDER: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-const PARTNER_STATUS_ORDER: PartnerStatus[] = ['TO_CONTACT', 'CONTACTED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'];
+const PARTNER_STATUS_ORDER: PartnerStatus[] = ['TO_CONTACT', 'CONTACTED', 'AGREED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'];
 const HEATMAP_WEEKS = 12;
 // Chart palettes live in theme.ts (BR-15). Pipeline stages keep per-hue
 // meaning (real status information); obstacle types use the blue depth ramp
@@ -250,6 +251,7 @@ export function DashboardPage() {
         dueInPeriodLink={`/tasks?dueFrom=${from}&dueTo=${to}${scopeSuffix}`}
         visionAreaId={filterVisionAreaId}
       />
+      <ProgressMetricsCard token={token} />
       <EnergyBudgetCard budget={summary?.energyBudget} />
       <GratitudeCard token={token} gratitude={summary?.gratitude} onChanged={() => reloadSummary(false)} />
       {/* The comp pairs the priority-task list with the dreams donut in one row. */}

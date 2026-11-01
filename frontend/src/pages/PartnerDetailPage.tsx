@@ -42,6 +42,7 @@ function recruitmentStage(partner: Partner): (typeof RECRUITMENT_STAGES)[number]
   const byStatus: Record<PartnerStatus, (typeof RECRUITMENT_STAGES)[number]> = {
     TO_CONTACT: 'Identify',
     CONTACTED: 'Contact',
+    AGREED: 'Recruit',
     ACTIVE: hasLinkedWork ? 'Utilize' : 'Recruit',
     WAITING: 'Recruit',
     DECLINED: 'Recruit',

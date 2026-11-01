@@ -94,4 +94,9 @@ public interface PartnerRepository extends JpaRepository<Partner, Long>, CodedRe
             @Param("dreamId") Long dreamId,
             @Param("term") String term,
             Pageable pageable);
+
+    boolean existsByUser_IdAndArchivedFalse(Long userId);
+
+    /** FR-75: partners who have said yes. */
+    long countByUser_IdAndArchivedFalseAndStatusIn(Long userId, List<PartnerStatus> statuses);
 }

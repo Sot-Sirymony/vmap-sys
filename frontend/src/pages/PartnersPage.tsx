@@ -459,7 +459,7 @@ export function PartnersPage() {
         Status
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as PartnerStatus)}>
-            {(['TO_CONTACT', 'CONTACTED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'] as const).map((value) => (
+            {(['TO_CONTACT', 'CONTACTED', 'AGREED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'] as const).map((value) => (
               <MenuItem value={value} key={value}>{partnerStatusLabels[value]}</MenuItem>
             ))}
           </Select>
