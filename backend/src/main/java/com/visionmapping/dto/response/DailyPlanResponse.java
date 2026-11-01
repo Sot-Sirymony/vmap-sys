@@ -12,7 +12,8 @@ public record DailyPlanResponse(
         AttitudeCheckInResponse attitude,
         List<HabitResponse> habits,
         boolean weeklyReviewDue,
-        LocalDate lastWeeklyReviewDate
+        LocalDate lastWeeklyReviewDate,
+        long undatedStepCount
 ) {
 
     public enum Kind {

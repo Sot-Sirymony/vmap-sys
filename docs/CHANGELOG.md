@@ -71,6 +71,15 @@ requirement; it is internal quality and UX work.
 Implements [VMS_BRD_V8.0.0](VMS_BRD_V8.0.0.md) for personal use. See its
 *Personal-use scope* section for what was dropped and how IDs were renumbered.
 
+### Follow-up fixes
+
+- **Fixed** Permanently deleting a dream or goal linked to a gratitude entry failed with
+  a server error. The entry now stays and loses the link.
+- **Added** Fear entries can be edited and restored on the Journal page.
+- **Added** `/steps/undated` lists older steps with no date, and Today links to it when
+  there are any.
+- App version is now 8.0.0.
+
 ### Shipped: Phase 4, Khmer, content editing and checks
 
 - **NFR-03, partial** English and Khmer switch on the Account page, remembered per

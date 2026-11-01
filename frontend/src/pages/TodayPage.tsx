@@ -119,6 +119,12 @@ export function TodayPage() {
             </Alert>
           )}
 
+          {plan.undatedStepCount > 0 && (
+            <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate('/steps/undated')}>{t('Set dates')}</Button>}>
+              {t(plan.undatedStepCount === 1 ? '1 step has no date, so it cannot appear here.' : '{count} steps have no date, so they cannot appear here.', { count: plan.undatedStepCount })}
+            </Alert>
+          )}
+
           <Card>
             <CardHeader title={t('How is your attitude today?')} subheader={t('1 is low, 5 is high. Tap a number to save.')} />
             <CardContent>

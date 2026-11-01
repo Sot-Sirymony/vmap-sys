@@ -20,6 +20,7 @@ const ModuleDetailPage = lazy(() => import('./pages/ModuleDetailPage').then((m) 
 const PlanPage = lazy(() => import('./pages/PlanPage').then((m) => ({ default: m.PlanPage })));
 const AccountSettingsPage = lazy(() => import('./pages/AccountSettingsPage').then((m) => ({ default: m.AccountSettingsPage })));
 const ModuleContentPage = lazy(() => import('./pages/ModuleContentPage').then((m) => ({ default: m.ModuleContentPage })));
+const UndatedStepsPage = lazy(() => import('./pages/UndatedStepsPage').then((m) => ({ default: m.UndatedStepsPage })));
 const VisionAreasPage = lazy(() => import('./pages/VisionAreasPage').then((m) => ({ default: m.VisionAreasPage })));
 const DreamsPage = lazy(() => import('./pages/DreamsPage').then((m) => ({ default: m.DreamsPage })));
 const DreamDetailPage = lazy(() => import('./pages/DreamDetailPage').then((m) => ({ default: m.DreamDetailPage })));
@@ -70,6 +71,7 @@ export function App() {
             <Route path="/dreams/:dreamId" element={<DreamDetailPage />} />
             <Route path="/vision-map" element={<DreamDetailPage />} />
             <Route path="/goals" element={<GoalsPage />} />
+            <Route path="/steps/undated" element={<UndatedStepsPage />} />
             <Route path="/steps" element={<StepsPage />} />
             <Route path="/tasks" element={<TasksBoardPage />} />
             <Route path="/partners" element={<PartnersPage />} />

@@ -71,7 +71,23 @@ export const km: Record<string, string> = {
   'No habits yet. Add the first one below.': 'មិនទាន់មាននិស្ស័យទេ។ បន្ថែមមួយខាងក្រោម។',
   'New habit': 'និស្ស័យថ្មី',
 
+  'Set dates': 'កំណត់កាលបរិច្ឆេទ',
+  '1 step has no date, so it cannot appear here.': 'ជំហាន 1 គ្មានកាលបរិច្ឆេទ ដូច្នេះមិនអាចបង្ហាញនៅទីនេះបានទេ។',
+  '{count} steps have no date, so they cannot appear here.': 'ជំហាន {count} គ្មានកាលបរិច្ឆេទ ដូច្នេះមិនអាចបង្ហាញនៅទីនេះបានទេ។',
+  'Steps with no date': 'ជំហានគ្មានកាលបរិច្ឆេទ',
+  'Give each step a date so it can appear on your Today page.': 'កំណត់កាលបរិច្ឆេទឱ្យជំហាននីមួយៗ ដើម្បីឱ្យវាបង្ហាញនៅទំព័រថ្ងៃនេះ។',
+  'Every step has a date.': 'ជំហានទាំងអស់មានកាលបរិច្ឆេទ។',
+  'Unable to load your steps.': 'មិនអាចផ្ទុកជំហានបានទេ។',
+  'Unable to save this date.': 'មិនអាចរក្សាទុកកាលបរិច្ឆេទនេះបានទេ។',
+  'Date for {title}': 'កាលបរិច្ឆេទសម្រាប់ {title}',
+  Save: 'រក្សាទុក',
+
   // Journal
+  'Edit this fear': 'កែការភ័យខ្លាចនេះ',
+  'Save changes': 'រក្សាទុកការផ្លាស់ប្តូរ',
+  'Edit {name}': 'កែ {name}',
+  'Restore {name}': 'ស្ដារ {name}',
+  'Unable to restore this.': 'មិនអាចស្ដារបានទេ។',
   'Unable to load your journal.': 'មិនអាចផ្ទុកកំណត់ហេតុបានទេ។',
   'Unable to save this fear.': 'មិនអាចរក្សាទុកការភ័យខ្លាចនេះបានទេ។',
   'Unable to remove this.': 'មិនអាចដកចេញបានទេ។',

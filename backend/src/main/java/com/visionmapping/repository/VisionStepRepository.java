@@ -40,4 +40,7 @@ public interface VisionStepRepository extends JpaRepository<VisionStep, Long>, C
     /** FR-77: the last time the user touched a step. */
     @Query("select max(s.updatedAt) from VisionStep s where s.user.id = :userId")
     java.time.Instant findLastUpdatedAt(@Param("userId") Long userId);
+
+    /** Steps from before FR-64 that still have no date, shown as a prompt on Today. */
+    long countByUser_IdAndArchivedFalseAndTargetDateIsNull(Long userId);
 }

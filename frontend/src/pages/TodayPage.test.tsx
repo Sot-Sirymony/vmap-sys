@@ -27,6 +27,7 @@ const plan: DailyPlan = {
   habits: [],
   weeklyReviewDue: true,
   lastWeeklyReviewDate: null,
+  undatedStepCount: 0,
 };
 
 function renderPage() {
@@ -72,5 +73,13 @@ describe('TodayPage', () => {
     await userEvent.click(await screen.findByRole('checkbox', { name: 'Complete Compare loans' }));
 
     expect(await screen.findByText(/complex step must have at least one task/)).toBeInTheDocument();
+  });
+
+  it('links to the steps that have no date', async () => {
+    vi.mocked(getDailyPlan).mockResolvedValue({ ...plan, undatedStepCount: 2 });
+    renderPage();
+
+    expect(await screen.findByText('2 steps have no date, so they cannot appear here.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set dates' })).toBeInTheDocument();
   });
 });

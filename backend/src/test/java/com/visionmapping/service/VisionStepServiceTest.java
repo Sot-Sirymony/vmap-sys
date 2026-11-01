@@ -23,6 +23,7 @@ import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.IdealPartnerProfileRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
@@ -63,6 +64,9 @@ class VisionStepServiceTest {
     @Mock private CommunicationMessageRepository communicationMessageRepository;
     @Mock private ReviewRepository reviewRepository;
     @Mock private ObstacleRepository obstacleRepository;
+    @Mock
+    private GratitudeEntryRepository gratitudeEntryRepository;
+
     @Mock private ProgressLogRepository progressLogRepository;
     @Mock private IdealPartnerProfileRepository idealPartnerProfileRepository;
 
@@ -79,7 +83,7 @@ class VisionStepServiceTest {
                 visionStepRepository, taskItemRepository, idealPartnerProfileRepository);
         PermanentDeleteCascade permanentDeleteCascade = new PermanentDeleteCascade(lookup, visionAreaRepository,
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
-                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, idealPartnerProfileRepository);
+                communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, gratitudeEntryRepository, idealPartnerProfileRepository);
         service = new VisionStepService(lookup, progress, archiveCascade, permanentDeleteCascade,
                 new VisionMappingMapper(), visionStepRepository, taskItemRepository);
         testUser = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")

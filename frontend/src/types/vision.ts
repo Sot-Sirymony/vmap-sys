@@ -653,6 +653,7 @@ export type DailyPlan = {
   habits: Habit[];
   weeklyReviewDue: boolean;
   lastWeeklyReviewDate?: string | null;
+  undatedStepCount: number;
 };
 
 // FR-59.1: what kind of thing a gratitude entry is about.

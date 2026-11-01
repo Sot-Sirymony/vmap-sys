@@ -53,7 +53,8 @@ public class DailyPlanService {
                 .orElse(null);
         LocalDate lastWeeklyReview = lastWeeklyReview(userId);
         return new DailyPlanResponse(date, items, attitude, habitService.listHabits(date, false),
-                weeklyReviewDue(lastWeeklyReview, date), lastWeeklyReview);
+                weeklyReviewDue(lastWeeklyReview, date), lastWeeklyReview,
+                visionStepRepository.countByUser_IdAndArchivedFalseAndTargetDateIsNull(userId));
     }
 
     /** Takes the user explicitly because the reminder job runs with nobody signed in. */

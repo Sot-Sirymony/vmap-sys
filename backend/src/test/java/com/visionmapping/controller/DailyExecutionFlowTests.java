@@ -153,6 +153,40 @@ class DailyExecutionFlowTests {
     }
 
     @Test
+    void permanentlyDeletingADreamOrGoalKeepsLinkedGratitudeAndSynergyDoesNotBlockIt() throws Exception {
+        String token = registerAndToken("gratitude-link");
+        long dreamId = dream(token, "Why it matters");
+        long goalId = goal(token, dreamId);
+        long otherGoal = goal(token, dreamId);
+        send(post("/api/gratitude-entries"), token, Map.of("category", "OTHER", "description", "On the dream", "relatedDreamId", dreamId)).andExpect(status().isCreated());
+        send(post("/api/gratitude-entries"), token, Map.of("category", "OTHER", "description", "On the goal", "relatedGoalId", goalId)).andExpect(status().isCreated());
+        long userId = jdbcTemplate.queryForObject("select user_id from goals where id = ?", Long.class, goalId);
+        jdbcTemplate.update("insert into goal_synergy_links (user_id, goal_id, related_goal_id, created_at, updated_at) values (?, ?, ?, now(), now())", userId, goalId, otherGoal);
+
+        mockMvc.perform(delete("/api/goals/" + goalId).header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/goals/" + goalId + "/permanent").header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/dreams/" + dreamId).header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/dreams/" + dreamId + "/permanent").header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].relatedDreamId").doesNotExist())
+                .andExpect(jsonPath("$[0].relatedGoalId").doesNotExist())
+                .andExpect(jsonPath("$[1].relatedDreamId").doesNotExist())
+                .andExpect(jsonPath("$[1].relatedGoalId").doesNotExist());
+    }
+
+    @Test
+    void dailyPlanCountsOldStepsWithNoDate() throws Exception {
+        String token = registerAndToken("undated");
+        long stepId = step(token, goal(token, dream(token, "Why it matters")), "Old step", TODAY.plusDays(3));
+        jdbcTemplate.update("update vision_steps set target_date = null where id = ?", stepId);
+
+        mockMvc.perform(get("/api/daily-plan").param("date", TODAY.toString()).header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$.undatedStepCount").value(1));
+    }
+
+    @Test
     void attitudeCheckInReplacesTheSameDayAndRejectsTheFuture() throws Exception {
         String token = registerAndToken("attitude");
         send(put("/api/attitude-checkins/" + TODAY), token, Map.of("score", 2)).andExpect(status().isOk());

@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Pencil, RotateCcw, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -12,12 +12,13 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { listAttitudeCheckIns } from '../api/dailyPlanApi';
-import { archiveFearEntry, createFearEntry, listFearEntries } from '../api/fearEntryApi';
+import { archiveFearEntry, createFearEntry, listFearEntries, restoreFearEntry, updateFearEntry } from '../api/fearEntryApi';
 import { Button } from '../components/common/Button';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
+import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import type { AttitudeCheckIn, FearEntry, FearLikelihood } from '../types/vision';
@@ -43,6 +44,8 @@ export function JournalPage() {
   const [worstCase, setWorstCase] = useState('');
   const [likelihood, setLikelihood] = useState<FearLikelihood>('MEDIUM');
   const [firstTest, setFirstTest] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -50,13 +53,13 @@ export function JournalPage() {
     }
     setError('');
     try {
-      const [nextFears, nextAttitudes] = await Promise.all([listFearEntries(token), listAttitudeCheckIns(token)]);
+      const [nextFears, nextAttitudes] = await Promise.all([listFearEntries(token, showArchived), listAttitudeCheckIns(token)]);
       setFears(nextFears);
       setAttitudes(nextAttitudes);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t('Unable to load your journal.'));
     }
-  }, [token]);
+  }, [token, showArchived]);
 
   useEffect(() => {
     void load();
@@ -72,16 +75,49 @@ export function JournalPage() {
     setSaving(true);
     setError('');
     try {
-      await createFearEntry(token, { fear: fear.trim(), worstCase: worstCase.trim(), likelihood, firstTest: firstTest.trim() });
-      setFear('');
-      setWorstCase('');
-      setLikelihood('MEDIUM');
-      setFirstTest('');
+      const request = { fear: fear.trim(), worstCase: worstCase.trim(), likelihood, firstTest: firstTest.trim() };
+      if (editingId === null) {
+        await createFearEntry(token, request);
+      } else {
+        // Keeps any dream link the entry already has.
+        const relatedDreamId = fears?.find((entry) => entry.id === editingId)?.relatedDreamId ?? undefined;
+        await updateFearEntry(token, editingId, { ...request, relatedDreamId });
+      }
+      resetForm();
       await load();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : t('Unable to save this fear.'));
     } finally {
       setSaving(false);
+    }
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setFear('');
+    setWorstCase('');
+    setLikelihood('MEDIUM');
+    setFirstTest('');
+  }
+
+  function startEdit(entry: FearEntry) {
+    setEditingId(entry.id);
+    setFear(entry.fear);
+    setWorstCase(entry.worstCase);
+    setLikelihood(entry.likelihood);
+    setFirstTest(entry.firstTest);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function handleRestore(id: number) {
+    if (!token) {
+      return;
+    }
+    try {
+      await restoreFearEntry(token, id);
+      await load();
+    } catch (restoreError) {
+      setError(restoreError instanceof Error ? restoreError.message : t('Unable to restore this.'));
     }
   }
 
@@ -108,7 +144,7 @@ export function JournalPage() {
       {fears !== null && (
         <Stack spacing={2}>
           <Card>
-            <CardHeader title={t('Write down a fear')} subheader={t('Name it, size it, then pick a small test that would challenge it')} />
+            <CardHeader title={t(editingId === null ? 'Write down a fear' : 'Edit this fear')} subheader={t('Name it, size it, then pick a small test that would challenge it')} />
             <CardContent>
               <Box component="form" onSubmit={(event) => void handleSubmit(event)} sx={{ display: 'grid', gap: 1.5 }}>
                 <label>
@@ -137,15 +173,16 @@ export function JournalPage() {
                   {t('What is a low-risk first test?')}
                   <Textarea value={firstTest} onChange={(event) => setFirstTest(event.target.value)} required />
                 </label>
-                <Box>
-                  <Button type="submit" disabled={saving || !ready}>{saving ? t('Saving…') : t('Save fear')}</Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button type="submit" disabled={saving || !ready}>{saving ? t('Saving…') : t(editingId === null ? 'Save fear' : 'Save changes')}</Button>
+                  {editingId !== null && <Button variant="secondary" onClick={resetForm}>{t('Cancel')}</Button>}
                 </Box>
               </Box>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader title={t('Fear log')} />
+            <CardHeader title={t('Fear log')} action={<ShowArchivedToggle checked={showArchived} onToggle={() => setShowArchived((current) => !current)} />} />
             <CardContent>
               {fears.length === 0 ? (
                 <EmptyState>{t('No fears written down yet.')}</EmptyState>
@@ -161,9 +198,20 @@ export function JournalPage() {
                         <Typography variant="body2">{t('Worst case: {text}', { text: entry.worstCase })}</Typography>
                         <Typography variant="body2">{t('First test: {text}', { text: entry.firstTest })}</Typography>
                       </Box>
-                      <IconButton size="small" aria-label={t('Remove {name}', { name: entry.fear })} onClick={() => void handleArchive(entry.id)}>
-                        <X size={14} />
-                      </IconButton>
+                      {entry.archived ? (
+                        <IconButton size="small" aria-label={t('Restore {name}', { name: entry.fear })} onClick={() => void handleRestore(entry.id)}>
+                          <RotateCcw size={14} />
+                        </IconButton>
+                      ) : (
+                        <>
+                          <IconButton size="small" aria-label={t('Edit {name}', { name: entry.fear })} onClick={() => startEdit(entry)}>
+                            <Pencil size={14} />
+                          </IconButton>
+                          <IconButton size="small" aria-label={t('Remove {name}', { name: entry.fear })} onClick={() => void handleArchive(entry.id)}>
+                            <X size={14} />
+                          </IconButton>
+                        </>
+                      )}
                     </Box>
                   ))}
                 </Stack>

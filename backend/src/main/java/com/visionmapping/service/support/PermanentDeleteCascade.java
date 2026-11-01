@@ -3,6 +3,7 @@ package com.visionmapping.service.support;
 import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.entity.Obstacle;
 import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.Review;
@@ -12,6 +13,7 @@ import com.visionmapping.entity.VisionStep;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.IdealPartnerProfileRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
@@ -50,6 +52,7 @@ public class PermanentDeleteCascade {
     private final ReviewRepository reviewRepository;
     private final ObstacleRepository obstacleRepository;
     private final ProgressLogRepository progressLogRepository;
+    private final GratitudeEntryRepository gratitudeEntryRepository;
     private final IdealPartnerProfileRepository idealPartnerProfileRepository;
 
     public void deleteVisionArea(VisionArea area) {
@@ -119,6 +122,7 @@ public class PermanentDeleteCascade {
         obstacleRepository.findByUser_Id(userId).forEach(obstacle -> unlinkObstacle(obstacle, deleted));
         communicationMessageRepository.findByUser_Id(userId).forEach(message -> unlinkMessage(message, deleted));
         reviewRepository.findByUser_Id(userId).forEach(review -> unlinkReview(review, deleted));
+        gratitudeEntryRepository.findByUser_Id(userId).forEach(entry -> unlinkGratitude(entry, deleted));
 
         taskItemRepository.deleteAll(subtree.tasks);
         visionStepRepository.deleteAll(subtree.steps);
@@ -178,6 +182,15 @@ public class PermanentDeleteCascade {
         }
         if (references(review.getRelatedDream(), Dream::getId, deleted.dreams)) {
             review.setRelatedDream(null);
+        }
+    }
+
+    private void unlinkGratitude(GratitudeEntry entry, DeletedIds deleted) {
+        if (references(entry.getRelatedDream(), Dream::getId, deleted.dreams)) {
+            entry.setRelatedDream(null);
+        }
+        if (references(entry.getRelatedGoal(), Goal::getId, deleted.goals)) {
+            entry.setRelatedGoal(null);
         }
     }
 

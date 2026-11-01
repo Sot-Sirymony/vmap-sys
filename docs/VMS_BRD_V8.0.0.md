@@ -21,7 +21,7 @@ This is draft v0.1, written as a BRD for a "Dream Conversion" goal-achievement p
 
 ## Implementation status
 
-Status as of Nov 1, 2026. All work runs locally. It is **not committed and not deployed**, and the app version still shows 7.0.0. VMS is scoped to personal use; see *Personal-use scope* below.
+Status as of Nov 1, 2026. The work is committed and pushed to `main`; a production deploy has not been confirmed. Later fixes are recorded in the changelog. VMS is scoped to personal use; see *Personal-use scope* below.
 
 | Mark | Meaning |
 | --- | --- |
@@ -39,7 +39,7 @@ Status as of Nov 1, 2026. All work runs locally. It is **not committed and not d
 | Non-functional requirements (10) | 3 | 1 | 4 | 0 | 2 |
 | Acceptance criteria (7) | 4 | 0 | 2 | 1 | 0 |
 
-**Still to do:** translate the older pages into Khmer, have a Khmer speaker review the drafts, and test the older pages for accessibility. Before release: commit the work, build the Docker image, and send a real reminder email.
+**Still to do:** translate the older pages into Khmer, have a Khmer speaker review the drafts, and test the older pages for accessibility. Before relying on production: confirm the deploy, a Khmer PDF, and a real reminder email.
 
 ## Executive summary
 
