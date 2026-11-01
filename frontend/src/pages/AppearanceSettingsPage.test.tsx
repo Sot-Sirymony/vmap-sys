@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { backgroundTones } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../api/preferencesApi', () => ({
@@ -48,7 +49,7 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     expect(screen.getByText('Ocean')).toBeInTheDocument();
     expect(screen.getByText('Stitch')).toBeInTheDocument();
     // The accents are swatches, so they're found by their accessible names.
-    expect(screen.getAllByRole('button', { name: /accent$/ })).toHaveLength(23);
+    expect(screen.getAllByRole('button', { name: /^\w+ accent$/ })).toHaveLength(23);
     expect(screen.getByRole('button', { name: 'Vermilion accent' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Violet accent' })).toBeInTheDocument();
   });
@@ -61,8 +62,8 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('button', { name: 'Modern interface style' })).toBeInTheDocument();
-    const classic = screen.getByRole('button', { name: 'Classic interface style' });
+    expect(screen.getByRole('button', { name: /^Modern/ })).toBeInTheDocument();
+    const classic = screen.getByRole('button', { name: /^Classic/ });
 
     // Modern is the baseline, so nothing is stamped until Classic is chosen.
     expect(document.documentElement.hasAttribute('data-style')).toBe(false);
@@ -116,16 +117,19 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
   it('offers the sixteen background tones', () => {
     renderPage();
 
-    expect(screen.getAllByRole('button', { name: /background$/ })).toHaveLength(16);
-    expect(screen.getByRole('button', { name: 'Warm background' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Lavender background' })).toBeInTheDocument();
+    expect(backgroundTones).toHaveLength(16);
+    backgroundTones.forEach((tone) => {
+      expect(screen.getAllByRole('button', { name: new RegExp(`^${tone.label}`) }).length).toBeGreaterThan(0);
+    });
+    expect(screen.getByRole('button', { name: /^Warm/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Lavender/ })).toBeInTheDocument();
   });
 
   it('applies a background tone', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Warm background' }));
+    await user.click(screen.getByRole('button', { name: /^Warm/ }));
 
     await waitFor(() => expect(document.documentElement.dataset.tone).toBe('warm'));
   });
@@ -142,7 +146,7 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
     await user.click(screen.getByRole('switch', { name: /high contrast/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Warm background' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /^Warm/ })).toBeDisabled();
     });
     expect(screen.getByText(/unavailable while high contrast is on/i)).toBeInTheDocument();
   });

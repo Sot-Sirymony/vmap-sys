@@ -91,7 +91,7 @@ export function DashboardCard({ label, value, icon: Icon, tone = 'neutral', vari
   }
 
   return (
-    <Link to={to} aria-label={`${label}: ${value}. View these records.`} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
+    <Link to={to} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
       {card}
     </Link>
   );

@@ -71,6 +71,17 @@ requirement; it is internal quality and UX work.
 Implements [VMS_BRD_V8.0.0](VMS_BRD_V8.0.0.md) for personal use. See its
 *Personal-use scope* section for what was dropped and how IDs were renumbered.
 
+### Browser test suite
+
+- **Added** `npm run test:e2e` in `frontend/`: Playwright checks of the main V8 flows, plus
+  axe (WCAG A and AA) on every signed-in page at desktop, dark mode and phone width, and
+  on the signed-out pages. It needs the backend running locally and Chrome installed,
+  and each run creates and deletes its own temporary accounts.
+- **Fixed** from that audit: Dashboard and Appearance controls whose accessible names did
+  not match their visible text, unlabelled heatmap cells, scrollable tables keyboard users
+  could not reach, and low-contrast text on two Appearance buttons and on summary chips
+  in dark mode.
+
 ### Follow-up fixes
 
 - **Fixed** Permanently deleting a dream or goal linked to a gratitude entry failed with

@@ -172,7 +172,7 @@ export function AppearanceSettingsPage() {
     <PageSection
       title="Appearance"
       subtitle="Choose how the app looks. Changes apply immediately and are saved to your account."
-      actions={<Button onClick={reset} size="small" variant="outlined">Reset to defaults</Button>}
+      actions={<Button onClick={reset} size="small" variant="outlined" sx={{ color: 'primary.dark' }}>Reset to defaults</Button>}
     >
       {/* BR-33: a failed save never blocks the choice — it applies locally and
           is retried. Saying so is better than pretending it saved. */}
@@ -253,7 +253,6 @@ export function AppearanceSettingsPage() {
                     type="button"
                     onClick={() => update({ interfaceStyle: style.id })}
                     aria-pressed={selected}
-                    aria-label={`${style.label} interface style`}
                     sx={{
                       textAlign: 'left',
                       cursor: 'pointer',
@@ -354,7 +353,6 @@ export function AppearanceSettingsPage() {
                     type="button"
                     disabled={settings.highContrast}
                     onClick={() => update({ backgroundTone: tone.id })}
-                    aria-label={`${tone.label} background`}
                     aria-pressed={selected}
                     sx={{
                       display: 'flex',
@@ -420,7 +418,7 @@ export function AppearanceSettingsPage() {
                 />
               )}
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button variant="outlined" size="small" component="label" disabled={settings.highContrast}>
+                <Button variant="outlined" size="small" component="label" disabled={settings.highContrast} sx={{ color: 'primary.dark' }}>
                   {backgroundImage ? 'Replace image' : 'Browse image'}
                   <input hidden type="file" accept="image/*" onChange={onPickBackgroundImage} />
                 </Button>
@@ -507,7 +505,6 @@ export function AppearanceSettingsPage() {
                     type="button"
                     onClick={() => update({ fontFamily: font.id })}
                     aria-pressed={selected}
-                    aria-label={`${font.label} font`}
                     sx={{
                       textAlign: 'left',
                       cursor: 'pointer',

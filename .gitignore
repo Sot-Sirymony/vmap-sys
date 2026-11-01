@@ -63,3 +63,7 @@ production_env.md
 *.backup
 *.sql.gz
 *.sql.zst
+
+# Playwright output
+frontend/test-results/
+frontend/playwright-report/

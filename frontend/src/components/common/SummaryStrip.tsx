@@ -42,7 +42,7 @@ export function SummaryStrip({ chips }: { chips: SummaryChipItem[] }) {
               ...(tint
                 ? chip.active
                   ? { bgcolor: tint.fg, color: '#ffffff', '&:hover': { bgcolor: tint.fg } }
-                  : { color: `color-mix(in srgb, ${tint.fg} 80%, var(--foreground))`, borderColor: tint.fg }
+                  : { color: `color-mix(in srgb, ${tint.fg} 45%, var(--foreground))`, borderColor: tint.fg }
                 : chip.active
                   ? { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.main' } }
                   : {}),

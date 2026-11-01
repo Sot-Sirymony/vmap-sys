@@ -353,7 +353,7 @@ export function DataTable<T extends { id: number }>({
           </Button>
         </Toolbar>
       )}
-      <TableContainer>
+      <TableContainer tabIndex={0} role="region" aria-label="Records">
         <Table className="data-table">
           <TableHead>
             <TableRow>

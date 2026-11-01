@@ -63,6 +63,17 @@ export PASSWORD_RESET_TTL_MINUTES=30
 
 `DB_PASSWORD` is required — the app fails fast on startup if it isn't set. `JWT_SECRET` should also be overridden with a strong value for anything beyond local development.
 
+## Browser Tests
+
+With the backend running on port 8080 and Chrome installed:
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+Each run builds the frontend, then creates and deletes its own temporary accounts.
+
 ## Version 8 Features
 
 Today, Journal, Assessment, Modules, Plan, milestones, plan PDF, data export, account

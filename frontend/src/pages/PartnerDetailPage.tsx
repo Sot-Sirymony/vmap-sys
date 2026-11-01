@@ -232,7 +232,7 @@ export function PartnerDetailPage() {
               No messages yet. <Link to="/communication">Draft one in the Communication Builder.</Link>
             </EmptyState>
           ) : (
-            <TableContainer>
+            <TableContainer tabIndex={0} role="region" aria-label="Messages to this partner">
               <Table className="data-table">
                 <TableHead>
                   <TableRow>

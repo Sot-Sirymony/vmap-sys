@@ -39,7 +39,7 @@ Status as of Nov 1, 2026. The work is committed and pushed to `main`; a producti
 | Non-functional requirements (10) | 3 | 1 | 4 | 0 | 2 |
 | Acceptance criteria (7) | 4 | 0 | 2 | 1 | 0 |
 
-**Still to do:** translate the older pages into Khmer, have a Khmer speaker review the drafts, and test the older pages for accessibility. Before relying on production: confirm the deploy, a Khmer PDF, and a real reminder email.
+**Still to do:** translate the older pages into Khmer, have a Khmer speaker review the drafts, and test open dialogs and a real screen reader for accessibility. Before relying on production: confirm the deploy, a Khmer PDF, and a real reminder email.
 
 ## Executive summary
 
@@ -189,7 +189,7 @@ Each Power Secret becomes one module with a business outcome and a required exer
 | ID | Category | Requirement | Status |
 | --- | --- | --- | --- |
 | NFR-01 | Usability | A daily check-in and priority list shall take under 5 minutes on mobile | 🔷 Built, not fully verified: Today page built for phones; the 5 minutes not timed |
-| NFR-02 | Accessibility | Screens shall meet WCAG 2.1 AA | 🔶 Partial: automated checks pass on new pages; older pages and screen reader not tested |
+| NFR-02 | Accessibility | Screens shall meet WCAG 2.1 AA | 🔶 Partial: automated checks pass on all pages at rest; open dialogs and a real screen reader not tested |
 | NFR-03 | Language | UI and content shall support English and Khmer; more languages configurable | 🔶 Partial: new pages and modules in Khmer, draft needing review; older pages still English |
 | NFR-04 | Privacy | Journals and dreams are private by default; sharing is opt-in per item | ✅ Done: data stays private to each account; no sharing exists |
 | NFR-05 | Security | Personal data encrypted in transit and at rest; role-based access (participant, coach, partner, admin) | 🔶 Partial: role-based access exists, partner and coach roles dropped; encryption not verified |

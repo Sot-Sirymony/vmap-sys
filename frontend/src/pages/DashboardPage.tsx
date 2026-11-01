@@ -262,7 +262,7 @@ export function DashboardPage() {
           {priorityTasks.length === 0 ? (
             <EmptyState>No open priority tasks.</EmptyState>
           ) : (
-            <TableContainer>
+            <TableContainer tabIndex={0} role="region" aria-label="Priority tasks">
             <Table className="data-table">
               <TableHead>
                 <TableRow>
@@ -431,6 +431,9 @@ export function DashboardPage() {
                     {week.map((day) => (
                       <Tooltip key={day.date} title={formatHeatmapTooltip(day)} arrow>
                         <Box
+                          // Days yet to come carry no information to announce.
+                          role={day.isFuture ? undefined : 'img'}
+                          aria-hidden={day.isFuture ? true : undefined}
                           sx={{
                             width: 13,
                             height: 13,
