@@ -21,7 +21,19 @@ This is draft v0.1, written as a BRD for a "Dream Conversion" goal-achievement p
 
 ## Implementation status
 
-Status as of Nov 2, 2026. The work is committed and pushed to `main`; a production deploy has not been confirmed. Later fixes are recorded in the changelog. VMS is scoped to personal use; see *Personal-use scope* below.
+Status as of Nov 2, 2026. The work is committed and pushed to `main` (latest commit `8d8cdd7`); a production deploy has not been confirmed. Details are in the changelog. VMS is scoped to personal use; see *Personal-use scope* below.
+
+**Work completed**
+
+| Stage | What was done | Requirements |
+| --- | --- | --- |
+| Phases 1–4 | Today page, journal, assessment, 15 modules, guided plan, milestones, objectives card, plan PDF, reminders, data export and deletion, module editing | BR-01 to BR-15, FR-64 to FR-78 |
+| Follow-up | Browser test suite; fixes from the page audit; fear editing; undated steps page | NFR-02 |
+| Phase A: checks | Accessibility checks on every open dialog, with three fixes; phone check-in in 3 taps; reminder email delivered over real SMTP in a test; reminder email address and test button on the Dashboard and Account page; production image built and run with Render's limits | NFR-01, NFR-02, FR-18 |
+| Phase B: Khmer | Every page, dialog, label, chart and message in Khmer, with Khmer dates; Khmer checked on every page at phone width | NFR-03 |
+| Phase C: text editing | Admins change any interface text in English or Khmer, or reset it, without a code change | FR-20 |
+
+**Tests at the latest commit:** 282 backend, 389 frontend unit, and 136 browser checks, all passing locally.
 
 | Mark | Meaning |
 | --- | --- |
