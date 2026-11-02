@@ -239,10 +239,18 @@ Belongs to:
 - **Milestone:** `dreamId`, `title`, `achievedOn`, `note`, `archived`. Removed with its
   dream on permanent delete.
 
+## V8 Interface text (FR-20)
+
+**UiTextOverride** (`ui_text_overrides`, V51): `language` (`en` or `km`), `sourceText`
+(the English text the app uses as its key), `text` (the replacement), `createdAt`,
+`updatedAt`. One row per language and source text. It belongs to the server, not to a
+user, so it is not in a user's data export. Deleting a row restores the default.
+
 ## V8 Reminders
 
 **AppUser** adds `remindersEnabled` (default false), `reminderTimeZone` and
-`lastReminderOn`.
+`lastReminderOn`. V50 adds `reminderEmail` (nullable): where reminders go, or the login
+email when it is null.
 
 ## Business Rules
 

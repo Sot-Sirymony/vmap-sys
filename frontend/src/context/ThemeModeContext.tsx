@@ -7,6 +7,7 @@ import { getAppearancePreferences, updateAppearancePreferences } from '../api/pr
 import { toSettings, toWire } from './appearance-mapping';
 import { useAuth } from './AuthContext';
 import type { AppearancePreferences } from '../types/preferences';
+import { tr } from '../i18n/translate';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type FontSize = 'small' | 'medium' | 'large';
@@ -463,7 +464,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
         .catch((error: unknown) => {
           // The choice is already applied and cached — this is about telling the
           // truth, not rolling back what the user asked for (BR-33).
-          setSaveError(error instanceof Error ? error.message : 'Could not save appearance to your account.');
+          setSaveError(error instanceof Error ? error.message : tr('Could not save appearance to your account.'));
         });
     }, SAVE_DEBOUNCE_MS);
 

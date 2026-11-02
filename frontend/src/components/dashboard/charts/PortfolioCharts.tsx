@@ -2,6 +2,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { ChartTooltipContent } from '../ChartTooltipContent';
 import { chartPrimary } from '../../../theme';
 import type { PartnerStatus } from '../../../types/vision';
+import { tr } from '../../../i18n/translate';
 
 /**
  * The dashboard's three Recharts figures, moved out of DashboardPage so that
@@ -30,7 +31,7 @@ export function ProgressTrendChart({ data }: { data: TrendPoint[] }) {
         <RechartsTooltip content={<ChartTooltipContent />} />
         <Area
           dataKey="progress"
-          name="Average progress %"
+          name={tr('Average progress %')}
           type="monotone"
           fill={chartPrimary}
           fillOpacity={0.15}
@@ -50,7 +51,7 @@ export function VisionAreaProgressChart({ data }: { data: AreaProgressPoint[] })
         <XAxis type="number" domain={[0, 100]} tickFormatter={percentTick} tickLine={false} axisLine={false} />
         <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} width={120} />
         <RechartsTooltip content={<ChartTooltipContent />} />
-        <Bar dataKey="progress" name="Progress %" radius={4} fill={chartPrimary} />
+        <Bar dataKey="progress" name={tr('Progress %')} radius={4} fill={chartPrimary} />
       </BarChart>
     </ResponsiveContainer>
   );

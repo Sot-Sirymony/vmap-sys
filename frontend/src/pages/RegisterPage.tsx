@@ -5,6 +5,7 @@ import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 export function RegisterPage() {
   const [fullName, setFullName] = useState('');
@@ -20,7 +21,7 @@ export function RegisterPage() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('The passwords do not match.');
+      setError(tr('The passwords do not match.'));
       return;
     }
 
@@ -38,14 +39,14 @@ export function RegisterPage() {
       // the account exists, not that whoever filled the form can sign in to it.
       navigate('/login', { replace: true, state: { registeredEmail: email } });
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Registration failed.');
+      setError(error instanceof Error ? error.message : tr('Registration failed.'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthLayout subtitle="Create your account">
+    <AuthLayout subtitle={tr('Create your account')}>
       <GoogleSignInButton onClick={() => navigate('/oauth/google')} />
       <div className="auth-divider" aria-hidden="true">
         <span>or</span>
@@ -53,7 +54,7 @@ export function RegisterPage() {
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="register-name"
-          label="Full name"
+          label={tr('Full name')}
           name="fullName"
           autoComplete="name"
           placeholder="John Doe"
@@ -63,7 +64,7 @@ export function RegisterPage() {
         />
         <AuthField
           id="register-email"
-          label="Email"
+          label={tr('Email')}
           type="email"
           name="email"
           autoComplete="username"
@@ -74,7 +75,7 @@ export function RegisterPage() {
         />
         <AuthField
           id="register-password"
-          label="Password"
+          label={tr('Password')}
           type="password"
           name="password"
           autoComplete="new-password"
@@ -86,7 +87,7 @@ export function RegisterPage() {
         />
         <AuthField
           id="register-confirm-password"
-          label="Confirm password"
+          label={tr('Confirm password')}
           type="password"
           name="confirmPassword"
           autoComplete="new-password"
@@ -98,11 +99,11 @@ export function RegisterPage() {
         />
         {error && <ErrorMessage message={error} />}
         <button className="auth-submit" type="submit" disabled={loading}>
-          {loading ? 'Creating...' : 'Create account'}
+          {loading ? tr('Creating...') : tr('Create account')}
         </button>
       </form>
       <p className="auth-link" style={{ textAlign: 'center' }}>
-        Already have an account? <Link to="/login">Sign in</Link>
+        Already have an account? <Link to="/login">{tr('Sign in')}</Link>
       </p>
     </AuthLayout>
   );

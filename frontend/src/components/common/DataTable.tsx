@@ -16,6 +16,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { TablePaginationActions } from './TablePaginationActions';
+import { tr } from '../../i18n/translate';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -215,11 +216,11 @@ export function DataTable<T extends { id: number }>({
       return null;
     }
     if (reorderActive) {
-      return 'Drag a row to move it to a new position.';
+      return tr('Drag a row to move it to a new position.');
     }
     if (sortKey !== reorder.columnKey || sortDirection !== 'asc') {
-      const columnLabel = columns.find((column) => column.key === reorder.columnKey)?.label ?? 'its position column';
-      return `Sort by "${columnLabel}" ascending (click its header) to drag rows into a new order.`;
+      const columnLabel = columns.find((column) => column.key === reorder.columnKey)?.label ?? tr('its position column');
+      return tr('Sort by "{column}" ascending (click its header) to drag rows into a new order.', { column: typeof columnLabel === 'string' ? columnLabel : tr('its position column') });
     }
     if (totalRows > currentRowsPerPage) {
       return 'Increase rows per page below so everything fits on one page to drag rows into a new order.';
@@ -301,7 +302,7 @@ export function DataTable<T extends { id: number }>({
     const detailColumns = columns.filter((column) => column !== headerColumn && column !== actionsColumn);
     return (
       <>
-        {reorder && <p className="field-hint">Drag-and-drop reorder needs a wider screen — not available at this size.</p>}
+        {reorder && <p className="field-hint">{tr('Drag-and-drop reorder needs a wider screen — not available at this size.')}</p>}
         <div className="table-cards">
           {visibleRows.map((row) => (
             <article className={`table-card ${rowClassName?.(row) ?? ''}`} key={row.id}>
@@ -329,6 +330,8 @@ export function DataTable<T extends { id: number }>({
           onPageChange={(_event, nextPage) => handlePageChange(nextPage)}
           onRowsPerPageChange={(event) => handleRowsPerPageChange(Number(event.target.value))}
           ActionsComponent={TablePaginationActions}
+          labelRowsPerPage={tr('Rows per page:')}
+          labelDisplayedRows={({ from, to, count }) => tr('{from}–{to} of {count}', { from, to, count })}
         />
       </>
     );
@@ -349,11 +352,11 @@ export function DataTable<T extends { id: number }>({
           </Typography>
           {selection.actions}
           <Button type="button" variant="secondary" onClick={() => selection.onChange(new Set())}>
-            Clear selection
+            {tr('Clear selection')}
           </Button>
         </Toolbar>
       )}
-      <TableContainer tabIndex={0} role="region" aria-label="Records">
+      <TableContainer tabIndex={0} role="region" aria-label={tr('Records')}>
         <Table className="data-table">
           <TableHead>
             <TableRow>
@@ -420,6 +423,8 @@ export function DataTable<T extends { id: number }>({
         onPageChange={(_event, nextPage) => handlePageChange(nextPage)}
         onRowsPerPageChange={(event) => handleRowsPerPageChange(Number(event.target.value))}
         ActionsComponent={TablePaginationActions}
+        labelRowsPerPage={tr('Rows per page:')}
+        labelDisplayedRows={({ from, to, count }) => tr('{from}–{to} of {count}', { from, to, count })}
       />
     </>
   );

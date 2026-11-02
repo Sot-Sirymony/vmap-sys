@@ -53,6 +53,7 @@ import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 export function DreamsPage() {
   const { token } = useAuth();
@@ -300,7 +301,7 @@ export function DreamsPage() {
         void nudgeContributionForDream({ token, dreamId: dream.id, showToast, navigate });
       }
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update dream status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update dream status.'));
     }
   }
 
@@ -330,7 +331,7 @@ export function DreamsPage() {
       await reorderDreams(token, dragged.visionAreaId, nextOrder);
       await crud.reload();
     } catch (reorderError) {
-      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder dreams.');
+      crud.setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder dreams.'));
     }
   }
 
@@ -339,7 +340,7 @@ export function DreamsPage() {
       return 'Archive this dream?';
     }
     const impact = await getDreamArchiveImpact(token, dream.id);
-    return `Archiving "${dream.title}" also archives ${impact.goals} goal(s), ${impact.steps} step(s), and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+    return tr('Archiving "{title}" also archives {goals} goal(s), {steps} step(s), and {tasks} task(s). Everything can be restored later with "Show archived".', { title: dream.title, goals: impact.goals, steps: impact.steps, tasks: impact.tasks });
   }
 
   const filteredDreams = crud.items.filter((dream) => {
@@ -401,11 +402,11 @@ export function DreamsPage() {
         archived={dream.archived}
         confirmArchive={() => archiveImpactMessage(dream)}
         extraActions={[
-          { label: 'View map', onClick: () => navigate(`/dreams/${dream.id}`) },
-          { label: 'View goals', onClick: () => navigate(`/goals?dreamId=${dream.id}`) },
-          { label: 'Add goal', onClick: () => navigate(`/goals?create=goal&parent=${dream.id}`) },
+          { label: tr('View map'), onClick: () => navigate(`/dreams/${dream.id}`) },
+          { label: tr('View goals'), onClick: () => navigate(`/goals?dreamId=${dream.id}`) },
+          { label: tr('Add goal'), onClick: () => navigate(`/goals?create=goal&parent=${dream.id}`) },
         ]}
-        label="Dream actions"
+        label={tr('Dream actions')}
       />
     );
   }
@@ -413,14 +414,14 @@ export function DreamsPage() {
   const columns: DataTableColumn<Dream>[] = [
     {
       key: 'position',
-      label: 'Order',
+      label: tr('Order'),
       sortValue: (dream) => dream.sortOrder ?? Number.MAX_SAFE_INTEGER,
       render: (dream) => (dream.sortOrder != null ? dream.sortOrder + 1 : '—'),
     },
-    { key: 'code', label: 'Code', sortValue: (dream) => dream.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (dream) => dream.code },
+    { key: 'code', label: tr('Code'), sortValue: (dream) => dream.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (dream) => dream.code },
     {
       key: 'title',
-      label: 'Dream',
+      label: tr('Dream'),
       sortValue: (dream) => dream.title,
       sx: { fontWeight: 500 },
       // FR-24.4: the map is a dream's landing surface — its title goes there.
@@ -438,16 +439,16 @@ export function DreamsPage() {
               />
             )}
             {dream.moonshot && (
-              <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
-                <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot dream">
+              <Tooltip title={dream.moonshotVision || tr('Moonshot dream')} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label={tr('Moonshot dream')}>
                   <Rocket size={16} />
                 </Box>
               </Tooltip>
             )}
             {dream.scheduleOverrun && (
               // FR-51.2: fixed top-down deadline, but a goal now runs past it — informational only.
-              <Tooltip title={dream.scheduleOverrunDetail || 'A goal runs past this dream\'s fixed target date.'} arrow>
-                <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)' }} role="img" aria-label="Schedule overrun">
+              <Tooltip title={dream.scheduleOverrunDetail || tr('A goal runs past this dream\'s fixed target date.')} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)' }} role="img" aria-label={tr('Schedule overrun')}>
                   <TriangleAlert size={16} />
                 </Box>
               </Tooltip>
@@ -460,119 +461,118 @@ export function DreamsPage() {
     },
     {
       key: 'priority',
-      label: 'Priority',
+      label: tr('Priority'),
       sortValue: (dream) => priorityRank(dream.priority),
       render: (dream) => <PriorityBadge priority={dream.priority} />,
     },
     {
       key: 'letterRank',
-      label: 'Rank',
+      label: tr('Rank'),
       sortValue: (dream) => dream.letterRank ?? '',
       render: (dream) => dream.letterRank ?? '—',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (dream) => dream.status,
       render: (dream) => <StatusBadge status={dream.status} />,
     },
     {
       key: 'goals',
-      label: 'Goals',
+      label: tr('Goals'),
       sortValue: (dream) => goalCounts.get(dream.id) ?? 0,
       render: (dream) => goalCounts.get(dream.id) ?? 0,
     },
     {
       key: 'targetDate',
-      label: 'Target',
+      label: tr('Target'),
       sortValue: (dream) => dream.targetDate,
       render: (dream) => <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} />,
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (dream) => renderDreamActions(dream),
     },
   ];
 
   const clarityChecks = [
-    { label: 'What exactly do you want to achieve?', met: title.trim().length >= 8 },
-    { label: 'Why does this matter to you?', met: whyImportant.trim().length >= 15 },
-    { label: 'What will success look like?', met: successDefinition.trim().length >= 15 },
-    { label: 'When do you want to achieve it?', met: Boolean(targetDate) },
-    { label: 'Which area of life or work does this belong to?', met: Boolean(visionAreaId) },
+    { label: tr('What exactly do you want to achieve?'), met: title.trim().length >= 8 },
+    { label: tr('Why does this matter to you?'), met: whyImportant.trim().length >= 15 },
+    { label: tr('What will success look like?'), met: successDefinition.trim().length >= 15 },
+    { label: tr('When do you want to achieve it?'), met: Boolean(targetDate) },
+    { label: tr('Which area of life or work does this belong to?'), met: Boolean(visionAreaId) },
   ];
   const isVague = clarityChecks.some((check) => !check.met);
 
   const formFields = (
     <>
       <label>
-        Vision Area
+        {tr('Vision Area')}
         <FormControl fullWidth size="small" required>
           <Select SelectDisplayProps={{ 'aria-label': "Vision Area" }} displayEmpty value={visionAreaId} onChange={(event) => setVisionAreaId(event.target.value)}>
-            <MenuItem value="" disabled><em>Select a vision area</em></MenuItem>
+            <MenuItem value="" disabled><em>{tr('Select a vision area')}</em></MenuItem>
             {visionAreas.map((area) => <MenuItem value={String(area.id)} key={area.id}>{area.name}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Title
+        {tr('Title')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
-        Type
+        {tr('Type')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Type" }} value={dreamType} onChange={(event) => setDreamType(event.target.value as DreamType)}>
-            <MenuItem value="SHORT_TERM">Short Term</MenuItem>
-            <MenuItem value="LONG_TERM">Long Term</MenuItem>
-            <MenuItem value="LIFETIME">Lifetime</MenuItem>
+            <MenuItem value="SHORT_TERM">{tr('Short Term')}</MenuItem>
+            <MenuItem value="LONG_TERM">{tr('Long Term')}</MenuItem>
+            <MenuItem value="LIFETIME">{tr('Lifetime')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Target Date
+        {tr('Target Date')}
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
       </label>
       <label>
-        Priority
+        {tr('Priority')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Priority" }} value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
-            <MenuItem value="LOW">Low</MenuItem>
-            <MenuItem value="MEDIUM">Medium</MenuItem>
-            <MenuItem value="HIGH">High</MenuItem>
-            <MenuItem value="CRITICAL">Critical</MenuItem>
+            <MenuItem value="LOW">{tr('Low')}</MenuItem>
+            <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+            <MenuItem value="HIGH">{tr('High')}</MenuItem>
+            <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Rank within this area
+        {tr('Rank within this area')}
         <Input
           value={letterRank}
           onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-          placeholder="e.g. A"
+          placeholder={tr('e.g. A')}
           maxLength={1}
         />
         <span className="field-hint">
-          Optional. A, B, C… — assigned after listing everything, to mark which dreams in this area come first. Ties
-          are fine; nothing enforces a unique order.
+          {tr('Optional. A, B, C… — assigned after listing everything, to mark which dreams in this area come first. Ties are fine; nothing enforces a unique order.')}
         </span>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as DreamStatus)}>
-            <MenuItem value="IDEA">Idea</MenuItem>
-            <MenuItem value="ACTIVE">Active</MenuItem>
-            <MenuItem value="PAUSED">Paused</MenuItem>
-            <MenuItem value="COMPLETED">Completed</MenuItem>
+            <MenuItem value="IDEA">{tr('Idea')}</MenuItem>
+            <MenuItem value="ACTIVE">{tr('Active')}</MenuItem>
+            <MenuItem value="PAUSED">{tr('Paused')}</MenuItem>
+            <MenuItem value="COMPLETED">{tr('Completed')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       {isVague && (
         <div className="field-full coaching-panel">
-          <strong>Make this dream clearer</strong>
-          <p>A vague dream is hard to turn into goals. Answer these before saving:</p>
+          <strong>{tr('Make this dream clearer')}</strong>
+          <p>{tr('A vague dream is hard to turn into goals. Answer these before saving:')}</p>
           <ul>
             {clarityChecks.map((check) => (
               <li key={check.label} className={check.met ? 'coaching-item-done' : ''}>
@@ -583,26 +583,25 @@ export function DreamsPage() {
         </div>
       )}
       <label className="field-full">
-        Why Important
+        {tr('Why Important')}
         <Textarea value={whyImportant} onChange={(event) => setWhyImportant(event.target.value)} />
       </label>
       <label className="field-full">
-        Success Definition
+        {tr('Success Definition')}
         <Textarea value={successDefinition} onChange={(event) => setSuccessDefinition(event.target.value)} />
       </label>
       <label className="field-full">
         <span className="inline-meta">
           <Checkbox checked={moonshot} onChange={(event) => setMoonshot(event.target.checked)} />
-          Moonshot dream
+          {tr('Moonshot dream')}
         </span>
       </label>
       {moonshot && (
         <label className="field-full">
-          Moonshot vision
+          {tr('Moonshot vision')}
           <Textarea value={moonshotVision} onChange={(event) => setMoonshotVision(event.target.value)} />
           <span className="field-hint">
-            If resources were no limit, what would the ideal result look like? Aim beyond what feels achievable — this
-            is aspirational only and never changes the dream's progress or completion.
+            {tr('If resources were no limit, what would the ideal result look like? Aim beyond what feels achievable — this is aspirational only and never changes the dream\'s progress or completion.')}
           </span>
         </label>
       )}
@@ -615,12 +614,11 @@ export function DreamsPage() {
           placeholder="https://..."
         />
         <span className="field-hint">
-          Optional. A link to a picture of what achieving this dream looks like — no upload, just paste a link to an
-          image hosted elsewhere.
+          {tr('Optional. A link to a picture of what achieving this dream looks like — no upload, just paste a link to an image hosted elsewhere.')}
         </span>
       </label>
       <label className="field-full">
-        Target date scheduling
+        {tr('Target date scheduling')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={scheduleMode} onChange={(event) => setScheduleMode(event.target.value as ScheduleMode)}>
             <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
@@ -630,16 +628,14 @@ export function DreamsPage() {
         <span className="field-hint">
           {scheduleMode === 'BOTTOM_UP'
             ? "This dream's target date must be on or after its goals' target dates — set from the bottom up."
-            : 'A real external deadline that cannot move. Goals running past it are flagged, not blocked.'}
+            : tr('A real external deadline that cannot move. Goals running past it are flagged, not blocked.')}
         </span>
       </label>
       {showDecisionChecklist && (
         <div className="field-full diligence-checklist">
-          <strong>Before you move this moonshot dream to Active…</strong>
+          <strong>{tr('Before you move this moonshot dream to Active…')}</strong>
           <p>
-            This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least two
-            Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page. Either one
-            clears this check — there's no right answer here, only an honest one.
+            {tr('This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least two Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page. Either one clears this check — there\'s no right answer here, only an honest one.')}
           </p>
           {DECISION_CHECKLIST_QUESTIONS.map((question) => (
             <div className="diligence-row" key={question.key}>
@@ -656,15 +652,15 @@ export function DreamsPage() {
                 }}
                 aria-label={question.label}
               >
-                <ToggleButton value="no">No</ToggleButton>
-                <ToggleButton value="yes">Yes</ToggleButton>
+                <ToggleButton value="no">{tr('No')}</ToggleButton>
+                <ToggleButton value="yes">{tr('Yes')}</ToggleButton>
               </ToggleButtonGroup>
             </div>
           ))}
           <span className="field-hint">
             {isDecisionChecklistComplete(decisionAnswers)
-              ? 'All eight answered — this checklist clears the gate on save.'
-              : `${DECISION_CHECKLIST_QUESTIONS.filter((question) => decisionAnswers[question.key] !== null).length} of ${DECISION_CHECKLIST_QUESTIONS.length} answered.`}
+              ? tr('All eight answered — this checklist clears the gate on save.')
+              : tr('{done} of {total} answered.', { done: DECISION_CHECKLIST_QUESTIONS.filter((question) => decisionAnswers[question.key] !== null).length, total: DECISION_CHECKLIST_QUESTIONS.length })}
           </span>
         </div>
       )}
@@ -677,17 +673,17 @@ export function DreamsPage() {
 
   return (
     <PageSection
-      title="Dreams"
-      subtitle="Capture meaningful outcomes and prepare them for goals."
+      title={tr('Dreams')}
+      subtitle={tr('Capture meaningful outcomes and prepare them for goals.')}
       actions={
         <Button type="button" onClick={openCreateFlow} disabled={visionAreas.length === 0}>
-          Create dream
+          {tr('Create dream')}
         </Button>
       }
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create dream"
+        createLabel={tr('Create dream')}
         editTitle="Edit Dream"
         saving={crud.saving}
         disabled={visionAreas.length === 0}
@@ -730,33 +726,33 @@ export function DreamsPage() {
       <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamType, filterPriority, filterLetterRank, filterStatus, filterOverdueOnly, filterMoonshotOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="dreams" />
         <FilterSelect
-          label="Vision Area"
+          label={tr('Vision Area')}
           value={filterVisionAreaId}
           onChange={setFilterVisionAreaId}
           options={optionsFromEntities(visionAreas, (area) => area.name)}
         />
         <FilterSelect
-          label="Type"
+          label={tr('Type')}
           value={filterDreamType}
           onChange={setFilterDreamType}
           options={optionsFromLabels(dreamTypeLabels)}
         />
         <FilterSelect
-          label="Priority"
+          label={tr('Priority')}
           value={filterPriority}
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
         {letterRankOptions.length > 0 && (
           <FilterSelect
-            label="Rank"
+            label={tr('Rank')}
             value={filterLetterRank}
             onChange={setFilterLetterRank}
             options={letterRankOptions}
           />
         )}
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={setFilterStatus}
           // "Archived" can only ever match hidden rows, so the option appears
@@ -767,30 +763,30 @@ export function DreamsPage() {
         />
         <label className="checkbox-field">
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
-          Overdue only
+          {tr('Overdue only')}
         </label>
         <label className="checkbox-field">
           <Checkbox checked={filterMoonshotOnly} onChange={(event) => setFilterMoonshotOnly(event.target.checked)} />
-          Moonshots only
+          {tr('Moonshots only')}
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Dream view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Dream view')} />
       </div>
       {!crud.loading && crud.items.length === 0 && !hasFilters ? (
         <EmptyState
-          headline="No dreams yet"
+          headline={tr('No dreams yet')}
           icon={MoonStar}
           action={
             visionAreas.length === 0 ? (
-              <Button type="button" onClick={() => navigate('/vision-areas?create=area')}>Create a vision area first</Button>
+              <Button type="button" onClick={() => navigate('/vision-areas?create=area')}>{tr('Create a vision area first')}</Button>
             ) : (
-              <Button type="button" onClick={() => setWizardOpen(true)}>Start your first dream</Button>
+              <Button type="button" onClick={() => setWizardOpen(true)}>{tr('Start your first dream')}</Button>
             )
           }
         >
-          A dream is a meaningful outcome you want to reach — the guide asks a few questions to make it clear enough to plan.
+          {tr('A dream is a meaningful outcome you want to reach — the guide asks a few questions to make it clear enough to plan.')}
         </EmptyState>
       ) : viewMode === 'list' ? (
         <Card>
@@ -799,7 +795,7 @@ export function DreamsPage() {
             storageKey="dreams"
             rows={filteredDreams}
             columns={columns}
-            emptyMessage={hasFilters ? 'No dreams match these filters.' : 'No dreams yet.'}
+            emptyMessage={hasFilters ? tr('No dreams match these filters.') : tr('No dreams yet.')}
             defaultSortKey="position"
             defaultSortDirection="asc"
             reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderDreams(draggedId, targetId) }}
@@ -813,7 +809,7 @@ export function DreamsPage() {
                 <BulkArchiveAction
                   selectedIds={selectedIds}
                   items={crud.items}
-                  entityLabel="dream(s)"
+                  entityLabel={tr('dream(s)')}
                   onArchive={async (ids) => {
                     await crud.archiveMany(ids);
                     setSelectedIds(new Set());
@@ -844,22 +840,22 @@ export function DreamsPage() {
             <>
               <strong>
                 {dream.moonshot && (
-                  <Tooltip title={dream.moonshotVision || 'Moonshot dream'} arrow>
-                    <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Moonshot dream">
+                  <Tooltip title={dream.moonshotVision || tr('Moonshot dream')} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label={tr('Moonshot dream')}>
                       <Rocket size={16} />
                     </Box>
                   </Tooltip>
                 )}
                 {dream.scheduleOverrun && (
-                  <Tooltip title={dream.scheduleOverrunDetail || 'A goal runs past this dream\'s fixed target date.'} arrow>
-                    <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)', mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Schedule overrun">
+                  <Tooltip title={dream.scheduleOverrunDetail || tr('A goal runs past this dream\'s fixed target date.')} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)', mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label={tr('Schedule overrun')}>
                       <TriangleAlert size={16} />
                     </Box>
                   </Tooltip>
                 )}
                 {dream.title}
               </strong>
-              <p>{dream.code} · {goalCounts.get(dream.id) ?? 0} goal(s){dream.targetDate ? <> · Target <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} /></> : ''}</p>
+              <p>{dream.code} · {goalCounts.get(dream.id) ?? 0} goal(s){dream.targetDate ? <> {tr('· Target')} <RelativeDate date={dream.targetDate} completed={dream.status === 'COMPLETED'} /></> : ''}</p>
               <div className="inline-meta">
                 <PriorityBadge priority={dream.priority} />
                 {dream.letterRank && <span>Rank {dream.letterRank}</span>}

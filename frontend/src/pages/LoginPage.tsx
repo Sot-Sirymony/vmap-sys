@@ -10,6 +10,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 // Only the email is stored. The password is never written to disk by this app —
 // the autoComplete attributes below hand that job to the browser's own password
@@ -32,7 +33,7 @@ export function LoginPage() {
   // belongs to.
   const registeredEmail = state?.registeredEmail;
   const notice = registeredEmail
-    ? `Account created for ${registeredEmail}. Sign in to continue.`
+    ? tr('Account created for {email}. Sign in to continue.', { email: registeredEmail })
     : state?.notice;
   const [email, setEmail] = useState(registeredEmail ?? rememberedEmail);
   const [password, setPassword] = useState('');
@@ -71,23 +72,23 @@ export function LoginPage() {
       setSession(response, remember);
       navigate(from, { replace: true });
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Login failed. Check your email and password.');
+      setError(error instanceof Error ? error.message : tr('Login failed. Check your email and password.'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthLayout subtitle="Sign in to continue to your dashboard">
+    <AuthLayout subtitle={tr('Sign in to continue to your dashboard')}>
       {showNotice && notice && <MuiAlert severity="success">{notice}</MuiAlert>}
       <GoogleSignInButton onClick={() => navigate('/oauth/google', { state: { from } })} />
       <div className="auth-divider" aria-hidden="true">
-        <span>or sign in with email</span>
+        <span>{tr('or sign in with email')}</span>
       </div>
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="login-email"
-          label="Email address"
+          label={tr('Email address')}
           type="email"
           name="email"
           autoComplete="username"
@@ -99,7 +100,7 @@ export function LoginPage() {
         />
         <AuthField
           id="login-password"
-          label="Password"
+          label={tr('Password')}
           name="password"
           autoComplete="current-password"
           placeholder="••••••••"
@@ -110,21 +111,21 @@ export function LoginPage() {
           required
           labelEnd={
             <span className="auth-link auth-forgot">
-              <Link to="/forgot-password">Forgot password?</Link>
+              <Link to="/forgot-password">{tr('Forgot password?')}</Link>
             </span>
           }
         />
         <FormControlLabel
           control={<Checkbox checked={remember} onChange={(event) => setRemember(event.target.checked)} />}
-          label="Remember me on this device"
+          label={tr('Remember me on this device')}
         />
         {error && <ErrorMessage message={error} />}
         <button className="auth-submit" type="submit" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign in'}
+          {loading ? tr('Signing in...') : tr('Sign in')}
         </button>
       </form>
       <p className="auth-link" style={{ textAlign: 'center' }}>
-        No account yet? <Link to="/register">Create one</Link>
+        No account yet? <Link to="/register">{tr('Create one')}</Link>
       </p>
     </AuthLayout>
   );

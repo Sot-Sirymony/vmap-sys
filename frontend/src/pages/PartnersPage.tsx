@@ -46,6 +46,7 @@ import {
 } from '../utils/enumLabels';
 import { workStyleArchetypeLabels } from '../utils/workStyleAssessment';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 // FR-50.1: unchecked by default — "no concerns flagged" is the common case.
 const EMPTY_INTEGRITY_FLAGS: Record<IntegrityFlagKey, boolean> = {
@@ -195,7 +196,7 @@ export function PartnersPage() {
     event.preventDefault();
     const anyFlagChecked = INTEGRITY_CHECKLIST_QUESTIONS.some((question) => integrityFlags[question.key]);
     if (showIntegrityChecklist && anyFlagChecked && !riskOverrideNote.trim()) {
-      crud.setError('This partner has one or more integrity concerns flagged. Record why you are proceeding anyway before moving them to Active.');
+      crud.setError(tr('This partner has one or more integrity concerns flagged. Record why you are proceeding anyway before moving them to Active.'));
       return false;
     }
     const success = await crud.save({
@@ -343,7 +344,7 @@ export function PartnersPage() {
       });
       await crud.reload();
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update partner status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update partner status.'));
     }
   }
 
@@ -357,31 +358,31 @@ export function PartnersPage() {
         onRestore={() => void crud.restore(partner.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(partner.id)}
         archived={partner.archived}
-        extraActions={[{ label: 'View details', onClick: () => navigate(`/partners/${partner.id}`) }]}
-        label="Partner actions"
+        extraActions={[{ label: tr('View details'), onClick: () => navigate(`/partners/${partner.id}`) }]}
+        label={tr('Partner actions')}
       />
     );
   }
 
   // Column keys double as the server's sort fields, so they match Partner's JPA property names.
   const columns: DataTableColumn<Partner>[] = [
-    { key: 'code', label: 'Code', sortValue: (partner) => partner.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (partner) => partner.code },
-    { key: 'name', label: 'Name', sortValue: (partner) => partner.name, sx: { fontWeight: 500 }, render: (partner) => partner.name },
+    { key: 'code', label: tr('Code'), sortValue: (partner) => partner.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (partner) => partner.code },
+    { key: 'name', label: tr('Name'), sortValue: (partner) => partner.name, sx: { fontWeight: 500 }, render: (partner) => partner.name },
     {
       key: 'supportType',
-      label: 'Support',
+      label: tr('Support'),
       sortValue: (partner) => partner.supportType,
       render: (partner) => partnerSupportTypeLabels[partner.supportType],
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (partner) => partner.status,
       render: (partner) => <StatusBadge status={partner.status} />,
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (partner) => renderPartnerActions(partner),
     },
@@ -390,27 +391,27 @@ export function PartnersPage() {
   const formFields = (
     <>
       <label>
-        Name
+        {tr('Name')}
         <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus />
       </label>
       <label>
-        Role
+        {tr('Role')}
         <Input value={role} onChange={(event) => setRole(event.target.value)} />
       </label>
       <label>
-        Organization
+        {tr('Organization')}
         <Input value={organization} onChange={(event) => setOrganization(event.target.value)} />
       </label>
       <label>
-        Email
+        {tr('Email')}
         <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
       </label>
       <label>
-        Phone
+        {tr('Phone')}
         <Input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} />
       </label>
       <label>
-        Support Type
+        {tr('Support Type')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Support Type" }} value={supportType} onChange={(event) => setSupportType(event.target.value as PartnerSupportType)}>
             {(['MENTOR', 'EXPERT', 'ADVISOR', 'COLLEAGUE', 'FINANCIAL', 'TECHNICAL', 'EMOTIONAL', 'OTHER'] as const).map((value) => (
@@ -420,43 +421,43 @@ export function PartnersPage() {
         </FormControl>
       </label>
       <label>
-        Offer Type
+        {tr('Offer Type')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Offer Type" }} displayEmpty value={offerType} onChange={(event) => setOfferType(event.target.value as OfferType | '')}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {(['MONEY', 'SHARED_VISION', 'RECOGNITION', 'EXPERIENCE', 'OTHER'] as const).map((value) => (
               <MenuItem value={value} key={value}>{offerTypeLabels[value]}</MenuItem>
             ))}
           </Select>
         </FormControl>
-        <span className="field-hint">What this partner most likely responds to in exchange for their help.</span>
+        <span className="field-hint">{tr('What this partner most likely responds to in exchange for their help.')}</span>
       </label>
       <label>
-        Primary Motivator
+        {tr('Primary Motivator')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Primary Motivator" }} displayEmpty value={primaryMotivator} onChange={(event) => setPrimaryMotivator(event.target.value as PartnerMotivator | '')}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {(['FINANCIAL_GAIN', 'AVOIDING_LOSS', 'SHARED_VISION', 'RECOGNITION', 'OTHER'] as const).map((value) => (
               <MenuItem value={value} key={value}>{partnerMotivatorLabels[value]}</MenuItem>
             ))}
           </Select>
         </FormControl>
-        <span className="field-hint">What drives this partner, as distinct from what you're offering them.</span>
+        <span className="field-hint">{tr('What drives this partner, as distinct from what you\'re offering them.')}</span>
       </label>
       <label>
-        Work Style
+        {tr('Work Style')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Work Style" }} displayEmpty value={workStyleType} onChange={(event) => setWorkStyleType(event.target.value as WorkStyleArchetype | '')}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {(['DRIVER', 'CONNECTOR', 'STEADIER', 'PLANNER'] as const).map((value) => (
               <MenuItem value={value} key={value}>{workStyleArchetypeLabels[value]}</MenuItem>
             ))}
           </Select>
         </FormControl>
-        <span className="field-hint">Your own estimate of their style (FR-49.3) — not a self-report from them.</span>
+        <span className="field-hint">{tr('Your own estimate of their style (FR-49.3) — not a self-report from them.')}</span>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as PartnerStatus)}>
             {(['TO_CONTACT', 'CONTACTED', 'AGREED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'] as const).map((value) => (
@@ -467,10 +468,9 @@ export function PartnersPage() {
       </label>
       {showIntegrityChecklist && (
         <div className="field-full diligence-checklist">
-          <strong>Before you move this partner to Active…</strong>
+          <strong>{tr('Before you move this partner to Active…')}</strong>
           <p>
-            Check anything that concerns you. If nothing does, moving to Active needs no extra step. If something
-            does, you'll need to record why you're proceeding anyway.
+            {tr('Check anything that concerns you. If nothing does, moving to Active needs no extra step. If something does, you\'ll need to record why you\'re proceeding anyway.')}
           </p>
           {INTEGRITY_CHECKLIST_QUESTIONS.map((question) => (
             <div className="diligence-row" key={question.key}>
@@ -485,8 +485,8 @@ export function PartnersPage() {
                 }))}
                 aria-label={question.label}
               >
-                <ToggleButton value="no">No concern</ToggleButton>
-                <ToggleButton value="yes">Flag it</ToggleButton>
+                <ToggleButton value="no">{tr('No concern')}</ToggleButton>
+                <ToggleButton value="yes">{tr('Flag it')}</ToggleButton>
               </ToggleButtonGroup>
             </div>
           ))}
@@ -497,56 +497,56 @@ export function PartnersPage() {
         </div>
       )}
       <label>
-        Vision Area
+        {tr('Vision Area')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Vision Area" }} displayEmpty value={relatedVisionAreaId} onChange={(event) => setRelatedVisionAreaId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {visionAreas.map((area) => <MenuItem value={String(area.id)} key={area.id}>{area.name}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Dream
+        {tr('Dream')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Dream" }} displayEmpty value={relatedDreamId} onChange={(event) => setRelatedDreamId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Goal
+        {tr('Goal')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Goal" }} displayEmpty value={relatedGoalId} onChange={(event) => setRelatedGoalId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {goals.map((goal) => <MenuItem value={String(goal.id)} key={goal.id}>{goal.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Step
+        {tr('Step')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Step" }} displayEmpty value={relatedStepId} onChange={(event) => setRelatedStepId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {steps.map((step) => <MenuItem value={String(step.id)} key={step.id}>{step.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Task
+        {tr('Task')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Task" }} displayEmpty value={relatedTaskId} onChange={(event) => setRelatedTaskId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {tasks.map((task) => <MenuItem value={String(task.id)} key={task.id}>{task.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Strength
+        {tr('Strength')}
         <Input value={strength} onChange={(event) => setStrength(event.target.value)} />
       </label>
       <label className="field-full">
-        Notes
+        {tr('Notes')}
         <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
       </label>
     </>
@@ -560,13 +560,13 @@ export function PartnersPage() {
 
   return (
     <PageSection
-      title="Partners"
-      subtitle="Track mentors, experts, advisors, and resources."
-      actions={<Button type="button" onClick={() => setCreateOpen(true)}>Create partner</Button>}
+      title={tr('Partners')}
+      subtitle={tr('Track mentors, experts, advisors, and resources.')}
+      actions={<Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create partner')}</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create partner"
+        createLabel={tr('Create partner')}
         editTitle="Edit Partner"
         saving={crud.saving}
         creating={createOpen}
@@ -582,7 +582,7 @@ export function PartnersPage() {
       <SummaryStrip
         chips={[
           { key: 'total', label: crud.items.length === 1 ? 'partner' : 'partners', count: crud.items.length },
-          { key: 'to-contact', label: 'to contact', count: crud.items.filter((partner) => partner.status === 'TO_CONTACT').length, tone: 'warning', active: filterStatus === 'TO_CONTACT', onClick: () => setFilterStatus(filterStatus === 'TO_CONTACT' ? '' : 'TO_CONTACT') },
+          { key: 'to-contact', label: tr('to contact'), count: crud.items.filter((partner) => partner.status === 'TO_CONTACT').length, tone: 'warning', active: filterStatus === 'TO_CONTACT', onClick: () => setFilterStatus(filterStatus === 'TO_CONTACT' ? '' : 'TO_CONTACT') },
           { key: 'active', label: 'active', count: crud.items.filter((partner) => partner.status === 'ACTIVE').length, tone: 'positive', active: filterStatus === 'ACTIVE', onClick: () => setFilterStatus(filterStatus === 'ACTIVE' ? '' : 'ACTIVE') },
           { key: 'waiting', label: 'waiting', count: crud.items.filter((partner) => partner.status === 'WAITING').length, active: filterStatus === 'WAITING', onClick: () => setFilterStatus(filterStatus === 'WAITING' ? '' : 'WAITING') },
         ]}
@@ -597,19 +597,19 @@ export function PartnersPage() {
           entityLabel="partners"
         />
         <FilterSelect
-          label="Support Type"
+          label={tr('Support Type')}
           value={filterSupportType}
           onChange={applyFilter(setFilterSupportType)}
           options={optionsFromLabels(partnerSupportTypeLabels)}
         />
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={applyFilter(setFilterStatus)}
           options={optionsFromLabels(partnerStatusLabels)}
         />
         <FilterSelect
-          label="Dream"
+          label={tr('Dream')}
           value={filterDreamId}
           onChange={applyFilter(setFilterDreamId)}
           options={optionsFromEntities(dreams, (dream) => dream.title)}
@@ -617,15 +617,15 @@ export function PartnersPage() {
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Partner view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Partner view')} />
       </div>
       {showFirstRun && (
         <EmptyState
-          headline="No partners yet"
+          headline={tr('No partners yet')}
           icon={Handshake}
-          action={<Button type="button" onClick={() => setCreateOpen(true)}>Add your first partner</Button>}
+          action={<Button type="button" onClick={() => setCreateOpen(true)}>{tr('Add your first partner')}</Button>}
         >
-          Partners are the mentors, experts, and supporters who help unblock your work — link them to a dream, goal, step, or task.
+          {tr('Partners are the mentors, experts, and supporters who help unblock your work — link them to a dream, goal, step, or task.')}
         </EmptyState>
       )}
       {!showFirstRun && viewMode === 'board' && (
@@ -656,8 +656,8 @@ export function PartnersPage() {
           columns={columns}
           emptyMessage={
             searchTerm || filterSupportType || filterStatus || filterDreamId
-              ? 'No partners match these filters.'
-              : 'No partners yet.'
+              ? tr('No partners match these filters.')
+              : tr('No partners yet.')
           }
           rowClassName={(partner) => (partner.archived ? 'row-archived' : '')}
           serverPaging={{
@@ -682,7 +682,7 @@ export function PartnersPage() {
               <BulkArchiveAction
                 selectedIds={selectedIds}
                 items={crud.items}
-                entityLabel="partner(s)"
+                entityLabel={tr('partner(s)')}
                 onArchive={async (ids) => {
                   await crud.archiveMany(ids);
                   setSelectedIds(new Set());
@@ -705,8 +705,8 @@ export function PartnersPage() {
       {profiles.length > 0 && (
         <Card>
           <CardHeader
-            title="Ideal partner profiles"
-            subheader="The partners your steps still need — defined on the Steps page, recruited from here"
+            title={tr('Ideal partner profiles')}
+            subheader={tr('The partners your steps still need — defined on the Steps page, recruited from here')}
           />
           <CardContent>
             <div className="stack-list">
@@ -714,11 +714,11 @@ export function PartnersPage() {
                 const step = steps.find((candidate) => candidate.id === profile.stepId);
                 return (
                   <article className="list-card" key={profile.id}>
-                    <strong>{step ? step.title : `Step #${profile.stepId}`}</strong>
-                    {profile.requiredExperience && <p>Experience: {profile.requiredExperience}</p>}
-                    {profile.characterTraits && <p>Traits: {profile.characterTraits}</p>}
-                    {profile.motivation && <p>Motivation: {profile.motivation}</p>}
-                    {profile.offerInReturn && <p>In return: {profile.offerInReturn}</p>}
+                    <strong>{step ? step.title : tr('Step #{id}', { id: profile.stepId })}</strong>
+                    {profile.requiredExperience && <p>{tr('Experience: {text}', { text: profile.requiredExperience })}</p>}
+                    {profile.characterTraits && <p>{tr('Traits: {text}', { text: profile.characterTraits })}</p>}
+                    {profile.motivation && <p>{tr('Motivation: {text}', { text: profile.motivation })}</p>}
+                    {profile.offerInReturn && <p>{tr('In return: {text}', { text: profile.offerInReturn })}</p>}
                   </article>
                 );
               })}

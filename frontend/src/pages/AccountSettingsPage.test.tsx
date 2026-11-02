@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as renderPlain, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { deleteAccount, getReminderSettings, updateReminderSettings } from '../api/accountApi';
+import { deleteAccount, getReminderSettings, sendTestReminder, updateReminderSettings } from '../api/accountApi';
 import { AccountSettingsPage } from './AccountSettingsPage';
 
 const logout = vi.fn();
@@ -11,12 +13,17 @@ vi.mock('../api/accountApi', () => ({
   exportAccountData: vi.fn(),
   getReminderSettings: vi.fn(),
   updateReminderSettings: vi.fn(),
+  sendTestReminder: vi.fn(),
 }));
+
+const LOGIN = 'me@example.com';
+
+const render = (page: ReactElement) => renderPlain(<MemoryRouter>{page}</MemoryRouter>);
 
 describe('AccountSettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getReminderSettings).mockResolvedValue({ enabled: false, timeZone: null, emailConfigured: false, sendHour: 8 });
+    vi.mocked(getReminderSettings).mockResolvedValue({ enabled: false, timeZone: null, emailConfigured: false, sendHour: 8, reminderEmail: null, sendsTo: LOGIN });
   });
 
   it('says plainly when no mail server can send reminders', async () => {
@@ -25,12 +32,35 @@ describe('AccountSettingsPage', () => {
   });
 
   it('saves reminders with the browser time zone', async () => {
-    vi.mocked(updateReminderSettings).mockResolvedValue({ enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8 });
+    vi.mocked(updateReminderSettings).mockResolvedValue({ enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: null, sendsTo: LOGIN });
     render(<AccountSettingsPage />);
 
     await userEvent.click(await screen.findByRole('switch', { name: 'Email me a daily reminder' }));
 
-    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String)));
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), ''));
+  });
+
+  it('saves a separate reminder address, then sends a test email to it', async () => {
+    vi.mocked(getReminderSettings).mockResolvedValue({ enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: null, sendsTo: LOGIN });
+    const chosen = { enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: 'inbox@example.org', sendsTo: 'inbox@example.org' };
+    vi.mocked(updateReminderSettings).mockResolvedValue(chosen);
+    vi.mocked(sendTestReminder).mockResolvedValue(chosen);
+    render(<AccountSettingsPage />);
+
+    expect(await screen.findByText(`Leave blank to use your login email. Reminders now go to ${LOGIN}.`)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Send reminders to'), ' inbox@example.org ');
+    expect(screen.getByRole('button', { name: 'Send test email' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Save email' }));
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), 'inbox@example.org'));
+    expect(await screen.findByText('Reminder email saved.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Send test email' }));
+    expect(await screen.findByText('Test email sent to inbox@example.org. Check your inbox and spam folder.')).toBeInTheDocument();
+  });
+
+  it('keeps the test button off when no mail server is set up', async () => {
+    render(<AccountSettingsPage />);
+    expect(await screen.findByRole('button', { name: 'Send test email' })).toBeDisabled();
   });
 
   it('keeps delete disabled until the password and the word are both given, then signs out', async () => {

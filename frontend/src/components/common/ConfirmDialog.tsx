@@ -4,6 +4,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import { Button } from './Button';
+import { tr } from '../../i18n/translate';
 
 type ConfirmDialogProps = {
   title: string;
@@ -24,7 +25,7 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onClose
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button type="button" variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>{confirmLabel}</Button>
-        <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+        <Button type="button" variant="secondary" onClick={onClose}>{tr('Cancel')}</Button>
       </DialogActions>
     </Dialog>
   );

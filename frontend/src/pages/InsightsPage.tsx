@@ -14,6 +14,8 @@ import { useAuth } from '../context/AuthContext';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { Insight, InsightKind } from '../types/vision';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
+import { formatDate as formatLocalDate } from '../i18n/formatDate';
 
 const KIND_LABELS: Record<InsightKind, string> = {
   LESSON_LEARNED: 'Lesson learned',
@@ -28,9 +30,9 @@ function titleCase(value: string): string {
 // Where the insight came from, and where to click back to for editing (FR-36.3).
 function sourceLabel(insight: Insight): string {
   if (insight.source === 'REVIEW') {
-    return `${titleCase(insight.sourceTitle)} review`;
+    return tr('{type} review', { type: tr(titleCase(insight.sourceTitle)) });
   }
-  return `Obstacle: ${insight.sourceTitle}`;
+  return tr('Obstacle: {title}', { title: insight.sourceTitle });
 }
 
 function sourceLink(insight: Insight): string {
@@ -41,7 +43,7 @@ function formatDate(dateIso?: string): string {
   if (!dateIso) {
     return '';
   }
-  return new Date(`${dateIso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatLocalDate(new Date(`${dateIso}T00:00:00`), { year: true });
 }
 
 /**
@@ -67,14 +69,14 @@ export function InsightsPage() {
         setInsights(data);
         setError('');
       })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load insights.'))
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : tr('Unable to load insights.')))
       .finally(() => setLoading(false));
   }, [token, debouncedSearch]);
 
   return (
     <PageSection
-      title="Insights"
-      subtitle="Search the lessons you've already captured — reused instead of relearned."
+      title={tr('Insights')}
+      subtitle={tr('Search the lessons you\'ve already captured — reused instead of relearned.')}
     >
       <Card className="filter-bar flex-row">
         <SearchBar value={search} onChange={setSearch} entityLabel="insights" />
@@ -86,8 +88,8 @@ export function InsightsPage() {
       {!loading && !error && insights.length === 0 && (
         <EmptyState>
           {debouncedSearch
-            ? 'No insights match your search.'
-            : 'No lessons captured yet. Your review lessons and obstacle root causes will collect here.'}
+            ? tr('No insights match your search.')
+            : tr('No lessons captured yet. Your review lessons and obstacle root causes will collect here.')}
         </EmptyState>
       )}
 

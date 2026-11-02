@@ -51,14 +51,15 @@ import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 const statusOptions: { value: WorkStatus; label: string }[] = [
-  { value: 'NOT_STARTED', label: 'Not Started' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'WAITING', label: 'Waiting' },
-  { value: 'BLOCKED', label: 'Blocked' },
-  { value: 'PAUSED', label: 'Paused' },
-  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'NOT_STARTED', label: tr('Not Started') },
+  { value: 'IN_PROGRESS', label: tr('In Progress') },
+  { value: 'WAITING', label: tr('Waiting') },
+  { value: 'BLOCKED', label: tr('Blocked') },
+  { value: 'PAUSED', label: tr('Paused') },
+  { value: 'COMPLETED', label: tr('Completed') },
 ];
 
 export function GoalsPage() {
@@ -248,7 +249,7 @@ export function GoalsPage() {
       await reorderGoals(token, dragged.dreamId, nextOrder);
       await crud.reload();
     } catch (reorderError) {
-      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder goals.');
+      crud.setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder goals.'));
     }
   }
 
@@ -257,7 +258,7 @@ export function GoalsPage() {
       return 'Archive this goal?';
     }
     const impact = await getGoalArchiveImpact(token, goal.id);
-    return `Archiving "${goal.title}" also archives ${impact.steps} step(s) and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+    return tr('Archiving "{title}" also archives {steps} step(s) and {tasks} task(s). Everything can be restored later with "Show archived".', { title: goal.title, steps: impact.steps, tasks: impact.tasks });
   }
 
   const filteredGoals = crud.items.filter((goal) => {
@@ -342,7 +343,7 @@ export function GoalsPage() {
       });
       await crud.reload();
     } catch (addError) {
-      crud.setError(addError instanceof Error ? addError.message : 'Unable to add goal.');
+      crud.setError(addError instanceof Error ? addError.message : tr('Unable to add goal.'));
     }
   }
 
@@ -358,7 +359,7 @@ export function GoalsPage() {
         void nudgeContributionForGoal({ token, goalId: goal.id, showToast, navigate });
       }
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update goal status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update goal status.'));
     }
   }
 
@@ -373,10 +374,10 @@ export function GoalsPage() {
         return goal ? updateGoal(token, goal.id, { ...goalRequest(goal), priority: bulkPriority }) : Promise.resolve();
       }));
       await crud.reload();
-      showToast(`Updated ${selectedIds.size} goal${selectedIds.size === 1 ? '' : 's'}.`);
+      showToast(tr(selectedIds.size === 1 ? tr('Updated 1 goal.') : 'Updated {count} goals.', { count: selectedIds.size }));
       setSelectedIds(new Set());
     } catch (bulkError) {
-      crud.setError(bulkError instanceof Error ? bulkError.message : 'Unable to update selected goals.');
+      crud.setError(bulkError instanceof Error ? bulkError.message : tr('Unable to update selected goals.'));
     } finally {
       setBulkApplying(false);
     }
@@ -390,10 +391,10 @@ export function GoalsPage() {
     try {
       await Promise.all([...selectedIds].map((id) => updateGoalStatus(token, id, bulkStatus)));
       await crud.reload();
-      showToast(`Updated ${selectedIds.size} goal${selectedIds.size === 1 ? '' : 's'}.`);
+      showToast(tr(selectedIds.size === 1 ? tr('Updated 1 goal.') : 'Updated {count} goals.', { count: selectedIds.size }));
       setSelectedIds(new Set());
     } catch (bulkError) {
-      crud.setError(bulkError instanceof Error ? bulkError.message : 'Unable to update selected goals.');
+      crud.setError(bulkError instanceof Error ? bulkError.message : tr('Unable to update selected goals.'));
     } finally {
       setBulkApplying(false);
     }
@@ -421,11 +422,11 @@ export function GoalsPage() {
         archived={goal.archived}
         confirmArchive={() => archiveImpactMessage(goal)}
         extraActions={[
-          { label: 'View steps', onClick: () => navigate(`/steps?goalId=${goal.id}`) },
-          { label: 'Add step', onClick: () => navigate(`/steps?create=step&parent=${goal.id}`) },
-          { label: 'Synergy links', onClick: () => setSynergyGoal(goal) },
+          { label: tr('View steps'), onClick: () => navigate(`/steps?goalId=${goal.id}`) },
+          { label: tr('Add step'), onClick: () => navigate(`/steps?create=step&parent=${goal.id}`) },
+          { label: tr('Synergy links'), onClick: () => setSynergyGoal(goal) },
         ]}
-        label="Goal actions"
+        label={tr('Goal actions')}
       />
     );
   }
@@ -433,29 +434,29 @@ export function GoalsPage() {
   const columns: DataTableColumn<Goal>[] = [
     {
       key: 'position',
-      label: 'Order',
+      label: tr('Order'),
       sortValue: (goal) => goal.sortOrder ?? Number.MAX_SAFE_INTEGER,
       render: (goal) => (goal.sortOrder != null ? goal.sortOrder + 1 : '—'),
     },
-    { key: 'code', label: 'Code', sortValue: (goal) => goal.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (goal) => goal.code },
+    { key: 'code', label: tr('Code'), sortValue: (goal) => goal.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (goal) => goal.code },
     {
       key: 'title',
-      label: 'Goal',
+      label: tr('Goal'),
       sortValue: (goal) => goal.title,
       sx: { fontWeight: 500 },
       render: (goal) => (
         <>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
             {goal.moonshot && (
-              <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
-                <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label="Moonshot goal">
+              <Tooltip title={goal.moonshotVision || tr('Moonshot goal')} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet }} role="img" aria-label={tr('Moonshot goal')}>
                   <Rocket size={16} />
                 </Box>
               </Tooltip>
             )}
             {goal.scheduleOverrun && (
-              <Tooltip title={goal.scheduleOverrunDetail || 'A step runs past this goal\'s fixed target date.'} arrow>
-                <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)' }} role="img" aria-label="Schedule overrun">
+              <Tooltip title={goal.scheduleOverrunDetail || tr('A step runs past this goal\'s fixed target date.')} arrow>
+                <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)' }} role="img" aria-label={tr('Schedule overrun')}>
                   <TriangleAlert size={16} />
                 </Box>
               </Tooltip>
@@ -468,37 +469,37 @@ export function GoalsPage() {
     },
     {
       key: 'priority',
-      label: 'Priority',
+      label: tr('Priority'),
       sortValue: (goal) => priorityRank(goal.priority),
       render: (goal) => <PriorityBadge priority={goal.priority} />,
     },
     {
       key: 'letterRank',
-      label: 'Rank',
+      label: tr('Rank'),
       sortValue: (goal) => goal.letterRank ?? '',
       render: (goal) => goal.letterRank ?? '—',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (goal) => workStatusRank(goal.status),
       render: (goal) => <StatusBadge status={goal.status} />,
     },
     {
       key: 'steps',
-      label: 'Steps',
+      label: tr('Steps'),
       sortValue: (goal) => stepCounts.get(goal.id) ?? 0,
       render: (goal) => stepCounts.get(goal.id) ?? 0,
     },
     {
       key: 'progress',
-      label: 'Progress',
+      label: tr('Progress'),
       sortValue: (goal) => Number(goal.progressPercent),
       render: (goal) => <ProgressBar value={Number(goal.progressPercent)} />,
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (goal) => renderGoalActions(goal),
     },
@@ -507,7 +508,7 @@ export function GoalsPage() {
   const formFields = (
     <>
       <label>
-        Dream
+        {tr('Dream')}
         <FormControl fullWidth size="small" required>
           <Select SelectDisplayProps={{ 'aria-label': "Dream" }} value={dreamId} onChange={(event) => setDreamId(event.target.value)}>
             {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
@@ -515,72 +516,70 @@ export function GoalsPage() {
         </FormControl>
       </label>
       <label>
-        Title
+        {tr('Title')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
-        Priority
+        {tr('Priority')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Priority" }} value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
-            <MenuItem value="LOW">Low</MenuItem>
-            <MenuItem value="MEDIUM">Medium</MenuItem>
-            <MenuItem value="HIGH">High</MenuItem>
-            <MenuItem value="CRITICAL">Critical</MenuItem>
+            <MenuItem value="LOW">{tr('Low')}</MenuItem>
+            <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+            <MenuItem value="HIGH">{tr('High')}</MenuItem>
+            <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Rank
+        {tr('Rank')}
         <Input
           value={letterRank}
           onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-          placeholder="e.g. A"
+          placeholder={tr('e.g. A')}
           maxLength={1}
         />
         <span className="field-hint">
-          Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come first.
-          Ties are fine; nothing enforces a unique order.
+          {tr('Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come first. Ties are fine; nothing enforces a unique order.')}
         </span>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as WorkStatus)}>
-            <MenuItem value="NOT_STARTED">Not Started</MenuItem>
-            <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-            <MenuItem value="WAITING">Waiting</MenuItem>
-            <MenuItem value="BLOCKED">Blocked</MenuItem>
-            <MenuItem value="PAUSED">Paused</MenuItem>
-            <MenuItem value="COMPLETED">Completed</MenuItem>
+            <MenuItem value="NOT_STARTED">{tr('Not Started')}</MenuItem>
+            <MenuItem value="IN_PROGRESS">{tr('In Progress')}</MenuItem>
+            <MenuItem value="WAITING">{tr('Waiting')}</MenuItem>
+            <MenuItem value="BLOCKED">{tr('Blocked')}</MenuItem>
+            <MenuItem value="PAUSED">{tr('Paused')}</MenuItem>
+            <MenuItem value="COMPLETED">{tr('Completed')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Target Date
+        {tr('Target Date')}
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
       </label>
       <label className="field-full">
-        Success Criteria
+        {tr('Success Criteria')}
         <Textarea value={successCriteria} onChange={(event) => setSuccessCriteria(event.target.value)} />
       </label>
       <label className="field-full">
         <span className="inline-meta">
           <Checkbox checked={moonshot} onChange={(event) => setMoonshot(event.target.checked)} />
-          Moonshot goal
+          {tr('Moonshot goal')}
         </span>
       </label>
       {moonshot && (
         <label className="field-full">
-          Moonshot vision
+          {tr('Moonshot vision')}
           <Textarea value={moonshotVision} onChange={(event) => setMoonshotVision(event.target.value)} />
           <span className="field-hint">
-            If resources were no limit, what would the ideal result look like? Aim beyond what feels achievable — this
-            is aspirational only and never changes the goal's progress or completion.
+            {tr('If resources were no limit, what would the ideal result look like? Aim beyond what feels achievable — this is aspirational only and never changes the goal\'s progress or completion.')}
           </span>
         </label>
       )}
       <label className="field-full">
-        Target date scheduling
+        {tr('Target date scheduling')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={scheduleMode} onChange={(event) => setScheduleMode(event.target.value as ScheduleMode)}>
             <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
@@ -590,7 +589,7 @@ export function GoalsPage() {
         <span className="field-hint">
           {scheduleMode === 'BOTTOM_UP'
             ? "This goal's target date must be on or after its steps' target dates — set from the bottom up."
-            : 'A real external deadline that cannot move. Steps running past it are flagged, not blocked.'}
+            : tr('A real external deadline that cannot move. Steps running past it are flagged, not blocked.')}
         </span>
       </label>
       <label className="field-full">
@@ -602,13 +601,13 @@ export function GoalsPage() {
 
   return (
     <PageSection
-      title="Goals"
-      subtitle="Define specific results for each dream."
-      actions={<Button type="button" onClick={openCreateGoal} disabled={dreams.length === 0}>Create goal</Button>}
+      title={tr('Goals')}
+      subtitle={tr('Define specific results for each dream.')}
+      actions={<Button type="button" onClick={openCreateGoal} disabled={dreams.length === 0}>{tr('Create goal')}</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create goal"
+        createLabel={tr('Create goal')}
         editTitle="Edit Goal"
         saving={crud.saving}
         disabled={dreams.length === 0}
@@ -637,81 +636,81 @@ export function GoalsPage() {
       <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterDreamId, filterStatus, filterPriority, filterLetterRank, filterOverdueOnly, filterMoonshotOnly, filterTargetFrom, filterTargetTo].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="goals" />
         <FilterSelect
-          label="Vision Area"
+          label={tr('Vision Area')}
           value={filterVisionAreaId}
           onChange={setFilterVisionAreaId}
           options={optionsFromEntities(visionAreas, (area) => area.name)}
         />
         <FilterSelect
-          label="Dream"
+          label={tr('Dream')}
           value={filterDreamId}
           onChange={setFilterDreamId}
           options={optionsFromEntities(dreams, (dream) => dream.title)}
         />
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={setFilterStatus}
           options={statusOptions.map((option) => ({ value: option.value, label: option.label }))}
         />
         <FilterSelect
-          label="Priority"
+          label={tr('Priority')}
           value={filterPriority}
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
         {letterRankOptions.length > 0 && (
           <FilterSelect
-            label="Rank"
+            label={tr('Rank')}
             value={filterLetterRank}
             onChange={setFilterLetterRank}
             options={letterRankOptions}
           />
         )}
         <label>
-          Target from
+          {tr('Target from')}
           <Input type="date" value={filterTargetFrom} onChange={(event) => setFilterTargetFrom(event.target.value)} />
         </label>
         <label>
-          Target to
+          {tr('Target to')}
           <Input type="date" value={filterTargetTo} onChange={(event) => setFilterTargetTo(event.target.value)} />
         </label>
         <label className="checkbox-field">
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
-          Overdue only
+          {tr('Overdue only')}
         </label>
         <label className="checkbox-field">
           <Checkbox checked={filterMoonshotOnly} onChange={(event) => setFilterMoonshotOnly(event.target.checked)} />
-          Moonshots only
+          {tr('Moonshots only')}
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Goal view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Goal view')} />
       </div>
       {crud.items.length > 0 && dreams.length > 0 && (
         <QuickAddRow
-          parentLabel="Dream"
+          parentLabel={tr('Dream')}
           parents={dreams.map((dream) => ({ value: String(dream.id), label: dream.title }))}
           parentValue={quickAddParentId}
           onParentChange={handleQuickParentChange}
-          placeholder="New goal title — Enter to add"
+          placeholder={tr('New goal title — Enter to add')}
           onAdd={handleQuickAdd}
         />
       )}
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
-          headline="No goals yet"
+          headline={tr('No goals yet')}
           icon={Target}
           action={
             dreams.length === 0 ? (
-              <Button type="button" onClick={() => navigate('/dreams?create=dream')}>Create a dream first</Button>
+              <Button type="button" onClick={() => navigate('/dreams?create=dream')}>{tr('Create a dream first')}</Button>
             ) : (
-              <Button type="button" onClick={() => setCreateOpen(true)}>Create your first goal</Button>
+              <Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create your first goal')}</Button>
             )
           }
         >
-          Goals are the major results that make a dream real. Each goal breaks down into steps and tasks.
+          {tr('Goals are the major results that make a dream real. Each goal breaks down into steps and tasks.')}
         </EmptyState>
       ) : null}
       {crud.items.length > 0 && viewMode === 'board' && (
@@ -726,22 +725,22 @@ export function GoalsPage() {
             <>
               <strong>
                 {goal.moonshot && (
-                  <Tooltip title={goal.moonshotVision || 'Moonshot goal'} arrow>
-                    <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Moonshot goal">
+                  <Tooltip title={goal.moonshotVision || tr('Moonshot goal')} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: moonshotViolet, mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label={tr('Moonshot goal')}>
                       <Rocket size={16} />
                     </Box>
                   </Tooltip>
                 )}
                 {goal.scheduleOverrun && (
-                  <Tooltip title={goal.scheduleOverrunDetail || 'A step runs past this goal\'s fixed target date.'} arrow>
-                    <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)', mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label="Schedule overrun">
+                  <Tooltip title={goal.scheduleOverrunDetail || tr('A step runs past this goal\'s fixed target date.')} arrow>
+                    <Box component="span" sx={{ display: 'inline-flex', color: 'var(--palette-warning-dark)', mr: 0.75, verticalAlign: 'middle' }} role="img" aria-label={tr('Schedule overrun')}>
                       <TriangleAlert size={16} />
                     </Box>
                   </Tooltip>
                 )}
                 {goal.title}
               </strong>
-              <p>{goal.code} · {stepCounts.get(goal.id) ?? 0} step(s){goal.targetDate ? <> · Target <RelativeDate date={goal.targetDate} completed={goal.status === 'COMPLETED'} /></> : ''}</p>
+              <p>{goal.code} · {stepCounts.get(goal.id) ?? 0} step(s){goal.targetDate ? <> {tr('· Target')} <RelativeDate date={goal.targetDate} completed={goal.status === 'COMPLETED'} /></> : ''}</p>
               <div className="inline-meta">
                 <PriorityBadge priority={goal.priority} />
                 <span>{goal.progressPercent}%</span>
@@ -759,7 +758,7 @@ export function GoalsPage() {
             storageKey="goals"
             rows={filteredGoals}
             columns={columns}
-            emptyMessage="No goals match these filters."
+            emptyMessage={tr('No goals match these filters.')}
             defaultSortKey="position"
             defaultSortDirection="asc"
             reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderGoals(draggedId, targetId) }}
@@ -772,7 +771,7 @@ export function GoalsPage() {
               actions: (
                 <>
                   <label>
-                    Set status
+                    {tr('Set status')}
                     <FormControl fullWidth size="small">
                       <Select SelectDisplayProps={{ 'aria-label': "Set status" }} value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as WorkStatus)}>
                         {statusOptions.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -780,24 +779,24 @@ export function GoalsPage() {
                     </FormControl>
                   </label>
                   <Button type="button" onClick={() => void handleBulkApply()} disabled={bulkApplying}>
-                    {bulkApplying ? 'Applying...' : 'Apply'}
+                    {bulkApplying ? tr('Applying...') : tr('Apply')}
                   </Button>
                   <label>
-                    Set priority
+                    {tr('Set priority')}
                     <FormControl fullWidth size="small">
                       <Select SelectDisplayProps={{ 'aria-label': 'Set priority' }} value={bulkPriority} onChange={(event) => setBulkPriority(event.target.value as Priority)}>
-                        <MenuItem value="LOW">Low</MenuItem>
-                        <MenuItem value="MEDIUM">Medium</MenuItem>
-                        <MenuItem value="HIGH">High</MenuItem>
-                        <MenuItem value="CRITICAL">Critical</MenuItem>
+                        <MenuItem value="LOW">{tr('Low')}</MenuItem>
+                        <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+                        <MenuItem value="HIGH">{tr('High')}</MenuItem>
+                        <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
                       </Select>
                     </FormControl>
                   </label>
-                  <Button type="button" onClick={() => void handleBulkPriority()} disabled={bulkApplying}>Apply</Button>
+                  <Button type="button" onClick={() => void handleBulkPriority()} disabled={bulkApplying}>{tr('Apply')}</Button>
                   <BulkArchiveAction
                     selectedIds={selectedIds}
                     items={crud.items}
-                    entityLabel="goal(s)"
+                    entityLabel={tr('goal(s)')}
                     onArchive={async (ids) => {
                       await crud.archiveMany(ids);
                       setSelectedIds(new Set());

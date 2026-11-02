@@ -10,6 +10,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { useAuth } from '../context/AuthContext';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 /** Matches the backend's @Size(min = 8) on the new password. */
 const MIN_PASSWORD_LENGTH = 8;
@@ -32,7 +33,7 @@ export function SecuritySettingsPage() {
     // catch a typo before it becomes a password nobody knows, and the backend
     // has no use for a value whose only job is to equal another one.
     if (newPassword !== confirmPassword) {
-      setError('The new passwords do not match.');
+      setError(tr('The new passwords do not match.'));
       return;
     }
 
@@ -46,24 +47,24 @@ export function SecuritySettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not change the password.');
+      setError(error instanceof Error ? error.message : tr('Could not change the password.'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <PageSection title="Security" subtitle="Change the password for your account.">
+    <PageSection title={tr('Security')} subtitle={tr('Change the password for your account.')}>
       <Card sx={{ maxWidth: 520 }}>
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="body2" color="text.secondary">
-              Signed in as {user?.email}. Enter your current password to confirm it is you.
+              {tr('Signed in as {email}. Enter your current password to confirm it is you.', { email: user?.email ?? '' })}
             </Typography>
 
             <form className="form-stack" onSubmit={handleSubmit}>
               <label>
-                Current password
+                {tr('Current password')}
                 <Input
                   type="password"
                   name="currentPassword"
@@ -74,7 +75,7 @@ export function SecuritySettingsPage() {
                 />
               </label>
               <label>
-                New password
+                {tr('New password')}
                 <Input
                   type="password"
                   name="newPassword"
@@ -86,7 +87,7 @@ export function SecuritySettingsPage() {
                 />
               </label>
               <label>
-                Confirm new password
+                {tr('Confirm new password')}
                 <Input
                   type="password"
                   name="confirmPassword"
@@ -99,18 +100,18 @@ export function SecuritySettingsPage() {
               </label>
 
               <Typography variant="caption" color="text.secondary">
-                Use at least {MIN_PASSWORD_LENGTH} characters.
+                {tr('Use at least {count} characters.', { count: MIN_PASSWORD_LENGTH })}
               </Typography>
 
               {error && <ErrorMessage message={error} />}
               {saved && (
                 <Alert severity="success">
-                  Password changed. Use the new password next time you sign in.
+                  {tr('Password changed. Use the new password next time you sign in.')}
                 </Alert>
               )}
 
               <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Change password'}
+                {loading ? tr('Saving...') : tr('Change password')}
               </Button>
             </form>
           </Stack>

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { translate } from './I18nContext';
+import { setOverrides } from './translate';
 import { km } from './km';
 
 describe('translate', () => {
@@ -34,5 +35,34 @@ describe('translate', () => {
     for (const message of messages) {
       expect(km[message], message).toBeDefined();
     }
+  });
+});
+
+describe('server text with numbers', () => {
+  it('translates plan and objective text built on the server', () => {
+    expect(translate('km', '3 goals in place.')).toBe('មានគោលដៅ 3 រួចហើយ។');
+    expect(translate('km', '1 step still without a date.')).toBe('ជំហាន 1 នៅតែគ្មានកាលបរិច្ឆេទ។');
+    expect(translate('km', '+25% from your baseline')).toBe('+25% ធៀបនឹងមូលដ្ឋានរបស់អ្នក');
+    expect(translate('km', '2 of 4 (50%)')).toBe('2 លើ 4 (50%)');
+  });
+
+  it('leaves the English text alone', () => {
+    expect(translate('en', '3 goals in place.')).toBe('3 goals in place.');
+  });
+});
+
+describe('admin text changes', () => {
+  afterEach(() => setOverrides({}));
+
+  it('come before the built-in text, including server text with numbers', () => {
+    setOverrides({ Today: 'My day', '{count} goal(s) in place.': '{count} goals ready.' });
+    expect(translate('en', 'Today')).toBe('My day');
+    expect(translate('en', '3 goals in place.')).toBe('3 goals ready.');
+    expect(translate('en', 'Goals')).toBe('Goals');
+  });
+
+  it('only apply to the language they were loaded for', () => {
+    setOverrides({ Today: 'My day' });
+    expect(translate('km', 'Today')).toBe('ថ្ងៃនេះ');
   });
 });

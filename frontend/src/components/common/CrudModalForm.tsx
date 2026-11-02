@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { tr } from '../../i18n/translate';
 
 type CrudModalFormProps = {
   editing: boolean;
@@ -115,8 +116,8 @@ export function CrudModalForm({
           {children}
           <div className="field-full row-actions">
             {extraActions}
-            <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</Button>
-            <Button type="button" variant="secondary" onClick={onCancelEdit}>Cancel</Button>
+            <Button type="submit" disabled={saving}>{saving ? tr('Saving...') : tr('Save changes')}</Button>
+            <Button type="button" variant="secondary" onClick={onCancelEdit}>{tr('Cancel')}</Button>
           </div>
         </form>
       </Modal>
@@ -134,11 +135,11 @@ export function CrudModalForm({
             {children}
             <div className="field-full row-actions">
               {extraActions}
-              <Button type="submit" disabled={saving} onClick={() => { addAnotherRef.current = false; }}>{saving ? 'Saving...' : createLabel}</Button>
+              <Button type="submit" disabled={saving} onClick={() => { addAnotherRef.current = false; }}>{saving ? tr('Saving...') : createLabel}</Button>
               <Button type="submit" variant="secondary" disabled={saving} onClick={() => { addAnotherRef.current = true; }}>
-                Save & add another
+                {tr('Save & add another')}
               </Button>
-              <Button type="button" variant="secondary" onClick={() => setCreating(false)}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={() => setCreating(false)}>{tr('Cancel')}</Button>
             </div>
           </form>
         </Modal>

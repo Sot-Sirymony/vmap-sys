@@ -21,6 +21,7 @@ import { useThemeSettings } from '../../context/ThemeModeContext';
 import { useI18n } from '../../i18n/I18nContext';
 import { listPartners } from '../../api/partnerApi';
 import type { Partner } from '../../types/vision';
+import { tr } from '../../i18n/translate';
 
 function currentPageLabel(pathname: string) {
   const exact = navItems.find((item) => (item.to === '/' ? pathname === '/' : pathname === item.to));
@@ -28,7 +29,7 @@ function currentPageLabel(pathname: string) {
     return exact.label;
   }
   const closest = navItems.find((item) => item.to !== '/' && pathname.startsWith(item.to));
-  return closest?.label ?? 'Dashboard';
+  return closest?.label ?? tr('Dashboard');
 }
 
 function initials(name: string) {
@@ -99,10 +100,10 @@ function PartnerStack() {
           ))}
         </AvatarGroup>
       )}
-      <Tooltip title="Add a partner">
+      <Tooltip title={tr('Add a partner')}>
         <IconButton
           size="small"
-          aria-label="Add a partner"
+          aria-label={tr('Add a partner')}
           onClick={() => navigate('/partners?create=partner')}
           sx={{
             width: 28,
@@ -145,10 +146,10 @@ function ModernTitle({ pathname }: { pathname: string }) {
   return (
     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
       <Typography variant="subtitle1" noWrap>
-        {firstName ? `Welcome back, ${firstName}` : 'Welcome back'} <span aria-hidden>👋</span>
+        {firstName ? tr('Welcome back, {name}', { name: firstName }) : tr('Welcome back')} <span aria-hidden>👋</span>
       </Typography>
       <Typography variant="caption" color="text.secondary" noWrap sx={{ display: { xs: 'none', sm: 'block' } }}>
-        Here is where your dreams stand today.
+        {tr('Here is where your dreams stand today.')}
       </Typography>
     </Box>
   );
@@ -186,7 +187,7 @@ export function Header() {
       }}
     >
       <Toolbar sx={{ gap: 1.5, minHeight: `${modern ? 64 : 56}px !important` }}>
-        <IconButton onClick={toggle} aria-label="Toggle sidebar" edge="start" size="small">
+        <IconButton onClick={toggle} aria-label={tr('Toggle sidebar')} edge="start" size="small">
           <PanelLeft size={18} />
         </IconButton>
 

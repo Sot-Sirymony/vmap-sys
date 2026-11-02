@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import Card from '@mui/material/Card';
 import ButtonBase from '@mui/material/ButtonBase';
 import { ChevronDown, ListFilter } from 'lucide-react';
+import { tr } from '../../i18n/translate';
 
 type FilterPanelProps = {
   children: ReactNode;
@@ -32,7 +33,7 @@ export function FilterPanel({ children, activeCount = 0 }: FilterPanelProps) {
         aria-controls={contentId}
       >
         <ListFilter size={16} aria-hidden />
-        <span>Filters</span>
+        <span>{tr('Filters')}</span>
         {activeCount > 0 && <span className="filter-panel-count">{activeCount}</span>}
         <ChevronDown
           size={16}

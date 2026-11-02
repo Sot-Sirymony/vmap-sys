@@ -5,6 +5,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { Button } from './Button';
 import { Input } from './Input';
+import { tr } from '../../i18n/translate';
 
 type QuickAddRowProps = {
   /** Label for the parent select ("Dream", "Goal", "Step"). */
@@ -49,26 +50,26 @@ export function QuickAddRow({ parentLabel, parents, parentValue, onParentChange,
   return (
     <Card className="quick-add-row" component="form" onSubmit={(event: FormEvent) => void handleSubmit(event)}>
       <label>
-        {parentLabel}
+        {tr(parentLabel)}
         <FormControl fullWidth size="small">
-          <Select SelectDisplayProps={{ 'aria-label': parentLabel }} displayEmpty value={parentValue} onChange={(event) => onParentChange(event.target.value)}>
-            <MenuItem value="" disabled><em>Select…</em></MenuItem>
+          <Select SelectDisplayProps={{ 'aria-label': tr(parentLabel) }} displayEmpty value={parentValue} onChange={(event) => onParentChange(event.target.value)}>
+            <MenuItem value="" disabled><em>{tr('Select…')}</em></MenuItem>
             {parents.map((parent) => <MenuItem value={parent.value} key={parent.value}>{parent.label}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label className="quick-add-title">
-        Quick add
+        {tr('Quick add')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={placeholder} />
       </label>
       {withDueDate && (
         <label>
-          Due date
+          {tr('Due date')}
           <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
         </label>
       )}
       <Button type="submit" variant="secondary" disabled={busy || !ready}>
-        {busy ? 'Adding...' : 'Add'}
+        {busy ? tr('Adding...') : tr('Add')}
       </Button>
     </Card>
   );

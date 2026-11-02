@@ -48,6 +48,7 @@ import { matchesSearch } from '../utils/search';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { ARCHETYPE_GUIDANCE, getComplementarySuggestion, workStyleArchetypeLabels } from '../utils/workStyleAssessment';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 export function StepsPage() {
   const { token, user } = useAuth();
@@ -176,7 +177,7 @@ export function StepsPage() {
       setProfiles(await listIdealPartnerProfiles(token));
       setProfileStep(null);
     } catch (profileError) {
-      crud.setError(profileError instanceof Error ? profileError.message : 'Unable to save the ideal partner profile.');
+      crud.setError(profileError instanceof Error ? profileError.message : tr('Unable to save the ideal partner profile.'));
     } finally {
       setProfileSaving(false);
     }
@@ -197,7 +198,7 @@ export function StepsPage() {
       setProfiles(await listIdealPartnerProfiles(token));
       setProfileStep(null);
     } catch (profileError) {
-      crud.setError(profileError instanceof Error ? profileError.message : 'Unable to remove the ideal partner profile.');
+      crud.setError(profileError instanceof Error ? profileError.message : tr('Unable to remove the ideal partner profile.'));
     } finally {
       setProfileSaving(false);
     }
@@ -294,7 +295,7 @@ export function StepsPage() {
       });
       await crud.reload();
     } catch (addError) {
-      crud.setError(addError instanceof Error ? addError.message : 'Unable to add step.');
+      crud.setError(addError instanceof Error ? addError.message : tr('Unable to add step.'));
     }
   }
 
@@ -307,7 +308,7 @@ export function StepsPage() {
       await updateStepStatus(token, step.id, nextStatus);
       await crud.reload();
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update step status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update step status.'));
     }
   }
 
@@ -338,7 +339,7 @@ export function StepsPage() {
       await reorderSteps(token, dragged.goalId, nextOrder);
       await crud.reload();
     } catch (reorderError) {
-      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder steps.');
+      crud.setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder steps.'));
     }
   }
 
@@ -347,7 +348,7 @@ export function StepsPage() {
       return 'Archive this step?';
     }
     const impact = await getStepArchiveImpact(token, step.id);
-    return `Archiving "${step.title}" also archives ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+    return tr('Archiving "{title}" also archives {tasks} task(s). Everything can be restored later with "Show archived".', { title: step.title, tasks: impact.tasks });
   }
 
   const dreamById = new Map(dreams.map((dream) => [dream.id, dream]));
@@ -400,16 +401,16 @@ export function StepsPage() {
         archived={step.archived}
         confirmArchive={() => archiveImpactMessage(step)}
         extraActions={[
-          { label: 'View tasks', onClick: () => navigate(`/tasks?stepId=${step.id}`) },
-          { label: 'Add task', onClick: () => navigate(`/tasks?create=task&parent=${step.id}`) },
+          { label: tr('View tasks'), onClick: () => navigate(`/tasks?stepId=${step.id}`) },
+          { label: tr('Add task'), onClick: () => navigate(`/tasks?create=task&parent=${step.id}`) },
           ...(step.complex
             ? [{
-                label: profileByStepId.has(step.id) ? 'Edit ideal partner profile' : 'Define ideal partner profile',
+                label: profileByStepId.has(step.id) ? tr('Edit ideal partner profile') : tr('Define ideal partner profile'),
                 onClick: () => openProfileEditor(step),
               }]
             : []),
         ]}
-        label="Step actions"
+        label={tr('Step actions')}
       />
     );
   }
@@ -427,10 +428,10 @@ export function StepsPage() {
   }
 
   const columns: DataTableColumn<VisionStep>[] = [
-    { key: 'code', label: 'Code', sortValue: (step) => step.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (step) => step.code },
+    { key: 'code', label: tr('Code'), sortValue: (step) => step.code, sx: { fontSize: 'var(--font-caption)', color: 'var(--text-label)' }, render: (step) => step.code },
     {
       key: 'title',
-      label: 'Step',
+      label: tr('Step'),
       sortValue: (step) => step.title,
       sx: { fontWeight: 500 },
       render: (step) => (
@@ -439,9 +440,9 @@ export function StepsPage() {
           <Breadcrumbs crumbs={stepCrumbs(step)} />
           {step.complex && taskCountFor(step) === 0 && (
             <div className="coaching-panel step-needs-tasks">
-              <strong>Complex step, no tasks yet</strong>
-              <p>Break this into executable tasks so it can actually move forward.</p>
-              <Link to={`/tasks?stepId=${step.id}`}>Break this into tasks →</Link>
+              <strong>{tr('Complex step, no tasks yet')}</strong>
+              <p>{tr('Break this into executable tasks so it can actually move forward.')}</p>
+              <Link to={`/tasks?stepId=${step.id}`}>{tr('Break this into tasks →')}</Link>
             </div>
           )}
         </>
@@ -449,37 +450,37 @@ export function StepsPage() {
     },
     {
       key: 'sequenceNumber',
-      label: 'Seq',
+      label: tr('Seq'),
       sortValue: (step) => step.sequenceNumber,
       render: (step) => step.sequenceNumber,
     },
     {
       key: 'priority',
-      label: 'Priority',
+      label: tr('Priority'),
       sortValue: (step) => priorityRank(step.priority),
       render: (step) => <PriorityBadge priority={step.priority} />,
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (step) => workStatusRank(step.status),
       render: (step) => <StatusBadge status={step.status} />,
     },
     {
       key: 'progress',
-      label: 'Progress',
+      label: tr('Progress'),
       sortValue: (step) => Number(step.progressPercent),
       render: (step) => <ProgressBar value={Number(step.progressPercent)} />,
     },
     {
       key: 'taskCount',
-      label: 'Tasks',
+      label: tr('Tasks'),
       sortValue: (step) => taskCountFor(step),
       render: (step) => taskCountFor(step),
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (step) => renderStepActions(step),
     },
@@ -488,7 +489,7 @@ export function StepsPage() {
   const formFields = (
     <>
       <label>
-        Goal
+        {tr('Goal')}
         <FormControl fullWidth size="small" required>
           <Select SelectDisplayProps={{ 'aria-label': "Goal" }} value={goalId} onChange={(event) => setGoalId(event.target.value)}>
             {goals.map((goal) => <MenuItem value={String(goal.id)} key={goal.id}>{goal.title}</MenuItem>)}
@@ -496,7 +497,7 @@ export function StepsPage() {
         </FormControl>
       </label>
       <label>
-        Title
+        {tr('Title')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
@@ -504,41 +505,41 @@ export function StepsPage() {
         <Input type="number" min="0" value={sequenceNumber} onChange={(event) => setSequenceNumber(Number(event.target.value))} required />
       </label>
       <label>
-        Owner
+        {tr('Owner')}
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} required />
       </label>
       <label>
-        Target Date
+        {tr('Target Date')}
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} required />
       </label>
       <label>
-        Priority
+        {tr('Priority')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Priority" }} value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
-            <MenuItem value="LOW">Low</MenuItem>
-            <MenuItem value="MEDIUM">Medium</MenuItem>
-            <MenuItem value="HIGH">High</MenuItem>
-            <MenuItem value="CRITICAL">Critical</MenuItem>
+            <MenuItem value="LOW">{tr('Low')}</MenuItem>
+            <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+            <MenuItem value="HIGH">{tr('High')}</MenuItem>
+            <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as WorkStatus)}>
-            <MenuItem value="NOT_STARTED">Not Started</MenuItem>
-            <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
-            <MenuItem value="WAITING">Waiting</MenuItem>
-            <MenuItem value="BLOCKED">Blocked</MenuItem>
-            <MenuItem value="PAUSED">Paused</MenuItem>
-            <MenuItem value="COMPLETED">Completed</MenuItem>
+            <MenuItem value="NOT_STARTED">{tr('Not Started')}</MenuItem>
+            <MenuItem value="IN_PROGRESS">{tr('In Progress')}</MenuItem>
+            <MenuItem value="WAITING">{tr('Waiting')}</MenuItem>
+            <MenuItem value="BLOCKED">{tr('Blocked')}</MenuItem>
+            <MenuItem value="PAUSED">{tr('Paused')}</MenuItem>
+            <MenuItem value="COMPLETED">{tr('Completed')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label className="field-full">
         <span className="inline-meta">
           <Checkbox checked={complex} onChange={(event) => setComplex(event.target.checked)} />
-          Complex step
+          {tr('Complex step')}
         </span>
       </label>
       <label className="field-full">
@@ -550,13 +551,13 @@ export function StepsPage() {
 
   return (
     <PageSection
-      title="Steps"
-      subtitle="Break goals into ordered action stages."
-      actions={<Button type="button" onClick={openCreateStep} disabled={goals.length === 0}>Create step</Button>}
+      title={tr('Steps')}
+      subtitle={tr('Break goals into ordered action stages.')}
+      actions={<Button type="button" onClick={openCreateStep} disabled={goals.length === 0}>{tr('Create step')}</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create step"
+        createLabel={tr('Create step')}
         editTitle="Edit Step"
         saving={crud.saving}
         disabled={goals.length === 0}
@@ -574,7 +575,7 @@ export function StepsPage() {
       <SummaryStrip
         chips={[
           { key: 'total', label: crud.items.length === 1 ? 'step' : 'steps', count: crud.items.length },
-          { key: 'needs-tasks', label: 'complex without tasks', count: crud.items.filter((step) => step.complex && taskCountFor(step) === 0 && step.status !== 'COMPLETED').length, tone: 'warning', active: filterComplexOnly, onClick: () => setFilterComplexOnly(!filterComplexOnly) },
+          { key: 'needs-tasks', label: tr('complex without tasks'), count: crud.items.filter((step) => step.complex && taskCountFor(step) === 0 && step.status !== 'COMPLETED').length, tone: 'warning', active: filterComplexOnly, onClick: () => setFilterComplexOnly(!filterComplexOnly) },
           { key: 'blocked', label: 'blocked', count: crud.items.filter((step) => step.status === 'BLOCKED').length, tone: 'warning', active: filterStatus === 'BLOCKED', onClick: () => setFilterStatus(filterStatus === 'BLOCKED' ? '' : 'BLOCKED') },
           { key: 'completed', label: 'completed', count: crud.items.filter((step) => step.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
         ]}
@@ -582,66 +583,66 @@ export function StepsPage() {
       <FilterPanel activeCount={[searchTerm, filterVisionAreaId, filterGoalId, filterStatus, filterPriority, filterOverdueOnly, filterComplexOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="steps" />
         <FilterSelect
-          label="Vision Area"
+          label={tr('Vision Area')}
           value={filterVisionAreaId}
           onChange={(value) => setFilterBatch({ visionAreaId: value, goalId: '' })}
           options={optionsFromEntities(visionAreas, (area) => area.name)}
         />
         <FilterSelect
-          label="Goal"
+          label={tr('Goal')}
           value={filterGoalId}
           onChange={setFilterGoalId}
           options={optionsFromEntities(goalsForFilter, (goal) => goal.title)}
         />
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={setFilterStatus}
           options={optionsFromLabels(workStatusLabels)}
         />
         <FilterSelect
-          label="Priority"
+          label={tr('Priority')}
           value={filterPriority}
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
         <label className="checkbox-field">
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
-          Overdue only
+          {tr('Overdue only')}
         </label>
         <label className="checkbox-field">
           <Checkbox checked={filterComplexOnly} onChange={(event) => setFilterComplexOnly(event.target.checked)} />
-          Complex only
+          {tr('Complex only')}
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Step view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Step view')} />
       </div>
       {crud.items.length > 0 && goals.length > 0 && (
         <QuickAddRow
-          parentLabel="Goal"
+          parentLabel={tr('Goal')}
           parents={goals.map((goal) => ({ value: String(goal.id), label: goal.title }))}
           parentValue={quickAddParentId}
           onParentChange={handleQuickParentChange}
-          placeholder="New step title — Enter to add"
+          placeholder={tr('New step title — Enter to add')}
           withDueDate
           onAdd={handleQuickAdd}
         />
       )}
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
-          headline="No steps yet"
+          headline={tr('No steps yet')}
           icon={Footprints}
           action={
             goals.length === 0 ? (
-              <Button type="button" onClick={() => navigate('/goals?create=goal')}>Create a goal first</Button>
+              <Button type="button" onClick={() => navigate('/goals?create=goal')}>{tr('Create a goal first')}</Button>
             ) : (
-              <Button type="button" onClick={() => setCreateOpen(true)}>Create your first step</Button>
+              <Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create your first step')}</Button>
             )
           }
         >
-          Steps are the action stages of a goal. Mark a step complex to break it into tasks.
+          {tr('Steps are the action stages of a goal. Mark a step complex to break it into tasks.')}
         </EmptyState>
       ) : null}
       {crud.items.length > 0 && viewMode === 'board' && (
@@ -658,12 +659,12 @@ export function StepsPage() {
               <p>{step.code} · Seq {step.sequenceNumber} · {taskCountFor(step)} task(s)</p>
               <div className="inline-meta">
                 <PriorityBadge priority={step.priority} />
-                {step.complex && <span>Complex</span>}
+                {step.complex && <span>{tr('Complex')}</span>}
                 <span>{step.progressPercent}%</span>
               </div>
               <ProgressBar value={Number(step.progressPercent)} />
               {step.complex && taskCountFor(step) === 0 && (
-                <p><Link to={`/tasks?stepId=${step.id}`}>Break this into tasks →</Link></p>
+                <p><Link to={`/tasks?stepId=${step.id}`}>{tr('Break this into tasks →')}</Link></p>
               )}
             </>
           )}
@@ -677,7 +678,7 @@ export function StepsPage() {
             storageKey="steps"
             rows={filteredSteps}
             columns={columns}
-            emptyMessage="No steps match these filters."
+            emptyMessage={tr('No steps match these filters.')}
             defaultSortKey="sequenceNumber"
             defaultSortDirection="asc"
             reorder={{ columnKey: 'sequenceNumber', onReorder: (draggedId, targetId) => void handleReorderSteps(draggedId, targetId) }}
@@ -691,7 +692,7 @@ export function StepsPage() {
                 <BulkArchiveAction
                   selectedIds={selectedIds}
                   items={crud.items}
-                  entityLabel="step(s)"
+                  entityLabel={tr('step(s)')}
                   onArchive={async (ids) => {
                     await crud.archiveMany(ids);
                     setSelectedIds(new Set());
@@ -712,11 +713,10 @@ export function StepsPage() {
       </Card>
       )}
       {profileStep && (
-        <Modal title={`Ideal partner for: ${profileStep.title}`} onClose={() => setProfileStep(null)}>
+        <Modal title={tr('Ideal partner for: {title}', { title: profileStep.title })} onClose={() => setProfileStep(null)}>
           <div className="stack-list">
             <p className="field-hint">
-              Describe the person this step needs before looking for them — it turns recruiting
-              from "who do I know?" into "who fits this?".
+              {tr('Describe the person this step needs before looking for them — it turns recruiting from "who do I know?" into "who fits this?".')}
             </p>
             {myWorkStyleDominant && (() => {
               const suggestion = getComplementarySuggestion(myWorkStyleDominant);
@@ -725,38 +725,40 @@ export function StepsPage() {
               }
               return (
                 <div className="coaching-panel">
-                  <strong>Complementary work style</strong>
+                  <strong>{tr('Complementary work style')}</strong>
                   <p>
-                    Your own work style leans {workStyleArchetypeLabels[myWorkStyleDominant]} ({ARCHETYPE_GUIDANCE[myWorkStyleDominant].blindSpot}).
-                    A partner leaning {suggestion.map((archetype) => workStyleArchetypeLabels[archetype]).join(' or ')} tends
-                    to cover that gap well.
+                    {tr('Your own work style leans {style} ({blindSpot}). A partner leaning {partners} tends to cover that gap well.', {
+                      style: workStyleArchetypeLabels[myWorkStyleDominant],
+                      blindSpot: ARCHETYPE_GUIDANCE[myWorkStyleDominant].blindSpot,
+                      partners: suggestion.map((archetype) => workStyleArchetypeLabels[archetype]).join(tr(' or ')),
+                    })}
                   </p>
                 </div>
               );
             })()}
             <label>
-              Required experience
+              {tr('Required experience')}
               <Textarea value={profileExperience} onChange={(event) => setProfileExperience(event.target.value)} />
             </label>
             <label>
-              Character traits
+              {tr('Character traits')}
               <Textarea value={profileTraits} onChange={(event) => setProfileTraits(event.target.value)} />
             </label>
             <label>
-              What would motivate them
+              {tr('What would motivate them')}
               <Textarea value={profileMotivation} onChange={(event) => setProfileMotivation(event.target.value)} />
             </label>
             <label>
-              What you can offer in return
+              {tr('What you can offer in return')}
               <Textarea value={profileOffer} onChange={(event) => setProfileOffer(event.target.value)} />
             </label>
             <div className="row-actions">
               <Button type="button" onClick={() => void handleProfileSave()} disabled={profileSaving}>
-                {profileSaving ? 'Saving...' : 'Save profile'}
+                {profileSaving ? tr('Saving...') : tr('Save profile')}
               </Button>
               {profileByStepId.has(profileStep.id) && (
                 <Button type="button" variant="secondary" onClick={() => void handleProfileArchive()} disabled={profileSaving}>
-                  Remove profile
+                  {tr('Remove profile')}
                 </Button>
               )}
             </div>

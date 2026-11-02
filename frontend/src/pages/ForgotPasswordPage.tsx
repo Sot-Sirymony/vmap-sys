@@ -6,6 +6,7 @@ import { forgotPassword } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -23,14 +24,14 @@ export function ForgotPasswordPage() {
     } catch (error) {
       // Only a transport or server failure reaches here: the endpoint answers
       // 204 for an unknown address exactly as it does for a known one.
-      setError(error instanceof Error ? error.message : 'Could not send the reset link.');
+      setError(error instanceof Error ? error.message : tr('Could not send the reset link.'));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <AuthLayout subtitle="Reset your password">
+    <AuthLayout subtitle={tr('Reset your password')}>
       {sent ? (
         <>
           {/*
@@ -44,18 +45,17 @@ export function ForgotPasswordPage() {
             works once and expires in 30 minutes.
           </MuiAlert>
           <p className="auth-link">
-            Didn't get it? Check the spam folder, or <Link to="/forgot-password" onClick={() => setSent(false)}>try another address</Link>.
+            Didn't get it? Check the spam folder, or <Link to="/forgot-password" onClick={() => setSent(false)}>{tr('try another address')}</Link>.
           </p>
         </>
       ) : (
         <form className="auth-form" onSubmit={handleSubmit}>
           <p className="auth-status-text">
-            Enter the email address for your account and we'll send you a link to choose a
-            new password.
+            {tr('Enter the email address for your account and we\'ll send you a link to choose a new password.')}
           </p>
           <AuthField
             id="forgot-email"
-            label="Email address"
+            label={tr('Email address')}
             type="email"
             name="email"
             autoComplete="username"
@@ -67,13 +67,13 @@ export function ForgotPasswordPage() {
           />
           {error && <ErrorMessage message={error} />}
           <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? 'Sending...' : 'Send reset link'}
+            {loading ? tr('Sending...') : tr('Send reset link')}
           </button>
         </form>
       )}
 
       <p className="auth-link" style={{ textAlign: 'center' }}>
-        Remembered it? <Link to="/login">Sign in</Link>
+        Remembered it? <Link to="/login">{tr('Sign in')}</Link>
       </p>
     </AuthLayout>
   );

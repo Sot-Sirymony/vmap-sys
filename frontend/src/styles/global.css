@@ -76,6 +76,7 @@
   --info-border: #61F3F3;
   --info-text: #003768;
   --info-strong: #006C9C;
+  --done-text: #065E49;          /* answered coaching questions — success.darker, AA on --info-bg */
   --danger-bg: #FFE9D5;          /* overdue row wash — error.lighter */
   --hint: #0d7d70;               /* field hints */
   --moonshot-fg: #6b21a8;        /* moonshot text; light-legible violet */
@@ -212,6 +213,7 @@
   --info-border: #1e4976;
   --info-text: #9ec9ec;
   --info-strong: #6cb8f6;
+  --done-text: #77ED8B;
   --danger-bg: #3a1d1f;
   --hint: #6ccdc2;
   --moonshot-fg: #cdbce6;
@@ -1554,7 +1556,7 @@ button:focus-visible,
 }
 
 .coaching-panel li.coaching-item-done {
-  color: #16a34a;
+  color: var(--done-text);
   text-decoration: line-through;
   text-decoration-color: #86efac;
 }
@@ -2585,6 +2587,11 @@ button:focus-visible,
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-soft);
+}
+
+/* The soft grey fails contrast on the active row's accent wash. */
+.palette-item--active .palette-group {
+  color: inherit;
 }
 
 .palette-label {

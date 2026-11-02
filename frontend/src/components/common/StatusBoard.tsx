@@ -4,6 +4,7 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { EmptyState } from './EmptyState';
+import { tr } from '../../i18n/translate';
 
 export type StatusBoardColumn<S extends string> = { value: S; label: string };
 
@@ -50,7 +51,7 @@ export function StatusBoard<T extends { id: number; archived: boolean }, S exten
 
   function announceMove(status: S) {
     const label = columns.find((column) => column.value === status)?.label ?? status;
-    setAnnouncement(`Moved to ${label}.`);
+    setAnnouncement(tr('Moved to {status}.', { status: label }));
   }
 
   function handleDragStart(event: DragEvent<HTMLElement>, id: number) {

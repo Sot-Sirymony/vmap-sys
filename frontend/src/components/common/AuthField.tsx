@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { tr } from '../../i18n/translate';
 
 type AuthFieldProps = {
   id: string;
@@ -87,7 +88,7 @@ export function AuthField({
           <button
             type="button"
             className="auth-toggle"
-            aria-label={revealed ? 'Hide password' : 'Show password'}
+            aria-label={revealed ? tr('Hide password') : tr('Show password')}
             onClick={() => setRevealed((current) => !current)}
           >
             {revealed ? <EyeOff size={18} /> : <Eye size={18} />}

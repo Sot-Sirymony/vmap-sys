@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Button } from '../common/Button';
 import { Input } from '../common/Input';
+import { tr } from '../../i18n/translate';
 
 type QuickAddTitleProps = {
   placeholder: string;
@@ -28,7 +29,7 @@ export function QuickAddTitle({ placeholder, onAdd }: QuickAddTitleProps) {
   return (
     <form className="quick-add" onSubmit={handleSubmit}>
       <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={placeholder} />
-      <Button type="submit" variant="secondary" disabled={busy || !title.trim()}>{busy ? 'Adding...' : 'Add'}</Button>
+      <Button type="submit" variant="secondary" disabled={busy || !title.trim()}>{busy ? tr('Adding...') : tr('Add')}</Button>
     </form>
   );
 }

@@ -7,6 +7,7 @@ import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { semanticTints } from '../../theme';
+import { tr } from '../../i18n/translate';
 
 type GettingStartedProps = {
   hasArea: boolean;
@@ -25,24 +26,24 @@ export function GettingStarted({ hasArea, hasDream, hasGoal }: GettingStartedPro
     {
       icon: Compass,
       done: hasArea,
-      title: 'Create a Vision Area',
-      description: 'A major area of your life or work — like Career, Health, or Family.',
+      title: tr('Create a Vision Area'),
+      description: tr('A major area of your life or work — like Career, Health, or Family.'),
       actionLabel: 'Create a vision area',
       to: '/vision-areas?create=area',
     },
     {
       icon: MoonStar,
       done: hasDream,
-      title: 'Add a Dream',
-      description: 'A meaningful outcome you want to reach. A short guide helps you make it clear.',
+      title: tr('Add a Dream'),
+      description: tr('A meaningful outcome you want to reach. A short guide helps you make it clear.'),
       actionLabel: 'Add a dream',
       to: '/dreams?create=dream',
     },
     {
       icon: Footprints,
       done: hasGoal,
-      title: 'Break it down',
-      description: 'Turn the dream into goals, steps, and tasks on the Vision Map.',
+      title: tr('Break it down'),
+      description: tr('Turn the dream into goals, steps, and tasks on the Vision Map.'),
       actionLabel: 'Open the Vision Map',
       to: '/vision-map',
     },
@@ -52,9 +53,9 @@ export function GettingStarted({ hasArea, hasDream, hasGoal }: GettingStartedPro
   return (
     <Card>
       <CardContent>
-        <Typography variant="h2" component="h2" sx={{ mb: 0.5 }}>Get started</Typography>
+        <Typography variant="h2" component="h2" sx={{ mb: 0.5 }}>{tr('Get started')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Three steps from a blank page to a plan. This checklist disappears once your first dream has goals.
+          {tr('Three steps from a blank page to a plan. This checklist disappears once your first dream has goals.')}
         </Typography>
         <Stack spacing={1.5}>
           {steps.map((step, index) => {

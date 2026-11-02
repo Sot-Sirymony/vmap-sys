@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { CommandPalette } from '../common/CommandPalette';
 import { ShortcutHelp } from '../common/ShortcutHelp';
 import { useCommandPalette } from './command-palette-context';
+import { tr } from '../../i18n/translate';
 
 const GO_TARGETS: Record<string, string> = {
   d: '/',
@@ -93,7 +94,7 @@ export function GlobalShortcuts() {
           navigate(CREATE_TARGETS[base]);
         }
       } else if (event.key === '/') {
-        const search = document.querySelector<HTMLInputElement>('.search-bar input, input[placeholder="Search Here"]');
+        const search = document.querySelector<HTMLInputElement>(`.search-bar input, input[placeholder="${tr('Search Here')}"]`);
         if (search) {
           event.preventDefault();
           search.focus();

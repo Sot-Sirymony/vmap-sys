@@ -1,5 +1,6 @@
 import { Textarea } from '../common/Textarea';
+import { tr } from '../../i18n/translate';
 
 export function CommunicationForm() {
-  return <Textarea placeholder="Message body" />;
+  return <Textarea placeholder={tr('Message body')} />;
 }

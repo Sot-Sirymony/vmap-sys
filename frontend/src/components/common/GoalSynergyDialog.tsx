@@ -18,6 +18,7 @@ import type { Goal, GoalSynergyLink } from '../../types/vision';
 import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { Textarea } from './Textarea';
+import { tr } from '../../i18n/translate';
 
 type GoalSynergyDialogProps = {
   goal: Goal;
@@ -70,7 +71,7 @@ export function GoalSynergyDialog({ goal, goals, token, onClose }: GoalSynergyDi
       setNote('');
       reload();
     } catch (addError) {
-      setError(addError instanceof Error ? addError.message : 'Unable to link goals.');
+      setError(addError instanceof Error ? addError.message : tr('Unable to link goals.'));
     } finally {
       setBusy(false);
     }
@@ -86,14 +87,14 @@ export function GoalSynergyDialog({ goal, goals, token, onClose }: GoalSynergyDi
 
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Synergy links — {goal.title}</DialogTitle>
+      <DialogTitle>{tr('Synergy links — {title}', { title: goal.title })}</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: 2 }}>
-          Record how this goal reinforces another — the same work can move more than one Vision Area forward.
+          {tr('Record how this goal reinforces another — the same work can move more than one Vision Area forward.')}
         </DialogContentText>
 
         {links.length === 0 ? (
-          <EmptyState>No synergy links yet.</EmptyState>
+          <EmptyState>{tr('No synergy links yet.')}</EmptyState>
         ) : (
           <Stack spacing={1.25} sx={{ mb: 2 }}>
             {links.map((link) => (
@@ -105,12 +106,12 @@ export function GoalSynergyDialog({ goal, goals, token, onClose }: GoalSynergyDi
                       {link.relatedGoalCode} · {link.relatedGoalVisionAreaName}
                     </Typography>
                     {link.crossVisionArea && (
-                      <Chip size="small" variant="outlined" color="primary" label="Cross-area" sx={{ height: 20, fontWeight: 700 }} />
+                      <Chip size="small" variant="outlined" color="primary" label={tr('Cross-area')} sx={{ height: 20, fontWeight: 700 }} />
                     )}
                   </Stack>
                   {link.note && <Typography variant="caption" color="text.secondary">{link.note}</Typography>}
                 </Box>
-                <IconButton size="small" aria-label={`Remove link to ${link.relatedGoalTitle}`} onClick={() => void handleRemove(link.id)}>
+                <IconButton size="small" aria-label={tr('Remove link to {title}', { title: link.relatedGoalTitle })} onClick={() => void handleRemove(link.id)}>
                   <Trash2 size={16} />
                 </IconButton>
               </Stack>
@@ -127,7 +128,7 @@ export function GoalSynergyDialog({ goal, goals, token, onClose }: GoalSynergyDi
                 value={relatedGoalId}
                 onChange={(event) => setRelatedGoalId(event.target.value)}
               >
-                <MenuItem value="" disabled><em>Link to another goal…</em></MenuItem>
+                <MenuItem value="" disabled><em>{tr('Link to another goal…')}</em></MenuItem>
                 {options.map((candidate) => (
                   <MenuItem value={String(candidate.id)} key={candidate.id}>{candidate.title}</MenuItem>
                 ))}
@@ -136,20 +137,20 @@ export function GoalSynergyDialog({ goal, goals, token, onClose }: GoalSynergyDi
             <Textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="How do they reinforce each other? (optional)"
-              aria-label="Synergy note"
+              placeholder={tr('How do they reinforce each other? (optional)')}
+              aria-label={tr('Synergy note')}
             />
             {error && <Typography variant="caption" color="error">{error}</Typography>}
             <Box>
               <Button type="submit" variant="secondary" disabled={busy || !relatedGoalId}>
-                {busy ? 'Adding…' : 'Add link'}
+                {busy ? tr('Adding…') : tr('Add link')}
               </Button>
             </Box>
           </Stack>
         </form>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button variant="secondary" onClick={onClose}>Done</Button>
+        <Button variant="secondary" onClick={onClose}>{tr('Done')}</Button>
       </DialogActions>
     </Dialog>
   );

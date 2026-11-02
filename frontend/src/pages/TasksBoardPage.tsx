@@ -50,6 +50,7 @@ import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { energyDemandLabels, obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 const columns: WorkStatus[] = ['NOT_STARTED', 'IN_PROGRESS', 'WAITING', 'BLOCKED', 'COMPLETED', 'PAUSED'];
 const blockerCategories: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY', 'DECISION', 'PARTNER', 'MOTIVATION'];
@@ -156,10 +157,10 @@ export function TasksBoardPage() {
         return task ? updateTask(token, task.id, { ...taskRequest(task), priority: bulkPriority }) : Promise.resolve();
       }));
       await crud.reload();
-      showToast(`Updated ${selectedIds.size} task${selectedIds.size === 1 ? '' : 's'}.`);
+      showToast(tr(selectedIds.size === 1 ? tr('Updated 1 task.') : 'Updated {count} tasks.', { count: selectedIds.size }));
       setSelectedIds(new Set());
     } catch (bulkError) {
-      crud.setError(bulkError instanceof Error ? bulkError.message : 'Unable to update selected tasks.');
+      crud.setError(bulkError instanceof Error ? bulkError.message : tr('Unable to update selected tasks.'));
     } finally {
       setBulkApplying(false);
     }
@@ -319,7 +320,7 @@ export function TasksBoardPage() {
         });
       }
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update task status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update task status.'));
     }
   }
 
@@ -461,7 +462,7 @@ export function TasksBoardPage() {
       await reorderTasks(token, dragged.stepId, nextOrder);
       await crud.reload();
     } catch (reorderError) {
-      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder tasks.');
+      crud.setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder tasks.'));
     }
   }
 
@@ -483,13 +484,13 @@ export function TasksBoardPage() {
   const taskColumns: DataTableColumn<TaskItem>[] = [
     {
       key: 'position',
-      label: 'Order',
+      label: tr('Order'),
       sortValue: (task) => task.sortOrder ?? Number.MAX_SAFE_INTEGER,
       render: (task) => (task.sortOrder != null ? task.sortOrder + 1 : '—'),
     },
     {
       key: 'title',
-      label: 'Task',
+      label: tr('Task'),
       sortValue: (task) => task.title,
       sx: { fontWeight: 500 },
       render: (task) => (
@@ -499,42 +500,42 @@ export function TasksBoardPage() {
         </>
       ),
     },
-    { key: 'owner', label: 'Owner', sortValue: (task) => task.owner, render: (task) => task.owner },
-    { key: 'dueDate', label: 'Due', sortValue: (task) => task.dueDate, render: (task) => <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /> },
+    { key: 'owner', label: tr('Owner'), sortValue: (task) => task.owner, render: (task) => task.owner },
+    { key: 'dueDate', label: tr('Due'), sortValue: (task) => task.dueDate, render: (task) => <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /> },
     {
       key: 'priority',
-      label: 'Priority',
+      label: tr('Priority'),
       sortValue: (task) => priorityRank(task.priority),
       render: (task) => <PriorityBadge priority={task.priority} />,
     },
     {
       key: 'letterRank',
-      label: 'Rank',
+      label: tr('Rank'),
       sortValue: (task) => task.letterRank ?? '',
       render: (task) => task.letterRank ?? '—',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (task) => workStatusRank(task.status),
       render: (task) => <StatusBadge status={task.status} />,
     },
     {
       key: 'progress',
-      label: 'Progress',
+      label: tr('Progress'),
       sortValue: (task) => Number(task.progressPercent),
       sx: { width: 160 },
       render: (task) => <ProgressBar value={Number(task.progressPercent)} />,
     },
     {
       key: 'hours',
-      label: 'Hours',
+      label: tr('Hours'),
       sortValue: (task) => Number(task.actualHours ?? 0),
       render: (task) => formatHours(task),
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (task) => (
         <RowActionsMenu
@@ -543,7 +544,7 @@ export function TasksBoardPage() {
           onRestore={() => void crud.restore(task.id)}
           onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
           archived={task.archived}
-          label="Task actions"
+          label={tr('Task actions')}
         />
       ),
     },
@@ -554,7 +555,7 @@ export function TasksBoardPage() {
   const formFields = (
     <>
       <label>
-        Step
+        {tr('Step')}
         <FormControl fullWidth size="small" required>
           <Select SelectDisplayProps={{ 'aria-label': "Step" }} value={stepId} onChange={(event) => setStepId(event.target.value)}>
             {steps.map((step) => <MenuItem value={String(step.id)} key={step.id}>{step.title}</MenuItem>)}
@@ -562,40 +563,39 @@ export function TasksBoardPage() {
         </FormControl>
       </label>
       <label>
-        Title
+        {tr('Title')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
-      <div className="field-full form-section">Ownership & priority</div>
+      <div className="field-full form-section">{tr('Ownership & priority')}</div>
       <label>
-        Owner
+        {tr('Owner')}
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} required />
       </label>
       <label>
-        Priority
+        {tr('Priority')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Priority" }} value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
-            <MenuItem value="LOW">Low</MenuItem>
-            <MenuItem value="MEDIUM">Medium</MenuItem>
-            <MenuItem value="HIGH">High</MenuItem>
-            <MenuItem value="CRITICAL">Critical</MenuItem>
+            <MenuItem value="LOW">{tr('Low')}</MenuItem>
+            <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+            <MenuItem value="HIGH">{tr('High')}</MenuItem>
+            <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Rank
+        {tr('Rank')}
         <Input
           value={letterRank}
           onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-          placeholder="e.g. A"
+          placeholder={tr('e.g. A')}
           maxLength={1}
         />
         <span className="field-hint">
-          Optional. A, B, C… — assigned after listing everything, to mark which tasks under this step come first.
-          Ties are fine; nothing enforces a unique order.
+          {tr('Optional. A, B, C… — assigned after listing everything, to mark which tasks under this step come first. Ties are fine; nothing enforces a unique order.')}
         </span>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as WorkStatus)}>
             {columns.map((column) => <MenuItem value={column} key={column}>{workStatusLabels[column]}</MenuItem>)}
@@ -604,55 +604,55 @@ export function TasksBoardPage() {
       </label>
       {status === 'BLOCKED' && (
         <label>
-          What's missing?
+          {tr('What\'s missing?')}
           <FormControl fullWidth size="small">
             <Select SelectDisplayProps={{ 'aria-label': "What's missing?" }} displayEmpty value={blockerCategory} onChange={(event) => setBlockerCategory(event.target.value as ObstacleType)}>
-              <MenuItem value="" disabled><em>Select a category...</em></MenuItem>
+              <MenuItem value="" disabled><em>{tr('Select a category...')}</em></MenuItem>
               {blockerCategories.map((category) => <MenuItem value={category} key={category}>{obstacleTypeLabels[category]}</MenuItem>)}
             </Select>
           </FormControl>
           {blockerCategory && (
             <span className="field-hint">
-              {suggestPartnerFor(blockerCategory)?.label ?? 'Look for a partner or connector who can help directly.'}
+              {suggestPartnerFor(blockerCategory)?.label ?? tr('Look for a partner or connector who can help directly.')}
             </span>
           )}
           {profileByStepId.has(Number(stepId)) && (
             <span className="field-hint">
-              This step already has an ideal partner profile — see the Partners page for who to recruit.
+              {tr('This step already has an ideal partner profile — see the Partners page for who to recruit.')}
             </span>
           )}
         </label>
       )}
       {status === 'BLOCKED' && (
         <label className="field-full">
-          Blocker Reason
+          {tr('Blocker Reason')}
           <Textarea value={blockerReason} onChange={(event) => setBlockerReason(event.target.value)} required />
         </label>
       )}
-      <div className="field-full form-section">Dates</div>
+      <div className="field-full form-section">{tr('Dates')}</div>
       <label>
-        Start Date
+        {tr('Start Date')}
         <Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
       </label>
       <label>
-        Due Date
+        {tr('Due Date')}
         <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} required />
       </label>
-      <div className="field-full form-section">Details</div>
+      <div className="field-full form-section">{tr('Details')}</div>
       <label>
-        Progress
+        {tr('Progress')}
         <Input type="number" min="0" max="100" value={progressPercent} onChange={(event) => setProgressPercent(Number(event.target.value))} required />
       </label>
       <label>
-        Estimated Hours
+        {tr('Estimated Hours')}
         <Input type="number" min="0" step="0.5" value={estimatedHours} onChange={(event) => setEstimatedHours(event.target.value)} />
       </label>
       <label>
-        Actual Hours
+        {tr('Actual Hours')}
         <Input type="number" min="0" step="0.5" value={actualHours} onChange={(event) => setActualHours(event.target.value)} />
       </label>
       <label>
-        Energy
+        {tr('Energy')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': 'Energy' }} value={energyDemand} onChange={(event) => setEnergyDemand(event.target.value as EnergyDemand)}>
             {(Object.keys(energyDemandLabels) as EnergyDemand[]).map((value) => (
@@ -662,7 +662,7 @@ export function TasksBoardPage() {
         </FormControl>
       </label>
       <label className="field-full">
-        Next Action
+        {tr('Next Action')}
         <Textarea value={nextAction} onChange={(event) => setNextAction(event.target.value)} />
       </label>
       <label className="field-full">
@@ -674,13 +674,13 @@ export function TasksBoardPage() {
 
   return (
     <PageSection
-      title="Tasks Board"
-      subtitle="Manage executable work by status."
-      actions={<Button type="button" onClick={openCreateTask} disabled={steps.length === 0}>Create task</Button>}
+      title={tr('Tasks Board')}
+      subtitle={tr('Manage executable work by status.')}
+      actions={<Button type="button" onClick={openCreateTask} disabled={steps.length === 0}>{tr('Create task')}</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create task"
+        createLabel={tr('Create task')}
         editTitle="Edit Task"
         saving={crud.saving}
         disabled={steps.length === 0}
@@ -702,101 +702,101 @@ export function TasksBoardPage() {
           { key: 'overdue', label: 'overdue', count: crud.items.filter((task) => isOverdue(task.dueDate, task.status)).length, tone: 'critical', active: filterOverdueOnly, onClick: () => setFilterOverdueOnly(!filterOverdueOnly) },
           { key: 'blocked', label: 'blocked', count: crud.items.filter((task) => task.status === 'BLOCKED').length, tone: 'warning', active: filterStatus === 'BLOCKED', onClick: () => setFilterStatus(filterStatus === 'BLOCKED' ? '' : 'BLOCKED') },
           { key: 'completed', label: 'completed', count: crud.items.filter((task) => task.status === 'COMPLETED').length, tone: 'positive', active: filterStatus === 'COMPLETED', onClick: () => setFilterStatus(filterStatus === 'COMPLETED' ? '' : 'COMPLETED') },
-          { key: 'preset-mine', label: '· My overdue', count: crud.items.filter((task) => task.owner === (user?.fullName ?? '') && isOverdue(task.dueDate, task.status)).length, active: Boolean(filterOwner) && filterOverdueOnly, onClick: applyMyOverdue },
-          { key: 'preset-week', label: '· Due this week', count: crud.items.filter((task) => { const d = new Date(`${task.dueDate}T00:00:00`); const now = new Date(); const end = new Date(now); end.setDate(now.getDate() + 7); return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= end && task.status !== 'COMPLETED'; }).length, active: Boolean(filterDueFrom && filterDueTo), onClick: applyDueThisWeek },
+          { key: 'preset-mine', label: tr('· My overdue'), count: crud.items.filter((task) => task.owner === (user?.fullName ?? '') && isOverdue(task.dueDate, task.status)).length, active: Boolean(filterOwner) && filterOverdueOnly, onClick: applyMyOverdue },
+          { key: 'preset-week', label: tr('· Due this week'), count: crud.items.filter((task) => { const d = new Date(`${task.dueDate}T00:00:00`); const now = new Date(); const end = new Date(now); end.setDate(now.getDate() + 7); return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && d <= end && task.status !== 'COMPLETED'; }).length, active: Boolean(filterDueFrom && filterDueTo), onClick: applyDueThisWeek },
         ]}
       />
       <FilterPanel activeCount={[searchTerm, filterOwner, filterPriority, filterLetterRank, filterStatus, filterVisionAreaId, filterDreamId, filterGoalId, filterDueFrom, filterDueTo, filterOverdueOnly].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="tasks" />
         <label>
-          Owner
-          <Input value={filterOwner} onChange={(event) => setFilterOwner(event.target.value)} placeholder="Any owner" />
+          {tr('Owner')}
+          <Input value={filterOwner} onChange={(event) => setFilterOwner(event.target.value)} placeholder={tr('Any owner')} />
         </label>
         <FilterSelect
-          label="Priority"
+          label={tr('Priority')}
           value={filterPriority}
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
         {letterRankOptions.length > 0 && (
           <FilterSelect
-            label="Rank"
+            label={tr('Rank')}
             value={filterLetterRank}
             onChange={setFilterLetterRank}
             options={letterRankOptions}
           />
         )}
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={setFilterStatus}
           options={optionsFromLabels(workStatusLabels)}
         />
         <FilterSelect
-          label="Vision Area"
+          label={tr('Vision Area')}
           value={filterVisionAreaId}
           onChange={(value) => setFilterBatch({ visionAreaId: value, dreamId: '', goalId: '' })}
           options={optionsFromEntities(visionAreas, (area) => area.name)}
         />
         <FilterSelect
-          label="Dream"
+          label={tr('Dream')}
           value={filterDreamId}
           onChange={(value) => setFilterBatch({ dreamId: value, goalId: '' })}
           options={optionsFromEntities(dreamsForFilter, (dream) => dream.title)}
         />
         <FilterSelect
-          label="Goal"
+          label={tr('Goal')}
           value={filterGoalId}
           onChange={setFilterGoalId}
           options={optionsFromEntities(goalsForFilter, (goal) => goal.title)}
         />
         <label>
-          Due from
+          {tr('Due from')}
           <Input type="date" value={filterDueFrom} onChange={(event) => setFilterDueFrom(event.target.value)} />
         </label>
         <label>
-          Due to
+          {tr('Due to')}
           <Input type="date" value={filterDueTo} onChange={(event) => setFilterDueTo(event.target.value)} />
         </label>
         <label className="checkbox-field">
           <Checkbox checked={filterOverdueOnly} onChange={(event) => setFilterOverdueOnly(event.target.checked)} />
-          Overdue only
+          {tr('Overdue only')}
         </label>
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       {filterStepId && (
         <Card className="filter-banner flex-row">
-          <span>Showing tasks for step: <strong>{steps.find((step) => String(step.id) === filterStepId)?.title ?? filterStepId}</strong></span>
-          <Link to="/tasks">Clear filter</Link>
+          <span>{tr('Showing tasks for step:')} <strong>{steps.find((step) => String(step.id) === filterStepId)?.title ?? filterStepId}</strong></span>
+          <Link to="/tasks">{tr('Clear filter')}</Link>
         </Card>
       )}
       <div className="list-controls">
         {crud.items.length > 0 && steps.length > 0 && (
           <QuickAddRow
-            parentLabel="Step"
+            parentLabel={tr('Step')}
             parents={steps.map((step) => ({ value: String(step.id), label: step.title }))}
             parentValue={quickParentId}
             onParentChange={setQuickParentId}
-            placeholder="New task title"
+            placeholder={tr('New task title')}
             withDueDate
             onAdd={handleQuickAdd}
           />
         )}
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Task view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Task view')} />
       </div>
       {!crud.loading && crud.items.length === 0 ? (
         <EmptyState
-          headline="No tasks yet"
+          headline={tr('No tasks yet')}
           icon={CheckSquare}
           action={
             steps.length === 0 ? (
-              <Button type="button" onClick={() => navigate('/steps?create=step')}>Create a step first</Button>
+              <Button type="button" onClick={() => navigate('/steps?create=step')}>{tr('Create a step first')}</Button>
             ) : (
-              <Button type="button" onClick={() => setCreateOpen(true)}>Create your first task</Button>
+              <Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create your first task')}</Button>
             )
           }
         >
-          Tasks are the small executable actions that move a step forward — each with an owner, due date, and priority.
+          {tr('Tasks are the small executable actions that move a step forward — each with an owner, due date, and priority.')}
         </EmptyState>
       ) : null}
       {crud.items.length > 0 && (viewMode === 'list' ? (
@@ -806,7 +806,7 @@ export function TasksBoardPage() {
               storageKey="tasks"
               rows={visibleTasks}
               columns={taskColumns}
-              emptyMessage="No tasks match these filters."
+              emptyMessage={tr('No tasks match these filters.')}
               defaultSortKey="position"
               defaultSortDirection="asc"
               reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderTasks(draggedId, targetId) }}
@@ -819,30 +819,30 @@ export function TasksBoardPage() {
                 actions: (
                   <>
                     <label>
-                      Set status
+                      {tr('Set status')}
                       <FormControl fullWidth size="small">
                         <Select SelectDisplayProps={{ 'aria-label': 'Set status' }} value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as WorkStatus)}>
                           {columns.map((column) => <MenuItem value={column} key={column}>{workStatusLabels[column]}</MenuItem>)}
                         </Select>
                       </FormControl>
                     </label>
-                    <Button type="button" onClick={() => void applyBulk('status')} disabled={bulkApplying}>Apply</Button>
+                    <Button type="button" onClick={() => void applyBulk('status')} disabled={bulkApplying}>{tr('Apply')}</Button>
                     <label>
-                      Set priority
+                      {tr('Set priority')}
                       <FormControl fullWidth size="small">
                         <Select SelectDisplayProps={{ 'aria-label': 'Set priority' }} value={bulkPriority} onChange={(event) => setBulkPriority(event.target.value as Priority)}>
-                          <MenuItem value="LOW">Low</MenuItem>
-                          <MenuItem value="MEDIUM">Medium</MenuItem>
-                          <MenuItem value="HIGH">High</MenuItem>
-                          <MenuItem value="CRITICAL">Critical</MenuItem>
+                          <MenuItem value="LOW">{tr('Low')}</MenuItem>
+                          <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+                          <MenuItem value="HIGH">{tr('High')}</MenuItem>
+                          <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
                         </Select>
                       </FormControl>
                     </label>
-                    <Button type="button" onClick={() => void applyBulk('priority')} disabled={bulkApplying}>Apply</Button>
+                    <Button type="button" onClick={() => void applyBulk('priority')} disabled={bulkApplying}>{tr('Apply')}</Button>
                     <BulkArchiveAction
                       selectedIds={selectedIds}
                       items={crud.items}
-                      entityLabel="task(s)"
+                      entityLabel={tr('task(s)')}
                       onArchive={async (ids) => {
                         await crud.archiveMany(ids);
                         setSelectedIds(new Set());
@@ -882,7 +882,7 @@ export function TasksBoardPage() {
               <ProgressBar value={Number(task.progressPercent)} />
               {task.blockerReason && <p>{task.blockerReason}</p>}
               {task.status === 'BLOCKED' && profileByStepId.has(task.stepId) && (
-                <p><Link to="/partners">Ideal partner profile defined for this step →</Link></p>
+                <p><Link to="/partners">{tr('Ideal partner profile defined for this step →')}</Link></p>
               )}
             </>
           )}
@@ -893,7 +893,7 @@ export function TasksBoardPage() {
               onRestore={() => void crud.restore(task.id)}
               onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
               archived={task.archived}
-              label="Task actions"
+              label={tr('Task actions')}
             />
           )}
         />

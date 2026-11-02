@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import { Ban, CheckCircle2, CircleAlert, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardAttention } from '../../types/vision';
+import { tr } from '../../i18n/translate';
 
 type Finding = {
   key: string;
@@ -42,67 +43,67 @@ function buildFindings(attention: DashboardAttention, visionAreaId?: string): Fi
       key: 'blocked-no-partner',
       icon: Ban,
       count: attention.blockedTasksWithoutPartner.length,
-      title: 'Blocked tasks with no partner',
+      title: tr('Blocked tasks with no partner'),
       why: 'Nothing is lined up to unblock these. They will stay stuck until someone helps.',
       to: scoped('/tasks?status=BLOCKED', visionAreaId),
-      action: 'Find a partner',
+      action: tr('Find a partner'),
     },
     {
       key: 'complex-no-tasks',
       icon: GitBranch,
       count: attention.complexStepsWithoutTasks.length,
-      title: 'Complex steps with no tasks',
+      title: tr('Complex steps with no tasks'),
       why: 'A step marked complex has nothing to actually do. There is no first action to take.',
       to: scoped('/steps?complex=true', visionAreaId),
-      action: 'Break into tasks',
+      action: tr('Break into tasks'),
     },
     {
       key: 'dreams-no-goals',
       icon: MoonStar,
       count: attention.dreamsWithoutGoals.length,
-      title: 'Dreams with no goals',
+      title: tr('Dreams with no goals'),
       why: 'A dream with no goals is still a wish — nothing can be executed on it.',
       to: scoped('/dreams', visionAreaId),
-      action: 'Add goals',
+      action: tr('Add goals'),
     },
     {
       key: 'goals-no-steps',
       icon: Target,
       count: attention.goalsWithoutSteps.length,
-      title: 'Goals with no steps',
+      title: tr('Goals with no steps'),
       why: 'This goal has no path to it yet.',
       to: scoped('/goals', visionAreaId),
-      action: 'Add steps',
+      action: tr('Add steps'),
     },
     {
       key: 'starved-areas',
       icon: TrendingDown,
       count: (attention.starvedVisionAreas ?? []).length,
-      title: 'Vision Areas being starved',
+      title: tr('Vision Areas being starved'),
       why: 'Active goals here, but nothing has moved in two weeks while other areas did. Give it attention this week, or pause it on purpose.',
       // One starved area → straight to its dreams; several → the areas list.
       to: (attention.starvedVisionAreas ?? []).length === 1
         ? `/dreams?visionAreaId=${attention.starvedVisionAreas[0].id}`
         : '/vision-areas',
-      action: 'Give it attention',
+      action: tr('Give it attention'),
     },
     {
       key: 'moonshot-inactive',
       icon: Rocket,
       count: (attention.inactiveMoonshotGoals ?? []).length,
-      title: 'Moonshots not started',
+      title: tr('Moonshots not started'),
       why: 'Ambition going stale — start the first step, or consciously revise the goal.',
       to: scoped('/goals?moonshot=true', visionAreaId),
-      action: 'Start or revise',
+      action: tr('Start or revise'),
     },
     {
       key: 'moonshot-dream-inactive',
       icon: Rocket,
       count: (attention.inactiveMoonshotDreams ?? []).length,
-      title: 'Moonshot dreams still an idea',
+      title: tr('Moonshot dreams still an idea'),
       why: 'A moonshot that never left the idea stage is ambition going stale — promote it to active, or consciously revise it.',
       to: scoped('/dreams?moonshot=true', visionAreaId),
-      action: 'Start or revise',
+      action: tr('Start or revise'),
     },
   ];
 
@@ -130,10 +131,9 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
             <CheckCircle2 size={18} />
           </Box>
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>Your map holds together</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{tr('Your map holds together')}</Typography>
             <Typography variant="caption" color="text.secondary">
-              Every dream has goals, every goal has steps, every complex step has tasks, and nothing is
-              blocked without someone to unblock it.
+              {tr('Every dream has goals, every goal has steps, every complex step has tasks, and nothing is blocked without someone to unblock it.')}
             </Typography>
           </Box>
         </CardContent>
@@ -152,8 +152,8 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
             <CircleAlert size={20} />
           </Box>
         }
-        title="Needs your attention"
-        subheader="Places where the map has a dead end — nothing below can move until these are fixed"
+        title={tr('Needs your attention')}
+        subheader={tr('Places where the map has a dead end — nothing below can move until these are fixed')}
       />
       <CardContent sx={{ pt: 0 }}>
         <Stack divider={<Box sx={{ borderTop: '1px solid', borderColor: 'divider' }} />}>
@@ -191,7 +191,7 @@ export function AttentionPanel({ attention, visionAreaId }: { attention: Dashboa
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>{finding.title}</Typography>
                   <Chip
                     size="small"
-                    label={`${finding.count} ${finding.count === 1 ? 'issue' : 'issues'}`}
+                    label={tr(finding.count === 1 ? tr('1 issue') : '{count} issues', { count: finding.count })}
                     sx={{ height: 20, fontWeight: 700, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                   />
                 </Stack>

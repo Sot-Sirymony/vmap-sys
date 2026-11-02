@@ -45,6 +45,7 @@ import { RelativeDate } from '../common/RelativeDate';
 import { RowActionsMenu } from '../common/RowActionsMenu';
 import { StatusBadge } from '../common/StatusBadge';
 import { Textarea } from '../common/Textarea';
+import { tr } from '../../i18n/translate';
 
 type VisionMapTreeProps = {
   dream: Dream;
@@ -66,26 +67,26 @@ type VisionMapTreeProps = {
 };
 
 const WORK_STATUSES: { value: WorkStatus; label: string }[] = [
-  { value: 'NOT_STARTED', label: 'Not Started' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'WAITING', label: 'Waiting' },
-  { value: 'BLOCKED', label: 'Blocked' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'PAUSED', label: 'Paused' },
+  { value: 'NOT_STARTED', label: tr('Not Started') },
+  { value: 'IN_PROGRESS', label: tr('In Progress') },
+  { value: 'WAITING', label: tr('Waiting') },
+  { value: 'BLOCKED', label: tr('Blocked') },
+  { value: 'COMPLETED', label: tr('Completed') },
+  { value: 'PAUSED', label: tr('Paused') },
 ];
 
 const DREAM_STATUSES: { value: DreamStatus; label: string }[] = [
-  { value: 'IDEA', label: 'Idea' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'PAUSED', label: 'Paused' },
-  { value: 'COMPLETED', label: 'Completed' },
+  { value: 'IDEA', label: tr('Idea') },
+  { value: 'ACTIVE', label: tr('Active') },
+  { value: 'PAUSED', label: tr('Paused') },
+  { value: 'COMPLETED', label: tr('Completed') },
 ];
 
 const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
-  { value: 'LOW', label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'CRITICAL', label: 'Critical' },
+  { value: 'LOW', label: tr('Low') },
+  { value: 'MEDIUM', label: tr('Medium') },
+  { value: 'HIGH', label: tr('High') },
+  { value: 'CRITICAL', label: tr('Critical') },
 ];
 
 const BLOCKER_CATEGORIES: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY', 'DECISION', 'PARTNER', 'MOTIVATION'];
@@ -368,7 +369,7 @@ export function VisionMapTree({
       }
       await onDataChange();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to rename.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to rename.'));
     }
     setTimeout(() => focusRow(row.key), 50);
   }
@@ -401,7 +402,7 @@ export function VisionMapTree({
         nudgeAfterTaskComplete({ token, completedTaskId: id, tasks, steps, goals, showToast, onApplied: () => void onDataChange() });
       }
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : 'Unable to update status.');
+      setError(statusError instanceof Error ? statusError.message : tr('Unable to update status.'));
     }
   }
 
@@ -431,7 +432,7 @@ export function VisionMapTree({
       }
       await onDataChange();
     } catch (reorderError) {
-      setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder.');
+      setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder.'));
     }
   }
 
@@ -511,7 +512,7 @@ export function VisionMapTree({
       setEditingDream(false);
       return true;
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save dream.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to save dream.'));
       return false;
     } finally {
       setDreamSaving(false);
@@ -521,7 +522,7 @@ export function VisionMapTree({
   async function dreamArchiveImpactMessage() {
     try {
       const impact = await getDreamArchiveImpact(token, dream.id);
-      return `Archiving "${dream.title}" also archives ${impact.goals} goal(s), ${impact.steps} step(s), and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+      return tr('Archiving "{title}" also archives {goals} goal(s), {steps} step(s), and {tasks} task(s). Everything can be restored later with "Show archived".', { title: dream.title, goals: impact.goals, steps: impact.steps, tasks: impact.tasks });
     } catch {
       return 'Archive this dream?';
     }
@@ -533,7 +534,7 @@ export function VisionMapTree({
       await archiveDream(token, dream.id);
       await onDataChange();
     } catch (archiveError) {
-      setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive dream.');
+      setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive dream.'));
     }
   }
 
@@ -543,7 +544,7 @@ export function VisionMapTree({
       await restoreDream(token, dream.id);
       await onDataChange();
     } catch (restoreError) {
-      setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore dream.');
+      setError(restoreError instanceof Error ? restoreError.message : tr('Unable to restore dream.'));
     }
   }
 
@@ -553,7 +554,7 @@ export function VisionMapTree({
       await permanentlyDeleteDream(token, dream.id);
       onDreamPermanentlyDeleted?.();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to permanently delete dream.');
+      setError(deleteError instanceof Error ? deleteError.message : tr('Unable to permanently delete dream.'));
     }
   }
 
@@ -603,7 +604,7 @@ export function VisionMapTree({
       setEditingGoalId(null);
       return true;
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save goal.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to save goal.'));
       return false;
     } finally {
       setGoalSaving(false);
@@ -613,7 +614,7 @@ export function VisionMapTree({
   async function goalArchiveImpactMessage(goal: Goal) {
     try {
       const impact = await getGoalArchiveImpact(token, goal.id);
-      return `Archiving "${goal.title}" also archives ${impact.steps} step(s) and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+      return tr('Archiving "{title}" also archives {steps} step(s) and {tasks} task(s). Everything can be restored later with "Show archived".', { title: goal.title, steps: impact.steps, tasks: impact.tasks });
     } catch {
       return 'Archive this goal?';
     }
@@ -625,7 +626,7 @@ export function VisionMapTree({
       await archiveGoal(token, goal.id);
       await onDataChange();
     } catch (archiveError) {
-      setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive goal.');
+      setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive goal.'));
     }
   }
 
@@ -635,7 +636,7 @@ export function VisionMapTree({
       await restoreGoal(token, goal.id);
       await onDataChange();
     } catch (restoreError) {
-      setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore goal.');
+      setError(restoreError instanceof Error ? restoreError.message : tr('Unable to restore goal.'));
     }
   }
 
@@ -645,7 +646,7 @@ export function VisionMapTree({
       await permanentlyDeleteGoal(token, goal.id);
       await onDataChange();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to permanently delete goal.');
+      setError(deleteError instanceof Error ? deleteError.message : tr('Unable to permanently delete goal.'));
     }
   }
 
@@ -692,7 +693,7 @@ export function VisionMapTree({
       setEditingStepId(null);
       return true;
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save step.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to save step.'));
       return false;
     } finally {
       setStepSaving(false);
@@ -702,7 +703,7 @@ export function VisionMapTree({
   async function stepArchiveImpactMessage(step: VisionStep) {
     try {
       const impact = await getStepArchiveImpact(token, step.id);
-      return `Archiving "${step.title}" also archives ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+      return tr('Archiving "{title}" also archives {tasks} task(s). Everything can be restored later with "Show archived".', { title: step.title, tasks: impact.tasks });
     } catch {
       return 'Archive this step?';
     }
@@ -714,7 +715,7 @@ export function VisionMapTree({
       await archiveStep(token, step.id);
       await onDataChange();
     } catch (archiveError) {
-      setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive step.');
+      setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive step.'));
     }
   }
 
@@ -724,7 +725,7 @@ export function VisionMapTree({
       await restoreStep(token, step.id);
       await onDataChange();
     } catch (restoreError) {
-      setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore step.');
+      setError(restoreError instanceof Error ? restoreError.message : tr('Unable to restore step.'));
     }
   }
 
@@ -734,7 +735,7 @@ export function VisionMapTree({
       await permanentlyDeleteStep(token, step.id);
       await onDataChange();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to permanently delete step.');
+      setError(deleteError instanceof Error ? deleteError.message : tr('Unable to permanently delete step.'));
     }
   }
 
@@ -802,7 +803,7 @@ export function VisionMapTree({
       setEditingTaskId(null);
       return true;
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save task.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to save task.'));
       return false;
     } finally {
       setTaskSaving(false);
@@ -815,7 +816,7 @@ export function VisionMapTree({
       await archiveTask(token, task.id);
       await onDataChange();
     } catch (archiveError) {
-      setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive task.');
+      setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive task.'));
     }
   }
 
@@ -825,7 +826,7 @@ export function VisionMapTree({
       await restoreTask(token, task.id);
       await onDataChange();
     } catch (restoreError) {
-      setError(restoreError instanceof Error ? restoreError.message : 'Unable to restore task.');
+      setError(restoreError instanceof Error ? restoreError.message : tr('Unable to restore task.'));
     }
   }
 
@@ -835,7 +836,7 @@ export function VisionMapTree({
       await permanentlyDeleteTask(token, task.id);
       await onDataChange();
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to permanently delete task.');
+      setError(deleteError instanceof Error ? deleteError.message : tr('Unable to permanently delete task.'));
     }
   }
 
@@ -990,7 +991,7 @@ export function VisionMapTree({
         className="map-title-edit"
         value={editValue}
         autoFocus
-        aria-label="Rename"
+        aria-label={tr('Rename')}
         onChange={(event) => setEditValue(event.target.value)}
         onBlur={() => void saveEdit(row)}
         onKeyDown={(event) => {
@@ -1020,7 +1021,7 @@ export function VisionMapTree({
     const options = row.kind === 'dream' ? DREAM_STATUSES : WORK_STATUSES;
     return (
       <FormControl size="small" className="map-status">
-        <Select value={value} onChange={(event) => void changeStatus(row, event.target.value)} SelectDisplayProps={{ 'aria-label': `Status of ${entityTitle(row)}` }}>
+        <Select value={value} onChange={(event) => void changeStatus(row, event.target.value)} SelectDisplayProps={{ 'aria-label': tr('Status of {title}', { title: entityTitle(row) }) }}>
           {options.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
         </Select>
       </FormControl>
@@ -1059,38 +1060,38 @@ export function VisionMapTree({
   return (
     <div>
       {error && <p className="map-error" role="alert">{error}</p>}
-      <p className="map-hint">↑↓ move · → ← expand / collapse · Enter rename · N add child · drag a row to reorder it among its siblings</p>
+      <p className="map-hint">{tr('↑↓ move · → ← expand / collapse · Enter rename · N add child · drag a row to reorder it among its siblings')}</p>
       {energyNudge.dialog}
 
       {editingDream && (
         <CrudModalForm
           editing
-          createLabel="Save"
+          createLabel={tr('Save')}
           editTitle="Edit Dream"
           saving={dreamSaving}
           onSubmit={submitDreamEdit}
           onCancelEdit={cancelDreamEdit}
         >
           <label>
-            Title
+            {tr('Title')}
             <Input value={dreamTitle} onChange={(event) => setDreamTitle(event.target.value)} required autoFocus />
           </label>
           <label>
-            Type
+            {tr('Type')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Type' }} value={dreamTypeField} onChange={(event) => setDreamTypeField(event.target.value as DreamType)}>
-                <MenuItem value="SHORT_TERM">Short Term</MenuItem>
-                <MenuItem value="LONG_TERM">Long Term</MenuItem>
-                <MenuItem value="LIFETIME">Lifetime</MenuItem>
+                <MenuItem value="SHORT_TERM">{tr('Short Term')}</MenuItem>
+                <MenuItem value="LONG_TERM">{tr('Long Term')}</MenuItem>
+                <MenuItem value="LIFETIME">{tr('Lifetime')}</MenuItem>
               </Select>
             </FormControl>
           </label>
           <label>
-            Target Date
+            {tr('Target Date')}
             <Input type="date" value={dreamTargetDate} onChange={(event) => setDreamTargetDate(event.target.value)} />
           </label>
           <label>
-            Priority
+            {tr('Priority')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Priority' }} value={dreamPriority} onChange={(event) => setDreamPriority(event.target.value as Priority)}>
                 {PRIORITY_OPTIONS.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1098,16 +1099,16 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
-            Rank within this area
+            {tr('Rank within this area')}
             <Input
               value={dreamLetterRank}
               onChange={(event) => setDreamLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-              placeholder="e.g. A"
+              placeholder={tr('e.g. A')}
               maxLength={1}
             />
           </label>
           <label>
-            Status
+            {tr('Status')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Status' }} value={dreamStatusField} onChange={(event) => setDreamStatusField(event.target.value as DreamStatus)}>
                 {DREAM_STATUSES.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1117,12 +1118,12 @@ export function VisionMapTree({
           <label className="field-full">
             <span className="inline-meta">
               <Checkbox checked={dreamMoonshot} onChange={(event) => setDreamMoonshot(event.target.checked)} />
-              Moonshot dream
+              {tr('Moonshot dream')}
             </span>
           </label>
           {dreamMoonshot && (
             <label className="field-full">
-              Moonshot vision
+              {tr('Moonshot vision')}
               <Textarea value={dreamMoonshotVision} onChange={(event) => setDreamMoonshotVision(event.target.value)} />
             </label>
           )}
@@ -1131,7 +1132,7 @@ export function VisionMapTree({
             <Input type="url" value={dreamImageUrl} onChange={(event) => setDreamImageUrl(event.target.value)} placeholder="https://..." />
           </label>
           <label className="field-full">
-            Target date scheduling
+            {tr('Target date scheduling')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={dreamScheduleMode} onChange={(event) => setDreamScheduleMode(event.target.value as ScheduleMode)}>
                 <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
@@ -1141,11 +1142,9 @@ export function VisionMapTree({
           </label>
           {showDreamDecisionChecklist && (
             <div className="field-full diligence-checklist">
-              <strong>Before you move this moonshot dream to Active…</strong>
+              <strong>{tr('Before you move this moonshot dream to Active…')}</strong>
               <p>
-                This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least
-                two Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page.
-                Either one clears this check.
+                {tr('This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least two Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page. Either one clears this check.')}
               </p>
               {DECISION_CHECKLIST_QUESTIONS.map((question) => (
                 <div className="diligence-row" key={question.key}>
@@ -1162,24 +1161,24 @@ export function VisionMapTree({
                     }}
                     aria-label={question.label}
                   >
-                    <ToggleButton value="no">No</ToggleButton>
-                    <ToggleButton value="yes">Yes</ToggleButton>
+                    <ToggleButton value="no">{tr('No')}</ToggleButton>
+                    <ToggleButton value="yes">{tr('Yes')}</ToggleButton>
                   </ToggleButtonGroup>
                 </div>
               ))}
               <span className="field-hint">
                 {isDecisionChecklistComplete(dreamDecisionAnswers)
-                  ? 'All eight answered — this checklist clears the gate on save.'
-                  : `${DECISION_CHECKLIST_QUESTIONS.filter((question) => dreamDecisionAnswers[question.key] !== null).length} of ${DECISION_CHECKLIST_QUESTIONS.length} answered.`}
+                  ? tr('All eight answered — this checklist clears the gate on save.')
+                  : tr('{done} of {total} answered.', { done: DECISION_CHECKLIST_QUESTIONS.filter((question) => dreamDecisionAnswers[question.key] !== null).length, total: DECISION_CHECKLIST_QUESTIONS.length })}
               </span>
             </div>
           )}
           <label className="field-full">
-            Why Important
+            {tr('Why Important')}
             <Textarea value={dreamWhyImportant} onChange={(event) => setDreamWhyImportant(event.target.value)} />
           </label>
           <label className="field-full">
-            Success Definition
+            {tr('Success Definition')}
             <Textarea value={dreamSuccessDefinition} onChange={(event) => setDreamSuccessDefinition(event.target.value)} />
           </label>
           <label className="field-full">
@@ -1192,18 +1191,18 @@ export function VisionMapTree({
       {editingGoalId !== null && (
         <CrudModalForm
           editing
-          createLabel="Save"
+          createLabel={tr('Save')}
           editTitle="Edit Goal"
           saving={goalSaving}
           onSubmit={submitGoalEdit}
           onCancelEdit={cancelGoalEdit}
         >
           <label>
-            Title
+            {tr('Title')}
             <Input value={goalTitle} onChange={(event) => setGoalTitle(event.target.value)} required autoFocus />
           </label>
           <label>
-            Priority
+            {tr('Priority')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Priority' }} value={goalPriority} onChange={(event) => setGoalPriority(event.target.value as Priority)}>
                 {PRIORITY_OPTIONS.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1211,20 +1210,19 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
-            Rank
+            {tr('Rank')}
             <Input
               value={goalLetterRank}
               onChange={(event) => setGoalLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-              placeholder="e.g. A"
+              placeholder={tr('e.g. A')}
               maxLength={1}
             />
             <span className="field-hint">
-              Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come
-              first. Ties are fine; nothing enforces a unique order.
+              {tr('Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come first. Ties are fine; nothing enforces a unique order.')}
             </span>
           </label>
           <label>
-            Status
+            {tr('Status')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Status' }} value={goalStatus} onChange={(event) => setGoalStatus(event.target.value as WorkStatus)}>
                 {WORK_STATUSES.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1232,27 +1230,27 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
-            Target Date
+            {tr('Target Date')}
             <Input type="date" value={goalTargetDate} onChange={(event) => setGoalTargetDate(event.target.value)} />
           </label>
           <label className="field-full">
-            Success Criteria
+            {tr('Success Criteria')}
             <Textarea value={goalSuccessCriteria} onChange={(event) => setGoalSuccessCriteria(event.target.value)} />
           </label>
           <label className="field-full">
             <span className="inline-meta">
               <Checkbox checked={goalMoonshot} onChange={(event) => setGoalMoonshot(event.target.checked)} />
-              Moonshot goal
+              {tr('Moonshot goal')}
             </span>
           </label>
           {goalMoonshot && (
             <label className="field-full">
-              Moonshot vision
+              {tr('Moonshot vision')}
               <Textarea value={goalMoonshotVision} onChange={(event) => setGoalMoonshotVision(event.target.value)} />
             </label>
           )}
           <label className="field-full">
-            Target date scheduling
+            {tr('Target date scheduling')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Target date scheduling' }} value={goalScheduleMode} onChange={(event) => setGoalScheduleMode(event.target.value as ScheduleMode)}>
                 <MenuItem value="BOTTOM_UP">{scheduleModeLabels.BOTTOM_UP}</MenuItem>
@@ -1270,14 +1268,14 @@ export function VisionMapTree({
       {editingStepId !== null && (
         <CrudModalForm
           editing
-          createLabel="Save"
+          createLabel={tr('Save')}
           editTitle="Edit Step"
           saving={stepSaving}
           onSubmit={submitStepEdit}
           onCancelEdit={cancelStepEdit}
         >
           <label>
-            Title
+            {tr('Title')}
             <Input value={stepTitle} onChange={(event) => setStepTitle(event.target.value)} required autoFocus />
           </label>
           <label>
@@ -1285,15 +1283,15 @@ export function VisionMapTree({
             <Input type="number" min="0" value={stepSequenceNumber} onChange={(event) => setStepSequenceNumber(Number(event.target.value))} required />
           </label>
           <label>
-            Owner
+            {tr('Owner')}
             <Input value={stepOwner} onChange={(event) => setStepOwner(event.target.value)} required />
           </label>
           <label>
-            Target Date
+            {tr('Target Date')}
             <Input type="date" value={stepTargetDate} onChange={(event) => setStepTargetDate(event.target.value)} required />
           </label>
           <label>
-            Priority
+            {tr('Priority')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Priority' }} value={stepPriority} onChange={(event) => setStepPriority(event.target.value as Priority)}>
                 {PRIORITY_OPTIONS.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1301,7 +1299,7 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
-            Status
+            {tr('Status')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Status' }} value={stepStatus} onChange={(event) => setStepStatus(event.target.value as WorkStatus)}>
                 {WORK_STATUSES.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1311,7 +1309,7 @@ export function VisionMapTree({
           <label className="field-full">
             <span className="inline-meta">
               <Checkbox checked={stepComplex} onChange={(event) => setStepComplex(event.target.checked)} />
-              Complex step
+              {tr('Complex step')}
             </span>
           </label>
           <label className="field-full">
@@ -1324,22 +1322,22 @@ export function VisionMapTree({
       {editingTaskId !== null && (
         <CrudModalForm
           editing
-          createLabel="Save"
+          createLabel={tr('Save')}
           editTitle="Edit Task"
           saving={taskSaving}
           onSubmit={submitTaskEdit}
           onCancelEdit={cancelTaskEdit}
         >
           <label>
-            Title
+            {tr('Title')}
             <Input value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required autoFocus />
           </label>
           <label>
-            Owner
+            {tr('Owner')}
             <Input value={taskOwner} onChange={(event) => setTaskOwner(event.target.value)} required />
           </label>
           <label>
-            Priority
+            {tr('Priority')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Priority' }} value={taskPriority} onChange={(event) => setTaskPriority(event.target.value as Priority)}>
                 {PRIORITY_OPTIONS.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1347,20 +1345,19 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label>
-            Rank
+            {tr('Rank')}
             <Input
               value={taskLetterRank}
               onChange={(event) => setTaskLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-              placeholder="e.g. A"
+              placeholder={tr('e.g. A')}
               maxLength={1}
             />
             <span className="field-hint">
-              Optional. A, B, C… — assigned after listing everything, to mark which tasks under this step come
-              first. Ties are fine; nothing enforces a unique order.
+              {tr('Optional. A, B, C… — assigned after listing everything, to mark which tasks under this step come first. Ties are fine; nothing enforces a unique order.')}
             </span>
           </label>
           <label>
-            Status
+            {tr('Status')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Status' }} value={taskStatus} onChange={(event) => setTaskStatus(event.target.value as WorkStatus)}>
                 {WORK_STATUSES.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -1369,48 +1366,48 @@ export function VisionMapTree({
           </label>
           {taskStatus === 'BLOCKED' && (
             <label>
-              What's missing?
+              {tr('What\'s missing?')}
               <FormControl fullWidth size="small">
                 <Select SelectDisplayProps={{ 'aria-label': "What's missing?" }} displayEmpty value={taskBlockerCategory} onChange={(event) => setTaskBlockerCategory(event.target.value as ObstacleType)}>
-                  <MenuItem value="" disabled><em>Select a category...</em></MenuItem>
+                  <MenuItem value="" disabled><em>{tr('Select a category...')}</em></MenuItem>
                   {BLOCKER_CATEGORIES.map((category) => <MenuItem value={category} key={category}>{obstacleTypeLabels[category]}</MenuItem>)}
                 </Select>
               </FormControl>
               {taskBlockerCategory && (
                 <span className="field-hint">
-                  {suggestPartnerFor(taskBlockerCategory)?.label ?? 'Look for a partner or connector who can help directly.'}
+                  {suggestPartnerFor(taskBlockerCategory)?.label ?? tr('Look for a partner or connector who can help directly.')}
                 </span>
               )}
             </label>
           )}
           {taskStatus === 'BLOCKED' && (
             <label className="field-full">
-              Blocker Reason
+              {tr('Blocker Reason')}
               <Textarea value={taskBlockerReason} onChange={(event) => setTaskBlockerReason(event.target.value)} required />
             </label>
           )}
           <label>
-            Start Date
+            {tr('Start Date')}
             <Input type="date" value={taskStartDate} onChange={(event) => setTaskStartDate(event.target.value)} />
           </label>
           <label>
-            Due Date
+            {tr('Due Date')}
             <Input type="date" value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)} required />
           </label>
           <label>
-            Progress
+            {tr('Progress')}
             <Input type="number" min="0" max="100" value={taskProgressPercent} onChange={(event) => setTaskProgressPercent(Number(event.target.value))} required />
           </label>
           <label>
-            Estimated Hours
+            {tr('Estimated Hours')}
             <Input type="number" min="0" step="0.5" value={taskEstimatedHours} onChange={(event) => setTaskEstimatedHours(event.target.value)} />
           </label>
           <label>
-            Actual Hours
+            {tr('Actual Hours')}
             <Input type="number" min="0" step="0.5" value={taskActualHours} onChange={(event) => setTaskActualHours(event.target.value)} />
           </label>
           <label>
-            Energy
+            {tr('Energy')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Energy' }} value={taskEnergyDemand} onChange={(event) => setTaskEnergyDemand(event.target.value as EnergyDemand)}>
                 {(Object.keys(energyDemandLabels) as EnergyDemand[]).map((value) => (
@@ -1420,7 +1417,7 @@ export function VisionMapTree({
             </FormControl>
           </label>
           <label className="field-full">
-            Next Action
+            {tr('Next Action')}
             <Textarea value={taskNextAction} onChange={(event) => setTaskNextAction(event.target.value)} />
           </label>
           <label className="field-full">
@@ -1430,7 +1427,7 @@ export function VisionMapTree({
         </CrudModalForm>
       )}
 
-    <div className="map-tree" role="tree" aria-label={`Vision map for ${dream.title}`} onKeyDown={handleTreeKeyDown}>
+    <div className="map-tree" role="tree" aria-label={tr('Vision map for {title}', { title: dream.title })} onKeyDown={handleTreeKeyDown}>
       <div className="map-node map-node--dream" role="none">
         <div className={`map-row${dream.archived ? ' map-row--archived' : ''}`} {...rowShellProps(dreamRow)}>
           {chevron(dreamRow)}
@@ -1453,14 +1450,14 @@ export function VisionMapTree({
                 <Chip
                   size="small"
                   icon={<Rocket size={14} />}
-                  label="Moonshot"
+                  label={tr('Moonshot')}
                   sx={{ bgcolor: moonshotTint, color: moonshotVioletDeep, fontWeight: 700, '& .MuiChip-icon': { color: moonshotViolet } }}
                 />
               )}
-              {dream.letterRank && <Chip size="small" variant="outlined" label={`Rank ${dream.letterRank}`} />}
+              {dream.letterRank && <Chip size="small" variant="outlined" label={tr('Rank {rank}', { rank: dream.letterRank })} />}
               <PriorityBadge priority={dream.priority} />
             </div>
-            {dream.successDefinition && <p className="map-meta">Success looks like: {dream.successDefinition}</p>}
+            {dream.successDefinition && <p className="map-meta">{tr('Success looks like: {text}', { text: dream.successDefinition })}</p>}
           </div>
           {statusCell(dreamRow, dream.status, dream.archived)}
           {rail(dreamProgress)}
@@ -1471,7 +1468,7 @@ export function VisionMapTree({
             onDeletePermanently={() => void deleteDreamNode()}
             archived={dream.archived}
             confirmArchive={dreamArchiveImpactMessage}
-            label="Dream actions"
+            label={tr('Dream actions')}
           />
         </div>
 
@@ -1503,7 +1500,7 @@ export function VisionMapTree({
                           <Chip
                             size="small"
                             icon={<Rocket size={14} />}
-                            label="Moonshot"
+                            label={tr('Moonshot')}
                             sx={{ bgcolor: moonshotTint, color: moonshotVioletDeep, fontWeight: 700, '& .MuiChip-icon': { color: moonshotViolet } }}
                           />
                         )}
@@ -1519,7 +1516,7 @@ export function VisionMapTree({
                       onDeletePermanently={() => void deleteGoalNode(goal)}
                       archived={goal.archived}
                       confirmArchive={() => goalArchiveImpactMessage(goal)}
-                      label="Goal actions"
+                      label={tr('Goal actions')}
                     />
                   </div>
                   {!collapsed.has(goalKey) && (
@@ -1542,7 +1539,7 @@ export function VisionMapTree({
                                 <div className="map-line">
                                   <span className="map-code">{step.code}</span>
                                   {titleCell(stepRow, step.title, step.archived)}
-                                  {step.complex && <Chip variant="outlined" size="small" label="Complex" />}
+                                  {step.complex && <Chip variant="outlined" size="small" label={tr('Complex')} />}
                                   <PriorityBadge priority={step.priority} />
                                 </div>
                               </div>
@@ -1555,7 +1552,7 @@ export function VisionMapTree({
                                 onDeletePermanently={() => void deleteStepNode(step)}
                                 archived={step.archived}
                                 confirmArchive={() => stepArchiveImpactMessage(step)}
-                                label="Step actions"
+                                label={tr('Step actions')}
                               />
                             </div>
                             {!collapsed.has(stepKey) && (
@@ -1593,14 +1590,14 @@ export function VisionMapTree({
                                           onRestore={() => void restoreTaskNode(task)}
                                           onDeletePermanently={() => void deleteTaskNode(task)}
                                           archived={task.archived}
-                                          label="Task actions"
+                                          label={tr('Task actions')}
                                         />
                                       </div>
                                     </div>
                                   );
                                 })}
                                 {!filtering && step.complex && tasksForStep(step.id).length === 0 && !step.archived && (
-                                  <MapNudge emphasis>This step is marked complex — break it into tasks so each piece is small enough to do.</MapNudge>
+                                  <MapNudge emphasis>{tr('This step is marked complex — break it into tasks so each piece is small enough to do.')}</MapNudge>
                                 )}
                                 {!step.archived && (
                                   <TaskAddRow
@@ -1617,7 +1614,7 @@ export function VisionMapTree({
                         );
                       })}
                       {!filtering && allGoalSteps.length === 0 && !goal.archived && (
-                        <MapNudge>No steps yet — what has to happen, in order, to reach this goal?</MapNudge>
+                        <MapNudge>{tr('No steps yet — what has to happen, in order, to reach this goal?')}</MapNudge>
                       )}
                       {!goal.archived && (
                         <StepAddRow
@@ -1635,14 +1632,14 @@ export function VisionMapTree({
               );
             })}
             {filtering && visibleGoals.length === 0 && (
-              <p className="map-meta">No goals match these filters.</p>
+              <p className="map-meta">{tr('No goals match these filters.')}</p>
             )}
             {!filtering && dreamGoals.length === 0 && !dream.archived && (
-              <MapNudge>Start by breaking this dream into goals — the major results that, together, make it real.</MapNudge>
+              <MapNudge>{tr('Start by breaking this dream into goals — the major results that, together, make it real.')}</MapNudge>
             )}
             {!dream.archived && (
               <TitleAddRow
-                placeholder="New goal title"
+                placeholder={tr('New goal title')}
                 level={2}
                 onAdd={async (title) => {
                   await createGoal(token, { dreamId: dream.id, title, priority: 'MEDIUM', status: 'NOT_STARTED', moonshot: false, scheduleMode: 'BOTTOM_UP' });
@@ -1703,7 +1700,7 @@ function TitleAddRow({ placeholder, level, onAdd, inputRef }: {
     <div role="treeitem" aria-level={level} aria-selected={false}>
       <form className="map-add" onSubmit={(event) => void handleSubmit(event)}>
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={placeholder} aria-label={placeholder} inputRef={inputRef} />
-        <Button type="submit" variant="secondary" disabled={busy || !title.trim()}>{busy ? 'Adding...' : 'Add'}</Button>
+        <Button type="submit" variant="secondary" disabled={busy || !title.trim()}>{busy ? tr('Adding...') : tr('Add')}</Button>
       </form>
     </div>
   );
@@ -1747,7 +1744,7 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
       setTitle('');
       await onDataChange();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to add step.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to add step.'));
     } finally {
       setBusy(false);
     }
@@ -1756,10 +1753,10 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
   return (
     <div role="treeitem" aria-level={3} aria-selected={false}>
       <form className="map-add map-add--task" onSubmit={(event) => void handleSubmit(event)}>
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New step title" aria-label="New step title" inputRef={inputRef} />
-        <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Owner" aria-label="Step owner" />
-        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} aria-label="Step target date" />
-        <Button type="submit" variant="secondary" disabled={busy || !ready}>{busy ? 'Adding...' : 'Add'}</Button>
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New step title')} aria-label={tr('New step title')} inputRef={inputRef} />
+        <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Step owner')} />
+        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} aria-label={tr('Step target date')} />
+        <Button type="submit" variant="secondary" disabled={busy || !ready}>{busy ? tr('Adding...') : tr('Add')}</Button>
       </form>
       {error && <p className="map-meta" role="alert">{error}</p>}
     </div>
@@ -1807,11 +1804,11 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
   return (
     <div role="treeitem" aria-level={4} aria-selected={false}>
       <form className="map-add map-add--task" onSubmit={(event) => void handleSubmit(event)}>
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New task title" aria-label="New task title" inputRef={inputRef} />
-        <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder="Owner" aria-label="Owner" />
-        <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} aria-label="Due date" />
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New task title')} aria-label={tr('New task title')} inputRef={inputRef} />
+        <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Owner')} />
+        <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} aria-label={tr('Due date')} />
         <Button type="submit" variant="secondary" disabled={busy || !title.trim() || !owner.trim() || !dueDate}>
-          {busy ? 'Adding...' : 'Add task'}
+          {busy ? tr('Adding...') : tr('Add task')}
         </Button>
       </form>
     </div>

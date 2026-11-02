@@ -20,18 +20,19 @@ import type {
   Severity,
   WorkStatus,
 } from '../types/vision';
+import { tr } from '../i18n/translate';
 
 export const priorityLabels: Record<Priority, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
-  CRITICAL: 'Critical',
+  LOW: tr('Low'),
+  MEDIUM: tr('Medium'),
+  HIGH: tr('High'),
+  CRITICAL: tr('Critical'),
 };
 
 // FR-51: how a dream's or goal's target date relates to its children's.
 export const scheduleModeLabels: Record<ScheduleMode, string> = {
-  BOTTOM_UP: 'Bottom-up (default)',
-  TOP_DOWN_FIXED: 'Fixed deadline (top-down)',
+  BOTTOM_UP: tr('Bottom-up (default)'),
+  TOP_DOWN_FIXED: tr('Fixed deadline (top-down)'),
 };
 
 // FR-39.3 removed the `priorityColors` and `workStatusColors` re-exports that
@@ -46,116 +47,116 @@ export const scheduleModeLabels: Record<ScheduleMode, string> = {
 // FR-34.1: energy demand. The order (CHARGE → NEUTRAL → DRAIN) reads as a
 // scale from energising to depleting, matching how the budget nets them.
 export const energyDemandLabels: Record<EnergyDemand, string> = {
-  CHARGE: 'Charge',
-  NEUTRAL: 'Neutral',
-  DRAIN: 'Drain',
+  CHARGE: tr('Charge'),
+  NEUTRAL: tr('Neutral'),
+  DRAIN: tr('Drain'),
 };
 
 export const severityLabels: Record<Severity, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
-  CRITICAL: 'Critical',
+  LOW: tr('Low'),
+  MEDIUM: tr('Medium'),
+  HIGH: tr('High'),
+  CRITICAL: tr('Critical'),
 };
 
 export const workStatusLabels: Record<WorkStatus, string> = {
-  NOT_STARTED: 'Not Started',
-  IN_PROGRESS: 'In Progress',
-  WAITING: 'Waiting',
-  BLOCKED: 'Blocked',
-  PAUSED: 'Paused',
-  COMPLETED: 'Completed',
+  NOT_STARTED: tr('Not Started'),
+  IN_PROGRESS: tr('In Progress'),
+  WAITING: tr('Waiting'),
+  BLOCKED: tr('Blocked'),
+  PAUSED: tr('Paused'),
+  COMPLETED: tr('Completed'),
 };
 
 export const dreamStatusLabels: Record<DreamStatus, string> = {
-  IDEA: 'Idea',
-  ACTIVE: 'Active',
-  PAUSED: 'Paused',
-  COMPLETED: 'Completed',
-  ARCHIVED: 'Archived',
+  IDEA: tr('Idea'),
+  ACTIVE: tr('Active'),
+  PAUSED: tr('Paused'),
+  COMPLETED: tr('Completed'),
+  ARCHIVED: tr('Archived'),
 };
 
 export const dreamTypeLabels: Record<DreamType, string> = {
-  SHORT_TERM: 'Short Term',
-  LONG_TERM: 'Long Term',
-  LIFETIME: 'Lifetime',
+  SHORT_TERM: tr('Short Term'),
+  LONG_TERM: tr('Long Term'),
+  LIFETIME: tr('Lifetime'),
 };
 
 export const lifecycleStatusLabels: Record<LifecycleStatus, string> = {
-  ACTIVE: 'Active',
-  PAUSED: 'Paused',
-  COMPLETED: 'Completed',
-  ARCHIVED: 'Archived',
+  ACTIVE: tr('Active'),
+  PAUSED: tr('Paused'),
+  COMPLETED: tr('Completed'),
+  ARCHIVED: tr('Archived'),
 };
 
 export const partnerStatusLabels: Record<PartnerStatus, string> = {
-  TO_CONTACT: 'To Contact',
-  CONTACTED: 'Contacted',
-  AGREED: 'Agreed',
-  ACTIVE: 'Active',
-  WAITING: 'Waiting',
-  DECLINED: 'Declined',
-  COMPLETED: 'Completed',
+  TO_CONTACT: tr('To Contact'),
+  CONTACTED: tr('Contacted'),
+  AGREED: tr('Agreed'),
+  ACTIVE: tr('Active'),
+  WAITING: tr('Waiting'),
+  DECLINED: tr('Declined'),
+  COMPLETED: tr('Completed'),
 };
 
 export const fearLikelihoodLabels: Record<FearLikelihood, string> = {
-  LOW: 'Low',
-  MEDIUM: 'Medium',
-  HIGH: 'High',
+  LOW: tr('Low'),
+  MEDIUM: tr('Medium'),
+  HIGH: tr('High'),
 };
 
 export const partnerSupportTypeLabels: Record<PartnerSupportType, string> = {
-  MENTOR: 'Mentor',
-  EXPERT: 'Expert',
-  ADVISOR: 'Advisor',
-  COLLEAGUE: 'Colleague',
-  FINANCIAL: 'Financial',
-  TECHNICAL: 'Technical',
-  EMOTIONAL: 'Emotional',
-  OTHER: 'Other',
+  MENTOR: tr('Mentor'),
+  EXPERT: tr('Expert'),
+  ADVISOR: tr('Advisor'),
+  COLLEAGUE: tr('Colleague'),
+  FINANCIAL: tr('Financial'),
+  TECHNICAL: tr('Technical'),
+  EMOTIONAL: tr('Emotional'),
+  OTHER: tr('Other'),
 };
 
 export const offerTypeLabels: Record<OfferType, string> = {
-  MONEY: 'Money',
-  SHARED_VISION: 'Shared Vision',
-  RECOGNITION: 'Recognition',
-  EXPERIENCE: 'Experience',
-  OTHER: 'Other',
+  MONEY: tr('Money'),
+  SHARED_VISION: tr('Shared Vision'),
+  RECOGNITION: tr('Recognition'),
+  EXPERIENCE: tr('Experience'),
+  OTHER: tr('Other'),
 };
 
 // FR-50.4: what drives the partner, as distinct from offerTypeLabels above
 // (what the user offers them in return).
 export const partnerMotivatorLabels: Record<PartnerMotivator, string> = {
-  FINANCIAL_GAIN: 'Financial gain',
-  AVOIDING_LOSS: 'Avoiding a loss',
-  SHARED_VISION: 'Shared vision',
-  RECOGNITION: 'Recognition',
-  OTHER: 'Other',
+  FINANCIAL_GAIN: tr('Financial gain'),
+  AVOIDING_LOSS: tr('Avoiding a loss'),
+  SHARED_VISION: tr('Shared vision'),
+  RECOGNITION: tr('Recognition'),
+  OTHER: tr('Other'),
 };
 
 // FR-50.1: seven original, plain-language integrity-and-reliability checks.
 export const INTEGRITY_CHECKLIST_QUESTIONS = [
-  { key: 'flagDishonesty', label: 'I have concerns about this person’s honesty or trustworthiness' },
-  { key: 'flagAnger', label: 'I have seen a pattern of volatile anger from them' },
-  { key: 'flagPoorJudgment', label: 'I have seen a pattern of poor judgment or repeated bad decisions' },
-  { key: 'flagOutsizedReward', label: 'They are promising an unusually large reward for very little effort' },
-  { key: 'flagFlatteryPressure', label: 'They rely on excessive flattery or high-pressure persuasion' },
-  { key: 'flagGossip', label: 'They share other people’s private information inappropriately' },
-  { key: 'flagDisregardBoundaries', label: 'They disregard agreements, rules, or boundaries' },
+  { key: 'flagDishonesty', label: tr('I have concerns about this person’s honesty or trustworthiness') },
+  { key: 'flagAnger', label: tr('I have seen a pattern of volatile anger from them') },
+  { key: 'flagPoorJudgment', label: tr('I have seen a pattern of poor judgment or repeated bad decisions') },
+  { key: 'flagOutsizedReward', label: tr('They are promising an unusually large reward for very little effort') },
+  { key: 'flagFlatteryPressure', label: tr('They rely on excessive flattery or high-pressure persuasion') },
+  { key: 'flagGossip', label: tr('They share other people’s private information inappropriately') },
+  { key: 'flagDisregardBoundaries', label: tr('They disregard agreements, rules, or boundaries') },
 ] as const;
 
 // FR-55.2: Gate A of BR-44 — an eight-item, originally-worded decision-
 // prudence checklist. Answering honestly that a trap applies is still
 // "answered" (FR-55.4) — there is no right answer, only a completed one.
 export const DECISION_CHECKLIST_QUESTIONS = [
-  { key: 'decisionSkippedResearch', label: 'Have I actually researched this, not just gone with my first instinct?' },
-  { key: 'decisionAssumedNoChange', label: 'Am I assuming today’s conditions will hold, rather than considering how things could change?' },
-  { key: 'decisionTrustedUnverifiedClaim', label: 'Have I verified the key claims myself, rather than taking them at face value?' },
-  { key: 'decisionJudgedByAppearance', label: 'Am I judging this by substance, not just how polished or confident it looks?' },
-  { key: 'decisionUnderTimePressure', label: 'Am I deciding on my own timeline, rather than because someone is rushing me?' },
-  { key: 'decisionNoOutsideInput', label: 'Have I talked this through with someone outside my own head?' },
-  { key: 'decisionChasedEasyReward', label: 'Does the reward here match the effort, rather than looking too easy?' },
-  { key: 'decisionDismissedDisagreeingAdvice', label: 'Am I still willing to hear advice that disagrees with what I want to do?' },
+  { key: 'decisionSkippedResearch', label: tr('Have I actually researched this, not just gone with my first instinct?') },
+  { key: 'decisionAssumedNoChange', label: tr('Am I assuming today’s conditions will hold, rather than considering how things could change?') },
+  { key: 'decisionTrustedUnverifiedClaim', label: tr('Have I verified the key claims myself, rather than taking them at face value?') },
+  { key: 'decisionJudgedByAppearance', label: tr('Am I judging this by substance, not just how polished or confident it looks?') },
+  { key: 'decisionUnderTimePressure', label: tr('Am I deciding on my own timeline, rather than because someone is rushing me?') },
+  { key: 'decisionNoOutsideInput', label: tr('Have I talked this through with someone outside my own head?') },
+  { key: 'decisionChasedEasyReward', label: tr('Does the reward here match the effort, rather than looking too easy?') },
+  { key: 'decisionDismissedDisagreeingAdvice', label: tr('Am I still willing to hear advice that disagrees with what I want to do?') },
 ] as const;
 
 export type DecisionChecklistKey = (typeof DECISION_CHECKLIST_QUESTIONS)[number]['key'];
@@ -185,10 +186,10 @@ export type IntegrityFlagKey = (typeof INTEGRITY_CHECKLIST_QUESTIONS)[number]['k
 // (FR-62.2) — only a blank answer blocks a PARTNER obstacle's Resolved
 // transition (BR-51).
 export const CONFLICT_CHECKLIST_QUESTIONS = [
-  { key: 'conflictNoCharacterAttacks', label: 'Avoided attacking character or name-calling' },
-  { key: 'conflictStayedOnIncident', label: 'Stayed on this specific incident, not past ones' },
-  { key: 'conflictNoThreatsOrSarcasm', label: 'Avoided threats, ultimatums, or sarcasm' },
-  { key: 'conflictDefinedWinWin', label: 'Named an outcome that works for both sides, not just one' },
+  { key: 'conflictNoCharacterAttacks', label: tr('Avoided attacking character or name-calling') },
+  { key: 'conflictStayedOnIncident', label: tr('Stayed on this specific incident, not past ones') },
+  { key: 'conflictNoThreatsOrSarcasm', label: tr('Avoided threats, ultimatums, or sarcasm') },
+  { key: 'conflictDefinedWinWin', label: tr('Named an outcome that works for both sides, not just one') },
 ] as const;
 
 export type ConflictChecklistKey = (typeof CONFLICT_CHECKLIST_QUESTIONS)[number]['key'];
@@ -206,61 +207,61 @@ export const EMPTY_CONFLICT_CHECKLIST_ANSWERS: Record<ConflictChecklistKey, bool
 };
 
 export const communicationStatusLabels: Record<CommunicationStatus, string> = {
-  DRAFT: 'Draft',
-  SENT: 'Sent',
-  FOLLOWED_UP: 'Followed Up',
-  REPLIED: 'Replied',
-  CLOSED: 'Closed',
+  DRAFT: tr('Draft'),
+  SENT: tr('Sent'),
+  FOLLOWED_UP: tr('Followed Up'),
+  REPLIED: tr('Replied'),
+  CLOSED: tr('Closed'),
 };
 
 export const reviewTypeLabels: Record<ReviewType, string> = {
-  DAILY: 'Daily',
-  WEEKLY: 'Weekly',
-  MONTHLY: 'Monthly',
-  QUARTERLY: 'Quarterly',
+  DAILY: tr('Daily'),
+  WEEKLY: tr('Weekly'),
+  MONTHLY: tr('Monthly'),
+  QUARTERLY: tr('Quarterly'),
 };
 
 // FR-59.1: what kind of thing a gratitude entry is about.
 export const gratitudeCategoryLabels: Record<GratitudeCategory, string> = {
-  GIFT: 'Gift',
-  HEALTH: 'Health',
-  PERSON: 'Person',
-  OTHER: 'Other',
+  GIFT: tr('Gift'),
+  HEALTH: tr('Health'),
+  PERSON: tr('Person'),
+  OTHER: tr('Other'),
 };
 
 export const obstacleTypeLabels: Record<ObstacleType, string> = {
-  KNOWLEDGE: 'Knowledge',
-  SKILL: 'Skill',
-  TIME: 'Time',
-  MONEY: 'Money',
-  MOTIVATION: 'Motivation',
-  PARTNER: 'Partner',
-  SYSTEM: 'System',
-  DECISION: 'Decision',
-  OTHER: 'Other',
+  KNOWLEDGE: tr('Knowledge'),
+  SKILL: tr('Skill'),
+  TIME: tr('Time'),
+  MONEY: tr('Money'),
+  MOTIVATION: tr('Motivation'),
+  PARTNER: tr('Partner'),
+  SYSTEM: tr('System'),
+  DECISION: tr('Decision'),
+  OTHER: tr('Other'),
 };
 
 export const obstacleStatusLabels: Record<ObstacleStatus, string> = {
-  OPEN: 'Open',
-  IN_PROGRESS: 'In Progress',
-  RESOLVED: 'Resolved',
-  ACCEPTED: 'Accepted',
+  OPEN: tr('Open'),
+  IN_PROGRESS: tr('In Progress'),
+  RESOLVED: tr('Resolved'),
+  ACCEPTED: tr('Accepted'),
 };
 
 // FR-38: in-app issue reporting.
 export const reportTypeLabels: Record<ReportType, string> = {
-  BUG: 'Bug',
-  IMPROVEMENT: 'Improvement',
-  QUESTION: 'Question',
-  OTHER: 'Other',
+  BUG: tr('Bug'),
+  IMPROVEMENT: tr('Improvement'),
+  QUESTION: tr('Question'),
+  OTHER: tr('Other'),
 };
 
 export const issueReportStatusLabels: Record<IssueReportStatus, string> = {
-  OPEN: 'Open',
-  IN_REVIEW: 'In Review',
-  PLANNED: 'Planned',
-  IN_PROGRESS: 'In Progress',
-  RESOLVED: 'Resolved',
-  CLOSED: 'Closed',
+  OPEN: tr('Open'),
+  IN_REVIEW: tr('In Review'),
+  PLANNED: tr('Planned'),
+  IN_PROGRESS: tr('In Progress'),
+  RESOLVED: tr('Resolved'),
+  CLOSED: tr('Closed'),
   WONT_FIX: "Won't Fix",
 };

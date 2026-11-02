@@ -1,5 +1,6 @@
 import { dreamHasLinkedPartner } from '../api/dreamApi';
 import { goalHasLinkedPartner } from '../api/goalApi';
+import { tr } from '../i18n/translate';
 
 type ShowToast = (message: string, options?: { action?: { label: string; onClick: () => void }; duration?: number }) => void;
 
@@ -24,7 +25,7 @@ export async function nudgeContributionForDream({ token, dreamId, showToast, nav
   }
   showToast(MESSAGE, {
     duration: 8000,
-    action: { label: 'Add partner', onClick: () => navigate(`/partners?create=partner&relatedDreamId=${dreamId}`) },
+    action: { label: tr('Add partner'), onClick: () => navigate(`/partners?create=partner&relatedDreamId=${dreamId}`) },
   });
 }
 
@@ -40,6 +41,6 @@ export async function nudgeContributionForGoal({ token, goalId, showToast, navig
   }
   showToast(MESSAGE, {
     duration: 8000,
-    action: { label: 'Add partner', onClick: () => navigate(`/partners?create=partner&relatedGoalId=${goalId}`) },
+    action: { label: tr('Add partner'), onClick: () => navigate(`/partners?create=partner&relatedGoalId=${goalId}`) },
   });
 }

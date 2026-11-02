@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 
 import { DashboardCard } from './DashboardCard';
 import type { DashboardSummary as DashboardSummaryData } from '../../types/vision';
+import { tr } from '../../i18n/translate';
 
 type DashboardSummaryProps = {
   summary?: DashboardSummaryData | null;
@@ -48,7 +49,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(12, 1fr)' } }}>
         <Box
           component="section"
-          aria-label="Task pressure"
+          aria-label={tr('Task pressure')}
           sx={{
             gridColumn: { lg: 'span 4' },
             display: 'grid',
@@ -57,7 +58,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
           }}
         >
           <DashboardCard
-            label="Overdue Tasks"
+            label={tr('Overdue Tasks')}
             value={summary?.overdueTasks ?? 0}
             icon={CalendarClock}
             variant="rail"
@@ -65,7 +66,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
             to={scoped('/tasks?overdue=true', visionAreaId)}
           />
           <DashboardCard
-            label="Blocked Tasks"
+            label={tr('Blocked Tasks')}
             value={summary?.blockedTasks ?? 0}
             icon={Ban}
             variant="rail"
@@ -75,7 +76,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
           {/* The comp keeps this tile on the accent rail: due-soon is workload,
               not an alarm, so it stays neutral regardless of the count. */}
           <DashboardCard
-            label={`Due ${periodLabel}`}
+            label={tr('Due {period}', { period: periodLabel })}
             value={summary?.tasksDueInPeriod ?? 0}
             icon={CalendarDays}
             variant="rail"
@@ -84,7 +85,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
         </Box>
         <Box
           component="section"
-          aria-label="Portfolio overview"
+          aria-label={tr('Portfolio overview')}
           sx={{
             gridColumn: { lg: 'span 8' },
             display: 'grid',
@@ -92,14 +93,14 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
             gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
           }}
         >
-          <DashboardCard label="Vision Areas" value={summary?.totalVisionAreas ?? 0} to="/vision-areas" />
+          <DashboardCard label={tr('Vision Areas')} value={summary?.totalVisionAreas ?? 0} to="/vision-areas" />
           <DashboardCard
-            label="Active Dreams"
+            label={tr('Active Dreams')}
             value={summary?.activeDreams ?? 0}
             to={scoped('/dreams?status=ACTIVE', visionAreaId)}
           />
-          <DashboardCard label="Active Goals" value={summary?.activeGoals ?? 0} />
-          <DashboardCard label="Open Tasks" value={summary?.activeTasks ?? 0} />
+          <DashboardCard label={tr('Active Goals')} value={summary?.activeGoals ?? 0} />
+          <DashboardCard label={tr('Open Tasks')} value={summary?.activeTasks ?? 0} />
           {/*
             Completed is scoped to the period by completion date. It doesn't link:
             the tasks board filters by *due* date, not completion date, so no
@@ -107,12 +108,12 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
             different number is worse than one that doesn't link.
           */}
           <DashboardCard
-            label={`Completed ${periodLabel}`}
+            label={tr('Completed {period}', { period: periodLabel })}
             value={summary?.completedTasksInPeriod ?? 0}
             tone={(summary?.completedTasksInPeriod ?? 0) > 0 ? 'positive' : 'neutral'}
           />
           <DashboardCard
-            label="Average Progress"
+            label={tr('Average Progress')}
             value={`${Math.round(summary?.averageProgress ?? 0)}%`}
             tone={(summary?.averageProgress ?? 0) >= 50 ? 'positive' : 'neutral'}
             extra={
@@ -138,7 +139,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--moonshot-fg)', mt: -0.5 }}>
           <Rocket size={14} />
           <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            {summary?.moonshotGoals} of your goals {summary?.moonshotGoals === 1 ? 'is a moonshot' : 'are moonshots'}.
+            {tr('{count} of your goals are moonshots.', { count: summary?.moonshotGoals ?? 0 })}
           </Typography>
         </Box>
       )}
@@ -146,7 +147,7 @@ export function DashboardSummary({ summary, periodLabel, dueInPeriodLink, vision
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--moonshot-fg)', mt: -1 }}>
           <Rocket size={14} />
           <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            {summary?.moonshotDreams} of your dreams {summary?.moonshotDreams === 1 ? 'is a moonshot' : 'are moonshots'}.
+            {tr('{count} of your dreams are moonshots.', { count: summary?.moonshotDreams ?? 0 })}
           </Typography>
         </Box>
       )}

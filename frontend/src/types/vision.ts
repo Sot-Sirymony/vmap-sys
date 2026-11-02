@@ -583,11 +583,24 @@ export type ProgressMetric = { id: string; label: string; value: string; target:
 export type ProgressMetrics = { metrics: ProgressMetric[] };
 
 // FR-77: emailConfigured is false when the server cannot send mail at all.
+/** FR-20: one interface string an admin changed. sourceText is the English the app uses as its key. */
+export type UiTextOverride = {
+  id: number;
+  language: 'en' | 'km';
+  sourceText: string;
+  text: string;
+  updatedAt: string;
+};
+
 export type ReminderSettings = {
   enabled: boolean;
   timeZone?: string | null;
   emailConfigured: boolean;
   sendHour: number;
+  /** The chosen address, or null to use the login email. */
+  reminderEmail?: string | null;
+  /** Where reminders actually go. */
+  sendsTo: string;
 };
 
 // FR-65: the fear log.

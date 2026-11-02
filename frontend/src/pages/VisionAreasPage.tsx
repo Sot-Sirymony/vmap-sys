@@ -36,6 +36,7 @@ import { lifecycleStatusLabels, priorityLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 export function VisionAreasPage() {
   const { token } = useAuth();
@@ -167,7 +168,7 @@ export function VisionAreasPage() {
       });
       await crud.reload();
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update vision area status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update vision area status.'));
     }
   }
 
@@ -193,7 +194,7 @@ export function VisionAreasPage() {
       await reorderVisionAreas(token, nextOrder);
       await crud.reload();
     } catch (reorderError) {
-      crud.setError(reorderError instanceof Error ? reorderError.message : 'Unable to reorder vision areas.');
+      crud.setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder vision areas.'));
     }
   }
 
@@ -202,7 +203,7 @@ export function VisionAreasPage() {
       return 'Archive this vision area?';
     }
     const impact = await getVisionAreaArchiveImpact(token, area.id);
-    return `Archiving "${area.name}" also archives ${impact.dreams} dream(s), ${impact.goals} goal(s), ${impact.steps} step(s), and ${impact.tasks} task(s). Everything can be restored later with "Show archived".`;
+    return tr('Archiving "{title}" also archives {dreams} dream(s), {goals} goal(s), {steps} step(s), and {tasks} task(s). Everything can be restored later with "Show archived".', { title: area.name, dreams: impact.dreams, goals: impact.goals, steps: impact.steps, tasks: impact.tasks });
   }
 
   const filteredAreas = crud.items.filter((area) => {
@@ -240,10 +241,10 @@ export function VisionAreasPage() {
         archived={area.archived}
         confirmArchive={() => archiveImpactMessage(area)}
         extraActions={[
-          { label: 'View dreams', onClick: () => navigate(`/dreams?visionAreaId=${area.id}`) },
-          { label: 'Add dream', onClick: () => navigate(`/dreams?create=dream&parent=${area.id}`) },
+          { label: tr('View dreams'), onClick: () => navigate(`/dreams?visionAreaId=${area.id}`) },
+          { label: tr('Add dream'), onClick: () => navigate(`/dreams?create=dream&parent=${area.id}`) },
         ]}
-        label="Vision area actions"
+        label={tr('Vision area actions')}
       />
     );
   }
@@ -251,14 +252,14 @@ export function VisionAreasPage() {
   const columns: DataTableColumn<VisionArea>[] = [
     {
       key: 'position',
-      label: 'Order',
+      label: tr('Order'),
       sortValue: (area) => area.sortOrder ?? Number.MAX_SAFE_INTEGER,
       render: (area) => (area.sortOrder != null ? area.sortOrder + 1 : '—'),
     },
-    { key: 'code', label: 'Code', sortValue: (area) => area.code, render: (area) => area.code },
+    { key: 'code', label: tr('Code'), sortValue: (area) => area.code, render: (area) => area.code },
     {
       key: 'name',
-      label: 'Name',
+      label: tr('Name'),
       sortValue: (area) => area.name,
       sx: { fontWeight: 500 },
       render: (area) => (
@@ -270,31 +271,31 @@ export function VisionAreasPage() {
     },
     {
       key: 'priority',
-      label: 'Priority',
+      label: tr('Priority'),
       sortValue: (area) => priorityRank(area.priority),
       render: (area) => <PriorityBadge priority={area.priority} />,
     },
     {
       key: 'letterRank',
-      label: 'Rank',
+      label: tr('Rank'),
       sortValue: (area) => area.letterRank ?? '',
       render: (area) => area.letterRank ?? '—',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (area) => area.status,
       render: (area) => <StatusBadge status={area.status} />,
     },
     {
       key: 'dreams',
-      label: 'Dreams',
+      label: tr('Dreams'),
       sortValue: (area) => dreamCounts.get(area.id) ?? 0,
       render: (area) => dreamCounts.get(area.id) ?? 0,
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (area) => renderAreaActions(area),
     },
@@ -303,50 +304,48 @@ export function VisionAreasPage() {
   const formFields = (
     <>
       <label>
-        Name
+        {tr('Name')}
         <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus />
       </label>
       <label>
-        Priority
+        {tr('Priority')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Priority" }} value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
-            <MenuItem value="LOW">Low</MenuItem>
-            <MenuItem value="MEDIUM">Medium</MenuItem>
-            <MenuItem value="HIGH">High</MenuItem>
-            <MenuItem value="CRITICAL">Critical</MenuItem>
+            <MenuItem value="LOW">{tr('Low')}</MenuItem>
+            <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+            <MenuItem value="HIGH">{tr('High')}</MenuItem>
+            <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label>
-        Rank
+        {tr('Rank')}
         <Input
           value={letterRank}
           onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-          placeholder="e.g. A"
+          placeholder={tr('e.g. A')}
           maxLength={1}
         />
         <span className="field-hint">
-          Optional. A, B, C… — assigned after listing everything, to mark which areas come first. Ties are fine;
-          nothing enforces a unique order.
+          {tr('Optional. A, B, C… — assigned after listing everything, to mark which areas come first. Ties are fine; nothing enforces a unique order.')}
         </span>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as LifecycleStatus)}>
-            <MenuItem value="ACTIVE">Active</MenuItem>
-            <MenuItem value="PAUSED">Paused</MenuItem>
-            <MenuItem value="COMPLETED">Completed</MenuItem>
-            <MenuItem value="ARCHIVED">Archived</MenuItem>
+            <MenuItem value="ACTIVE">{tr('Active')}</MenuItem>
+            <MenuItem value="PAUSED">{tr('Paused')}</MenuItem>
+            <MenuItem value="COMPLETED">{tr('Completed')}</MenuItem>
+            <MenuItem value="ARCHIVED">{tr('Archived')}</MenuItem>
           </Select>
         </FormControl>
       </label>
       <label className="field-full">
-        Vision Statement
+        {tr('Vision Statement')}
         <Textarea value={visionStatement} onChange={(event) => setVisionStatement(event.target.value)} />
         <span className="field-hint">
-          What does this area look like when it's going well? Optional, but writing it down first makes the dreams
-          underneath it easier to judge.
+          {tr('What does this area look like when it\'s going well? Optional, but writing it down first makes the dreams underneath it easier to judge.')}
         </span>
       </label>
       <label className="field-full">
@@ -358,13 +357,13 @@ export function VisionAreasPage() {
 
   return (
     <PageSection
-      title="Vision Areas"
-      subtitle="Organize the major areas of life or work."
-      actions={<Button type="button" onClick={openCreateFlow}>Create vision area</Button>}
+      title={tr('Vision Areas')}
+      subtitle={tr('Organize the major areas of life or work.')}
+      actions={<Button type="button" onClick={openCreateFlow}>{tr('Create vision area')}</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create vision area"
+        createLabel={tr('Create vision area')}
         editTitle="Edit Vision Area"
         saving={crud.saving}
         creating={flatCreateOpen}
@@ -395,23 +394,23 @@ export function VisionAreasPage() {
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
       <FilterPanel activeCount={[searchTerm, filterPriority, filterLetterRank, filterStatus].filter(Boolean).length}>
-        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="vision areas" />
+        <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel={tr('vision areas')} />
         <FilterSelect
-          label="Priority"
+          label={tr('Priority')}
           value={filterPriority}
           onChange={setFilterPriority}
           options={optionsFromLabels(priorityLabels)}
         />
         {letterRankOptions.length > 0 && (
           <FilterSelect
-            label="Rank"
+            label={tr('Rank')}
             value={filterLetterRank}
             onChange={setFilterLetterRank}
             options={letterRankOptions}
           />
         )}
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={setFilterStatus}
           // "Archived" can only ever match hidden rows, so the option appears
@@ -423,15 +422,15 @@ export function VisionAreasPage() {
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Vision area view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Vision area view')} />
       </div>
       {!crud.loading && crud.items.length === 0 && !searchTerm && !filterPriority && !filterLetterRank && !filterStatus ? (
         <EmptyState
-          headline="No vision areas yet"
+          headline={tr('No vision areas yet')}
           icon={Compass}
-          action={<Button type="button" onClick={() => setWizardOpen(true)}>Create your first vision area</Button>}
+          action={<Button type="button" onClick={() => setWizardOpen(true)}>{tr('Create your first vision area')}</Button>}
         >
-          A vision area is a major part of your life or work — like Career, Health, or Family. Everything else builds under it.
+          {tr('A vision area is a major part of your life or work — like Career, Health, or Family. Everything else builds under it.')}
         </EmptyState>
       ) : viewMode === 'list' ? (
         <Card>
@@ -440,7 +439,7 @@ export function VisionAreasPage() {
               storageKey="vision-areas"
               rows={filteredAreas}
               columns={columns}
-              emptyMessage={hasFilters ? 'No vision areas match these filters.' : 'No vision areas yet.'}
+              emptyMessage={hasFilters ? tr('No vision areas match these filters.') : tr('No vision areas yet.')}
               defaultSortKey="position"
               defaultSortDirection="asc"
               reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderAreas(draggedId, targetId) }}
@@ -454,7 +453,7 @@ export function VisionAreasPage() {
                   <BulkArchiveAction
                     selectedIds={selectedIds}
                     items={crud.items}
-                    entityLabel="vision area(s)"
+                    entityLabel={tr('vision area(s)')}
                     onArchive={async (ids) => {
                       await crud.archiveMany(ids);
                       setSelectedIds(new Set());
@@ -478,7 +477,7 @@ export function VisionAreasPage() {
           items={filteredAreas}
           columns={Object.entries(lifecycleStatusLabels).map(([value, label]) => ({ value: value as LifecycleStatus, label }))}
           statusOf={(area) => area.status}
-          entityLabel="vision areas"
+          entityLabel={tr('vision areas')}
           onMove={(area, nextStatus) => void handleMove(area, nextStatus)}
           renderCard={(area) => (
             <>

@@ -2,6 +2,7 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import TextField from '@mui/material/TextField';
 import { Search, X } from 'lucide-react';
+import { tr } from '../../i18n/translate';
 
 type SearchBarProps = {
   value: string;
@@ -20,7 +21,7 @@ export function SearchBar({ value, onChange, entityLabel }: SearchBarProps) {
       type="search"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      placeholder={`Search ${entityLabel}...`}
+      placeholder={tr('Search {items}...', { items: tr(entityLabel) })}
       aria-label={`Search ${entityLabel}`}
       slotProps={{
         input: {
@@ -31,7 +32,7 @@ export function SearchBar({ value, onChange, entityLabel }: SearchBarProps) {
           ),
           endAdornment: value ? (
             <InputAdornment position="end">
-              <IconButton size="small" aria-label="Clear search" onClick={() => onChange('')}>
+              <IconButton size="small" aria-label={tr('Clear search')} onClick={() => onChange('')}>
                 <X size={16} />
               </IconButton>
             </InputAdornment>

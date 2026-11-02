@@ -4,6 +4,7 @@ import { resetPassword } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 /** Matches the backend's @Size(min = 8) on the new password. */
 const MIN_PASSWORD_LENGTH = 8;
@@ -24,7 +25,7 @@ export function ResetPasswordPage() {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('The new passwords do not match.');
+      setError(tr('The new passwords do not match.'));
       return;
     }
 
@@ -36,7 +37,7 @@ export function ResetPasswordPage() {
       // the credential that should get them in.
       navigate('/login', { replace: true, state: { notice: 'Password updated. Sign in with your new password.' } });
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not reset the password.');
+      setError(error instanceof Error ? error.message : tr('Could not reset the password.'));
     } finally {
       setLoading(false);
     }
@@ -46,21 +47,21 @@ export function ResetPasswordPage() {
   // mangled the link. Saying so beats a form that can only fail on submit.
   if (!token) {
     return (
-      <AuthLayout subtitle="Reset your password">
-        <ErrorMessage message="This reset link is incomplete. Request a new one." />
+      <AuthLayout subtitle={tr('Reset your password')}>
+        <ErrorMessage message={tr('This reset link is incomplete. Request a new one.')} />
         <p className="auth-link" style={{ textAlign: 'center' }}>
-          <Link to="/forgot-password">Send a new link</Link>
+          <Link to="/forgot-password">{tr('Send a new link')}</Link>
         </p>
       </AuthLayout>
     );
   }
 
   return (
-    <AuthLayout subtitle="Choose a new password">
+    <AuthLayout subtitle={tr('Choose a new password')}>
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="reset-new-password"
-          label="New password"
+          label={tr('New password')}
           type="password"
           name="newPassword"
           autoComplete="new-password"
@@ -71,7 +72,7 @@ export function ResetPasswordPage() {
         />
         <AuthField
           id="reset-confirm-password"
-          label="Confirm new password"
+          label={tr('Confirm new password')}
           type="password"
           name="confirmPassword"
           autoComplete="new-password"
@@ -81,15 +82,15 @@ export function ResetPasswordPage() {
           required
         />
         <p className="auth-status-note" style={{ margin: 0, maxWidth: 'none' }}>
-          Use at least {MIN_PASSWORD_LENGTH} characters.
+          {tr('Use at least {count} characters.', { count: MIN_PASSWORD_LENGTH })}
         </p>
         {error && <ErrorMessage message={error} />}
         <button className="auth-submit" type="submit" disabled={loading}>
-          {loading ? 'Saving...' : 'Set new password'}
+          {loading ? tr('Saving...') : tr('Set new password')}
         </button>
       </form>
       <p className="auth-link" style={{ textAlign: 'center' }}>
-        Link expired? <Link to="/forgot-password">Request a new one</Link>
+        Link expired? <Link to="/forgot-password">{tr('Request a new one')}</Link>
       </p>
     </AuthLayout>
   );

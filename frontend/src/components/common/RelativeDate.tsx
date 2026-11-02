@@ -1,3 +1,5 @@
+import { tr } from '../../i18n/translate';
+import { formatDate } from '../../i18n/formatDate';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function daysFromToday(iso: string): number {
@@ -8,7 +10,7 @@ function daysFromToday(iso: string): number {
 }
 
 function shortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDate(new Date(`${iso}T00:00:00`), { year: true });
 }
 
 /**
@@ -29,18 +31,18 @@ export function RelativeDate({ date, completed = false }: { date?: string; compl
     const days = -diff;
     return (
       <span className="date-overdue" title={date}>
-        {days === 1 ? '1 day overdue' : `${days} days overdue`}
+        {days === 1 ? tr('1 day overdue') : tr('{count} days overdue', { count: days })}
       </span>
     );
   }
   if (diff === 0) {
-    return <span className="date-soon" title={date}>Today</span>;
+    return <span className="date-soon" title={date}>{tr('Today')}</span>;
   }
   if (diff === 1) {
-    return <span className="date-soon" title={date}>Tomorrow</span>;
+    return <span className="date-soon" title={date}>{tr('Tomorrow')}</span>;
   }
   if (diff <= 14) {
-    return <span title={date}>in {diff} days</span>;
+    return <span title={date}>{tr('in {count} days', { count: diff })}</span>;
   }
   return <span title={date}>{shortDate(date)}</span>;
 }

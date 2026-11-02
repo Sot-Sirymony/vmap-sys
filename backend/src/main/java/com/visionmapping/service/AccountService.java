@@ -104,7 +104,12 @@ public class AccountService {
         AppUser user = userScope.currentUser();
         Long userId = user.getId();
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("account", Map.of("fullName", user.getFullName(), "email", user.getEmail(), "createdAt", user.getCreatedAt()));
+        Map<String, Object> account = new LinkedHashMap<>();
+        account.put("fullName", user.getFullName());
+        account.put("email", user.getEmail());
+        account.put("reminderEmail", user.getReminderEmail());
+        account.put("createdAt", user.getCreatedAt());
+        data.put("account", account);
         data.put("visionAreas", visionAreaRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
         data.put("dreams", dreamRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
         data.put("goals", goalRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());

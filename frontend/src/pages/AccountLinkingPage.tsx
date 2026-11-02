@@ -6,6 +6,7 @@ import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 /**
  * The account-linking screen: reached from the Google callback when the
@@ -32,14 +33,14 @@ export function AccountLinkingPage() {
           <span className="auth-status-icon auth-status-icon--link">
             <LinkIcon size={28} />
           </span>
-          <h1 className="auth-status-title">Link your accounts</h1>
+          <h1 className="auth-status-title">{tr('Link your accounts')}</h1>
           <p className="auth-status-text">
-            This page is only reachable from a Google sign-in. Start again from the sign-in screen.
+            {tr('This page is only reachable from a Google sign-in. Start again from the sign-in screen.')}
           </p>
         </div>
         <div className="auth-actions">
           <Link className="auth-submit" to="/login">
-            Go to sign in
+            {tr('Go to sign in')}
           </Link>
         </div>
       </AuthLayout>
@@ -55,7 +56,7 @@ export function AccountLinkingPage() {
       setSession(response, true);
       navigate('/', { replace: true });
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not link the accounts.');
+      setError(error instanceof Error ? error.message : tr('Could not link the accounts.'));
     } finally {
       setLoading(false);
     }
@@ -67,19 +68,18 @@ export function AccountLinkingPage() {
         <span className="auth-status-icon auth-status-icon--link">
           <LinkIcon size={28} />
         </span>
-        <h1 className="auth-status-title">Link your accounts</h1>
+        <h1 className="auth-status-title">{tr('Link your accounts')}</h1>
         <p className="auth-status-text">
-          An account with this email already exists. To enable Google sign-in, please verify your
-          password once to link them.
+          {tr('An account with this email already exists. To enable Google sign-in, please verify your password once to link them.')}
         </p>
       </div>
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="link-password"
-          label="Password"
+          label={tr('Password')}
           name="password"
           autoComplete="current-password"
-          placeholder="Enter your password"
+          placeholder={tr('Enter your password')}
           revealable
           value={password}
           onChange={setPassword}
@@ -88,10 +88,10 @@ export function AccountLinkingPage() {
         {error && <ErrorMessage message={error} />}
         <div className="auth-actions">
           <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? 'Linking...' : 'Link accounts'}
+            {loading ? tr('Linking...') : tr('Link accounts')}
           </button>
           <Link className="auth-submit auth-submit--ghost" to="/login">
-            Cancel
+            {tr('Cancel')}
           </Link>
         </div>
       </form>

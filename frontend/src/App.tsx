@@ -20,6 +20,7 @@ const ModuleDetailPage = lazy(() => import('./pages/ModuleDetailPage').then((m) 
 const PlanPage = lazy(() => import('./pages/PlanPage').then((m) => ({ default: m.PlanPage })));
 const AccountSettingsPage = lazy(() => import('./pages/AccountSettingsPage').then((m) => ({ default: m.AccountSettingsPage })));
 const ModuleContentPage = lazy(() => import('./pages/ModuleContentPage').then((m) => ({ default: m.ModuleContentPage })));
+const InterfaceTextPage = lazy(() => import('./pages/InterfaceTextPage').then((m) => ({ default: m.InterfaceTextPage })));
 const UndatedStepsPage = lazy(() => import('./pages/UndatedStepsPage').then((m) => ({ default: m.UndatedStepsPage })));
 const VisionAreasPage = lazy(() => import('./pages/VisionAreasPage').then((m) => ({ default: m.VisionAreasPage })));
 const DreamsPage = lazy(() => import('./pages/DreamsPage').then((m) => ({ default: m.DreamsPage })));
@@ -86,6 +87,7 @@ export function App() {
             {/* FR-39.5 */}
             <Route path="/settings/appearance" element={<AppearanceSettingsPage />} />
             <Route path="/settings/module-content" element={<ModuleContentPage />} />
+            <Route path="/settings/interface-text" element={<InterfaceTextPage />} />
             <Route path="/settings/account" element={<AccountSettingsPage />} />
             <Route path="/settings/security" element={<SecuritySettingsPage />} />
           </Route>

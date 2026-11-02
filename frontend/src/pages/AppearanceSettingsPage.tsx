@@ -22,22 +22,23 @@ import { PriorityBadge } from '../components/common/PriorityBadge';
 import { accentOptions, backgroundTones, fontFamilies, fontStack, interfaceStyles, styleShape, themePresets, type AccentId, type InterfaceStyleId } from '../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../context/ThemeModeContext';
 import type { Density } from '../theme';
+import { tr } from '../i18n/translate';
 
 const MODE_OPTIONS: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
+  { value: 'light', label: tr('Light'), icon: Sun },
+  { value: 'dark', label: tr('Dark'), icon: Moon },
+  { value: 'system', label: tr('System'), icon: Monitor },
 ];
 
 const DENSITY_OPTIONS: { value: Density; label: string }[] = [
-  { value: 'comfortable', label: 'Comfortable' },
-  { value: 'compact', label: 'Compact' },
+  { value: 'comfortable', label: tr('Comfortable') },
+  { value: 'compact', label: tr('Compact') },
 ];
 
 const FONT_SIZE_OPTIONS: { value: FontSize; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
+  { value: 'small', label: tr('Small') },
+  { value: 'medium', label: tr('Medium') },
+  { value: 'large', label: tr('Large') },
 ];
 
 /**
@@ -144,12 +145,12 @@ export function AppearanceSettingsPage() {
     try {
       const dataUrl = await fileToBackgroundDataUrl(file);
       if (dataUrl.length > MAX_BACKGROUND_DATA_URL_LENGTH) {
-        setImageError('That image is too large even after compression — try a smaller one.');
+        setImageError(tr('That image is too large even after compression — try a smaller one.'));
         return;
       }
       setBackgroundImage(dataUrl);
     } catch {
-      setImageError('Could not read that file as an image.');
+      setImageError(tr('Could not read that file as an image.'));
     }
   }
 
@@ -165,14 +166,14 @@ export function AppearanceSettingsPage() {
   }, []);
 
   const activePresetLabel = preset === 'CUSTOM'
-    ? 'Custom'
-    : themePresets.find((option) => option.stored === preset)?.label ?? 'Custom';
+    ? tr('Custom')
+    : themePresets.find((option) => option.stored === preset)?.label ?? tr('Custom');
 
   return (
     <PageSection
-      title="Appearance"
-      subtitle="Choose how the app looks. Changes apply immediately and are saved to your account."
-      actions={<Button onClick={reset} size="small" variant="outlined" sx={{ color: 'primary.dark' }}>Reset to defaults</Button>}
+      title={tr('Appearance')}
+      subtitle={tr('Choose how the app looks. Changes apply immediately and are saved to your account.')}
+      actions={<Button onClick={reset} size="small" variant="outlined" sx={{ color: 'primary.dark' }}>{tr('Reset to defaults')}</Button>}
     >
       {/* BR-33: a failed save never blocks the choice — it applies locally and
           is retried. Saying so is better than pretending it saved. */}
@@ -185,8 +186,8 @@ export function AppearanceSettingsPage() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         <Box>
           <SettingGroup
-            title="Theme"
-            hint={`A preset sets the mode and accent together. Currently: ${activePresetLabel}.`}
+            title={tr('Theme')}
+            hint={tr('A preset sets the mode and accent together. Currently: {preset}.', { preset: activePresetLabel })}
           >
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
               {themePresets.map((option) => {
@@ -234,14 +235,14 @@ export function AppearanceSettingsPage() {
             </Box>
             {preset === 'CUSTOM' && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Your settings don't match a preset, so they're shown as Custom. Pick a preset above to go back to one.
+                {tr('Your settings don\'t match a preset, so they\'re shown as Custom. Pick a preset above to go back to one.')}
               </Typography>
             )}
           </SettingGroup>
 
           <SettingGroup
-            title="Interface style"
-            hint="Changes the shape of the app — corners, shadows, and navigation — not its colours. Works with every theme above."
+            title={tr('Interface style')}
+            hint={tr('Changes the shape of the app — corners, shadows, and navigation — not its colours. Works with every theme above.')}
           >
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
               {interfaceStyles.map((style) => {
@@ -277,7 +278,7 @@ export function AppearanceSettingsPage() {
             </Box>
           </SettingGroup>
 
-          <SettingGroup title="Mode" hint="System follows your device setting and updates when it changes.">
+          <SettingGroup title={tr('Mode')} hint={tr('System follows your device setting and updates when it changes.')}>
             <ToggleButtonGroup
               exclusive
               size="small"
@@ -293,7 +294,7 @@ export function AppearanceSettingsPage() {
             </ToggleButtonGroup>
           </SettingGroup>
 
-          <SettingGroup title="Accent" hint="Every accent is checked for readable contrast in both light and dark.">
+          <SettingGroup title={tr('Accent')} hint={tr('Every accent is checked for readable contrast in both light and dark.')}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25 }}>
               {(Object.keys(accentOptions) as AccentId[]).map((accentId) => {
                 const selected = settings.accent === accentId;
@@ -303,7 +304,7 @@ export function AppearanceSettingsPage() {
                       component="button"
                       type="button"
                       onClick={() => update({ accent: accentId })}
-                      aria-label={`${accentOptions[accentId].label} accent`}
+                      aria-label={tr('{color} accent', { color: accentOptions[accentId].label })}
                       aria-pressed={selected}
                       sx={{
                         width: 30,
@@ -332,11 +333,11 @@ export function AppearanceSettingsPage() {
           </SettingGroup>
 
           <SettingGroup
-            title="Background"
+            title={tr('Background')}
             hint={
               settings.highContrast
-                ? 'Unavailable while high contrast is on — it uses pure white or black surfaces.'
-                : 'Changes the page, cards, and sidebar together.'
+                ? tr('Unavailable while high contrast is on — it uses pure white or black surfaces.')
+                : tr('Changes the page, cards, and sidebar together.')
             }
           >
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -393,11 +394,11 @@ export function AppearanceSettingsPage() {
           </SettingGroup>
 
           <SettingGroup
-            title="Background image"
+            title={tr('Background image')}
             hint={
               settings.highContrast
-                ? 'Paused while high contrast is on — the image is removed so text stays maximally legible. It comes back when high contrast is switched off.'
-                : 'Your own picture behind the app — stored on this device only, never uploaded. A wash of the page colour keeps text readable.'
+                ? tr('Paused while high contrast is on — the image is removed so text stays maximally legible. It comes back when high contrast is switched off.')
+                : tr('Your own picture behind the app — stored on this device only, never uploaded. A wash of the page colour keeps text readable.')
             }
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-start' }}>
@@ -405,7 +406,7 @@ export function AppearanceSettingsPage() {
                 <Box
                   component="img"
                   src={backgroundImage}
-                  alt="Current background image"
+                  alt={tr('Current background image')}
                   sx={{
                     width: 240,
                     height: 135,
@@ -419,12 +420,12 @@ export function AppearanceSettingsPage() {
               )}
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button variant="outlined" size="small" component="label" disabled={settings.highContrast} sx={{ color: 'primary.dark' }}>
-                  {backgroundImage ? 'Replace image' : 'Browse image'}
+                  {backgroundImage ? tr('Replace image') : tr('Browse image')}
                   <input hidden type="file" accept="image/*" onChange={onPickBackgroundImage} />
                 </Button>
                 {backgroundImage && (
                   <Button size="small" color="error" onClick={() => setBackgroundImage(null)}>
-                    Remove
+                    {tr('Remove')}
                   </Button>
                 )}
               </Box>
@@ -455,7 +456,7 @@ export function AppearanceSettingsPage() {
                     </Typography>
                   )}
                   <Typography variant="caption" color="text.secondary" id="bg-image-contrast-label">
-                    Image contrast — {backgroundContrast}% {backgroundContrast === 100 ? '(as shot)' : ''}
+                    {tr('Image contrast — {percent}%', { percent: backgroundContrast })} {backgroundContrast === 100 ? tr('(as shot)') : ''}
                   </Typography>
                   {/* CSS contrast() on the image layer only — 100% is the photo
                       as shot, below softens it further, above makes it punchier.
@@ -478,7 +479,7 @@ export function AppearanceSettingsPage() {
             </Box>
           </SettingGroup>
 
-          <SettingGroup title="Density" hint="Compact fits more rows on screen without hiding anything.">
+          <SettingGroup title={tr('Density')} hint={tr('Compact fits more rows on screen without hiding anything.')}>
             <ToggleButtonGroup
               exclusive
               size="small"
@@ -492,8 +493,8 @@ export function AppearanceSettingsPage() {
           </SettingGroup>
 
           <SettingGroup
-            title="Font"
-            hint="The default is your device's own font and loads instantly. The others download once, the first time you pick them."
+            title={tr('Font')}
+            hint={tr('The default is your device\'s own font and loads instantly. The others download once, the first time you pick them.')}
           >
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
               {fontFamilies.map((font) => {
@@ -527,7 +528,7 @@ export function AppearanceSettingsPage() {
             </Box>
           </SettingGroup>
 
-          <SettingGroup title="Text size" hint="Scales all text proportionally, unlike browser zoom.">
+          <SettingGroup title={tr('Text size')} hint={tr('Scales all text proportionally, unlike browser zoom.')}>
             <ToggleButtonGroup
               exclusive
               size="small"
@@ -540,7 +541,7 @@ export function AppearanceSettingsPage() {
             </ToggleButtonGroup>
           </SettingGroup>
 
-          <SettingGroup title="Accessibility" hint="These work with any theme above — they don't replace your choice.">
+          <SettingGroup title={tr('Accessibility')} hint={tr('These work with any theme above — they don\'t replace your choice.')}>
             <FormControlLabel
               control={
                 <Switch
@@ -550,9 +551,9 @@ export function AppearanceSettingsPage() {
               }
               label={
                 <Box>
-                  <Typography variant="body2">High contrast</Typography>
+                  <Typography variant="body2">{tr('High contrast')}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Stronger text, borders, and focus rings.
+                    {tr('Stronger text, borders, and focus rings.')}
                   </Typography>
                 </Box>
               }
@@ -567,11 +568,11 @@ export function AppearanceSettingsPage() {
               }
               label={
                 <Box>
-                  <Typography variant="body2">Reduce motion</Typography>
+                  <Typography variant="body2">{tr('Reduce motion')}</Typography>
                   {/* Honest about the one-way rule: this can only ask for less
                       motion, so switching it off doesn't override the OS. */}
                   <Typography variant="caption" color="text.secondary">
-                    Turns off animations. If your device already asks for reduced motion, that still applies.
+                    {tr('Turns off animations. If your device already asks for reduced motion, that still applies.')}
                   </Typography>
                 </Box>
               }
@@ -584,16 +585,16 @@ export function AppearanceSettingsPage() {
             point of a live preview is seeing it while changing the settings
             further down the page. top clears the sticky glass header. */}
         <Box sx={{ position: { md: 'sticky' }, top: { md: 88 }, alignSelf: 'start' }}>
-          <Typography variant="h3" sx={{ mb: 0.25 }}>Preview</Typography>
+          <Typography variant="h3" sx={{ mb: 0.25 }}>{tr('Preview')}</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            Real components, not mock-ups — this is how your data will look.
+            {tr('Real components, not mock-ups — this is how your data will look.')}
           </Typography>
           <Card>
             <CardContent sx={{ display: 'grid', gap: 2 }}>
               <Box>
-                <Typography variant="h2">Prepare one concept note</Typography>
+                <Typography variant="h2">{tr('Prepare one concept note')}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Goal under Career Development · target 30 Sep
+                  {tr('Goal under Career Development · target 30 Sep')}
                 </Typography>
               </Box>
 
@@ -613,16 +614,16 @@ export function AppearanceSettingsPage() {
               <ProgressBar value={62} />
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button variant="contained" size="small">Primary action</Button>
-                <Button variant="outlined" size="small">Secondary</Button>
-                <Button size="small" color="error">Delete</Button>
+                <Button variant="contained" size="small">{tr('Primary action')}</Button>
+                <Button variant="outlined" size="small">{tr('Secondary')}</Button>
+                <Button size="small" color="error">{tr('Delete')}</Button>
               </Box>
 
               <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-body-sm)' }}>
                 <Box component="thead">
                   <Box component="tr" sx={{ textAlign: 'left', color: 'text.secondary' }}>
-                    <Box component="th" sx={{ p: 'var(--cell-pad-y) var(--cell-pad-x)', borderBottom: 1, borderColor: 'divider' }}>Task</Box>
-                    <Box component="th" sx={{ p: 'var(--cell-pad-y) var(--cell-pad-x)', borderBottom: 1, borderColor: 'divider' }}>Due</Box>
+                    <Box component="th" sx={{ p: 'var(--cell-pad-y) var(--cell-pad-x)', borderBottom: 1, borderColor: 'divider' }}>{tr('Task')}</Box>
+                    <Box component="th" sx={{ p: 'var(--cell-pad-y) var(--cell-pad-x)', borderBottom: 1, borderColor: 'divider' }}>{tr('Due')}</Box>
                   </Box>
                 </Box>
                 <Box component="tbody">
@@ -639,8 +640,8 @@ export function AppearanceSettingsPage() {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                <Chip size="small" label="Focus mode" color="primary" />
-                <Typography variant="caption" sx={{ color: 'var(--text-faint)' }}>G-001 · updated just now</Typography>
+                <Chip size="small" label={tr('Focus mode')} color="primary" />
+                <Typography variant="caption" sx={{ color: 'var(--text-faint)' }}>{tr('G-001 · updated just now')}</Typography>
               </Box>
             </CardContent>
           </Card>

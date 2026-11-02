@@ -68,7 +68,10 @@ public class SecurityConfig {
                                 // rate-limited only by the token being unguessable
                                 // and single-use.
                                 "/api/auth/forgot-password",
-                                "/api/auth/reset-password"
+                                "/api/auth/reset-password",
+                                // FR-20: interface text changes, needed before
+                                // sign-in to draw the sign-in page. Read-only.
+                                "/api/ui-text"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

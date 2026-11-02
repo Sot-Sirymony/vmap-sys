@@ -21,7 +21,7 @@ This is draft v0.1, written as a BRD for a "Dream Conversion" goal-achievement p
 
 ## Implementation status
 
-Status as of Nov 1, 2026. The work is committed and pushed to `main`; a production deploy has not been confirmed. Later fixes are recorded in the changelog. VMS is scoped to personal use; see *Personal-use scope* below.
+Status as of Nov 2, 2026. The work is committed and pushed to `main`; a production deploy has not been confirmed. Later fixes are recorded in the changelog. VMS is scoped to personal use; see *Personal-use scope* below.
 
 | Mark | Meaning |
 | --- | --- |
@@ -35,11 +35,11 @@ Status as of Nov 1, 2026. The work is committed and pushed to `main`; a producti
 | --- | --- | --- | --- | --- | --- |
 | Objectives (6) | 6 | 0 | 0 | 0 | 0 |
 | Business requirements (15) | 15 | 0 | 0 | 0 | 0 |
-| Functional requirements (20) | 13 | 1 | 4 | 2 | 0 |
-| Non-functional requirements (10) | 3 | 1 | 4 | 0 | 2 |
+| Functional requirements (20) | 15 | 0 | 3 | 2 | 0 |
+| Non-functional requirements (10) | 3 | 2 | 3 | 0 | 2 |
 | Acceptance criteria (7) | 4 | 0 | 2 | 1 | 0 |
 
-**Still to do:** translate the older pages into Khmer, have a Khmer speaker review the drafts, and test open dialogs and a real screen reader for accessibility. Before relying on production: confirm the deploy, a Khmer PDF, and a real reminder email.
+**Still to do:** have a Khmer speaker review the Khmer text, and try a real screen reader. The production image was built and run locally with Render's limits (512MB, 0.5 CPU): it starts, uses about 400MB, and renders a Khmer plan PDF. Before relying on production: confirm the Render deploy and set `MAIL_HOST` for real reminder emails.
 
 ## Executive summary
 
@@ -180,17 +180,17 @@ Each Power Secret becomes one module with a business outcome and a required exer
 | FR-15 | Review | The system shall prompt a weekly review: steps done, blockers, next week's priorities | BR-05, BR-13 | M | ✅ Done: prompt on Today (FR-70) |
 | FR-16 | Dashboard | The system shall show participant and coach dashboards with metrics BO-01 to BO-06 | BO-01–06 | M | 🔶 Partial: personal card done (FR-75); coach view dropped |
 | FR-17 | Coaching | The system shall let coaches comment on any exercise and flag at-risk participants (no activity 7 days) | All | M | ⛔ Dropped: personal use |
-| FR-18 | Notifications | The system shall send reminders for due steps, weekly review and inactive days | BR-13 | S | 🔷 Built, not fully verified: logic tested; no real email sent, needs `MAIL_HOST` (FR-77) |
+| FR-18 | Notifications | The system shall send reminders for due steps, weekly review and inactive days | BR-13 | S | ✅ Done: delivered over real SMTP in a test; reminder address and a test-email button on the Dashboard and Account page. Your own mail server still needs `MAIL_HOST` (FR-77) |
 | FR-19 | Export | The system shall export a participant's plan as PDF | BR-05 | S | ✅ Done: Plan page; Khmer prints (FR-76) |
-| FR-20 | Admin | The system shall let admins edit module content and cohort settings without code changes | All | M | 🔶 Partial: module text and order done (FR-78); interface text and cohort settings not included |
+| FR-20 | Admin | The system shall let admins edit module content and cohort settings without code changes | All | M | ✅ Done: module text and order (FR-78), and any interface text in English or Khmer from Settings → Account → Edit interface text. Cohort settings dropped: personal use |
 
 ## Non-functional requirements
 
 | ID | Category | Requirement | Status |
 | --- | --- | --- | --- |
-| NFR-01 | Usability | A daily check-in and priority list shall take under 5 minutes on mobile | 🔷 Built, not fully verified: Today page built for phones; the 5 minutes not timed |
-| NFR-02 | Accessibility | Screens shall meet WCAG 2.1 AA | 🔶 Partial: automated checks pass on all pages at rest; open dialogs and a real screen reader not tested |
-| NFR-03 | Language | UI and content shall support English and Khmer; more languages configurable | 🔶 Partial: new pages and modules in Khmer, draft needing review; older pages still English |
+| NFR-01 | Usability | A daily check-in and priority list shall take under 5 minutes on mobile | 🔷 Built, not fully verified: a browser check on a phone screen completes the check-in in 3 taps; not timed with a person |
+| NFR-02 | Accessibility | Screens shall meet WCAG 2.1 AA | 🔶 Partial: automated checks pass on all pages and on every kind of open dialog (focus, name, Escape); a real screen reader not tested |
+| NFR-03 | Language | UI and content shall support English and Khmer; more languages configurable | 🔷 Built, not fully verified: every page, dialog, label and module in Khmer, with Khmer dates; all pages pass layout and accessibility checks in Khmer. The text is a draft for a Khmer speaker to review. Partner messages you generate stay in English |
 | NFR-04 | Privacy | Journals and dreams are private by default; sharing is opt-in per item | ✅ Done: data stays private to each account; no sharing exists |
 | NFR-05 | Security | Personal data encrypted in transit and at rest; role-based access (participant, coach, partner, admin) | 🔶 Partial: role-based access exists, partner and coach roles dropped; encryption not verified |
 | NFR-06 | Availability | 99.5% monthly uptime | ➖ Not applicable: not tested, group program target |
@@ -302,9 +302,10 @@ FR-64 and BR-53, with migrations from V39.
 | 3 | Plan PDF | FR-19 | FR-76 | Done |
 | 3 | Optional daily reminder | FR-18 | FR-77 | Done |
 | 3 | Data export and account deletion | NFR-09 | NFR-09 | Done |
-| 4 | Khmer interface and module text | NFR-03 | NFR-03 | Partial: older pages still English; Khmer needs review |
+| 4 | Khmer interface and module text | NFR-03 | NFR-03 | Built; Khmer needs a speaker's review |
 | 4 | Admin editing of module text and order | FR-20 | FR-78 | Done |
-| 4 | Accessibility checks | NFR-02 | NFR-02 | Automated checks pass on new pages; older pages and manual testing not done |
+| 4 | Admin editing of interface text | FR-20 | FR-20 | Done |
+| 4 | Accessibility checks | NFR-02 | NFR-02 | Automated checks pass on all pages and open dialogs; real screen reader not tested |
 | 4 | Performance check | NFR-07 | NFR-07 | Under 3s to page heading on simulated 4G, locally only |
 
 **Module exercises:** where the app already records an exercise's output, that data

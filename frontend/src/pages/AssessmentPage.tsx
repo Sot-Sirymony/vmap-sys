@@ -17,16 +17,17 @@ import type { ChainAssessmentSummary, ChainScoreKey } from '../types/vision';
 import { localDateIso } from '../utils/localDate';
 import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 const SCORES = [1, 2, 3, 4, 5];
 
 const CHAINS: { key: ChainScoreKey; label: string; question: string }[] = [
-  { key: 'settlingScore', label: 'Settling for average', question: 'I expect more of myself than what is merely comfortable.' },
-  { key: 'fearScore', label: 'Fear of failure', question: 'I try things even when they might not work.' },
-  { key: 'criticismScore', label: 'Avoiding criticism', question: 'What others may say does not stop me from acting.' },
-  { key: 'visionScore', label: 'Unclear vision', question: 'I can describe exactly what I want and when I want it.' },
-  { key: 'knowledgeScore', label: 'Not knowing how', question: 'When I do not know how, I find out instead of stopping.' },
-  { key: 'resourcesScore', label: 'Lack of resources', question: 'When I lack something, I look for who could supply it.' },
+  { key: 'settlingScore', label: tr('Settling for average'), question: tr('I expect more of myself than what is merely comfortable.') },
+  { key: 'fearScore', label: tr('Fear of failure'), question: tr('I try things even when they might not work.') },
+  { key: 'criticismScore', label: tr('Avoiding criticism'), question: tr('What others may say does not stop me from acting.') },
+  { key: 'visionScore', label: tr('Unclear vision'), question: tr('I can describe exactly what I want and when I want it.') },
+  { key: 'knowledgeScore', label: tr('Not knowing how'), question: tr('When I do not know how, I find out instead of stopping.') },
+  { key: 'resourcesScore', label: tr('Lack of resources'), question: tr('When I lack something, I look for who could supply it.') },
 ];
 
 /** FR-71: the six-chain self-assessment, its retake, and progress from the baseline. */

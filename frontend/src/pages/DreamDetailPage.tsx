@@ -30,6 +30,7 @@ import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vis
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { DreamCommitmentCard } from '../components/vision-map/DreamCommitmentCard';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 /** Per-dream rollup for the overview cards. */
 type DreamStats = { goals: number; steps: number; tasks: number; progress: number };
@@ -80,7 +81,7 @@ export function DreamDetailPage() {
       setTasks(taskData);
       setError('');
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load vision map.');
+      setError(loadError instanceof Error ? loadError.message : tr('Unable to load vision map.'));
     } finally {
       setLoading(false);
     }
@@ -152,23 +153,23 @@ export function DreamDetailPage() {
 
   return (
     <PageSection
-      title="Vision Map"
-      subtitle={overviewMode ? 'Every dream at a glance — open one to work its tree.' : 'View one dream from area to executable tasks.'}
+      title={tr('Vision Map')}
+      subtitle={overviewMode ? tr('Every dream at a glance — open one to work its tree.') : tr('View one dream from area to executable tasks.')}
     >
       {dreams.length > 0 && (
         <Card>
           <CardContent sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
             <FilterSelect
-              label="Vision Area"
+              label={tr('Vision Area')}
               value={filterVisionAreaId}
               onChange={setFilterVisionAreaId}
               options={optionsFromEntities(visionAreas, (area) => area.name)}
-              allLabel="All areas"
+              allLabel={tr('All areas')}
             />
             {!overviewMode && (
               <>
                 <label>
-                  Dream
+                  {tr('Dream')}
                   <FormControl fullWidth size="small">
                     <Select
                       SelectDisplayProps={{ 'aria-label': 'Dream' }}
@@ -176,19 +177,19 @@ export function DreamDetailPage() {
                       displayEmpty
                       onChange={(event) => event.target.value && navigate(`/dreams/${event.target.value}${location.search}`)}
                     >
-                      {areaDreams.length === 0 && <MenuItem value="" disabled><em>No dreams in this area</em></MenuItem>}
+                      {areaDreams.length === 0 && <MenuItem value="" disabled><em>{tr('No dreams in this area')}</em></MenuItem>}
                       {areaDreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}{dream.archived ? ' (archived)' : ''}</MenuItem>)}
                     </Select>
                   </FormControl>
                 </label>
                 <FilterSelect
-                  label="Priority"
+                  label={tr('Priority')}
                   value={filterPriority}
                   onChange={setFilterPriority}
                   options={optionsFromLabels(priorityLabels)}
                 />
                 <FilterSelect
-                  label="Status"
+                  label={tr('Status')}
                   value={filterStatus}
                   onChange={setFilterStatus}
                   options={optionsFromLabels(workStatusLabels)}
@@ -204,19 +205,19 @@ export function DreamDetailPage() {
 
       {overviewMode && !loading && !error && dreams.length === 0 && (
         <EmptyState
-          headline="No dreams on the map yet"
+          headline={tr('No dreams on the map yet')}
           icon={MoonStar}
-          action={<Button type="button" onClick={() => navigate('/dreams?create=dream')}>Create your first dream</Button>}
+          action={<Button type="button" onClick={() => navigate('/dreams?create=dream')}>{tr('Create your first dream')}</Button>}
         >
-          A dream is the meaningful outcome everything else builds toward — create one and the map grows from there.
+          {tr('A dream is the meaningful outcome everything else builds toward — create one and the map grows from there.')}
         </EmptyState>
       )}
-      {overviewMode && areaHasNoDreams && <EmptyState>No dreams in this vision area yet.</EmptyState>}
+      {overviewMode && areaHasNoDreams && <EmptyState>{tr('No dreams in this vision area yet.')}</EmptyState>}
       {overviewMode && !loading && areaDreams.length > 0 && (
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
           {areaDreams.map((dream) => {
             const stats = dreamStats.get(dream.id) ?? { goals: 0, steps: 0, tasks: 0, progress: 0 };
-            const areaName = visionAreas.find((area) => area.id === dream.visionAreaId)?.name ?? 'Unassigned';
+            const areaName = visionAreas.find((area) => area.id === dream.visionAreaId)?.name ?? tr('Unassigned');
             return (
               <Card key={dream.id} className="map-overview-card">
                 <CardActionArea
@@ -233,7 +234,7 @@ export function DreamDetailPage() {
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                       <StatusBadge status={dream.status} />
-                      {dream.moonshot && <Rocket size={14} aria-label="Moonshot" style={{ color: 'var(--moonshot-fg)' }} />}
+                      {dream.moonshot && <Rocket size={14} aria-label={tr('Moonshot')} style={{ color: 'var(--moonshot-fg)' }} />}
                       {dream.targetDate && (
                         <Typography variant="caption" color="text.secondary">target {dream.targetDate}</Typography>
                       )}
@@ -244,8 +245,8 @@ export function DreamDetailPage() {
                     </Box>
                     <Typography variant="caption" color="text.secondary">
                       {stats.goals === 0
-                        ? 'No goals yet — open to add the first'
-                        : `${stats.goals} ${stats.goals === 1 ? 'goal' : 'goals'} · ${stats.steps} ${stats.steps === 1 ? 'step' : 'steps'} · ${stats.tasks} ${stats.tasks === 1 ? 'task' : 'tasks'}`}
+                        ? tr('No goals yet — open to add the first')
+                        : tr('{goals} goal(s) · {steps} step(s) · {tasks} task(s)', { goals: stats.goals, steps: stats.steps, tasks: stats.tasks })}
                     </Typography>
                   </CardContent>
                 </CardActionArea>
@@ -255,15 +256,15 @@ export function DreamDetailPage() {
         </Box>
       )}
 
-      {!overviewMode && !areaHasNoDreams && !loading && !selectedDream && <EmptyState>No dream selected.</EmptyState>}
+      {!overviewMode && !areaHasNoDreams && !loading && !selectedDream && <EmptyState>{tr('No dream selected.')}</EmptyState>}
       {!overviewMode && !areaHasNoDreams && selectedDream && (
         <>
         <Breadcrumbs
           crumbs={[
-            { label: 'All dreams', to: `/vision-map${location.search}` },
+            { label: tr('All dreams'), to: `/vision-map${location.search}` },
             selectedArea
               ? { label: selectedArea.name, to: `/dreams?visionAreaId=${selectedArea.id}` }
-              : { label: 'Unassigned' },
+              : { label: tr('Unassigned') },
             { label: selectedDream.title },
           ]}
         />
@@ -280,7 +281,7 @@ export function DreamDetailPage() {
         )}
         <VisionMapTree
           dream={selectedDream}
-          visionAreaName={selectedArea?.name ?? 'Unassigned'}
+          visionAreaName={selectedArea?.name ?? tr('Unassigned')}
           goals={goals}
           steps={steps}
           tasks={tasks}

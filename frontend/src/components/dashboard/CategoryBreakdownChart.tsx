@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import { ChartTooltipContent } from './ChartTooltipContent';
 import { CATEGORICAL_PIE_SLOTS, categoricalPieColor, chartBlueRamp, chartPrimary, pieLabelColor } from '../../theme';
 import { useThemeSettings } from '../../context/ThemeModeContext';
+import { tr } from '../../i18n/translate';
 
 // A single-hue depth ramp off Fluent's Communication Blue — pressed to light
 // tint — for charts with no specific semantic color mapping. Category is
@@ -234,7 +235,7 @@ export function CategoryBreakdownChart({
       <CardContent>
         {chartData.length === 0 ? (
           <Box sx={{ display: 'flex', height: 220, alignItems: 'center', justifyContent: 'center' }}>
-            <Box component="span" sx={{ fontSize: 'var(--font-body-sm)', color: 'text.secondary' }}>No data yet.</Box>
+            <Box component="span" sx={{ fontSize: 'var(--font-body-sm)', color: 'text.secondary' }}>{tr('No data yet.')}</Box>
           </Box>
         ) : variant === 'pie' ? (
           <PieBreakdown data={chartData} total={total} onSliceClick={openCategory} />

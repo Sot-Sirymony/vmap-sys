@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography';
 import { EmptyState } from '../common/EmptyState';
 import { semanticTints } from '../../theme';
 import type { DashboardEnergyBudget } from '../../types/vision';
+import { tr } from '../../i18n/translate';
 
 /**
  * FR-34.2: the weekly Energy Budget. Shows this week's tasks split by energy
@@ -24,20 +25,20 @@ export function EnergyBudgetCard({ budget }: { budget?: DashboardEnergyBudget })
   const total = charge + neutral + drain;
 
   const cells = [
-    { label: 'Charge', count: charge, tint: semanticTints.positive },
-    { label: 'Neutral', count: neutral, tint: semanticTints.neutral },
-    { label: 'Drain', count: drain, tint: semanticTints.warning },
+    { label: tr('Charge'), count: charge, tint: semanticTints.positive },
+    { label: tr('Neutral'), count: neutral, tint: semanticTints.neutral },
+    { label: tr('Drain'), count: drain, tint: semanticTints.warning },
   ];
 
   return (
     <Card>
       <CardHeader
-        title="Energy budget"
-        subheader="This week's tasks by energy demand — charging work weighed against draining work"
+        title={tr('Energy budget')}
+        subheader={tr('This week\'s tasks by energy demand — charging work weighed against draining work')}
       />
       <CardContent>
         {total === 0 ? (
-          <EmptyState>No tasks due this week — nothing to weigh yet.</EmptyState>
+          <EmptyState>{tr('No tasks due this week — nothing to weigh yet.')}</EmptyState>
         ) : (
           <Stack spacing={2}>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
@@ -68,7 +69,7 @@ function BalanceLine({ net }: { net: number }) {
     return (
       <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', color: 'text.secondary' }}>
         <Minus size={16} />
-        <Typography variant="body2">Balanced — charging and draining work are even this week.</Typography>
+        <Typography variant="body2">{tr('Balanced — charging and draining work are even this week.')}</Typography>
       </Stack>
     );
   }
@@ -79,8 +80,7 @@ function BalanceLine({ net }: { net: number }) {
     <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', color: tone }}>
       <Icon size={16} />
       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        Net {net > 0 ? `+${net}` : net} — this week leans {draining ? 'draining' : 'energising'}
-        {draining ? '. Consider what you could move.' : '.'}
+        {tr(draining ? 'Net {net} — this week leans draining. Consider what you could move.' : 'Net {net} — this week leans energising.', { net: net > 0 ? `+${net}` : net })}
       </Typography>
     </Stack>
   );

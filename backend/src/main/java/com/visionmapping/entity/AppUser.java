@@ -66,6 +66,10 @@ public class AppUser extends BaseAuditableEntity {
     @Column(name = "last_reminder_on")
     private LocalDate lastReminderOn;
 
+    /** Where reminders go; null sends them to the login email. */
+    @Column(name = "reminder_email")
+    private String reminderEmail;
+
     // FR-39.6: appearance preferences live on the account so a chosen look
     // follows the user across browsers and devices. Every field is non-null
     // with the same default the frontend has used since FR-18, so a user who

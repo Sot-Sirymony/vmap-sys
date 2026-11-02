@@ -1,4 +1,5 @@
 import Checkbox from '@mui/material/Checkbox';
+import { tr } from '../../i18n/translate';
 
 type ShowArchivedToggleProps = {
   checked: boolean;
@@ -10,7 +11,7 @@ export function ShowArchivedToggle({ checked, onToggle }: ShowArchivedToggleProp
   return (
     <label className="checkbox-field">
       <Checkbox checked={checked} onChange={onToggle} />
-      Show archived
+      {tr('Show archived')}
     </label>
   );
 }

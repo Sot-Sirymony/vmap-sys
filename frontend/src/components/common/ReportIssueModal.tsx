@@ -15,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import type { ReportType, Severity } from '../../types/vision';
 import { reportTypeLabels, severityLabels } from '../../utils/enumLabels';
+import { tr } from '../../i18n/translate';
 
 const reportTypes: ReportType[] = ['BUG', 'IMPROVEMENT', 'QUESTION', 'OTHER'];
 const severities: Severity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
@@ -62,18 +63,18 @@ export function ReportIssueModal({ onClose, onSubmitted }: ReportIssueModalProps
       onSubmitted?.();
       onClose();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to submit your report.');
+      setError(submitError instanceof Error ? submitError.message : tr('Unable to submit your report.'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal title="Report an issue" onClose={onClose}>
+    <Modal title={tr('Report an issue')} onClose={onClose}>
       <form className="form-grid" onSubmit={handleSubmit}>
         {error && <ErrorMessage message={error} />}
         <label>
-          Type
+          {tr('Type')}
           <FormControl fullWidth size="small">
             <Select
               SelectDisplayProps={{ 'aria-label': 'Type' }}
@@ -88,7 +89,7 @@ export function ReportIssueModal({ onClose, onSubmitted }: ReportIssueModalProps
         </label>
         {reportType === 'BUG' && (
           <label>
-            Severity
+            {tr('Severity')}
             <FormControl fullWidth size="small">
               <Select
                 SelectDisplayProps={{ 'aria-label': 'Severity' }}
@@ -103,23 +104,23 @@ export function ReportIssueModal({ onClose, onSubmitted }: ReportIssueModalProps
           </label>
         )}
         <label className="field-full">
-          Title
+          {tr('Title')}
           <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus maxLength={220} />
         </label>
         <label className="field-full">
-          What happened?
+          {tr('What happened?')}
           <Textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="Steps you took, what you expected, and what happened instead."
+            placeholder={tr('Steps you took, what you expected, and what happened instead.')}
           />
           <span className="field-hint">
             The page you're on ({location.pathname}) and app version ({APP_VERSION}) are attached automatically.
           </span>
         </label>
         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', mt: 1 }}>
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" disabled={saving}>{saving ? 'Sending…' : 'Send report'}</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{tr('Cancel')}</Button>
+          <Button type="submit" disabled={saving}>{saving ? tr('Sending…') : tr('Send report')}</Button>
         </Stack>
       </form>
     </Modal>

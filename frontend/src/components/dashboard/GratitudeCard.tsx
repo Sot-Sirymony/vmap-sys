@@ -16,6 +16,7 @@ import { gratitudeCategoryLabels } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
 import { EmptyState } from '../common/EmptyState';
 import { Input } from '../common/Input';
+import { tr } from '../../i18n/translate';
 
 /**
  * FR-59.2: this week's count plus the 2-3 most recent entries, with a
@@ -49,7 +50,7 @@ export function GratitudeCard({ token, gratitude, onChanged }: {
       setCategory('OTHER');
       onChanged();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to log this.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to log this.'));
     } finally {
       setSaving(false);
     }
@@ -63,15 +64,15 @@ export function GratitudeCard({ token, gratitude, onChanged }: {
       await archiveGratitudeEntry(token, id);
       onChanged();
     } catch (archiveError) {
-      setError(archiveError instanceof Error ? archiveError.message : 'Unable to remove this.');
+      setError(archiveError instanceof Error ? archiveError.message : tr('Unable to remove this.'));
     }
   }
 
   return (
     <Card>
       <CardHeader
-        title="Gratitude"
-        subheader={`${countThisWeek} logged this week — what's already going well, not just what's unfinished`}
+        title={tr('Gratitude')}
+        subheader={tr("{count} logged this week — what's already going well, not just what's unfinished", { count: countThisWeek })}
       />
       <CardContent>
         <Stack spacing={2}>
@@ -91,17 +92,17 @@ export function GratitudeCard({ token, gratitude, onChanged }: {
               <Input
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="What are you grateful for?"
-                aria-label="What are you grateful for?"
+                placeholder={tr('What are you grateful for?')}
+                aria-label={tr('What are you grateful for?')}
               />
             </Box>
             <Button type="submit" disabled={saving || !description.trim()}>
-              {saving ? 'Logging…' : 'Log it'}
+              {saving ? tr('Logging…') : tr('Log it')}
             </Button>
           </Box>
           {error && <Typography variant="body2" color="error">{error}</Typography>}
           {recent.length === 0 ? (
-            <EmptyState>Nothing logged yet — the first entry starts the list.</EmptyState>
+            <EmptyState>{tr('Nothing logged yet — the first entry starts the list.')}</EmptyState>
           ) : (
             <Stack spacing={1}>
               {recent.map((entry) => (
@@ -109,7 +110,7 @@ export function GratitudeCard({ token, gratitude, onChanged }: {
                   <Typography variant="body2" sx={{ flex: 1 }}>
                     <strong>{gratitudeCategoryLabels[entry.category]}</strong> — {entry.description}
                   </Typography>
-                  <IconButton size="small" aria-label="Remove" onClick={() => void handleArchive(entry.id)}>
+                  <IconButton size="small" aria-label={tr('Remove')} onClick={() => void handleArchive(entry.id)}>
                     <X size={14} />
                   </IconButton>
                 </Stack>

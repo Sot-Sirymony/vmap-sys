@@ -13,22 +13,23 @@ import Typography from '@mui/material/Typography';
 import { Check, Contrast, Monitor, Moon, Settings2, Sun, Waves } from 'lucide-react';
 import { accentOptions, backgroundTones, fontFamilies, fontStack, interfaceStyles, themePresets, type AccentId, type Density } from '../../theme';
 import { useThemeSettings, type FontSize, type ThemeMode } from '../../context/ThemeModeContext';
+import { tr } from '../../i18n/translate';
 
 const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
+  { value: 'light', label: tr('Light') },
+  { value: 'dark', label: tr('Dark') },
+  { value: 'system', label: tr('System') },
 ];
 
 const DENSITY_OPTIONS: { value: Density; label: string }[] = [
-  { value: 'comfortable', label: 'Comfortable' },
-  { value: 'compact', label: 'Compact' },
+  { value: 'comfortable', label: tr('Comfortable') },
+  { value: 'compact', label: tr('Compact') },
 ];
 
 const FONT_SIZE_OPTIONS: { value: FontSize; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
+  { value: 'small', label: tr('Small') },
+  { value: 'medium', label: tr('Medium') },
+  { value: 'large', label: tr('Large') },
 ];
 
 const SUBHEADER_SX = { lineHeight: '30px', bgcolor: 'transparent' } as const;
@@ -91,8 +92,8 @@ export function AppearanceMenu() {
 
   return (
     <>
-      <Tooltip title="Appearance">
-        <IconButton onClick={(event) => setAnchor(event.currentTarget)} aria-label="Appearance settings" size="small">
+      <Tooltip title={tr('Appearance')}>
+        <IconButton onClick={(event) => setAnchor(event.currentTarget)} aria-label={tr('Appearance settings')} size="small">
           <ModeIcon size={18} />
         </IconButton>
       </Tooltip>
@@ -102,7 +103,7 @@ export function AppearanceMenu() {
         onClose={() => setAnchor(null)}
         slotProps={{ list: { dense: true }, paper: { sx: { maxHeight: '80vh', width: 268 } } }}
       >
-        <ListSubheader sx={SUBHEADER_SX}>Theme</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Theme')}</ListSubheader>
         {themePresets.map((option) => (
           <MenuItem key={option.id} onClick={() => applyPreset(option.mode, option.accent)}>
             {check(preset === option.stored)}
@@ -117,12 +118,12 @@ export function AppearanceMenu() {
         {preset === 'CUSTOM' && (
           <MenuItem disabled>
             {check(true)}
-            <Typography variant="body2">Custom</Typography>
+            <Typography variant="body2">{tr('Custom')}</Typography>
           </MenuItem>
         )}
 
         <Divider />
-        <ListSubheader sx={SUBHEADER_SX}>Mode</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Mode')}</ListSubheader>
         {MODE_OPTIONS.map((option) => (
           <MenuItem key={option.value} onClick={() => update({ mode: option.value })}>
             {check(settings.mode === option.value)}
@@ -131,7 +132,7 @@ export function AppearanceMenu() {
         ))}
 
         <Divider />
-        <ListSubheader sx={SUBHEADER_SX}>Accent</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Accent')}</ListSubheader>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, px: 2, py: 0.5 }}>
           {(Object.keys(accentOptions) as AccentId[]).map((accentId) => {
             const swatch = accentOptions[accentId][resolvedMode];
@@ -161,13 +162,13 @@ export function AppearanceMenu() {
         </Box>
 
         <Divider sx={{ mt: 1 }} />
-        <ListSubheader sx={SUBHEADER_SX}>Background</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Background')}</ListSubheader>
         {/* FR-40.5: high contrast paints pure white/black surfaces, so the tone
             has no effect while it is on. Disabling the options states that,
             instead of letting a click appear to work and change nothing. */}
         {settings.highContrast && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2, pb: 0.5 }}>
-            Off while high contrast is on
+            {tr('Off while high contrast is on')}
           </Typography>
         )}
         {backgroundTones.map((tone) => (
@@ -196,7 +197,7 @@ export function AppearanceMenu() {
         <Divider />
         {/* FR-48: unlike the tone above, this stays enabled under high contrast
             — it changes shape, not legibility. */}
-        <ListSubheader sx={SUBHEADER_SX}>Interface style</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Interface style')}</ListSubheader>
         {interfaceStyles.map((style) => (
           <MenuItem key={style.id} onClick={() => update({ interfaceStyle: style.id })}>
             {check(settings.interfaceStyle === style.id)}
@@ -205,7 +206,7 @@ export function AppearanceMenu() {
         ))}
 
         <Divider />
-        <ListSubheader sx={SUBHEADER_SX}>Density</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Density')}</ListSubheader>
         {DENSITY_OPTIONS.map((option) => (
           <MenuItem key={option.value} onClick={() => update({ density: option.value })}>
             {check(settings.density === option.value)}
@@ -214,7 +215,7 @@ export function AppearanceMenu() {
         ))}
 
         <Divider />
-        <ListSubheader sx={SUBHEADER_SX}>Font</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Font')}</ListSubheader>
         {fontFamilies.map((font) => (
           <MenuItem key={font.id} onClick={() => update({ fontFamily: font.id })}>
             {check(settings.fontFamily === font.id)}
@@ -224,7 +225,7 @@ export function AppearanceMenu() {
         ))}
 
         <Divider />
-        <ListSubheader sx={SUBHEADER_SX}>Text size</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Text size')}</ListSubheader>
         {FONT_SIZE_OPTIONS.map((option) => (
           <MenuItem key={option.value} onClick={() => update({ fontSize: option.value })}>
             {check(settings.fontSize === option.value)}
@@ -233,17 +234,17 @@ export function AppearanceMenu() {
         ))}
 
         <Divider />
-        <ListSubheader sx={SUBHEADER_SX}>Accessibility</ListSubheader>
+        <ListSubheader sx={SUBHEADER_SX}>{tr('Accessibility')}</ListSubheader>
         {/* FR-39.3/39.4: toggles rather than presets — both must hold whatever
             look the user chose, so they compose with mode instead of replacing it. */}
         <ToggleRow
-          label="High contrast"
+          label={tr('High contrast')}
           icon={<Contrast size={16} />}
           checked={settings.highContrast}
           onToggle={() => update({ highContrast: !settings.highContrast })}
         />
         <ToggleRow
-          label="Reduce motion"
+          label={tr('Reduce motion')}
           icon={<Waves size={16} />}
           checked={settings.reduceMotion}
           onToggle={() => update({ reduceMotion: !settings.reduceMotion })}
@@ -257,7 +258,7 @@ export function AppearanceMenu() {
           }}
         >
           <ListItemIcon sx={{ minWidth: 28 }}><Settings2 size={16} /></ListItemIcon>
-          <Typography variant="body2">All appearance settings…</Typography>
+          <Typography variant="body2">{tr('All appearance settings…')}</Typography>
         </MenuItem>
       </Menu>
     </>

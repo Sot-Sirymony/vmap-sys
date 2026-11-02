@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { api, createSeedAccount, deleteSeedAccount, signIn, settle, today, type Seed } from './support';
+import { api, createSeedAccount, deleteSeedAccount, expectNoSidewaysScroll, signIn, settle, today, type Seed } from './support';
 
 let seed: Seed;
 
@@ -108,4 +108,41 @@ test('Khmer applies across the app and survives a reload', async ({ page }) => {
   await page.goto('/today');
   await expect(page.getByText('អាទិភាព', { exact: true })).toBeVisible();
   await settle(page);
+});
+
+test('NFR-01: the whole daily check-in fits a phone and takes a handful of taps', async ({ page }) => {
+  await api(seed.token, `/habits?date=${today}`, 'POST', { name: 'Read' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const started = Date.now();
+  let taps = 0;
+  const tap = async (locator: ReturnType<typeof page.getByRole>) => {
+    await locator.click();
+    taps += 1;
+  };
+
+  await page.goto('/today');
+  await expect(page.getByText('Call the bank')).toBeVisible();
+  await tap(page.getByRole('button', { name: '4', exact: true }));
+  await tap(page.getByRole('checkbox', { name: 'Read', exact: true }));
+  await tap(page.getByRole('checkbox', { name: 'Complete Call the bank' }));
+  await expect(page.getByText('Call the bank')).toHaveCount(0);
+  await expect(page.getByRole('checkbox', { name: 'Read', exact: true })).toBeChecked();
+  await expect(page.getByRole('button', { name: '4', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expectNoSidewaysScroll(page);
+
+  // Three taps on one screen: an attitude score, each habit, each due item.
+  expect(taps).toBe(3);
+  expect(Date.now() - started).toBeLessThan(5 * 60_000);
+});
+
+test('a reminder email set on the Dashboard is the one Account settings shows', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText(`Reminders now go to ${seed.email}.`, { exact: false })).toBeVisible();
+  await page.getByLabel('Send reminders to').fill('inbox@example.org');
+  await page.getByRole('button', { name: 'Save email' }).click();
+  await expect(page.getByText('Reminder email saved.')).toBeVisible();
+
+  await page.goto('/settings/account');
+  await expect(page.getByLabel('Send reminders to')).toHaveValue('inbox@example.org');
+  expect((await api<{ sendsTo: string }>(seed.token, '/account/reminders')).sendsTo).toBe('inbox@example.org');
 });

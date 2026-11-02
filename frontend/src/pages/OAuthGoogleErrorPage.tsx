@@ -1,6 +1,7 @@
 import { CircleAlert } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 /**
  * The OAuth error screen: what the user sees when Google sign-in could not be
@@ -18,18 +19,18 @@ export function OAuthGoogleErrorPage() {
         <span className="auth-status-icon auth-status-icon--error">
           <CircleAlert size={32} />
         </span>
-        <h1 className="auth-status-title">We couldn't sign you in with Google</h1>
+        <h1 className="auth-status-title">{tr('We couldn\'t sign you in with Google')}</h1>
         <p className="auth-status-text">
-          There was a problem authenticating your account. Please try again or use your password.
+          {tr('There was a problem authenticating your account. Please try again or use your password.')}
         </p>
         {state?.message && <p className="auth-status-note">{state.message}</p>}
       </div>
       <div className="auth-actions">
         <button className="auth-submit" type="button" onClick={() => navigate('/oauth/google')}>
-          Try again
+          {tr('Try again')}
         </button>
         <Link className="auth-submit auth-submit--text" to="/login">
-          Sign in with email instead
+          {tr('Sign in with email instead')}
         </Link>
       </div>
     </AuthLayout>

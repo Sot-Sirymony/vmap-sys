@@ -28,6 +28,7 @@ import type { Dream, Review, ReviewRequest, ReviewType, VisionArea } from '../ty
 import { reviewTypeLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 // FR-16.3: guided questions per review type, shown alongside the form.
 const REVIEW_GUIDES: Record<ReviewType, string[]> = {
@@ -58,15 +59,15 @@ const REVIEW_GUIDES: Record<ReviewType, string[]> = {
 // server-side). FR-53 widened the checklist from five checks to ten,
 // covering execution quality alongside the original planning-quality ones.
 const DILIGENCE_QUESTIONS = [
-  { key: 'diligenceClearVision', label: 'My vision for this area is still clear and specific' },
-  { key: 'diligenceWorkedPlan', label: 'I worked from a plan instead of just reacting' },
-  { key: 'diligenceUsedLeverage', label: 'I used tools or partners where they beat solo effort' },
-  { key: 'diligencePriorityFirst', label: 'The highest-priority work got my best hours' },
-  { key: 'diligenceSmarterRoute', label: 'Nothing I am doing the hard way has an obvious smarter route' },
-  { key: 'diligenceRightlyPlanned', label: 'I planned this properly before starting, with input where I needed it' },
-  { key: 'diligenceRightlyPerformed', label: 'I did the work to a standard I would stand behind' },
-  { key: 'diligenceExpeditious', label: 'I moved on this promptly rather than letting it sit' },
-  { key: 'diligenceEfficient', label: 'I used my time and tools well, without waste' },
+  { key: 'diligenceClearVision', label: tr('My vision for this area is still clear and specific') },
+  { key: 'diligenceWorkedPlan', label: tr('I worked from a plan instead of just reacting') },
+  { key: 'diligenceUsedLeverage', label: tr('I used tools or partners where they beat solo effort') },
+  { key: 'diligencePriorityFirst', label: tr('The highest-priority work got my best hours') },
+  { key: 'diligenceSmarterRoute', label: tr('Nothing I am doing the hard way has an obvious smarter route') },
+  { key: 'diligenceRightlyPlanned', label: tr('I planned this properly before starting, with input where I needed it') },
+  { key: 'diligenceRightlyPerformed', label: tr('I did the work to a standard I would stand behind') },
+  { key: 'diligenceExpeditious', label: tr('I moved on this promptly rather than letting it sit') },
+  { key: 'diligenceEfficient', label: tr('I used my time and tools well, without waste') },
   { key: 'diligenceQualityOutcome', label: 'The result is actually solid, not just finished' },
 ] as const;
 
@@ -150,7 +151,7 @@ export function ReviewsPage() {
     const answers = DILIGENCE_QUESTIONS.map((question) => diligence[question.key]);
     const answeredCount = answers.filter((answer) => answer !== null).length;
     if (checklistApplies && answeredCount > 0 && answeredCount < answers.length) {
-      crud.setError('Answer every diligence question, or skip the whole checklist.');
+      crud.setError(tr('Answer every diligence question, or skip the whole checklist.'));
       return false;
     }
     const includeChecklist = checklistApplies && answeredCount === answers.length;
@@ -275,43 +276,43 @@ export function ReviewsPage() {
   const columns: DataTableColumn<Review>[] = [
     {
       key: 'reviewType',
-      label: 'Type',
+      label: tr('Type'),
       sortValue: (review) => reviewTypeLabels[review.reviewType],
       render: (review) => <StatusBadge status={review.reviewType} />,
     },
-    { key: 'reviewDate', label: 'Date', sortValue: (review) => review.reviewDate, render: (review) => review.reviewDate },
+    { key: 'reviewDate', label: tr('Date'), sortValue: (review) => review.reviewDate, render: (review) => review.reviewDate },
     {
       key: 'letterRank',
-      label: 'Rank',
+      label: tr('Rank'),
       sortValue: (review) => review.letterRank ?? '',
       render: (review) => review.letterRank ?? '—',
     },
     {
       key: 'summary',
-      label: 'Summary',
+      label: tr('Summary'),
       sortValue: (review) => review.summary,
       render: (review) => review.summary || '-',
     },
     {
       key: 'diligence',
-      label: 'Diligence',
+      label: tr('Diligence'),
       sortValue: (review) => review.diligenceClearVision != null,
       render: (review) => {
         if (review.diligenceClearVision == null) {
           return '-';
         }
-        return review.diligenceScorePercent != null ? `Done (${review.diligenceScorePercent}%)` : 'Done';
+        return review.diligenceScorePercent != null ? tr('Done ({percent}%)', { percent: review.diligenceScorePercent }) : tr('Done');
       },
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (review) => review.archived,
       render: (review) => <StatusBadge status={review.archived ? 'ARCHIVED' : 'ACTIVE'} />,
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (review) => (
         <RowActionsMenu
@@ -320,7 +321,7 @@ export function ReviewsPage() {
           onRestore={() => void crud.restore(review.id)}
           onDeletePermanently={() => void crud.permanentlyDelete(review.id)}
           archived={review.archived}
-          label="Review actions"
+          label={tr('Review actions')}
         />
       ),
     },
@@ -348,7 +349,7 @@ export function ReviewsPage() {
   const formFields = (
     <>
       <label>
-        Type
+        {tr('Type')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Type" }} value={reviewType} onChange={(event) => setReviewType(event.target.value as ReviewType)}>
             {(['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY'] as const).map((value) => (
@@ -358,15 +359,15 @@ export function ReviewsPage() {
         </FormControl>
       </label>
       <label>
-        Date
+        {tr('Date')}
         <Input type="datetime-local" step={1} value={reviewDate} onChange={(event) => setReviewDate(event.target.value)} required />
       </label>
       <label>
-        Rank
+        {tr('Rank')}
         <Input
           value={letterRank}
           onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-          placeholder="e.g. A"
+          placeholder={tr('e.g. A')}
           maxLength={1}
         />
         <span className="field-hint">
@@ -374,19 +375,19 @@ export function ReviewsPage() {
         </span>
       </label>
       <label>
-        Vision Area
+        {tr('Vision Area')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Vision Area" }} displayEmpty value={relatedVisionAreaId} onChange={(event) => handleVisionAreaChange(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {visionAreas.map((area) => <MenuItem value={String(area.id)} key={area.id}>{area.name}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Dream
+        {tr('Dream')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Dream" }} displayEmpty value={relatedDreamId} onChange={(event) => setRelatedDreamId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {formDreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
           </Select>
         </FormControl>
@@ -401,9 +402,9 @@ export function ReviewsPage() {
       </div>
       {checklistApplies && (
         <div className="field-full diligence-checklist">
-          <strong>Diligence checkup</strong>
+          <strong>{tr('Diligence checkup')}</strong>
           <p>
-            Answer all ten, or leave the whole checkup empty to skip it.
+            {tr('Answer all ten, or leave the whole checkup empty to skip it.')}
             {diligenceAnsweredCount > 0 && diligenceAnsweredCount < DILIGENCE_QUESTIONS.length && (
               <> <span className="field-hint">({diligenceAnsweredCount} of {DILIGENCE_QUESTIONS.length} answered so far)</span></>
             )}
@@ -421,39 +422,39 @@ export function ReviewsPage() {
                 }))}
                 aria-label={question.label}
               >
-                <ToggleButton value="yes">Yes</ToggleButton>
-                <ToggleButton value="no">No</ToggleButton>
+                <ToggleButton value="yes">{tr('Yes')}</ToggleButton>
+                <ToggleButton value="no">{tr('No')}</ToggleButton>
               </ToggleButtonGroup>
             </div>
           ))}
           <label>
-            Checkup note
+            {tr('Checkup note')}
             <Textarea value={diligenceNote} onChange={(event) => setDiligenceNote(event.target.value)} />
           </label>
         </div>
       )}
       <label className="field-full">
-        Summary
+        {tr('Summary')}
         <Textarea value={summary} onChange={(event) => setSummary(event.target.value)} />
       </label>
       <label className="field-full">
-        Completed Tasks
+        {tr('Completed Tasks')}
         <Textarea value={completedTasks} onChange={(event) => setCompletedTasks(event.target.value)} />
       </label>
       <label className="field-full">
-        Blocked Tasks
+        {tr('Blocked Tasks')}
         <Textarea value={blockedTasks} onChange={(event) => setBlockedTasks(event.target.value)} />
       </label>
       <label className="field-full">
-        Lessons Learned
+        {tr('Lessons Learned')}
         <Textarea value={lessonsLearned} onChange={(event) => setLessonsLearned(event.target.value)} />
       </label>
       <label className="field-full">
-        Next Actions
+        {tr('Next Actions')}
         <Textarea value={nextActions} onChange={(event) => setNextActions(event.target.value)} />
       </label>
       <label className="field-full">
-        What's something you're grateful for this period?
+        {tr('What\'s something you\'re grateful for this period?')}
         <Textarea value={gratitudeNote} onChange={(event) => setGratitudeNote(event.target.value)} />
         <span className="field-hint">
           Optional. Answering logs it to your gratitude list; leaving it blank changes nothing about this review.
@@ -463,10 +464,10 @@ export function ReviewsPage() {
   );
 
   return (
-    <PageSection title="Reviews" subtitle="Record daily, weekly, monthly, and quarterly reflections.">
+    <PageSection title={tr('Reviews')} subtitle={tr('Record daily, weekly, monthly, and quarterly reflections.')}>
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create review"
+        createLabel={tr('Create review')}
         editTitle="Edit Review"
         saving={crud.saving}
         onSubmit={handleSubmit}
@@ -479,27 +480,27 @@ export function ReviewsPage() {
       <FilterPanel activeCount={[searchTerm, filterReviewType, filterLetterRank, filterVisionAreaId, filterDreamId].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="reviews" />
         <FilterSelect
-          label="Review Type"
+          label={tr('Review Type')}
           value={filterReviewType}
           onChange={setFilterReviewType}
           options={optionsFromLabels(reviewTypeLabels)}
         />
         {letterRankOptions.length > 0 && (
           <FilterSelect
-            label="Rank"
+            label={tr('Rank')}
             value={filterLetterRank}
             onChange={setFilterLetterRank}
             options={letterRankOptions}
           />
         )}
         <FilterSelect
-          label="Vision Area"
+          label={tr('Vision Area')}
           value={filterVisionAreaId}
           onChange={setFilterVisionAreaId}
           options={optionsFromEntities(visionAreas, (area) => area.name)}
         />
         <FilterSelect
-          label="Dream"
+          label={tr('Dream')}
           value={filterDreamId}
           onChange={setFilterDreamId}
           options={optionsFromEntities(dreams, (dream) => dream.title)}
@@ -511,7 +512,7 @@ export function ReviewsPage() {
         <DataTable
           rows={filteredReviews}
           columns={columns}
-          emptyMessage={hasFilters ? 'No reviews match these filters.' : 'No reviews yet.'}
+          emptyMessage={hasFilters ? tr('No reviews match these filters.') : tr('No reviews yet.')}
           pageResetKey={`${searchTerm}|${filterReviewType}|${filterLetterRank}|${filterVisionAreaId}|${filterDreamId}`}
           defaultSortKey="reviewDate"
           defaultSortDirection="desc"
@@ -519,12 +520,12 @@ export function ReviewsPage() {
           selection={{
             selectedIds,
             onChange: setSelectedIds,
-            rowLabel: (review) => `${reviewTypeLabels[review.reviewType]} review ${review.reviewDate}`,
+            rowLabel: (review) => tr('{type} review {date}', { type: reviewTypeLabels[review.reviewType], date: review.reviewDate }),
             actions: (
               <BulkArchiveAction
                 selectedIds={selectedIds}
                 items={crud.items}
-                entityLabel="review(s)"
+                entityLabel={tr('review(s)')}
                 onArchive={async (ids) => {
                   await crud.archiveMany(ids);
                   setSelectedIds(new Set());

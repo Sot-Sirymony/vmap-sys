@@ -88,6 +88,12 @@ public class PlanPdfService {
         table.setWidthPercentage(100);
         table.setSpacingBefore(6);
         table.setHeaderRows(1);
+        // Khmer vowel signs rise above the Latin cap height and subscripts drop
+        // below the baseline, so size rows by the font's real ascent and descent.
+        table.getDefaultCell().setUseAscender(true);
+        table.getDefaultCell().setUseDescender(true);
+        table.getDefaultCell().setPaddingTop(3);
+        table.getDefaultCell().setPaddingBottom(4);
         for (String column : COLUMNS) {
             table.addCell(pdfFonts.phrase(column, pdfFonts.getSmallBold()));
         }

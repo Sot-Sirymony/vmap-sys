@@ -30,6 +30,8 @@ import { localDateIso } from '../utils/localDate';
 import { priorityLabels } from '../utils/enumLabels';
 import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
+import { formatDate } from '../i18n/formatDate';
 
 const MAX_HABITS = 3;
 const ATTITUDE_SCORES = [1, 2, 3, 4, 5];
@@ -102,7 +104,8 @@ export function TodayPage() {
     }
   }
 
-  const subtitle = new Date(`${date}T00:00:00`).toLocaleDateString(language === 'km' ? 'km-KH' : undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const day = new Date(`${date}T00:00:00`);
+  const subtitle = language === 'km' ? formatDate(day, { weekday: true }) : day.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
     <PageSection title={t('Today')} subtitle={subtitle}>
@@ -121,7 +124,7 @@ export function TodayPage() {
 
           {plan.undatedStepCount > 0 && (
             <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate('/steps/undated')}>{t('Set dates')}</Button>}>
-              {t(plan.undatedStepCount === 1 ? '1 step has no date, so it cannot appear here.' : '{count} steps have no date, so they cannot appear here.', { count: plan.undatedStepCount })}
+              {t(plan.undatedStepCount === 1 ? tr('1 step has no date, so it cannot appear here.') : '{count} steps have no date, so they cannot appear here.', { count: plan.undatedStepCount })}
             </Alert>
           )}
 

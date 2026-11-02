@@ -453,7 +453,8 @@ the server's date is rejected for check-ins and habit checks.
 |---|---|---|
 | GET | `/api/progress-metrics?date=` | BO-01 to BO-06 for this user |
 | GET | `/api/dreams/{id}/plan.pdf` | The dream's plan as a PDF |
-| GET, PUT | `/api/account/reminders` | Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh" }` |
+| GET, PUT | `/api/account/reminders` | Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh", "reminderEmail": "me@example.org" }`. A blank `reminderEmail` uses the login email; the reply's `sendsTo` says where mail goes |
+| POST | `/api/account/reminders/test` | Sends a test reminder to `sendsTo` now; 400 when no mail server is set up |
 | GET | `/api/account/export` | All of this user's data as JSON. Never includes the password hash |
 | POST | `/api/account/delete` | Permanently delete the account: `{ "password": "..." }`. **400** if wrong |
 
@@ -467,6 +468,10 @@ accept `?language=km`; a language with no text falls back to English.
 | GET | `/api/admin/modules?language=` | All modules' text in one language (`en`, `km`) |
 | PUT | `/api/admin/modules/{number}/content/{language}` | Save text and optional `fieldLabels` |
 | PUT | `/api/admin/modules/order` | `{ "orderedNumbers": [...] }`, every module exactly once |
+| GET | `/api/ui-text?language=` | Public. Interface text an admin changed, as `{ "English text": "replacement" }` |
+| GET | `/api/admin/ui-text?language=` | Admin. The changes for one language, with ids |
+| PUT | `/api/admin/ui-text` | Admin. `{ "language": "km", "sourceText": "Today", "text": "..." }`; placeholders such as `{count}` must be kept |
+| DELETE | `/api/admin/ui-text/{id}` | Admin. Removes a change, restoring the app's own text |
 
 ## Excel
 

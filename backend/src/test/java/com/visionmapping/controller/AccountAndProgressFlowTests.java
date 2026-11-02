@@ -139,6 +139,39 @@ class AccountAndProgressFlowTests {
     }
 
     @Test
+    void remindersGoToTheChosenAddressAndFallBackToTheLoginEmail() throws Exception {
+        String email = "chosen-" + System.nanoTime() + "@example.com";
+        String token = register(email);
+        long userId = userId(email);
+        step(token, goal(token, dream(token, "Own a home")), TODAY);
+
+        send(put("/api/account/reminders"), token, Map.of("enabled", true, "timeZone", "UTC", "reminderEmail", "not-an-email"))
+                .andExpect(status().isBadRequest());
+        send(put("/api/account/reminders"), token, Map.of("enabled", true, "timeZone", "UTC", "reminderEmail", " inbox@example.org "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reminderEmail").value("inbox@example.org"))
+                .andExpect(jsonPath("$.sendsTo").value("inbox@example.org"));
+        clearInvocations(reminderMailer);
+        reminderService.remindIfDue(userId, TODAY.atTime(9, 0).atZone(ZoneId.of("UTC")).toInstant());
+        verify(reminderMailer, times(1)).send(eq("inbox@example.org"), contains("A step"));
+
+        send(put("/api/account/reminders"), token, Map.of("enabled", true, "timeZone", "UTC", "reminderEmail", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reminderEmail").doesNotExist())
+                .andExpect(jsonPath("$.sendsTo").value(email));
+    }
+
+    @Test
+    void aTestEmailIsRefusedWhenNoMailServerIsSetUp() throws Exception {
+        String token = register("test-mail-" + System.nanoTime() + "@example.com");
+        clearInvocations(reminderMailer);
+        mockMvc.perform(post("/api/account/reminders/test").header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("No email server is set up yet, so a test email cannot be sent."));
+        verify(reminderMailer, never()).send(anyString(), anyString());
+    }
+
+    @Test
     void aDayWithNothingToSaySendsNothing() throws Exception {
         String email = "quiet-" + System.nanoTime() + "@example.com";
         String token = register(email);

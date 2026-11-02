@@ -13,6 +13,7 @@ import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { Textarea } from '../common/Textarea';
 import type { Priority, VisionArea } from '../../types/vision';
+import { tr } from '../../i18n/translate';
 
 // FR-58.1: this product's own already-established category vocabulary
 // (CLAUDE.md's own Vision Area examples), reused here as starter
@@ -69,7 +70,7 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNa
       setCreatedArea(area);
       setStep(2);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to create the vision area.');
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to create the vision area.'));
     } finally {
       setSaving(false);
     }
@@ -105,7 +106,7 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNa
       setAddedDreams((dreams) => [...dreams, dreamTitle.trim()]);
       setDreamTitle('');
     } catch (dreamError) {
-      setError(dreamError instanceof Error ? dreamError.message : 'Unable to add the dream.');
+      setError(dreamError instanceof Error ? dreamError.message : tr('Unable to add the dream.'));
     } finally {
       setAddingDream(false);
     }
@@ -131,13 +132,13 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNa
       {step === 0 && (
         <form className="form-grid" onSubmit={handleStepSubmit}>
           <label className="field-full">
-            What area of life or work is this?
-            <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus placeholder="e.g. Career, Health, Family" />
-            <span className="field-hint">A major, ongoing part of your life or work — everything else builds under it.</span>
+            {tr('What area of life or work is this?')}
+            <Input value={name} onChange={(event) => setName(event.target.value)} required autoFocus placeholder={tr('e.g. Career, Health, Family')} />
+            <span className="field-hint">{tr('A major, ongoing part of your life or work — everything else builds under it.')}</span>
           </label>
           <div className="field-full wizard-suggestions">
             <span className="field-hint">
-              Common starting points — a balanced first plan usually covers more than one:
+              {tr('Common starting points — a balanced first plan usually covers more than one:')}
             </span>
             <div className="inline-meta">
               {STARTER_AREA_SUGGESTIONS.map((suggestion) => {
@@ -157,19 +158,19 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNa
             </div>
           </div>
           <label>
-            How important is it right now?
+            {tr('How important is it right now?')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': "How important is it right now?" }} value={priority} onChange={(event) => setPriority(event.target.value as Priority)}>
-                <MenuItem value="LOW">Low</MenuItem>
-                <MenuItem value="MEDIUM">Medium</MenuItem>
-                <MenuItem value="HIGH">High</MenuItem>
-                <MenuItem value="CRITICAL">Critical</MenuItem>
+                <MenuItem value="LOW">{tr('Low')}</MenuItem>
+                <MenuItem value="MEDIUM">{tr('Medium')}</MenuItem>
+                <MenuItem value="HIGH">{tr('High')}</MenuItem>
+                <MenuItem value="CRITICAL">{tr('Critical')}</MenuItem>
               </Select>
             </FormControl>
           </label>
           <div className="field-full row-actions">
-            <Button type="submit" disabled={!name.trim()}>Continue</Button>
-            <Button type="button" variant="secondary" onClick={onSkip}>Skip the guide</Button>
+            <Button type="submit" disabled={!name.trim()}>{tr('Continue')}</Button>
+            <Button type="button" variant="secondary" onClick={onSkip}>{tr('Skip the guide')}</Button>
           </div>
         </form>
       )}
@@ -177,16 +178,15 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNa
       {step === 1 && (
         <form className="form-grid" onSubmit={handleStepSubmit}>
           <label className="field-full">
-            What does this area look like when it's going well?
+            {tr('What does this area look like when it\'s going well?')}
             <Textarea value={visionStatement} onChange={(event) => setVisionStatement(event.target.value)} autoFocus />
             <span className="field-hint">
-              Optional, but writing this down first makes every dream you add underneath easier to judge — does it
-              actually move you toward this, or not?
+              {tr('Optional, but writing this down first makes every dream you add underneath easier to judge — does it actually move you toward this, or not?')}
             </span>
           </label>
           <div className="field-full row-actions">
-            <Button type="submit" disabled={saving}>{saving ? 'Creating...' : 'Create vision area'}</Button>
-            <Button type="button" variant="secondary" onClick={() => setStep(0)}>Back</Button>
+            <Button type="submit" disabled={saving}>{saving ? tr('Creating...') : tr('Create vision area')}</Button>
+            <Button type="button" variant="secondary" onClick={() => setStep(0)}>{tr('Back')}</Button>
           </div>
         </form>
       )}
@@ -207,17 +207,17 @@ export function VisionAreaWizard({ token, onClose, onSkip, onCreated, existingNa
             <Input
               value={dreamTitle}
               onChange={(event) => setDreamTitle(event.target.value)}
-              placeholder="e.g. Become a confident public speaker"
+              placeholder={tr('e.g. Become a confident public speaker')}
               autoFocus
             />
             <Button type="submit" variant="secondary" disabled={addingDream || !dreamTitle.trim()}>
-              {addingDream ? 'Adding...' : 'Add dream'}
+              {addingDream ? tr('Adding...') : tr('Add dream')}
             </Button>
           </form>
-          <span className="field-full field-hint"><MoonStar size={14} /> A dream added here can be fleshed out with its own why and success definition any time.</span>
+          <span className="field-full field-hint"><MoonStar size={14} /> {tr('A dream added here can be fleshed out with its own why and success definition any time.')}</span>
           <div className="field-full row-actions">
-            <Button type="button" onClick={() => { finish(); navigate('/dreams'); }}>View Dreams</Button>
-            <Button type="button" variant="secondary" onClick={finish}>Done</Button>
+            <Button type="button" onClick={() => { finish(); navigate('/dreams'); }}>{tr('View Dreams')}</Button>
+            <Button type="button" variant="secondary" onClick={finish}>{tr('Done')}</Button>
           </div>
         </div>
       )}

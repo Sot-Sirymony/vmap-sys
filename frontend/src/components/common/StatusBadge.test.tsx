@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setCurrentLanguage } from '../../i18n/translate';
+import { PriorityBadge } from './PriorityBadge';
 import { StatusBadge } from './StatusBadge';
 
 function chipFor(status: string) {
@@ -35,5 +37,16 @@ describe('StatusBadge', () => {
     render(<StatusBadge status="NOT_A_REAL_STATUS" />);
 
     expect(chipFor('NOT A REAL STATUS')).toBeInTheDocument();
+  });
+});
+
+describe('badges in Khmer', () => {
+  afterEach(() => setCurrentLanguage('en'));
+
+  it('shows the Khmer label for a raw status or priority', () => {
+    setCurrentLanguage('km');
+    render(<><StatusBadge status="IN_PROGRESS" /><PriorityBadge priority="HIGH" /></>);
+    expect(screen.getByText('កំពុងធ្វើ')).toBeInTheDocument();
+    expect(screen.getByText('ខ្ពស់')).toBeInTheDocument();
   });
 });

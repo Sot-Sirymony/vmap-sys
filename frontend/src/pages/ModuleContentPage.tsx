@@ -20,6 +20,7 @@ import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import type { ModuleContent } from '../types/vision';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 const LANGUAGES = [{ value: 'en', label: 'English' }, { value: 'km', label: 'ខ្មែរ (Khmer)' }];
 
@@ -50,7 +51,7 @@ export function ModuleContentPage() {
       setModules(next);
       setSelectedNumber((current) => current ?? next[0]?.number ?? null);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Unable to load module content.');
+      setLoadError(error instanceof Error ? error.message : tr('Unable to load module content.'));
     }
   }, [token, user?.role, language]);
 
@@ -82,7 +83,7 @@ export function ModuleContentPage() {
       setSaved(true);
       await load();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Unable to save this module.');
+      setActionError(error instanceof Error ? error.message : tr('Unable to save this module.'));
     }
   }
 
@@ -98,27 +99,27 @@ export function ModuleContentPage() {
       await reorderModules(token, order);
       await load();
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Unable to change the order.');
+      setActionError(error instanceof Error ? error.message : tr('Unable to change the order.'));
     }
   }
 
   if (user?.role !== 'ADMIN') {
     return (
-      <PageSection title="Module content" subtitle="Edit the text and order of the modules">
-        <Alert severity="info">Only an administrator can edit module content.</Alert>
+      <PageSection title={tr('Module content')} subtitle={tr('Edit the text and order of the modules')}>
+        <Alert severity="info">{tr('Only an administrator can edit module content.')}</Alert>
       </PageSection>
     );
   }
 
   return (
-    <PageSection title="Module content" subtitle="Changes apply to every account on this server">
+    <PageSection title={tr('Module content')} subtitle={tr('Changes apply to every account on this server')}>
       {loadError && <ErrorMessage message={loadError} onRetry={() => void load()} />}
       {!modules && !loadError && <Loading />}
       {modules && (
         <Stack spacing={2}>
           {actionError && <Alert severity="error">{actionError}</Alert>}
           <label>
-            Language
+            {tr('Language')}
             <FormControl fullWidth size="small">
               <Select SelectDisplayProps={{ 'aria-label': 'Language' }} value={language} onChange={(event) => setLanguage(event.target.value)}>
                 {LANGUAGES.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
@@ -127,15 +128,15 @@ export function ModuleContentPage() {
           </label>
 
           <Card>
-            <CardHeader title="Order" subheader="Modules unlock from top to bottom. Saved progress is kept." />
+            <CardHeader title={tr('Order')} subheader={tr('Modules unlock from top to bottom. Saved progress is kept.')} />
             <CardContent>
               <Stack spacing={0.5}>
                 {modules.map((module, index) => (
                   <Box key={module.number} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <IconButton size="small" disabled={index === 0} aria-label={`Move ${module.title} up`} onClick={() => void move(index, -1)}>
+                    <IconButton size="small" disabled={index === 0} aria-label={tr('Move {title} up', { title: module.title })} onClick={() => void move(index, -1)}>
                       <ArrowUp size={14} />
                     </IconButton>
-                    <IconButton size="small" disabled={index === modules.length - 1} aria-label={`Move ${module.title} down`} onClick={() => void move(index, 1)}>
+                    <IconButton size="small" disabled={index === modules.length - 1} aria-label={tr('Move {title} down', { title: module.title })} onClick={() => void move(index, 1)}>
                       <ArrowDown size={14} />
                     </IconButton>
                     <Button variant={module.number === selectedNumber ? 'primary' : 'secondary'} onClick={() => { setSaved(false); setSelectedNumber(module.number); }}>
@@ -149,25 +150,25 @@ export function ModuleContentPage() {
 
           {selected && (
             <Card>
-              <CardHeader title="Edit text" subheader={selected.translated ? undefined : 'Showing English because this language has no text for this module yet.'} />
+              <CardHeader title={tr('Edit text')} subheader={selected.translated ? undefined : tr('Showing English because this language has no text for this module yet.')} />
               <CardContent>
                 <Box component="form" onSubmit={(event) => void handleSave(event)} sx={{ display: 'grid', gap: 1.5 }}>
-                  <label>Title<Input aria-label="Title" value={title} onChange={(event) => setTitle(event.target.value)} required /></label>
-                  <label>Summary<Textarea value={summary} onChange={(event) => setSummary(event.target.value)} required /></label>
-                  <label>Guidance<Textarea value={guidance} onChange={(event) => setGuidance(event.target.value)} required /></label>
-                  <label>Exercise instructions<Textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} required /></label>
-                  {selected.fields.length > 0 && <Typography variant="body2" sx={{ fontWeight: 600 }}>Form field labels</Typography>}
+                  <label>{tr('Title')}<Input aria-label={tr('Title')} value={title} onChange={(event) => setTitle(event.target.value)} required /></label>
+                  <label>{tr('Summary')}<Textarea value={summary} onChange={(event) => setSummary(event.target.value)} required /></label>
+                  <label>{tr('Guidance')}<Textarea value={guidance} onChange={(event) => setGuidance(event.target.value)} required /></label>
+                  <label>{tr('Exercise instructions')}<Textarea value={instructions} onChange={(event) => setInstructions(event.target.value)} required /></label>
+                  {selected.fields.length > 0 && <Typography variant="body2" sx={{ fontWeight: 600 }}>{tr('Form field labels')}</Typography>}
                   {selected.fields.map((field) => (
                     <Input
                       key={field.key}
-                      aria-label={`Label for ${field.key}`}
+                      aria-label={tr('Label for {field}', { field: field.key })}
                       value={labels[field.key] ?? ''}
                       onChange={(event) => setLabels((current) => ({ ...current, [field.key]: event.target.value }))}
                       required
                     />
                   ))}
-                  {saved && <Alert severity="success">Saved.</Alert>}
-                  <Box><Button type="submit">Save module</Button></Box>
+                  {saved && <Alert severity="success">{tr('Saved.')}</Alert>}
+                  <Box><Button type="submit">{tr('Save module')}</Button></Box>
                 </Box>
               </CardContent>
             </Card>

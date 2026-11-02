@@ -4,6 +4,7 @@ import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { ConfirmDialog } from './ConfirmDialog';
+import { tr } from '../../i18n/translate';
 
 const DEFAULT_CONFIRM_MESSAGE = 'Archive this record? You can bring it back later with "Show archived".';
 const DEFAULT_DELETE_MESSAGE = 'Permanently delete this record and everything under it? This cannot be undone.';
@@ -73,38 +74,38 @@ export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanent
       </IconButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose}>
         {archived ? ([
-          onRestore && <MenuItem key="restore" onClick={() => { handleClose(); onRestore(); }}>Restore</MenuItem>,
+          onRestore && <MenuItem key="restore" onClick={() => { handleClose(); onRestore(); }}>{tr('Restore')}</MenuItem>,
           onDeletePermanently && (
             <MenuItem
               key="delete"
               onClick={() => { handleClose(); setDeleteMessage(confirmDelete ?? DEFAULT_DELETE_MESSAGE); }}
               sx={{ color: 'error.main' }}
             >
-              Delete permanently
+              {tr('Delete permanently')}
             </MenuItem>
           ),
         ]) : ([
           ...extraActions.map((action) => (
             <MenuItem key={action.label} onClick={() => { handleClose(); action.onClick(); }}>{action.label}</MenuItem>
           )),
-          <MenuItem key="edit" onClick={() => { handleClose(); onEdit(); }}>Edit</MenuItem>,
-          <MenuItem key="archive" onClick={() => void handleArchiveClick()}>Archive</MenuItem>,
+          <MenuItem key="edit" onClick={() => { handleClose(); onEdit(); }}>{tr('Edit')}</MenuItem>,
+          <MenuItem key="archive" onClick={() => void handleArchiveClick()}>{tr('Archive')}</MenuItem>,
         ])}
       </Menu>
       {confirmMessage !== null && (
         <ConfirmDialog
-          title="Confirm archive"
+          title={tr('Confirm archive')}
           message={confirmMessage}
-          confirmLabel="Archive"
+          confirmLabel={tr('Archive')}
           onConfirm={() => { setConfirmMessage(null); onArchive(); }}
           onClose={() => setConfirmMessage(null)}
         />
       )}
       {deleteMessage !== null && onDeletePermanently && (
         <ConfirmDialog
-          title="Delete permanently"
+          title={tr('Delete permanently')}
           message={deleteMessage}
-          confirmLabel="Delete permanently"
+          confirmLabel={tr('Delete permanently')}
           danger
           onConfirm={() => { setDeleteMessage(null); onDeletePermanently(); }}
           onClose={() => setDeleteMessage(null)}

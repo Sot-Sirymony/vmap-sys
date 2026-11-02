@@ -16,6 +16,7 @@ import { EnergyBudgetCard } from '../components/dashboard/EnergyBudgetCard';
 import { GettingStarted } from '../components/dashboard/GettingStarted';
 import { GratitudeCard } from '../components/dashboard/GratitudeCard';
 import { ProgressMetricsCard } from '../components/dashboard/ProgressMetricsCard';
+import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -46,6 +47,8 @@ import { heatmapLevelColors, priorityColor, statusColor } from '../theme';
 import { obstacleTypeLabels, partnerStatusLabels } from '../utils/enumLabels';
 import { useThemeSettings } from '../context/ThemeModeContext';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
+import { formatDate } from '../i18n/formatDate';
 
 const PRIORITY_ORDER: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 const PARTNER_STATUS_ORDER: PartnerStatus[] = ['TO_CONTACT', 'CONTACTED', 'AGREED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'];
@@ -66,9 +69,9 @@ const HEATMAP_LEVEL_COLORS = heatmapLevelColors;
 type DashboardPeriod = 'month' | 'quarter' | 'year';
 
 const PERIOD_OPTIONS = [
-  { value: 'month', label: 'This month' },
-  { value: 'quarter', label: 'This quarter' },
-  { value: 'year', label: 'This year' },
+  { value: 'month', label: tr('This month') },
+  { value: 'quarter', label: tr('This quarter') },
+  { value: 'year', label: tr('This year') },
 ];
 
 function isPeriod(value: string): value is DashboardPeriod {
@@ -139,7 +142,7 @@ export function DashboardPage() {
         setSummary(summaryData);
         setError('');
       })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load dashboard.'))
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : tr('Unable to load dashboard.')))
       .finally(() => setLoading(false));
   }
 
@@ -184,7 +187,7 @@ export function DashboardPage() {
   const cadenceReviewCount = Object.values(reviewCadence).reduce((sum, count) => sum + count, 0);
 
   const progressTrend = (summary?.progressTrend ?? []).map((point) => ({
-    label: new Date(`${point.weekEnd}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    label: formatDate(new Date(`${point.weekEnd}T00:00:00`)),
     progress: Number(point.progress),
   }));
 
@@ -207,21 +210,21 @@ export function DashboardPage() {
 
   return (
     <PageSection
-      title="Dashboard"
-      subtitle="Track progress across dreams, goals, steps, and tasks."
+      title={tr('Dashboard')}
+      subtitle={tr('Track progress across dreams, goals, steps, and tasks.')}
       // The comp puts the scope controls and the primary action in the title
       // row itself, not in a filter card below it.
       actions={
         <>
           <FilterSelect
-            label="Vision Area"
+            label={tr('Vision Area')}
             value={filterVisionAreaId}
             onChange={setFilterVisionAreaId}
             options={optionsFromEntities(visionAreas, (area) => area.name)}
-            allLabel="All areas"
+            allLabel={tr('All areas')}
           />
           <label>
-            Period
+            {tr('Period')}
             <FormControl size="small" sx={{ minWidth: 140 }}>
               <Select SelectDisplayProps={{ 'aria-label': "Period" }} value={period} onChange={(event) => setPeriodValue(event.target.value)}>
                 {PERIOD_OPTIONS.map((option) => (
@@ -231,7 +234,7 @@ export function DashboardPage() {
             </FormControl>
           </label>
           <MuiButton variant="contained" onClick={() => navigate('/tasks?new=true')} sx={{ whiteSpace: 'nowrap' }}>
-            New Task
+            {tr('New Task')}
           </MuiButton>
         </>
       }
@@ -247,30 +250,31 @@ export function DashboardPage() {
       <AttentionPanel attention={summary?.attention} visionAreaId={filterVisionAreaId} />
       <DashboardSummary
         summary={summary}
-        periodLabel={PERIOD_OPTIONS.find((option) => option.value === period)?.label.toLowerCase() ?? 'this month'}
+        periodLabel={PERIOD_OPTIONS.find((option) => option.value === period)?.label.toLowerCase() ?? tr('this month')}
         dueInPeriodLink={`/tasks?dueFrom=${from}&dueTo=${to}${scopeSuffix}`}
         visionAreaId={filterVisionAreaId}
       />
       <ProgressMetricsCard token={token} />
+      <ReminderSettingsCard token={token} />
       <EnergyBudgetCard budget={summary?.energyBudget} />
       <GratitudeCard token={token} gratitude={summary?.gratitude} onChanged={() => reloadSummary(false)} />
       {/* The comp pairs the priority-task list with the dreams donut in one row. */}
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, alignItems: 'stretch' }}>
       <Card>
-        <CardHeader title="Priority tasks" subheader="The five highest-priority tasks that are not yet completed" />
+        <CardHeader title={tr('Priority tasks')} subheader={tr('The five highest-priority tasks that are not yet completed')} />
         <CardContent>
           {priorityTasks.length === 0 ? (
-            <EmptyState>No open priority tasks.</EmptyState>
+            <EmptyState>{tr('No open priority tasks.')}</EmptyState>
           ) : (
-            <TableContainer tabIndex={0} role="region" aria-label="Priority tasks">
+            <TableContainer tabIndex={0} role="region" aria-label={tr('Priority tasks')}>
             <Table className="data-table">
               <TableHead>
                 <TableRow>
-                  <TableCell>Task</TableCell>
-                  <TableCell>Due</TableCell>
-                  <TableCell>Priority</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Progress</TableCell>
+                  <TableCell>{tr('Task')}</TableCell>
+                  <TableCell>{tr('Due')}</TableCell>
+                  <TableCell>{tr('Priority')}</TableCell>
+                  <TableCell>{tr('Status')}</TableCell>
+                  <TableCell>{tr('Progress')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -293,8 +297,8 @@ export function DashboardPage() {
         </CardContent>
       </Card>
         <CategoryBreakdownChart
-          title="Dreams by vision area"
-          description="Where active dreams are concentrated — click a slice to open those dreams"
+          title={tr('Dreams by vision area')}
+          description={tr('Where active dreams are concentrated — click a slice to open those dreams')}
           data={summary?.dreamsByVisionArea ?? {}}
           variant="pie"
           // FR-41: Vision Areas are categories with no inherent meaning, so the
@@ -303,7 +307,7 @@ export function DashboardPage() {
           // palettes for exactly that reason (BR-14). The chart assigns the
           // fills itself and rolls the smallest areas into "Other areas" once
           // they outrun the palette, so no two areas can share a colour.
-          otherLabel="Other areas"
+          otherLabel={tr('Other areas')}
           // The payload keys this chart by area *name*, so the drill-down maps
           // it back to the area's id before linking. The rolled-up slice spans
           // several areas, so it opens the unfiltered list.
@@ -315,8 +319,8 @@ export function DashboardPage() {
       </Box>
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
         <CategoryBreakdownChart
-          title="Goals by status"
-          description="Current distribution across all active goals — click a slice to open those goals"
+          title={tr('Goals by status')}
+          description={tr('Current distribution across all active goals — click a slice to open those goals')}
           data={summary?.goalsByStatus ?? {}}
           formatLabel={formatLabel}
           variant="donut"
@@ -324,8 +328,8 @@ export function DashboardPage() {
           linkForKey={(key) => `/goals?status=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
-          title="Tasks by status"
-          description="Current distribution across all tasks — click a slice to open that column"
+          title={tr('Tasks by status')}
+          description={tr('Current distribution across all tasks — click a slice to open that column')}
           data={tasksByStatus}
           formatLabel={formatLabel}
           variant="donut"
@@ -333,8 +337,8 @@ export function DashboardPage() {
           linkForKey={(key) => `/tasks?status=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
-          title="Tasks by priority"
-          description="Workload skew from Low to Critical — click a bar to open those tasks"
+          title={tr('Tasks by priority')}
+          description={tr('Workload skew from Low to Critical — click a bar to open those tasks')}
           data={tasksByPriority}
           formatLabel={formatLabel}
           variant="bar"
@@ -342,8 +346,8 @@ export function DashboardPage() {
           linkForKey={(key) => `/tasks?priority=${key}${scopeSuffix}`}
         />
         <CategoryBreakdownChart
-          title="Top obstacles"
-          description="What's actually blocking active work right now — click a slice to open those obstacles"
+          title={tr('Top obstacles')}
+          description={tr('What\'s actually blocking active work right now — click a slice to open those obstacles')}
           data={obstaclesByType}
           formatLabel={(key) => obstacleTypeLabels[key as keyof typeof obstacleTypeLabels]}
           variant="pie"
@@ -351,15 +355,15 @@ export function DashboardPage() {
           // chart ranks them and folds the tail; it used to keep the top four
           // and then add a fifth "Other" slice, which wrapped the palette and
           // painted that slice the same colour as the biggest type.
-          otherLabel="Other types"
+          otherLabel={tr('Other types')}
           // The rollup bucket spans several types, so it links to the plain list.
           linkForKey={(key) => (key === OTHER_CATEGORY_KEY ? '/obstacles' : `/obstacles?type=${key}`)}
         />
         <Card>
-          <CardHeader title="Progress trend" subheader="Portfolio-wide average task progress over the last 12 weeks" />
+          <CardHeader title={tr('Progress trend')} subheader={tr('Portfolio-wide average task progress over the last 12 weeks')} />
           <CardContent>
             {progressTrend.length === 0 ? (
-              <EmptyState>No progress logged yet — update a task's progress to start the trend.</EmptyState>
+              <EmptyState>{tr('No progress logged yet — update a task\'s progress to start the trend.')}</EmptyState>
             ) : (
               <Box sx={{ width: '100%', height: 220 }}>
                 <ProgressTrendChart data={progressTrend} />
@@ -368,10 +372,10 @@ export function DashboardPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader title="Vision Area progress" subheader="Average goal progress per area — lowest first is what needs attention" />
+          <CardHeader title={tr('Vision Area progress')} subheader={tr('Average goal progress per area — lowest first is what needs attention')} />
           <CardContent>
             {visionAreaProgress.length === 0 ? (
-              <EmptyState>No vision areas yet.</EmptyState>
+              <EmptyState>{tr('No vision areas yet.')}</EmptyState>
             ) : (
               <Box sx={{ width: '100%', height: Math.max(220, visionAreaProgress.length * 44) }}>
                 <VisionAreaProgressChart data={visionAreaProgress} />
@@ -382,10 +386,10 @@ export function DashboardPage() {
       </Box>
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
       <Card>
-        <CardHeader title="Partner engagement" subheader="Where partners sit in the pipeline, from first contact to done — click a stage to open those partners" />
+        <CardHeader title={tr('Partner engagement')} subheader={tr('Where partners sit in the pipeline, from first contact to done — click a stage to open those partners')} />
         <CardContent>
           {totalPartners === 0 ? (
-            <EmptyState>No partners yet.</EmptyState>
+            <EmptyState>{tr('No partners yet.')}</EmptyState>
           ) : (
             <>
               <Box sx={{ width: '100%', height: 72 }}>
@@ -419,10 +423,10 @@ export function DashboardPage() {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader title="Review cadence" subheader="Daily and weekly reviews logged over the last 12 weeks" />
+        <CardHeader title={tr('Review cadence')} subheader={tr('Daily and weekly reviews logged over the last 12 weeks')} />
         <CardContent>
           {cadenceReviewCount === 0 ? (
-            <EmptyState>No daily or weekly reviews logged yet.</EmptyState>
+            <EmptyState>{tr('No daily or weekly reviews logged yet.')}</EmptyState>
           ) : (
             <Box sx={{ overflowX: 'auto' }}>
               <Box sx={{ display: 'inline-flex', gap: '3px' }}>
@@ -449,14 +453,14 @@ export function DashboardPage() {
                 ))}
               </Box>
               <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', pt: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">Less</Typography>
+                <Typography variant="caption" color="text.secondary">{tr('Less')}</Typography>
                 {HEATMAP_LEVEL_COLORS.map((color) => (
                   <Box key={color} sx={{ width: 13, height: 13, borderRadius: '3px', bgcolor: color }} />
                 ))}
-                <Typography variant="caption" color="text.secondary">More</Typography>
+                <Typography variant="caption" color="text.secondary">{tr('More')}</Typography>
               </Stack>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', pt: 1 }}>
-                {summary?.weeksWithDiligence ?? 0} of the last 12 weeks include a diligence checkup.
+                {tr('{count} of the last 12 weeks include a diligence checkup.', { count: summary?.weeksWithDiligence ?? 0 })}
               </Typography>
             </Box>
           )}
@@ -470,7 +474,7 @@ export function DashboardPage() {
 }
 
 function formatLabel(value: string) {
-  return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return tr(value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()));
 }
 
 type HeatmapDay = { date: string; count: number; isFuture: boolean };
@@ -519,11 +523,6 @@ function formatHeatmapTooltip(day: HeatmapDay) {
   if (day.isFuture) {
     return '';
   }
-  const label = new Date(`${day.date}T00:00:00`).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  const reviewWord = day.count === 1 ? 'review' : 'reviews';
-  return `${label} — ${day.count} ${reviewWord}`;
+  const label = formatDate(new Date(`${day.date}T00:00:00`), { year: true });
+  return tr(day.count === 1 ? '{date} — 1 review' : '{date} — {count} reviews', { date: label, count: day.count });
 }

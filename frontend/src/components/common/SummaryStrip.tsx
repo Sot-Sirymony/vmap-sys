@@ -1,5 +1,6 @@
 import Chip from '@mui/material/Chip';
 import { semanticTints } from '../../theme';
+import { tr } from '../../i18n/translate';
 
 export type SummaryChipTone = 'neutral' | 'warning' | 'critical' | 'positive';
 
@@ -32,7 +33,7 @@ export function SummaryStrip({ chips }: { chips: SummaryChipItem[] }) {
         return (
           <Chip
             key={chip.key}
-            label={`${chip.count} ${chip.label}`}
+            label={`${chip.count} ${tr(chip.label)}`}
             size="small"
             clickable={Boolean(chip.onClick)}
             onClick={chip.onClick}

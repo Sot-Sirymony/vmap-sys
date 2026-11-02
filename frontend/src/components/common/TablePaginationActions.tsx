@@ -2,6 +2,7 @@ import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import type { TablePaginationActionsProps } from '@mui/material/TablePaginationActions';
+import { tr } from '../../i18n/translate';
 
 /**
  * Pagination actions for MUI TablePagination: first, previous, next, and last
@@ -16,7 +17,7 @@ export function TablePaginationActions({ count, page, rowsPerPage, onPageChange 
       <IconButton
         onClick={(event) => onPageChange(event, 0)}
         disabled={page === 0}
-        aria-label="First page"
+        aria-label={tr('First page')}
         size="small"
       >
         <ChevronsLeft size={18} />
@@ -24,7 +25,7 @@ export function TablePaginationActions({ count, page, rowsPerPage, onPageChange 
       <IconButton
         onClick={(event) => onPageChange(event, page - 1)}
         disabled={page === 0}
-        aria-label="Previous page"
+        aria-label={tr('Previous page')}
         size="small"
       >
         <ChevronLeft size={18} />
@@ -32,7 +33,7 @@ export function TablePaginationActions({ count, page, rowsPerPage, onPageChange 
       <IconButton
         onClick={(event) => onPageChange(event, page + 1)}
         disabled={page >= lastPage}
-        aria-label="Next page"
+        aria-label={tr('Next page')}
         size="small"
       >
         <ChevronRight size={18} />
@@ -40,7 +41,7 @@ export function TablePaginationActions({ count, page, rowsPerPage, onPageChange 
       <IconButton
         onClick={(event) => onPageChange(event, lastPage)}
         disabled={page >= lastPage}
-        aria-label="Last page"
+        aria-label={tr('Last page')}
         size="small"
       >
         <ChevronsRight size={18} />

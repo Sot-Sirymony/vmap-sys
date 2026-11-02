@@ -26,6 +26,7 @@ import { fearLikelihoodLabels } from '../utils/enumLabels';
 import { localDateIso } from '../utils/localDate';
 import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 /**
  * FR-65: the dated logs. Fears are written here and attitude history is read
@@ -144,7 +145,7 @@ export function JournalPage() {
       {fears !== null && (
         <Stack spacing={2}>
           <Card>
-            <CardHeader title={t(editingId === null ? 'Write down a fear' : 'Edit this fear')} subheader={t('Name it, size it, then pick a small test that would challenge it')} />
+            <CardHeader title={t(editingId === null ? tr('Write down a fear') : tr('Edit this fear'))} subheader={t('Name it, size it, then pick a small test that would challenge it')} />
             <CardContent>
               <Box component="form" onSubmit={(event) => void handleSubmit(event)} sx={{ display: 'grid', gap: 1.5 }}>
                 <label>
@@ -174,7 +175,7 @@ export function JournalPage() {
                   <Textarea value={firstTest} onChange={(event) => setFirstTest(event.target.value)} required />
                 </label>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button type="submit" disabled={saving || !ready}>{saving ? t('Saving…') : t(editingId === null ? 'Save fear' : 'Save changes')}</Button>
+                  <Button type="submit" disabled={saving || !ready}>{saving ? t('Saving…') : t(editingId === null ? tr('Save fear') : tr('Save changes'))}</Button>
                   {editingId !== null && <Button variant="secondary" onClick={resetForm}>{t('Cancel')}</Button>}
                 </Box>
               </Box>

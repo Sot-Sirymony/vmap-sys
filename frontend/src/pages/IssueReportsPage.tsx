@@ -37,6 +37,7 @@ import { useToast } from '../context/ToastContext';
 import type { IssueReport, IssueReportStatus } from '../types/vision';
 import { issueReportStatusLabels, reportTypeLabels, severityLabels } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 const statuses: IssueReportStatus[] = ['OPEN', 'IN_REVIEW', 'PLANNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'WONT_FIX'];
 
@@ -84,7 +85,7 @@ export function IssueReportsPage() {
         setReports(data);
         setError('');
       })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load reports.'))
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : tr('Unable to load reports.')))
       .finally(() => setLoading(false));
   }, [token, scope, filterType, filterStatus, filterSeverity]);
 
@@ -98,21 +99,21 @@ export function IssueReportsPage() {
       showToast(message);
       reload();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Action failed.');
+      setError(actionError instanceof Error ? actionError.message : tr('Action failed.'));
     }
   }
 
   const columns: DataTableColumn<IssueReport>[] = [
-    { key: 'code', label: 'Code', sortValue: (report) => report.code, render: (report) => report.code },
+    { key: 'code', label: tr('Code'), sortValue: (report) => report.code, render: (report) => report.code },
     {
       key: 'reportType',
-      label: 'Type',
+      label: tr('Type'),
       sortValue: (report) => reportTypeLabels[report.reportType],
       render: (report) => reportTypeLabels[report.reportType],
     },
     {
       key: 'title',
-      label: 'Title',
+      label: tr('Title'),
       sortValue: (report) => report.title,
       sx: { fontWeight: 500 },
       render: (report) => (
@@ -124,32 +125,32 @@ export function IssueReportsPage() {
     ...(isAdmin && scope === 'all'
       ? [{
           key: 'reporter',
-          label: 'Reporter',
+          label: tr('Reporter'),
           sortValue: (report: IssueReport) => report.reporterName,
           render: (report: IssueReport) => report.reporterName,
         }]
       : []),
     {
       key: 'severity',
-      label: 'Severity',
+      label: tr('Severity'),
       sortValue: (report) => report.severity ?? '',
       render: (report) => (report.severity ? <StatusBadge status={report.severity} /> : '-'),
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (report) => report.status,
       render: (report) => <StatusBadge status={report.status} />,
     },
     {
       key: 'createdAt',
-      label: 'Reported',
+      label: tr('Reported'),
       sortValue: (report) => report.createdAt,
       render: (report) => <span title={report.createdAt}>{formatDateTime(report.createdAt)}</span>,
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (report) => (
         <ReportActions
@@ -158,12 +159,12 @@ export function IssueReportsPage() {
           onView={() => setDetail(report)}
           onTriage={() => setTriageTarget(report)}
           onArchive={() => setConfirm({
-            message: 'Archive this report? You can bring it back later with the archive filter.',
+            message: tr('Archive this report? You can bring it back later with the archive filter.'),
             onConfirm: () => void runAction(archiveIssueReport(token!, report.id), 'Archived.'),
           })}
           onRestore={() => void runAction(restoreIssueReport(token!, report.id), 'Restored.')}
           onDelete={() => setConfirm({
-            message: 'Permanently delete this report? This cannot be undone.',
+            message: tr('Permanently delete this report? This cannot be undone.'),
             danger: true,
             onConfirm: () => void runAction(permanentlyDeleteIssueReport(token!, report.id), 'Deleted.'),
           })}
@@ -179,11 +180,11 @@ export function IssueReportsPage() {
 
   return (
     <PageSection
-      title="Issue Reports"
+      title={tr('Issue Reports')}
       subtitle={isAdmin
-        ? 'Track your reports, or switch to the full queue to triage what others have raised.'
-        : 'Bugs and improvements you’ve raised, and where each one stands.'}
-      actions={<Button type="button" onClick={() => setReportOpen(true)}>Report an issue</Button>}
+        ? tr('Track your reports, or switch to the full queue to triage what others have raised.')
+        : tr('Bugs and improvements you’ve raised, and where each one stands.')}
+      actions={<Button type="button" onClick={() => setReportOpen(true)}>{tr('Report an issue')}</Button>}
     >
       {isAdmin && (
         <ToggleButtonGroup
@@ -193,16 +194,16 @@ export function IssueReportsPage() {
           onChange={(_event, next: Scope | null) => next && setScope(next)}
           sx={{ mb: 1 }}
         >
-          <ToggleButton value="mine">My reports</ToggleButton>
-          <ToggleButton value="all">All reports{openCount > 0 && scope === 'all' ? ` · ${openCount} open` : ''}</ToggleButton>
+          <ToggleButton value="mine">{tr('My reports')}</ToggleButton>
+          <ToggleButton value="all">{tr('All reports')}{openCount > 0 && scope === 'all' ? ` · ${tr('{count} open', { count: openCount })}` : ''}</ToggleButton>
         </ToggleButtonGroup>
       )}
 
       {isAdmin && scope === 'all' && (
         <FilterPanel activeCount={[filterType, filterStatus, filterSeverity].filter(Boolean).length}>
-          <FilterSelect label="Type" value={filterType} onChange={setFilterType} options={optionsFromLabels(reportTypeLabels)} />
-          <FilterSelect label="Status" value={filterStatus} onChange={setFilterStatus} options={optionsFromLabels(issueReportStatusLabels)} />
-          <FilterSelect label="Severity" value={filterSeverity} onChange={setFilterSeverity} options={optionsFromLabels(severityLabels)} />
+          <FilterSelect label={tr('Type')} value={filterType} onChange={setFilterType} options={optionsFromLabels(reportTypeLabels)} />
+          <FilterSelect label={tr('Status')} value={filterStatus} onChange={setFilterStatus} options={optionsFromLabels(issueReportStatusLabels)} />
+          <FilterSelect label={tr('Severity')} value={filterSeverity} onChange={setFilterSeverity} options={optionsFromLabels(severityLabels)} />
         </FilterPanel>
       )}
 
@@ -212,8 +213,8 @@ export function IssueReportsPage() {
       {!loading && !error && reports.length === 0 && (
         <EmptyState>
           {scope === 'all'
-            ? 'No reports match these filters.'
-            : 'You haven’t raised any reports yet. Use "Report an issue" when something looks off.'}
+            ? tr('No reports match these filters.')
+            : tr('You haven’t raised any reports yet. Use "Report an issue" when something looks off.')}
         </EmptyState>
       )}
 
@@ -223,7 +224,7 @@ export function IssueReportsPage() {
             <DataTable
               rows={reports}
               columns={columns}
-              emptyMessage="No reports."
+              emptyMessage={tr('No reports.')}
               defaultSortKey="createdAt"
               defaultSortDirection="desc"
               rowClassName={(report) => (report.archived ? 'row-archived' : '')}
@@ -245,9 +246,9 @@ export function IssueReportsPage() {
       )}
       {confirm && (
         <ConfirmDialog
-          title="Please confirm"
+          title={tr('Please confirm')}
           message={confirm.message}
-          confirmLabel="Confirm"
+          confirmLabel={tr('Confirm')}
           danger={confirm.danger}
           onConfirm={() => { const run = confirm.onConfirm; setConfirm(null); run(); }}
           onClose={() => setConfirm(null)}
@@ -273,16 +274,16 @@ function ReportActions({ report, isAdmin, onView, onTriage, onArchive, onRestore
 
   return (
     <>
-      <IconButton size="small" aria-label="Report actions" onClick={(event) => setAnchorEl(event.currentTarget)}>
+      <IconButton size="small" aria-label={tr('Report actions')} onClick={(event) => setAnchorEl(event.currentTarget)}>
         <MoreVertical size={16} />
       </IconButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={close}>
-        <MenuItem onClick={() => { close(); onView(); }}>View details</MenuItem>
-        {isAdmin && <MenuItem onClick={() => { close(); onTriage(); }}>Change status</MenuItem>}
-        {!report.archived && <MenuItem onClick={() => { close(); onArchive(); }}>Archive</MenuItem>}
-        {report.archived && <MenuItem onClick={() => { close(); onRestore(); }}>Restore</MenuItem>}
+        <MenuItem onClick={() => { close(); onView(); }}>{tr('View details')}</MenuItem>
+        {isAdmin && <MenuItem onClick={() => { close(); onTriage(); }}>{tr('Change status')}</MenuItem>}
+        {!report.archived && <MenuItem onClick={() => { close(); onArchive(); }}>{tr('Archive')}</MenuItem>}
+        {report.archived && <MenuItem onClick={() => { close(); onRestore(); }}>{tr('Restore')}</MenuItem>}
         {report.archived && (
-          <MenuItem sx={{ color: 'error.main' }} onClick={() => { close(); onDelete(); }}>Delete permanently</MenuItem>
+          <MenuItem sx={{ color: 'error.main' }} onClick={() => { close(); onDelete(); }}>{tr('Delete permanently')}</MenuItem>
         )}
       </Menu>
     </>
@@ -301,11 +302,11 @@ function ReportDetailModal({ report, onClose }: { report: IssueReport; onClose: 
         {report.description && (
           <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{report.description}</Typography>
         )}
-        <DetailRow label="Reported by" value={`${report.reporterName} (${report.reporterEmail})`} />
-        <DetailRow label="On page" value={report.contextRoute || '—'} />
-        <DetailRow label="App version" value={report.appVersion || '—'} />
-        <DetailRow label="Reported" value={formatDateTime(report.createdAt)} />
-        {report.resolutionNote && <DetailRow label="Resolution" value={report.resolutionNote} />}
+        <DetailRow label={tr('Reported by')} value={`${report.reporterName} (${report.reporterEmail})`} />
+        <DetailRow label={tr('On page')} value={report.contextRoute || '—'} />
+        <DetailRow label={tr('App version')} value={report.appVersion || '—'} />
+        <DetailRow label={tr('Reported')} value={formatDateTime(report.createdAt)} />
+        {report.resolutionNote && <DetailRow label={tr('Resolution')} value={report.resolutionNote} />}
       </Stack>
     </Modal>
   );
@@ -342,18 +343,18 @@ function TriageModal({ report, onClose, onSaved }: { report: IssueReport; onClos
       showToast('Status updated.');
       onSaved();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Unable to update status.');
+      setError(submitError instanceof Error ? submitError.message : tr('Unable to update status.'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal title={`Triage ${report.code}`} onClose={onClose}>
+    <Modal title={tr('Triage {code}', { code: report.code })} onClose={onClose}>
       <form className="form-grid" onSubmit={handleSubmit}>
         {error && <ErrorMessage message={error} />}
         <label>
-          Status
+          {tr('Status')}
           <FormControl fullWidth size="small">
             <Select
               SelectDisplayProps={{ 'aria-label': 'Status' }}
@@ -367,19 +368,19 @@ function TriageModal({ report, onClose, onSaved }: { report: IssueReport; onClos
           </FormControl>
         </label>
         <label className="field-full">
-          Resolution note
+          {tr('Resolution note')}
           <Textarea
             value={resolutionNote}
             onChange={(event) => setResolutionNote(event.target.value)}
             required={noteRequired}
           />
           {noteRequired && (
-            <span className="field-hint">A resolved bug must record how it was resolved (BR-32).</span>
+            <span className="field-hint">{tr('A resolved bug must record how it was resolved (BR-32).')}</span>
           )}
         </label>
         <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end' }} className="field-full">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>{tr('Cancel')}</Button>
+          <Button type="submit" disabled={saving}>{saving ? tr('Saving…') : tr('Save')}</Button>
         </Stack>
       </form>
     </Modal>

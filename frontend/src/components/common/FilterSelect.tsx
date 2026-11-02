@@ -1,5 +1,6 @@
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
+import { tr } from '../../i18n/translate';
 
 export type FilterOption = { value: string; label: string };
 
@@ -29,7 +30,7 @@ type FilterSelectProps = {
 // filter", which is what lets every page reset a filter the same way — and here
 // it's produced by clearing the box (the X or Escape). Every filter behaves the
 // same whether it has 3 options or 300.
-export function FilterSelect({ label, value, onChange, options, allLabel = 'All' }: FilterSelectProps) {
+export function FilterSelect({ label, value, onChange, options, allLabel = tr('All') }: FilterSelectProps) {
   const selected = options.find((option) => option.value === value) ?? null;
 
   return (
@@ -45,7 +46,7 @@ export function FilterSelect({ label, value, onChange, options, allLabel = 'All'
         renderInput={(params) => (
           <TextField
             {...params}
-            placeholder={allLabel}
+            placeholder={tr(allLabel)}
             slotProps={{ ...params.slotProps, htmlInput: { ...params.slotProps.htmlInput, 'aria-label': label } }}
           />
         )}

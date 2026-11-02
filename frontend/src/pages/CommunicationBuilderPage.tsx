@@ -32,6 +32,7 @@ import type { CommunicationMessage, CommunicationMessageRequest, CommunicationSt
 import { communicationStatusLabels } from '../utils/enumLabels';
 import { generateMessageBody, type MessageTone } from '../utils/communicationMessageGenerator';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 export function CommunicationBuilderPage() {
   const { token } = useAuth();
@@ -245,7 +246,7 @@ export function CommunicationBuilderPage() {
       });
       await crud.reload();
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update message status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update message status.'));
     }
   }
 
@@ -259,7 +260,7 @@ export function CommunicationBuilderPage() {
         onRestore={() => void crud.restore(message.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(message.id)}
         archived={message.archived}
-        label="Message actions"
+        label={tr('Message actions')}
       />
     );
   }
@@ -268,32 +269,32 @@ export function CommunicationBuilderPage() {
   const columns: DataTableColumn<CommunicationMessage>[] = [
     {
       key: 'subject',
-      label: 'Subject',
+      label: tr('Subject'),
       sortValue: (message) => message.subject,
       sx: { fontWeight: 500 },
       render: (message) => message.subject || '-',
     },
     {
       key: 'audience',
-      label: 'Audience',
+      label: tr('Audience'),
       sortValue: (message) => message.audience,
       render: (message) => message.audience || '-',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (message) => message.status,
       render: (message) => <StatusBadge status={message.status} />,
     },
     {
       key: 'followUpDate',
-      label: 'Follow Up',
+      label: tr('Follow Up'),
       sortValue: (message) => message.followUpDate,
       render: (message) => message.followUpDate ?? '-',
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (message) => renderMessageActions(message),
     },
@@ -302,55 +303,55 @@ export function CommunicationBuilderPage() {
   const formFields = (
     <>
       <label>
-        Partner
+        {tr('Partner')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Partner" }} displayEmpty value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {partners.map((partner) => <MenuItem value={String(partner.id)} key={partner.id}>{partner.name}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Audience
+        {tr('Audience')}
         <Input value={audience} onChange={(event) => setAudience(event.target.value)} />
       </label>
       <label>
-        Dream
+        {tr('Dream')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Dream" }} displayEmpty value={relatedDreamId} onChange={(event) => setRelatedDreamId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Goal
+        {tr('Goal')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Goal" }} displayEmpty value={relatedGoalId} onChange={(event) => setRelatedGoalId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {goals.map((goal) => <MenuItem value={String(goal.id)} key={goal.id}>{goal.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Task
+        {tr('Task')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Task" }} displayEmpty value={relatedTaskId} onChange={(event) => setRelatedTaskId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {tasks.map((task) => <MenuItem value={String(task.id)} key={task.id}>{task.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Follow Up
+        {tr('Follow Up')}
         <Input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} />
       </label>
       <label>
-        Subject
+        {tr('Subject')}
         <Input value={subject} onChange={(event) => setSubject(event.target.value)} />
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as CommunicationStatus)}>
             {(['DRAFT', 'SENT', 'FOLLOWED_UP', 'REPLIED', 'CLOSED'] as const).map((value) => (
@@ -365,11 +366,9 @@ export function CommunicationBuilderPage() {
       </label>
       <label className="field-full">
         Hook
-        <Input value={hook} onChange={(event) => setHook(event.target.value)} placeholder="An opening line that earns attention" />
+        <Input value={hook} onChange={(event) => setHook(event.target.value)} placeholder={tr('An opening line that earns attention')} />
         <span className="field-hint">
-          Open with something specific to them, not a generic greeting. Try one of: a genuine question about their
-          work; a shared connection or moment ("We met at..."); or a concrete result you admire ("Your talk on X
-          changed how I...").
+          {tr('Open with something specific to them, not a generic greeting. Try one of: a genuine question about their work; a shared connection or moment ("We met at..."); or a concrete result you admire ("Your talk on X changed how I...").')}
         </span>
       </label>
       <label className="field-full">
@@ -377,45 +376,44 @@ export function CommunicationBuilderPage() {
         <Textarea value={problem} onChange={(event) => setProblem(event.target.value)} />
       </label>
       <label className="field-full">
-        Word Picture
+        {tr('Word Picture')}
         <Textarea value={wordPicture} onChange={(event) => setWordPicture(event.target.value)} />
         <span className="field-hint">
-          Optional. A short, relatable scene that makes the ask concrete. Instead of "I need mentorship," paint it:
-          "I have the pieces but keep taking wrong turns - like driving a new city without a map."
+          {tr('Optional. A short, relatable scene that makes the ask concrete. Instead of "I need mentorship," paint it: "I have the pieces but keep taking wrong turns - like driving a new city without a map."')}
         </span>
       </label>
       <label className="field-full">
-        Objections & Answers
+        {tr('Objections & Answers')}
         <Textarea value={objectionsAndAnswers} onChange={(event) => setObjectionsAndAnswers(event.target.value)} />
-        <span className="field-hint">Optional. The pushback you expect, and how you'd answer it.</span>
+        <span className="field-hint">{tr('Optional. The pushback you expect, and how you\'d answer it.')}</span>
       </label>
       <label className="field-full">
-        Social Proof
+        {tr('Social Proof')}
         <Textarea value={socialProof} onChange={(event) => setSocialProof(event.target.value)} />
-        <span className="field-hint">Optional. Credibility points — prior results, references.</span>
+        <span className="field-hint">{tr('Optional. Credibility points — prior results, references.')}</span>
       </label>
       <label className="field-full">
-        Value Comparison
+        {tr('Value Comparison')}
         <Textarea value={valueComparison} onChange={(event) => setValueComparison(event.target.value)} />
-        <span className="field-hint">Optional. Why this is worth more to them than it costs them.</span>
+        <span className="field-hint">{tr('Optional. Why this is worth more to them than it costs them.')}</span>
       </label>
       <label className="field-full">
         Request
         <Textarea value={request} onChange={(event) => setRequest(event.target.value)} />
       </label>
       <label className="field-full">
-        Benefit to Partner
+        {tr('Benefit to Partner')}
         <Textarea value={benefitToPartner} onChange={(event) => setBenefitToPartner(event.target.value)} />
       </label>
       <label className="field-full">
-        Expected Outcome
+        {tr('Expected Outcome')}
         <Textarea value={expectedOutcome} onChange={(event) => setExpectedOutcome(event.target.value)} />
       </label>
       <label className="field-full">
-        Call to Action
+        {tr('Call to Action')}
         <Textarea value={callToAction} onChange={(event) => setCallToAction(event.target.value)} />
         <span className="field-hint">
-          Optional. The one specific next step you're asking for — replaces the generic closing line when filled in.
+          {tr('Optional. The one specific next step you\'re asking for — replaces the generic closing line when filled in.')}
         </span>
       </label>
       <label className="field-full">
@@ -447,10 +445,10 @@ export function CommunicationBuilderPage() {
   }
 
   return (
-    <PageSection title="Communication" subtitle="Prepare support requests and follow-up messages.">
+    <PageSection title={tr('Communication')} subtitle={tr('Prepare support requests and follow-up messages.')}>
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Save message"
+        createLabel={tr('Save message')}
         editTitle="Edit Message"
         saving={crud.saving}
         onSubmit={handleSubmit}
@@ -459,11 +457,11 @@ export function CommunicationBuilderPage() {
           <>
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <Select SelectDisplayProps={{ 'aria-label': 'Generate tone' }} value={tone} onChange={(event) => setTone(event.target.value as MessageTone)}>
-                <MenuItem value="DEFAULT">Default tone</MenuItem>
-                <MenuItem value="CONSTRUCTIVE_FEEDBACK">Constructive feedback</MenuItem>
+                <MenuItem value="DEFAULT">{tr('Default tone')}</MenuItem>
+                <MenuItem value="CONSTRUCTIVE_FEEDBACK">{tr('Constructive feedback')}</MenuItem>
               </Select>
             </FormControl>
-            <Button type="button" variant="secondary" onClick={handleGenerateMessage}>Generate message</Button>
+            <Button type="button" variant="secondary" onClick={handleGenerateMessage}>{tr('Generate message')}</Button>
           </>
         }
       >
@@ -481,13 +479,13 @@ export function CommunicationBuilderPage() {
           entityLabel="messages"
         />
         <FilterSelect
-          label="Partner"
+          label={tr('Partner')}
           value={filterPartnerId}
           onChange={applyFilter(setFilterPartnerId)}
           options={optionsFromEntities(partners, (partner) => partner.name)}
         />
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={applyFilter(setFilterStatus)}
           options={optionsFromLabels(communicationStatusLabels)}
@@ -495,7 +493,7 @@ export function CommunicationBuilderPage() {
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Message view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Message view')} />
       </div>
       {viewMode === 'board' && (
         // Messages are server-paged, so the board shows the currently loaded page.
@@ -507,10 +505,10 @@ export function CommunicationBuilderPage() {
           onMove={(message, nextStatus) => void handleMove(message, nextStatus)}
           renderCard={(message) => (
             <>
-              <strong>{message.subject || '(No subject)'}</strong>
+              <strong>{message.subject || tr('(No subject)')}</strong>
               <p>
-                {message.audience || 'No audience'}
-                {message.followUpDate ? ` · Follow up ${message.followUpDate}` : ''}
+                {message.audience || tr('No audience')}
+                {message.followUpDate ? ` · ${tr('Follow up {date}', { date: message.followUpDate })}` : ''}
               </p>
             </>
           )}
@@ -524,7 +522,7 @@ export function CommunicationBuilderPage() {
           rows={crud.items}
           columns={columns}
           emptyMessage={
-            searchTerm || filterPartnerId || filterStatus ? 'No messages match these filters.' : 'No messages yet.'
+            searchTerm || filterPartnerId || filterStatus ? tr('No messages match these filters.') : tr('No messages yet.')
           }
           rowClassName={(message) => (message.archived ? 'row-archived' : '')}
           serverPaging={{
@@ -549,7 +547,7 @@ export function CommunicationBuilderPage() {
               <BulkArchiveAction
                 selectedIds={selectedIds}
                 items={crud.items}
-                entityLabel="message(s)"
+                entityLabel={tr('message(s)')}
                 onArchive={async (ids) => {
                   await crud.archiveMany(ids);
                   setSelectedIds(new Set());

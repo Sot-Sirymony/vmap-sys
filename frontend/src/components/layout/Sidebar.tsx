@@ -23,6 +23,7 @@ import { useI18n } from '@/i18n/I18nContext';
 import { navGroups, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
+import { tr } from '../../i18n/translate';
 
 const DRAWER_WIDTH = 256;
 const DRAWER_WIDTH_COLLAPSED = 64;
@@ -58,7 +59,7 @@ function SidebarSearch() {
     <Box sx={{ px: 2, pb: 1.5 }}>
       <ButtonBase
         onClick={openPalette}
-        aria-label={`Search and commands (${shortcutModifier()}+K)`}
+        aria-label={tr('Search and commands ({keys})', { keys: `${shortcutModifier()}+K` })}
         sx={{
           width: '100%',
           display: 'flex',
@@ -112,7 +113,7 @@ function Brand({ collapsed }: { collapsed: boolean }) {
       </Box>
       {!collapsed && (
         <Box sx={{ overflow: 'hidden' }}>
-          <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>Vision Map</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{tr('Vision Map')}</Typography>
           <Typography variant="caption" color="text.secondary" noWrap>Mapping System</Typography>
         </Box>
       )}
@@ -144,7 +145,7 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
     logout();
   }
 
-  const name = user?.fullName ?? 'Workspace';
+  const name = user?.fullName ?? tr('Workspace');
   const primaryLine = modern ? `${name.split(/\s+/)[0]}'s Workspace` : name;
   const secondaryLine = modern ? name : (user?.email ?? '');
 
@@ -210,7 +211,7 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
           <ListItemIcon sx={{ minWidth: 32 }}>
             <LogOut size={16} />
           </ListItemIcon>
-          Log out
+          {tr('Log out')}
         </MenuItem>
       </Menu>
     </>
@@ -305,7 +306,7 @@ function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavi
   const modern = settings.interfaceStyle !== 'classic';
 
   return (
-    <Box component="nav" aria-label="Sidebar" sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box component="nav" aria-label={tr('Sidebar')} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Brand collapsed={collapsed} />
       {/* Collapsed to an icon rail there is no room for the search row, and the
           ⌘K shortcut still works — so it is omitted rather than squeezed. */}

@@ -122,6 +122,14 @@ class DailyExecutionFlowTests {
     }
 
     @Test
+    void aMissingRequiredParameterIsABadRequestNotAServerError() throws Exception {
+        String token = registerAndToken("missing-param");
+        send(post("/api/habits"), token, Map.of("name", "Read"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Missing required parameter 'date'."));
+    }
+
+    @Test
     void fearEntriesStayPrivate() throws Exception {
         String token = registerAndToken("fear");
         String stranger = registerAndToken("fear-stranger");

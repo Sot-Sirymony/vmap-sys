@@ -48,6 +48,7 @@ import {
 import { matchesSearch } from '../utils/search';
 import { severityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 const obstacleTypes: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY', 'MOTIVATION', 'PARTNER', 'SYSTEM', 'DECISION', 'OTHER'];
 const severities: Severity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
@@ -291,7 +292,7 @@ export function ObstaclesPage() {
       const updated = await releaseExpectation(token, crud.editingId);
       setEditingExpectationReleasedAt(updated.expectationReleasedAt ?? null);
     } catch (releaseError) {
-      crud.setError(releaseError instanceof Error ? releaseError.message : 'Unable to release this expectation.');
+      crud.setError(releaseError instanceof Error ? releaseError.message : tr('Unable to release this expectation.'));
     } finally {
       setReleasingExpectation(false);
     }
@@ -366,7 +367,7 @@ export function ObstaclesPage() {
       });
       await crud.reload();
     } catch (moveError) {
-      crud.setError(moveError instanceof Error ? moveError.message : 'Unable to update obstacle status.');
+      crud.setError(moveError instanceof Error ? moveError.message : tr('Unable to update obstacle status.'));
     }
   }
 
@@ -380,7 +381,7 @@ export function ObstaclesPage() {
         onRestore={() => void crud.restore(obstacle.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(obstacle.id)}
         archived={obstacle.archived}
-        label="Obstacle actions"
+        label={tr('Obstacle actions')}
       />
     );
   }
@@ -423,46 +424,46 @@ export function ObstaclesPage() {
     .map((letter) => ({ value: letter, label: letter }));
 
   const columns: DataTableColumn<Obstacle>[] = [
-    { key: 'title', label: 'Title', sortValue: (obstacle) => obstacle.title, sx: { fontWeight: 500 }, render: (obstacle) => obstacle.title },
+    { key: 'title', label: tr('Title'), sortValue: (obstacle) => obstacle.title, sx: { fontWeight: 500 }, render: (obstacle) => obstacle.title },
     {
       key: 'obstacleType',
-      label: 'Type',
+      label: tr('Type'),
       sortValue: (obstacle) => obstacleTypeLabels[obstacle.obstacleType],
       render: (obstacle) => obstacleTypeLabels[obstacle.obstacleType],
     },
     {
       key: 'suggestedPartner',
-      label: 'Suggested Partner',
+      label: tr('Suggested Partner'),
       sortValue: (obstacle) => suggestPartnerFor(obstacle.obstacleType)?.label,
       render: (obstacle) => suggestPartnerFor(obstacle.obstacleType)?.label ?? '-',
     },
     {
       key: 'severity',
-      label: 'Severity',
+      label: tr('Severity'),
       sortValue: (obstacle) => severityRank(obstacle.severity),
       render: (obstacle) => <StatusBadge status={obstacle.severity} />,
     },
     {
       key: 'letterRank',
-      label: 'Rank',
+      label: tr('Rank'),
       sortValue: (obstacle) => obstacle.letterRank ?? '',
       render: (obstacle) => obstacle.letterRank ?? '—',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status'),
       sortValue: (obstacle) => obstacle.status,
       render: (obstacle) => <StatusBadge status={obstacle.status} />,
     },
     {
       key: 'solution',
-      label: 'Solution',
+      label: tr('Solution'),
       sortValue: (obstacle) => obstacle.solution,
       render: (obstacle) => obstacle.solution || '-',
     },
     {
       key: 'actions',
-      label: 'Action',
+      label: tr('Action'),
       className: 'row-actions',
       render: (obstacle) => renderObstacleActions(obstacle),
     },
@@ -474,20 +475,20 @@ export function ObstaclesPage() {
   const formFields = (
     <>
       <label>
-        Title
+        {tr('Title')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
       </label>
       <label>
-        Type
+        {tr('Type')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Type" }} value={obstacleType} onChange={(event) => setObstacleType(event.target.value as ObstacleType)}>
             {obstacleTypes.map((value) => <MenuItem value={value} key={value}>{obstacleTypeLabels[value]}</MenuItem>)}
           </Select>
         </FormControl>
-        {partnerSuggestion && <span className="field-hint">Suggested support: {partnerSuggestion.label}</span>}
+        {partnerSuggestion && <span className="field-hint">{tr('Suggested support: {partner}', { partner: partnerSuggestion.label })}</span>}
       </label>
       <label>
-        Severity
+        {tr('Severity')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Severity" }} value={severity} onChange={(event) => setSeverity(event.target.value as Severity)}>
             {severities.map((value) => <MenuItem value={value} key={value}>{priorityLabels[value]}</MenuItem>)}
@@ -495,11 +496,11 @@ export function ObstaclesPage() {
         </FormControl>
       </label>
       <label>
-        Rank
+        {tr('Rank')}
         <Input
           value={letterRank}
           onChange={(event) => setLetterRank(event.target.value.slice(-1).toUpperCase().replace(/[^A-Z]/, ''))}
-          placeholder="e.g. A"
+          placeholder={tr('e.g. A')}
           maxLength={1}
         />
         <span className="field-hint">
@@ -507,7 +508,7 @@ export function ObstaclesPage() {
         </span>
       </label>
       <label>
-        Status
+        {tr('Status')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Status" }} value={status} onChange={(event) => setStatus(event.target.value as ObstacleStatus)}>
             {statuses.map((value) => <MenuItem value={value} key={value}>{obstacleStatusLabels[value]}</MenuItem>)}
@@ -515,46 +516,46 @@ export function ObstaclesPage() {
         </FormControl>
       </label>
       <label>
-        Dream
+        {tr('Dream')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Dream" }} displayEmpty value={relatedDreamId} onChange={(event) => setRelatedDreamId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Goal
+        {tr('Goal')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Goal" }} displayEmpty value={relatedGoalId} onChange={(event) => setRelatedGoalId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {goals.map((goal) => <MenuItem value={String(goal.id)} key={goal.id}>{goal.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Step
+        {tr('Step')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Step" }} displayEmpty value={relatedStepId} onChange={(event) => setRelatedStepId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {steps.map((step) => <MenuItem value={String(step.id)} key={step.id}>{step.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Task
+        {tr('Task')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Task" }} displayEmpty value={relatedTaskId} onChange={(event) => setRelatedTaskId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {tasks.map((task) => <MenuItem value={String(task.id)} key={task.id}>{task.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
       <label>
-        Required Partner
+        {tr('Required Partner')}
         <FormControl fullWidth size="small">
           <Select SelectDisplayProps={{ 'aria-label': "Required Partner" }} displayEmpty value={requiredPartnerId} onChange={(event) => setRequiredPartnerId(event.target.value)}>
-            <MenuItem value="">None</MenuItem>
+            <MenuItem value="">{tr('None')}</MenuItem>
             {partners.map((partner) => <MenuItem value={String(partner.id)} key={partner.id}>{partner.name}</MenuItem>)}
           </Select>
         </FormControl>
@@ -564,7 +565,7 @@ export function ObstaclesPage() {
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
       </label>
       <label className="field-full">
-        Solution
+        {tr('Solution')}
         <Textarea value={solution} onChange={(event) => setSolution(event.target.value)} />
       </label>
       {relatedObstacles.length > 0 && (
@@ -573,7 +574,7 @@ export function ObstaclesPage() {
             You've resolved {relatedObstacles.length} {obstacleTypeLabels[obstacleType].toLowerCase()} obstacle
             {relatedObstacles.length === 1 ? '' : 's'} before
           </strong>
-          <p>How you cracked it last time — reuse it instead of relearning it.</p>
+          <p>{tr('How you cracked it last time — reuse it instead of relearning it.')}</p>
           <ul>
             {relatedObstacles.slice(0, 3).map((item) => (
               <li key={item.id}>
@@ -584,14 +585,14 @@ export function ObstaclesPage() {
         </div>
       )}
       <label className="field-full">
-        Root Cause
+        {tr('Root Cause')}
         <Textarea value={rootCause} onChange={(event) => setRootCause(event.target.value)} required={status === 'RESOLVED'} />
         <span className="field-hint">
           Why this happened, not just how you worked around it — required to mark Resolved (FR-32).
         </span>
       </label>
       <label className="field-full">
-        Creative Alternatives
+        {tr('Creative Alternatives')}
         <Textarea value={creativeAlternatives} onChange={(event) => setCreativeAlternatives(event.target.value)} required={status === 'ACCEPTED'} />
         <span className="field-hint">
           One alternative per line — at least three required to mark Accepted, so giving up isn't the first option.{' '}
@@ -600,62 +601,60 @@ export function ObstaclesPage() {
       </label>
       {obstacleType === 'PARTNER' && (
         <div className="field-full diligence-checklist">
-          <strong>Conflict worksheet</strong>
+          <strong>{tr('Conflict worksheet')}</strong>
           <p>
-            Optional, and never gates this obstacle's status — a way to work through what happened, not another
-            required field.
+            {tr('Optional, and never gates this obstacle\'s status — a way to work through what happened, not another required field.')}
           </p>
           <label className="field-full">
-            What happened
+            {tr('What happened')}
             <Textarea value={conflictIncident} onChange={(event) => setConflictIncident(event.target.value)} />
           </label>
           <label className="field-full">
-            What it cost
+            {tr('What it cost')}
             <Textarea value={conflictCost} onChange={(event) => setConflictCost(event.target.value)} />
-            <span className="field-hint">Time, trust, an opportunity — whatever this actually cost.</span>
+            <span className="field-hint">{tr('Time, trust, an opportunity — whatever this actually cost.')}</span>
           </label>
           <label className="field-full">
-            Their likely perspective
+            {tr('Their likely perspective')}
             <Textarea value={conflictOtherPerspective} onChange={(event) => setConflictOtherPerspective(event.target.value)} />
           </label>
           <label className="field-full">
-            What's worth keeping from this
+            {tr('What\'s worth keeping from this')}
             <Textarea value={conflictLesson} onChange={(event) => setConflictLesson(event.target.value)} />
           </label>
           <label className="field-full">
-            Private note — <strong>never shared or exported</strong>
+            Private note — <strong>{tr('never shared or exported')}</strong>
             <Textarea value={conflictPrivateNote} onChange={(event) => setConflictPrivateNote(event.target.value)} />
             <span className="field-hint">
-              A space to work through your own reaction. This never appears in an Excel export, in any sheet
-              (BR-43).
+              {tr('A space to work through your own reaction. This never appears in an Excel export, in any sheet (BR-43).')}
             </span>
           </label>
           <label className="field-full">
-            One concrete next action
+            {tr('One concrete next action')}
             <Textarea value={conflictNextAction} onChange={(event) => setConflictNextAction(event.target.value)} />
           </label>
           <label className="field-full">
-            What did you expect to happen — spoken or not?
+            {tr('What did you expect to happen — spoken or not?')}
             <Textarea value={conflictExpectation} onChange={(event) => setConflictExpectation(event.target.value)} />
           </label>
           <label className="field-full">
-            Did the other person actually agree to this expectation?
+            {tr('Did the other person actually agree to this expectation?')}
             <ToggleButtonGroup
               size="small"
               exclusive
               value={conflictExpectationAgreed || null}
               onChange={(_event, value: ExpectationAgreement | null) => setConflictExpectationAgreed(value ?? '')}
-              aria-label="Did the other person actually agree to this expectation?"
+              aria-label={tr('Did the other person actually agree to this expectation?')}
             >
-              <ToggleButton value="YES">Yes</ToggleButton>
-              <ToggleButton value="NO">No</ToggleButton>
-              <ToggleButton value="UNSURE">Unsure</ToggleButton>
+              <ToggleButton value="YES">{tr('Yes')}</ToggleButton>
+              <ToggleButton value="NO">{tr('No')}</ToggleButton>
+              <ToggleButton value="UNSURE">{tr('Unsure')}</ToggleButton>
             </ToggleButtonGroup>
           </label>
           <div className="field-full inline-meta">
             {editingExpectationReleasedAt ? (
               <span className="field-hint">
-                Expectation released — a one-time marker, and it doesn't change anything else about this obstacle.
+                {tr('Expectation released — a one-time marker, and it doesn\'t change anything else about this obstacle.')}
               </span>
             ) : (
               <Button
@@ -664,15 +663,14 @@ export function ObstaclesPage() {
                 disabled={crud.editingId === null || releasingExpectation}
                 onClick={() => void handleReleaseExpectation()}
               >
-                {releasingExpectation ? 'Releasing…' : 'Release this expectation'}
+                {releasingExpectation ? tr('Releasing…') : tr('Release this expectation')}
               </Button>
             )}
           </div>
           <div className="field-full diligence-checklist">
-            <strong>Before you mark this Resolved…</strong>
+            <strong>{tr('Before you mark this Resolved…')}</strong>
             <p>
-              A "No" here never blocks anything — only leaving one unanswered does, and only for a Resolved
-              transition.
+              {tr('A "No" here never blocks anything — only leaving one unanswered does, and only for a Resolved transition.')}
             </p>
             {CONFLICT_CHECKLIST_QUESTIONS.map((question) => (
               <div className="diligence-row" key={question.key}>
@@ -689,28 +687,28 @@ export function ObstaclesPage() {
                   }}
                   aria-label={question.label}
                 >
-                  <ToggleButton value="no">No</ToggleButton>
-                  <ToggleButton value="yes">Yes</ToggleButton>
+                  <ToggleButton value="no">{tr('No')}</ToggleButton>
+                  <ToggleButton value="yes">{tr('Yes')}</ToggleButton>
                 </ToggleButtonGroup>
               </div>
             ))}
             <span className="field-hint">
               {isConflictChecklistComplete(conflictChecklistAnswers)
-                ? 'All four answered — Resolved is unblocked.'
-                : `${CONFLICT_CHECKLIST_QUESTIONS.filter((question) => conflictChecklistAnswers[question.key] !== null).length} of ${CONFLICT_CHECKLIST_QUESTIONS.length} answered.`}
+                ? tr('All four answered — Resolved is unblocked.')
+                : tr('{done} of {total} answered.', { done: CONFLICT_CHECKLIST_QUESTIONS.filter((question) => conflictChecklistAnswers[question.key] !== null).length, total: CONFLICT_CHECKLIST_QUESTIONS.length })}
             </span>
           </div>
-          <strong className="field-full">Mining criticism you received</strong>
+          <strong className="field-full">{tr('Mining criticism you received')}</strong>
           <label className="field-full">
-            Overstated — what was exaggerated or absolute, and can be set aside
+            {tr('Overstated — what was exaggerated or absolute, and can be set aside')}
             <Textarea value={criticismOverstated} onChange={(event) => setCriticismOverstated(event.target.value)} />
           </label>
           <label className="field-full">
-            Delivery — what was about tone or timing, not substance
+            {tr('Delivery — what was about tone or timing, not substance')}
             <Textarea value={criticismDelivery} onChange={(event) => setCriticismDelivery(event.target.value)} />
           </label>
           <label className="field-full">
-            Substance — the one actionable truth worth keeping, if any
+            {tr('Substance — the one actionable truth worth keeping, if any')}
             <Textarea value={criticismSubstance} onChange={(event) => setCriticismSubstance(event.target.value)} />
             <Button
               type="button"
@@ -718,7 +716,7 @@ export function ObstaclesPage() {
               disabled={!criticismSubstance.trim()}
               onClick={handleTurnCriticismIntoTask}
             >
-              Turn this into a task
+              {tr('Turn this into a task')}
             </Button>
           </label>
         </div>
@@ -728,13 +726,13 @@ export function ObstaclesPage() {
 
   return (
     <PageSection
-      title="Obstacles"
-      subtitle="Track blockers and the support needed to resolve them."
-      actions={<Button type="button" onClick={() => setCreateOpen(true)}>Create obstacle</Button>}
+      title={tr('Obstacles')}
+      subtitle={tr('Track blockers and the support needed to resolve them.')}
+      actions={<Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create obstacle')}</Button>}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
-        createLabel="Create obstacle"
+        createLabel={tr('Create obstacle')}
         editTitle="Edit Obstacle"
         saving={crud.saving}
         creating={createOpen}
@@ -758,33 +756,33 @@ export function ObstaclesPage() {
       <FilterPanel activeCount={[searchTerm, filterObstacleType, filterSeverity, filterLetterRank, filterStatus, filterDreamId].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
         <FilterSelect
-          label="Type"
+          label={tr('Type')}
           value={filterObstacleType}
           onChange={setFilterObstacleType}
           options={optionsFromLabels(obstacleTypeLabels)}
         />
         <FilterSelect
-          label="Severity"
+          label={tr('Severity')}
           value={filterSeverity}
           onChange={setFilterSeverity}
           options={optionsFromLabels(severityLabels)}
         />
         {letterRankOptions.length > 0 && (
           <FilterSelect
-            label="Rank"
+            label={tr('Rank')}
             value={filterLetterRank}
             onChange={setFilterLetterRank}
             options={letterRankOptions}
           />
         )}
         <FilterSelect
-          label="Status"
+          label={tr('Status')}
           value={filterStatus}
           onChange={setFilterStatus}
           options={optionsFromLabels(obstacleStatusLabels)}
         />
         <FilterSelect
-          label="Dream"
+          label={tr('Dream')}
           value={filterDreamId}
           onChange={setFilterDreamId}
           options={optionsFromEntities(dreams, (dream) => dream.title)}
@@ -792,7 +790,7 @@ export function ObstaclesPage() {
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
       <div className="view-toggle-row">
-        <ViewToggle value={viewMode} onChange={setViewMode} label="Obstacle view" />
+        <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Obstacle view')} />
       </div>
       {viewMode === 'board' && (
         <StatusBoard
@@ -804,7 +802,7 @@ export function ObstaclesPage() {
           renderCard={(obstacle) => (
             <>
               <strong>{obstacle.title}</strong>
-              <p>{obstacleTypeLabels[obstacle.obstacleType]}{suggestPartnerFor(obstacle.obstacleType) ? ` · Suggested: ${suggestPartnerFor(obstacle.obstacleType)?.label}` : ''}</p>
+              <p>{obstacleTypeLabels[obstacle.obstacleType]}{suggestPartnerFor(obstacle.obstacleType) ? ` · ${tr('Suggested: {partner}', { partner: suggestPartnerFor(obstacle.obstacleType)?.label ?? '' })}` : ''}</p>
               <div className="inline-meta">
                 <StatusBadge status={obstacle.severity} />
               </div>
@@ -819,7 +817,7 @@ export function ObstaclesPage() {
         <DataTable
           rows={filteredObstacles}
           columns={columns}
-          emptyMessage={hasFilters ? 'No obstacles match these filters.' : 'No obstacles yet.'}
+          emptyMessage={hasFilters ? tr('No obstacles match these filters.') : tr('No obstacles yet.')}
           defaultSortKey="severity"
           defaultSortDirection="desc"
           pageResetKey={`${searchTerm}|${filterObstacleType}|${filterSeverity}|${filterLetterRank}|${filterStatus}|${filterDreamId}`}
@@ -832,7 +830,7 @@ export function ObstaclesPage() {
               <BulkArchiveAction
                 selectedIds={selectedIds}
                 items={crud.items}
-                entityLabel="obstacle(s)"
+                entityLabel={tr('obstacle(s)')}
                 onArchive={async (ids) => {
                   await crud.archiveMany(ids);
                   setSelectedIds(new Set());

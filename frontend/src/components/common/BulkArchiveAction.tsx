@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
+import { tr } from '../../i18n/translate';
 
 type BulkArchiveActionProps = {
   selectedIds: Set<number>;
@@ -47,21 +48,21 @@ export function BulkArchiveAction({ selectedIds, items, entityLabel, onArchive, 
 
   const dialogs: Record<PendingAction, { title: string; message: string; confirmLabel: string; danger: boolean }> = {
     archive: {
-      title: 'Archive selected',
-      message: `Archive ${activeIds.length} ${entityLabel}? They can be restored later with "Show archived".`,
-      confirmLabel: 'Archive',
+      title: tr('Archive selected'),
+      message: tr('Archive {count} {items}? They can be restored later with "Show archived".', { count: activeIds.length, items: tr(entityLabel) }),
+      confirmLabel: tr('Archive'),
       danger: true,
     },
     restore: {
-      title: 'Restore selected',
-      message: `Restore ${archivedIds.length} archived ${entityLabel}?`,
-      confirmLabel: 'Restore',
+      title: tr('Restore selected'),
+      message: tr('Restore {count} archived {items}?', { count: archivedIds.length, items: tr(entityLabel) }),
+      confirmLabel: tr('Restore'),
       danger: false,
     },
     delete: {
-      title: 'Delete permanently',
-      message: `Permanently delete ${archivedIds.length} archived ${entityLabel} and everything under them? This cannot be undone.`,
-      confirmLabel: 'Delete permanently',
+      title: tr('Delete permanently'),
+      message: tr('Permanently delete {count} archived {items} and everything under them? This cannot be undone.', { count: archivedIds.length, items: tr(entityLabel) }),
+      confirmLabel: tr('Delete permanently'),
       danger: true,
     },
   };
@@ -70,17 +71,17 @@ export function BulkArchiveAction({ selectedIds, items, entityLabel, onArchive, 
     <>
       {activeIds.length > 0 && (
         <Button type="button" variant="danger" disabled={running !== null} onClick={() => setConfirming('archive')}>
-          {running === 'archive' ? 'Archiving...' : `Archive selected (${activeIds.length})`}
+          {running === 'archive' ? tr('Archiving...') : tr('Archive selected ({count})', { count: activeIds.length })}
         </Button>
       )}
       {onRestore && archivedIds.length > 0 && (
         <Button type="button" variant="secondary" disabled={running !== null} onClick={() => setConfirming('restore')}>
-          {running === 'restore' ? 'Restoring...' : `Restore selected (${archivedIds.length})`}
+          {running === 'restore' ? tr('Restoring...') : tr('Restore selected ({count})', { count: archivedIds.length })}
         </Button>
       )}
       {onDeletePermanently && archivedIds.length > 0 && (
         <Button type="button" variant="danger" disabled={running !== null} onClick={() => setConfirming('delete')}>
-          {running === 'delete' ? 'Deleting...' : `Delete permanently (${archivedIds.length})`}
+          {running === 'delete' ? tr('Deleting...') : tr('Delete permanently ({count})', { count: archivedIds.length })}
         </Button>
       )}
       {confirming && (

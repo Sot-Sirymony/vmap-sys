@@ -12,6 +12,8 @@ import Typography from '@mui/material/Typography';
 import { Button } from './Button';
 import { RelativeDate } from './RelativeDate';
 import type { TaskItem } from '../../types/vision';
+import { tr } from '../../i18n/translate';
+import { formatDate } from '../../i18n/formatDate';
 
 type EnergyOvercommitDialogProps = {
   open: boolean;
@@ -26,7 +28,7 @@ function formatDay(dateIso: string): string {
   if (!dateIso) {
     return '';
   }
-  return new Date(`${dateIso}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatDate(new Date(`${dateIso}T00:00:00`));
 }
 
 /**
@@ -38,23 +40,22 @@ function formatDay(dateIso: string): string {
 export function EnergyOvercommitDialog({ open, weekStart, weekEnd, candidates, onClose }: EnergyOvercommitDialogProps) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>This week is filling up with draining work</DialogTitle>
+      <DialogTitle>{tr('This week is filling up with draining work')}</DialogTitle>
       <DialogContent>
         <DialogContentText sx={{ mb: candidates.length ? 1.5 : 0 }}>
-          The week of {formatDay(weekStart)}–{formatDay(weekEnd)} now has noticeably more draining work than
-          charging work. Nothing is blocked — but what could you drop or move to make room?
+          {tr('The week of {start}–{end} now has noticeably more draining work than charging work. Nothing is blocked — but what could you drop or move to make room?', { start: formatDay(weekStart), end: formatDay(weekEnd) })}
         </DialogContentText>
         {candidates.length > 0 && (
           <>
             <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-              Other draining tasks this week
+              {tr('Other draining tasks this week')}
             </Typography>
             <List dense disablePadding>
               {candidates.map((task) => (
                 <ListItem key={task.id} disableGutters>
                   <ListItemText
                     primary={task.title}
-                    secondary={<>Due <RelativeDate date={task.dueDate} /></>}
+                    secondary={<>{tr('Due')} <RelativeDate date={task.dueDate} /></>}
                   />
                 </ListItem>
               ))}
@@ -71,9 +72,9 @@ export function EnergyOvercommitDialog({ open, weekStart, weekEnd, candidates, o
           to={`/tasks?dueFrom=${weekStart}&dueTo=${weekEnd}`}
           onClick={onClose}
         >
-          Review this week
+          {tr('Review this week')}
         </MuiButton>
-        <Button variant="secondary" onClick={onClose}>Got it</Button>
+        <Button variant="secondary" onClick={onClose}>{tr('Got it')}</Button>
       </DialogActions>
     </Dialog>
   );

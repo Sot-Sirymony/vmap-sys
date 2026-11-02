@@ -46,4 +46,9 @@ public class AccountController {
     public ReminderSettingsResponse updateReminders(@Valid @RequestBody ReminderSettingsRequest request) {
         return reminderService.updateSettings(request);
     }
+
+    @PostMapping("/reminders/test")
+    public ReminderSettingsResponse sendTestReminder() {
+        return reminderService.sendTest();
+    }
 }

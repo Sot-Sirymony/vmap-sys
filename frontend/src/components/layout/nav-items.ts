@@ -24,6 +24,7 @@ import {
   UserCog,
   type LucideIcon,
 } from 'lucide-react';
+import { tr } from '../../i18n/translate';
 
 export type NavItem = {
   to: string;
@@ -53,43 +54,43 @@ export function navPathname(pathname: string): string {
 // direction (Plan), do the work (Execute), get help and review (Support).
 export const navGroups: NavGroup[] = [
   {
-    label: 'Plan',
+    label: tr('Plan'),
     items: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-      { to: '/vision-areas', label: 'Vision Areas', icon: Compass },
-      { to: '/dreams', label: 'Dreams', icon: MoonStar },
-      { to: '/vision-map', label: 'Vision Map', icon: Network },
-      { to: '/plan', label: 'Plan', icon: ListChecks },
-      { to: '/modules', label: 'Modules', icon: GraduationCap },
-      { to: '/assessment', label: 'Assessment', icon: Gauge },
+      { to: '/', label: tr('Dashboard'), icon: LayoutDashboard },
+      { to: '/vision-areas', label: tr('Vision Areas'), icon: Compass },
+      { to: '/dreams', label: tr('Dreams'), icon: MoonStar },
+      { to: '/vision-map', label: tr('Vision Map'), icon: Network },
+      { to: '/plan', label: tr('Plan'), icon: ListChecks },
+      { to: '/modules', label: tr('Modules'), icon: GraduationCap },
+      { to: '/assessment', label: tr('Assessment'), icon: Gauge },
     ],
   },
   {
-    label: 'Execute',
+    label: tr('Execute'),
     items: [
-      { to: '/today', label: 'Today', icon: CalendarCheck },
-      { to: '/goals', label: 'Goals', icon: Target },
-      { to: '/steps', label: 'Steps', icon: Footprints },
-      { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-      { to: '/obstacles', label: 'Obstacles', icon: TrafficCone },
-      { to: '/journal', label: 'Journal', icon: BookOpen },
+      { to: '/today', label: tr('Today'), icon: CalendarCheck },
+      { to: '/goals', label: tr('Goals'), icon: Target },
+      { to: '/steps', label: tr('Steps'), icon: Footprints },
+      { to: '/tasks', label: tr('Tasks'), icon: CheckSquare },
+      { to: '/obstacles', label: tr('Obstacles'), icon: TrafficCone },
+      { to: '/journal', label: tr('Journal'), icon: BookOpen },
     ],
   },
   {
-    label: 'Support',
+    label: tr('Support'),
     items: [
-      { to: '/partners', label: 'Partners', icon: Handshake },
-      { to: '/work-style', label: 'Work Style', icon: Fingerprint },
-      { to: '/communication', label: 'Communication', icon: Send },
-      { to: '/reviews', label: 'Reviews', icon: ClipboardList },
-      { to: '/insights', label: 'Insights', icon: Lightbulb },
-      { to: '/issue-reports', label: 'Issue Reports', icon: Bug },
-      { to: '/import-export', label: 'Import / Export', icon: FileSpreadsheet },
+      { to: '/partners', label: tr('Partners'), icon: Handshake },
+      { to: '/work-style', label: tr('Work Style'), icon: Fingerprint },
+      { to: '/communication', label: tr('Communication'), icon: Send },
+      { to: '/reviews', label: tr('Reviews'), icon: ClipboardList },
+      { to: '/insights', label: tr('Insights'), icon: Lightbulb },
+      { to: '/issue-reports', label: tr('Issue Reports'), icon: Bug },
+      { to: '/import-export', label: tr('Import / Export'), icon: FileSpreadsheet },
       // FR-39.5: the full Appearance surface. Reachable from the sidebar as well
       // as the header menu, so the header icon isn't the only way to find it.
-      { to: '/settings/appearance', label: 'Appearance', icon: Palette },
-      { to: '/settings/security', label: 'Security', icon: KeyRound },
-      { to: '/settings/account', label: 'Account', icon: UserCog },
+      { to: '/settings/appearance', label: tr('Appearance'), icon: Palette },
+      { to: '/settings/security', label: tr('Security'), icon: KeyRound },
+      { to: '/settings/account', label: tr('Account'), icon: UserCog },
     ],
   },
 ];

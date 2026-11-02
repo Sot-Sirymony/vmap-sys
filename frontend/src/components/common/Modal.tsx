@@ -4,6 +4,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
+import { tr } from '../../i18n/translate';
 
 type ModalProps = {
   title: string;
@@ -29,7 +30,7 @@ export function Modal({ title, children, onClose }: ModalProps) {
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
         {title}
-        <IconButton aria-label="Close" onClick={onClose} size="small">
+        <IconButton aria-label={tr('Close')} onClick={onClose} size="small">
           <X size={18} />
         </IconButton>
       </DialogTitle>

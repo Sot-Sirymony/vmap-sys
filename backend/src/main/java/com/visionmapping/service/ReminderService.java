@@ -19,6 +19,7 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.Objects;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReminderService {
 
     private static final int MAX_LISTED_ITEMS = 10;
+    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     private final UserScope userScope;
     private final AppUserRepository appUserRepository;
@@ -56,8 +58,7 @@ public class ReminderService {
 
     @Transactional(readOnly = true)
     public ReminderSettingsResponse settings() {
-        AppUser user = userScope.currentUser();
-        return new ReminderSettingsResponse(user.isRemindersEnabled(), user.getReminderTimeZone(), reminderMailer.isConfigured(), sendHour);
+        return toResponse(userScope.currentUser());
     }
 
     public ReminderSettingsResponse updateSettings(ReminderSettingsRequest request) {
@@ -69,8 +70,33 @@ public class ReminderService {
         }
         user.setRemindersEnabled(request.enabled());
         user.setReminderTimeZone(request.timeZone());
+        String reminderEmail = request.reminderEmail() == null ? "" : request.reminderEmail().trim();
+        if (!reminderEmail.isEmpty() && !EMAIL.matcher(reminderEmail).matches()) {
+            throw new BusinessRuleException("That reminder email address does not look right.");
+        }
+        user.setReminderEmail(reminderEmail.isEmpty() ? null : reminderEmail);
         appUserRepository.save(user);
-        return new ReminderSettingsResponse(user.isRemindersEnabled(), user.getReminderTimeZone(), reminderMailer.isConfigured(), sendHour);
+        return toResponse(user);
+    }
+
+    /** Lets the user confirm delivery now instead of waiting for the next morning. */
+    @Transactional(readOnly = true)
+    public ReminderSettingsResponse sendTest() {
+        AppUser user = userScope.currentUser();
+        if (!reminderMailer.isConfigured()) {
+            throw new BusinessRuleException("No email server is set up yet, so a test email cannot be sent.");
+        }
+        reminderMailer.send(sendsTo(user), "This is a test from Vision Mapping. Your daily reminders will arrive at this address.");
+        return toResponse(user);
+    }
+
+    private ReminderSettingsResponse toResponse(AppUser user) {
+        return new ReminderSettingsResponse(user.isRemindersEnabled(), user.getReminderTimeZone(), reminderMailer.isConfigured(),
+                sendHour, user.getReminderEmail(), sendsTo(user));
+    }
+
+    private static String sendsTo(AppUser user) {
+        return user.getReminderEmail() != null ? user.getReminderEmail() : user.getEmail();
     }
 
     /** Called by the job once per user, so one user's failure stays theirs. */
@@ -87,7 +113,7 @@ public class ReminderService {
         user.setLastReminderOn(today);
         String body = composeBody(user, today, now);
         if (body != null) {
-            reminderMailer.send(user.getEmail(), body);
+            reminderMailer.send(sendsTo(user), body);
         }
     }
 

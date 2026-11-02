@@ -10,6 +10,7 @@ import { Loading } from '../components/common/Loading';
 import { useAuth } from '../context/AuthContext';
 import type { ExcelImportSummary } from '../types/vision';
 import { PageSection } from './PageSection';
+import { tr } from '../i18n/translate';
 
 export function ImportExportPage() {
   const { token } = useAuth();
@@ -33,7 +34,7 @@ export function ImportExportPage() {
       URL.revokeObjectURL(url);
       setError('');
     } catch (exportError) {
-      setError(exportError instanceof Error ? exportError.message : 'Unable to export workbook.');
+      setError(exportError instanceof Error ? exportError.message : tr('Unable to export workbook.'));
     } finally {
       setLoading(false);
     }
@@ -50,7 +51,7 @@ export function ImportExportPage() {
       setSummary(await importExcelWorkbook(token, file));
       setError('');
     } catch (importError) {
-      setError(importError instanceof Error ? importError.message : 'Unable to import workbook.');
+      setError(importError instanceof Error ? importError.message : tr('Unable to import workbook.'));
     } finally {
       setLoading(false);
       event.target.value = '';
@@ -58,42 +59,42 @@ export function ImportExportPage() {
   }
 
   return (
-    <PageSection title="Import / Export" subtitle="Move Vision Mapping data between the system and Excel.">
+    <PageSection title={tr('Import / Export')} subtitle={tr('Move Vision Mapping data between the system and Excel.')}>
       {loading && <Loading />}
       {error && <ErrorMessage message={error} />}
       <div className="two-column">
         <Card>
-          <CardHeader title="Import Excel" subheader="Upload an exported .xlsx workbook to recreate its vision areas, dreams, goals, steps, and tasks." />
+          <CardHeader title={tr('Import Excel')} subheader={tr('Upload an exported .xlsx workbook to recreate its vision areas, dreams, goals, steps, and tasks.')} />
           <CardContent className="card-action">
             <MuiButton component="label" variant="contained" color="secondary" size="small">
-              Choose workbook
+              {tr('Choose workbook')}
               <input type="file" accept=".xlsx" hidden onChange={(event) => void handleImport(event)} />
             </MuiButton>
             {fileName && <p className="field-hint">Selected: {fileName}</p>}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader title="Export Excel" subheader="Download all current Vision Mapping data as a formatted workbook." />
+          <CardHeader title={tr('Export Excel')} subheader={tr('Download all current Vision Mapping data as a formatted workbook.')} />
           <CardContent className="card-action">
-            <Button type="button" onClick={() => void handleExport()}>Export workbook</Button>
+            <Button type="button" onClick={() => void handleExport()}>{tr('Export workbook')}</Button>
           </CardContent>
         </Card>
       </div>
       {summary && (
         <Card>
-          <CardHeader title="Import Summary" />
+          <CardHeader title={tr('Import Summary')} />
           <CardContent>
             <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
               <div className="metric-card">
-                <p>Records created</p>
+                <p>{tr('Records created')}</p>
                 <strong>{summary.createdRecords}</strong>
               </div>
               <div className="metric-card">
-                <p>Rows skipped</p>
+                <p>{tr('Rows skipped')}</p>
                 <strong>{summary.skippedRecords}</strong>
               </div>
               <div className="metric-card">
-                <p>Errors</p>
+                <p>{tr('Errors')}</p>
                 <strong>{summary.validationErrors.length}</strong>
               </div>
             </div>
@@ -106,7 +107,7 @@ export function ImportExportPage() {
               <p className="field-hint">A backup snapshot was saved before the import: {summary.backupFile}</p>
             )}
             {summary.createdRecords > 0 && (
-              <p className="field-hint">Open Goals, Steps, or Tasks to see the imported records.</p>
+              <p className="field-hint">{tr('Open Goals, Steps, or Tasks to see the imported records.')}</p>
             )}
             {summary.validationErrors.length > 0 && (
               <div className="stack-list">

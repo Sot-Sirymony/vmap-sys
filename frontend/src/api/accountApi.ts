@@ -11,12 +11,17 @@ export function getReminderSettings(token: string) {
   return apiClient<ReminderSettings>('/account/reminders', { token });
 }
 
-export function updateReminderSettings(token: string, enabled: boolean, timeZone: string) {
+/** A blank reminderEmail sends reminders to the login email. */
+export function updateReminderSettings(token: string, enabled: boolean, timeZone: string, reminderEmail = '') {
   return apiClient<ReminderSettings>('/account/reminders', {
     method: 'PUT',
     token,
-    body: JSON.stringify({ enabled, timeZone }),
+    body: JSON.stringify({ enabled, timeZone, reminderEmail }),
   });
+}
+
+export function sendTestReminder(token: string) {
+  return apiClient<ReminderSettings>('/account/reminders/test', { method: 'POST', token });
 }
 
 export async function exportAccountData(token: string) {

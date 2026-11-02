@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { getGoogleAuthorizeUrl } from '../api/oauthApi';
 import { GoogleGlyph } from '../components/common/GoogleSignInButton';
 import { AuthLayout } from '../layouts/AuthLayout';
+import { tr } from '../i18n/translate';
 
 /**
  * The OAuth loading screen. On arrival it asks the backend for Google's
@@ -48,8 +49,8 @@ export function OAuthGoogleStartPage() {
             <GoogleGlyph />
           </span>
         </div>
-        <p className="auth-status-text">Signing you in with Google…</p>
-        <p className="auth-status-note">Please wait while we securely authenticate your account.</p>
+        <p className="auth-status-text">{tr('Signing you in with Google…')}</p>
+        <p className="auth-status-note">{tr('Please wait while we securely authenticate your account.')}</p>
       </div>
     </AuthLayout>
   );

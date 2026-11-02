@@ -1,5 +1,6 @@
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import { tr } from '../../i18n/translate';
 
 export type ViewMode = 'board' | 'list';
 
@@ -21,8 +22,8 @@ export function ViewToggle({ value, onChange, label }: {
       }}
       aria-label={label}
     >
-      <ToggleButton value="board">Board</ToggleButton>
-      <ToggleButton value="list">List</ToggleButton>
+      <ToggleButton value="board">{tr('Board')}</ToggleButton>
+      <ToggleButton value="list">{tr('List')}</ToggleButton>
     </ToggleButtonGroup>
   );
 }

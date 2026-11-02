@@ -1,6 +1,7 @@
 import { updateGoalStatus } from '../api/goalApi';
 import { updateStepStatus } from '../api/stepApi';
 import type { Goal, TaskItem, VisionStep } from '../types/vision';
+import { tr } from '../i18n/translate';
 
 type ShowToast = (message: string, options?: { action?: { label: string; onClick: () => void }; duration?: number }) => void;
 
@@ -38,10 +39,10 @@ export function nudgeAfterTaskComplete({ token, completedTaskId, tasks, steps, g
     return;
   }
 
-  showToast(`All tasks done — mark step "${step.title}" completed?`, {
+  showToast(tr('All tasks done — mark step "{title}" completed?', { title: step.title }), {
     duration: 8000,
     action: {
-      label: 'Complete step',
+      label: tr('Complete step'),
       onClick: () => {
         void (async () => {
           await updateStepStatus(token, step.id, 'COMPLETED');
@@ -78,10 +79,10 @@ export function nudgeAfterStepComplete({ token, completedStepId, steps, goals, s
     return;
   }
 
-  showToast(`Every step is done — mark goal "${goal.title}" completed?`, {
+  showToast(tr('Every step is done — mark goal "{title}" completed?', { title: goal.title }), {
     duration: 8000,
     action: {
-      label: 'Complete goal',
+      label: tr('Complete goal'),
       onClick: () => {
         void (async () => {
           await updateGoalStatus(token, goal.id, 'COMPLETED');

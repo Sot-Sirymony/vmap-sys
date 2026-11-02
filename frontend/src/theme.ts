@@ -1,4 +1,5 @@
 import { createTheme } from '@mui/material/styles';
+import { tr } from './i18n/translate';
 
 /**
  * Fluent 2 design tokens (Microsoft's Fluent Design System). Values match
@@ -392,27 +393,27 @@ type AccentSet = {
 
 export const accentOptions: Record<AccentId, { label: string; light: AccentSet; dark: AccentSet }> = {
   blue: {
-    label: 'Blue',
+    label: tr('Blue'),
     light: { main: '#0078d4', hover: '#006abb', pressed: '#005a9f', contrastText: '#ffffff', tint: '#deecf9', tintForeground: '#005a9e' },
     dark: { main: '#4ba0e1', hover: '#6bb1e6', pressed: '#408ac1', contrastText: '#1b1a19', tint: '#0e3a5c', tintForeground: '#9ec9ec' },
   },
   teal: {
-    label: 'Teal',
+    label: tr('Teal'),
     light: { main: '#038387', hover: '#037377', pressed: '#026265', contrastText: '#ffffff', tint: '#d5f0f0', tintForeground: '#026d70' },
     dark: { main: '#58c2c6', hover: '#76cdd0', pressed: '#419093', contrastText: '#1b1a19', tint: '#0c3536', tintForeground: '#9be0e2' },
   },
   purple: {
-    label: 'Purple',
+    label: tr('Purple'),
     light: { main: '#8764b8', hover: '#7758a2', pressed: '#654b8a', contrastText: '#ffffff', tint: '#ece5f6', tintForeground: '#5a4180' },
     dark: { main: '#a68ccc', hover: '#b6a1d5', pressed: '#927bb4', contrastText: '#1b1a19', tint: '#2b2140', tintForeground: '#cdbce6' },
   },
   green: {
-    label: 'Green',
+    label: tr('Green'),
     light: { main: '#107c10', hover: '#0e6d0e', pressed: '#0c5d0c', contrastText: '#ffffff', tint: '#dff0df', tintForeground: '#0b5a0b' },
     dark: { main: '#6bbf6c', hover: '#86cb86', pressed: '#539554', contrastText: '#1b1a19', tint: '#16301c', tintForeground: '#a4d7a6' },
   },
   orange: {
-    label: 'Orange',
+    label: tr('Orange'),
     light: { main: '#ca5010', hover: '#b2460e', pressed: '#983c0c', contrastText: '#ffffff', tint: '#f8e3d7', tintForeground: '#8a3a0e' },
     dark: { main: '#df8e57', hover: '#e5a275', pressed: '#b77447', contrastText: '#1b1a19', tint: '#3a2415', tintForeground: '#f0c0a4' },
   },
@@ -426,22 +427,22 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
   // above, where #0078d4 → #106ebe → #005a9e descends in lightness — and going
   // the other way would drop contrast exactly when the user is interacting.
   magenta: {
-    label: 'Magenta',
+    label: tr('Magenta'),
     light: { main: '#b4009e', hover: '#9c0089', pressed: '#8a0079', contrastText: '#ffffff', tint: '#f8e0f4', tintForeground: '#8a0079' },
     dark: { main: '#e06ecd', hover: '#e98fd8', pressed: '#cf5cbd', contrastText: '#1b1a19', tint: '#3d0f36', tintForeground: '#f3b6e8' },
   },
   red: {
-    label: 'Red',
+    label: tr('Red'),
     light: { main: '#c4314b', hover: '#ad2942', pressed: '#9b2033', contrastText: '#ffffff', tint: '#fde7e9', tintForeground: '#9b2033' },
     dark: { main: '#e8737f', hover: '#ef9199', pressed: '#d96370', contrastText: '#1b1a19', tint: '#3f1418', tintForeground: '#f5b8be' },
   },
   brass: {
-    label: 'Brass',
+    label: tr('Brass'),
     light: { main: '#8e6a0b', hover: '#7d5d0a', pressed: '#6b5008', contrastText: '#ffffff', tint: '#f7ecd0', tintForeground: '#6b5008' },
     dark: { main: '#d4b158', hover: '#e0c37b', pressed: '#b8963f', contrastText: '#1b1a19', tint: '#332708', tintForeground: '#e8d69b' },
   },
   steel: {
-    label: 'Steel',
+    label: tr('Steel'),
     light: { main: '#005b70', hover: '#004d5f', pressed: '#003a49', contrastText: '#ffffff', tint: '#d6ebf1', tintForeground: '#00485a' },
     dark: { main: '#5ba7bd', hover: '#7dbccd', pressed: '#43909f', contrastText: '#1b1a19', tint: '#0a2c36', tintForeground: '#a3d3e0' },
   },
@@ -455,17 +456,17 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
   // red on Critical, Declined, and destructive actions, and a red Save button
   // beside a red Delete button is a hazard whatever the measured ΔE says.
   vermilion: {
-    label: 'Vermilion',
+    label: tr('Vermilion'),
     light: { main: '#B71833', hover: '#9c142c', pressed: '#7A0930', contrastText: '#ffffff', tint: '#FFE3D5', tintForeground: '#7A0930' },
     dark: { main: '#FFC1AC', hover: '#FFE3D5', pressed: '#FF8A7A', contrastText: '#1b1a19', tint: '#4a1220', tintForeground: '#FFC1AC' },
   },
   violet: {
-    label: 'Violet',
+    label: tr('Violet'),
     light: { main: '#8E33FF', hover: '#7522e0', pressed: '#5119B7', contrastText: '#ffffff', tint: '#EFD8FF', tintForeground: '#27097A' },
     dark: { main: '#C884FF', hover: '#EFD8FF', pressed: '#A85CFF', contrastText: '#1b1a19', tint: '#27097A', tintForeground: '#EFD8FF' },
   },
   pink: {
-    label: 'Pink',
+    label: tr('Pink'),
     light: { main: '#b8306e', hover: '#a32860', pressed: '#931f56', contrastText: '#ffffff', tint: '#fce4f1', tintForeground: '#931f56' },
     dark: { main: '#eb84b6', hover: '#f2a2c8', pressed: '#d1699b', contrastText: '#1b1a19', tint: '#3d1229', tintForeground: '#f7bdd8' },
   },
@@ -477,7 +478,7 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
   // pairs measured before being written down: 5.17/6.70/8.72/6.98 light,
   // 6.84/9.64/4.73/8.42 dark.
   cobalt: {
-    label: 'Cobalt',
+    label: tr('Cobalt'),
     light: { main: '#2563EB', hover: '#1D4ED8', pressed: '#1E40AF', contrastText: '#ffffff', tint: '#D1E9FE', tintForeground: '#1E40AF' },
     dark: { main: '#60A5FA', hover: '#93C5FD', pressed: '#3B82F6', contrastText: '#1b1a19', tint: '#16294A', tintForeground: '#A8C7FA' },
   },
@@ -488,52 +489,52 @@ export const accentOptions: Record<AccentId, { label: string; light: AccentSet; 
   // All 80 pairs were measured before being written down; the tightest is
   // indigo's dark pressed at 5.07:1. theme.test.ts enforces every one.
   indigo: {
-    label: 'Indigo',
+    label: tr('Indigo'),
     light: { main: '#4F46E5', hover: '#4338CA', pressed: '#3730A3', contrastText: '#ffffff', tint: '#E0E7FF', tintForeground: '#3730A3' },
     dark: { main: '#818CF8', hover: '#A5B4FC', pressed: '#7280F5', contrastText: '#1b1a19', tint: '#232567', tintForeground: '#C7D2FE' },
   },
   sky: {
-    label: 'Sky',
+    label: tr('Sky'),
     light: { main: '#0369A1', hover: '#075985', pressed: '#0C4A6E', contrastText: '#ffffff', tint: '#E0F2FE', tintForeground: '#0C4A6E' },
     dark: { main: '#38BDF8', hover: '#7DD3FC', pressed: '#0EA5E9', contrastText: '#1b1a19', tint: '#082F49', tintForeground: '#7DD3FC' },
   },
   emerald: {
-    label: 'Emerald',
+    label: tr('Emerald'),
     light: { main: '#047857', hover: '#065F46', pressed: '#064E3B', contrastText: '#ffffff', tint: '#D1FAE5', tintForeground: '#065F46' },
     dark: { main: '#34D399', hover: '#6EE7B7', pressed: '#10B981', contrastText: '#1b1a19', tint: '#06281E', tintForeground: '#A7F3D0' },
   },
   olive: {
-    label: 'Olive',
+    label: tr('Olive'),
     light: { main: '#4D7C0F', hover: '#3F6212', pressed: '#365314', contrastText: '#ffffff', tint: '#ECFCCB', tintForeground: '#365314' },
     dark: { main: '#A3E635', hover: '#BEF264', pressed: '#84CC16', contrastText: '#1b1a19', tint: '#1A2E05', tintForeground: '#D9F99D' },
   },
   amber: {
-    label: 'Amber',
+    label: tr('Amber'),
     light: { main: '#B45309', hover: '#92400E', pressed: '#78350F', contrastText: '#ffffff', tint: '#FEF3C7', tintForeground: '#78350F' },
     dark: { main: '#FBBF24', hover: '#FCD34D', pressed: '#F59E0B', contrastText: '#1b1a19', tint: '#3A2A08', tintForeground: '#FDE68A' },
   },
   rose: {
-    label: 'Rose',
+    label: tr('Rose'),
     light: { main: '#BE123C', hover: '#9F1239', pressed: '#881337', contrastText: '#ffffff', tint: '#FFE4E6', tintForeground: '#9F1239' },
     dark: { main: '#FB7185', hover: '#FDA4AF', pressed: '#F43F5E', contrastText: '#1b1a19', tint: '#4C0519', tintForeground: '#FECDD3' },
   },
   fuchsia: {
-    label: 'Fuchsia',
+    label: tr('Fuchsia'),
     light: { main: '#A21CAF', hover: '#86198F', pressed: '#701A75', contrastText: '#ffffff', tint: '#FAE8FF', tintForeground: '#86198F' },
     dark: { main: '#E879F9', hover: '#F0ABFC', pressed: '#D946EF', contrastText: '#1b1a19', tint: '#4A044E', tintForeground: '#F5D0FE' },
   },
   graphite: {
-    label: 'Graphite',
+    label: tr('Graphite'),
     light: { main: '#475569', hover: '#334155', pressed: '#1E293B', contrastText: '#ffffff', tint: '#E2E8F0', tintForeground: '#334155' },
     dark: { main: '#94A3B8', hover: '#CBD5E1', pressed: '#7A8BA3', contrastText: '#1b1a19', tint: '#27303C', tintForeground: '#CBD5E1' },
   },
   coffee: {
-    label: 'Coffee',
+    label: tr('Coffee'),
     light: { main: '#8B4513', hover: '#74390F', pressed: '#5E2E0C', contrastText: '#ffffff', tint: '#F5E6D8', tintForeground: '#5E2E0C' },
     dark: { main: '#D39C74', hover: '#E4BC9E', pressed: '#C1824F', contrastText: '#1b1a19', tint: '#3B2716', tintForeground: '#E9C9AC' },
   },
   navy: {
-    label: 'Navy',
+    label: tr('Navy'),
     light: { main: '#1E3A8A', hover: '#182E6E', pressed: '#122353', contrastText: '#ffffff', tint: '#DBEAFE', tintForeground: '#1E3A8A' },
     dark: { main: '#8FA8F8', hover: '#B4C4FB', pressed: '#6E8AF0', contrastText: '#1b1a19', tint: '#14204A', tintForeground: '#BFD0FF' },
   },
@@ -576,18 +577,18 @@ export type ThemePresetDefinition = {
 };
 
 export const themePresets: ThemePresetDefinition[] = [
-  { id: 'fluentSystem', stored: 'FLUENT_SYSTEM', label: 'Fluent System', description: 'Follows your device', mode: 'system', accent: 'blue' },
-  { id: 'fluentLight', stored: 'FLUENT_LIGHT', label: 'Fluent Light', description: 'Always light, brand blue', mode: 'light', accent: 'blue' },
-  { id: 'fluentDark', stored: 'FLUENT_DARK', label: 'Fluent Dark', description: 'Always dark, brand blue', mode: 'dark', accent: 'blue' },
-  { id: 'ocean', stored: 'OCEAN', label: 'Ocean', description: 'Light and teal', mode: 'light', accent: 'teal' },
-  { id: 'forest', stored: 'FOREST', label: 'Forest', description: 'Light and green', mode: 'light', accent: 'green' },
-  { id: 'slate', stored: 'SLATE', label: 'Slate', description: 'Light and steel blue', mode: 'light', accent: 'steel' },
-  { id: 'midnight', stored: 'MIDNIGHT', label: 'Midnight', description: 'Dark and purple', mode: 'dark', accent: 'purple' },
+  { id: 'fluentSystem', stored: 'FLUENT_SYSTEM', label: 'Fluent System', description: tr('Follows your device'), mode: 'system', accent: 'blue' },
+  { id: 'fluentLight', stored: 'FLUENT_LIGHT', label: 'Fluent Light', description: tr('Always light, brand blue'), mode: 'light', accent: 'blue' },
+  { id: 'fluentDark', stored: 'FLUENT_DARK', label: 'Fluent Dark', description: tr('Always dark, brand blue'), mode: 'dark', accent: 'blue' },
+  { id: 'ocean', stored: 'OCEAN', label: tr('Ocean'), description: tr('Light and teal'), mode: 'light', accent: 'teal' },
+  { id: 'forest', stored: 'FOREST', label: tr('Forest'), description: tr('Light and green'), mode: 'light', accent: 'green' },
+  { id: 'slate', stored: 'SLATE', label: tr('Slate'), description: tr('Light and steel blue'), mode: 'light', accent: 'steel' },
+  { id: 'midnight', stored: 'MIDNIGHT', label: tr('Midnight'), description: tr('Dark and purple'), mode: 'dark', accent: 'purple' },
   // From the Stitch project's DESIGN.md ("Clean, Modern, Data-Driven"): light
   // workspace with the guide's royal blue. Its other rules — Inter, the cool
   // sidebar wash, soft-shadow cards — are the existing Font/Tone/Style knobs
   // (Inter / Cool / Modern), which a preset deliberately does not touch.
-  { id: 'stitch', stored: 'STITCH', label: 'Stitch', description: 'Light and cobalt blue', mode: 'light', accent: 'cobalt' },
+  { id: 'stitch', stored: 'STITCH', label: 'Stitch', description: tr('Light and cobalt blue'), mode: 'light', accent: 'cobalt' },
 ];
 
 /**
@@ -642,57 +643,57 @@ export const fontFamilies: FontFamilyDefinition[] = [
   {
     id: 'system',
     stored: 'SYSTEM',
-    label: 'System default',
-    description: 'Matches your device — loads instantly',
+    label: tr('System default'),
+    description: tr('Matches your device — loads instantly'),
     stack: SYSTEM_STACK,
   },
   {
     id: 'publicSans',
     stored: 'PUBLIC_SANS',
     label: 'Public Sans',
-    description: 'Neutral and highly legible',
+    description: tr('Neutral and highly legible'),
     stack: `"Public Sans Variable", ${SYSTEM_STACK}`,
   },
   {
     id: 'inter',
     stored: 'INTER',
     label: 'Inter',
-    description: 'Designed for screens',
+    description: tr('Designed for screens'),
     stack: `"Inter Variable", ${SYSTEM_STACK}`,
   },
   {
     id: 'dmSans',
     stored: 'DM_SANS',
     label: 'DM Sans',
-    description: 'Geometric and low-contrast',
+    description: tr('Geometric and low-contrast'),
     stack: `"DM Sans Variable", ${SYSTEM_STACK}`,
   },
   {
     id: 'nunitoSans',
     stored: 'NUNITO_SANS',
     label: 'Nunito Sans',
-    description: 'Rounded and friendly',
+    description: tr('Rounded and friendly'),
     stack: `"Nunito Sans Variable", ${SYSTEM_STACK}`,
   },
   {
     id: 'montserrat',
     stored: 'MONTSERRAT',
     label: 'Montserrat',
-    description: 'Geometric, from the Stitch style guide',
+    description: tr('Geometric, from the Stitch style guide'),
     stack: `"Montserrat Variable", ${SYSTEM_STACK}`,
   },
   {
     id: 'lexend',
     stored: 'LEXEND',
     label: 'Lexend',
-    description: 'Tuned for effortless reading',
+    description: tr('Tuned for effortless reading'),
     stack: `"Lexend Variable", ${SYSTEM_STACK}`,
   },
   {
     id: 'plusJakartaSans',
     stored: 'PLUS_JAKARTA_SANS',
     label: 'Plus Jakarta Sans',
-    description: 'Contemporary and open',
+    description: tr('Contemporary and open'),
     stack: `"Plus Jakarta Sans Variable", ${SYSTEM_STACK}`,
   },
 ];
@@ -779,114 +780,114 @@ export const backgroundTones: BackgroundToneDefinition[] = [
   {
     id: 'neutral',
     stored: 'NEUTRAL',
-    label: 'Neutral',
-    description: 'Clean grey default',
+    label: tr('Neutral'),
+    description: tr('Clean grey default'),
     preview: { light: ['#F9FAFB', '#ffffff', '#f5f5f5'], dark: ['#1b1a19', '#252423', '#252423'] },
   },
   {
     id: 'warm',
     stored: 'WARM',
-    label: 'Warm',
-    description: 'Cream, easy on the eyes',
+    label: tr('Warm'),
+    description: tr('Cream, easy on the eyes'),
     preview: { light: ['#faf7f2', '#fffdfa', '#f5f1e9'], dark: ['#1f1b17', '#2a2521', '#2a2521'] },
   },
   {
     id: 'cool',
     stored: 'COOL',
-    label: 'Cool',
-    description: 'Calm blue-grey cast',
+    label: tr('Cool'),
+    description: tr('Calm blue-grey cast'),
     preview: { light: ['#EDF3F9', '#ffffff', '#E7EEF6'], dark: ['#171a1d', '#212529', '#212529'] },
   },
   {
     id: 'soft',
     stored: 'SOFT',
-    label: 'Soft',
-    description: 'Deeper canvas, cards stand out',
+    label: tr('Soft'),
+    description: tr('Deeper canvas, cards stand out'),
     preview: { light: ['#eef0f2', '#ffffff', '#e7eaee'], dark: ['#141414', '#242424', '#242424'] },
   },
   {
     id: 'tinted',
     stored: 'TINTED',
-    label: 'Tinted',
-    description: 'Washed with your accent',
+    label: tr('Tinted'),
+    description: tr('Washed with your accent'),
     // Resolved from the accent at render time; these stand in for the swatch.
     preview: { light: ['#f7fafd', '#ffffff', '#eef4f9'], dark: ['#16191c', '#202427', '#202427'] },
   },
   {
     id: 'flat',
     stored: 'FLAT',
-    label: 'Flat',
-    description: 'One surface, borders only',
+    label: tr('Flat'),
+    description: tr('One surface, borders only'),
     preview: { light: ['#ffffff', '#ffffff', '#ffffff'], dark: ['#1f1e1d', '#1f1e1d', '#1f1e1d'] },
   },
   {
     id: 'rose',
     stored: 'ROSE',
-    label: 'Rose',
-    description: 'Gentle pink blush',
+    label: tr('Rose'),
+    description: tr('Gentle pink blush'),
     preview: { light: ['#FAF3F5', '#FFFBFC', '#F4E9ED'], dark: ['#201819', '#2B2224', '#2B2224'] },
   },
   {
     id: 'mint',
     stored: 'MINT',
-    label: 'Mint',
-    description: 'Fresh green wash',
+    label: tr('Mint'),
+    description: tr('Fresh green wash'),
     preview: { light: ['#EFF6F1', '#FBFEFC', '#E7EFEA'], dark: ['#161B18', '#202623', '#202623'] },
   },
   {
     id: 'lavender',
     stored: 'LAVENDER',
-    label: 'Lavender',
-    description: 'Quiet violet cast',
+    label: tr('Lavender'),
+    description: tr('Quiet violet cast'),
     preview: { light: ['#F4F2FA', '#FDFCFF', '#EDEAF5'], dark: ['#1A181F', '#24222B', '#24222B'] },
   },
   {
     id: 'sand',
     stored: 'SAND',
-    label: 'Sand',
-    description: 'Deeper desert beige',
+    label: tr('Sand'),
+    description: tr('Deeper desert beige'),
     preview: { light: ['#F5F0E6', '#FDFAF2', '#EEE7D8'], dark: ['#1E1A14', '#29241C', '#29241C'] },
   },
   {
     id: 'sage',
     stored: 'SAGE',
-    label: 'Sage',
-    description: 'Muted grey-green',
+    label: tr('Sage'),
+    description: tr('Muted grey-green'),
     preview: { light: ['#F0F2EE', '#FAFBF9', '#E8ECE5'], dark: ['#191C18', '#232722', '#232722'] },
   },
   {
     id: 'ice',
     stored: 'ICE',
-    label: 'Ice',
-    description: 'Bright glacial blue',
+    label: tr('Ice'),
+    description: tr('Bright glacial blue'),
     preview: { light: ['#EAF4FB', '#ffffff', '#DFECF7'], dark: ['#151A20', '#1F262E', '#1F262E'] },
   },
   {
     id: 'linen',
     stored: 'LINEN',
-    label: 'Linen',
-    description: 'Soft paper white',
+    label: tr('Linen'),
+    description: tr('Soft paper white'),
     preview: { light: ['#FBF9F4', '#ffffff', '#F4F0E7'], dark: ['#1D1B17', '#272420', '#272420'] },
   },
   {
     id: 'slate',
     stored: 'SLATE',
-    label: 'Slate',
-    description: 'Deep blue-grey canvas',
+    label: tr('Slate'),
+    description: tr('Deep blue-grey canvas'),
     preview: { light: ['#E9ECF0', '#F8FAFC', '#DFE4EA'], dark: ['#15181C', '#1E2227', '#1E2227'] },
   },
   {
     id: 'plum',
     stored: 'PLUM',
-    label: 'Plum',
-    description: 'Dusky purple-pink',
+    label: tr('Plum'),
+    description: tr('Dusky purple-pink'),
     preview: { light: ['#F6F0F6', '#FDFAFD', '#EFE6EF'], dark: ['#1E1820', '#28222A', '#28222A'] },
   },
   {
     id: 'stone',
     stored: 'STONE',
-    label: 'Stone',
-    description: 'Warm mineral grey',
+    label: tr('Stone'),
+    description: tr('Warm mineral grey'),
     preview: { light: ['#F2F0ED', '#FAF9F7', '#EAE7E2'], dark: ['#1B1A18', '#252320', '#252320'] },
   },
 ];
@@ -923,20 +924,20 @@ export const interfaceStyles: InterfaceStyleDefinition[] = [
   {
     id: 'classic',
     stored: 'CLASSIC',
-    label: 'Classic',
-    description: 'Flatter and denser — square corners, crisp borders, breadcrumbs',
+    label: tr('Classic'),
+    description: tr('Flatter and denser — square corners, crisp borders, breadcrumbs'),
   },
   {
     id: 'modern',
     stored: 'MODERN',
-    label: 'Modern',
-    description: 'Rounded cards, soft shadows, pill navigation (default)',
+    label: tr('Modern'),
+    description: tr('Rounded cards, soft shadows, pill navigation (default)'),
   },
   {
     id: 'liquidGlass',
     stored: 'LIQUID_GLASS',
-    label: 'Liquid Glass',
-    description: 'Frosted translucent panels that float over your background',
+    label: tr('Liquid Glass'),
+    description: tr('Frosted translucent panels that float over your background'),
   },
 ];
 
