@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [9.0.0] — In progress (Phases 1–7 of 9)
+## [9.0.0] — In progress (Phases 1–8 of 9)
 
 Implements [VMS_BRD_V9.0.0](VMS_BRD_V9.0.0.md): Claude AI integration, which first brings
 back coaches and cohorts (decisions D-1, D-6 to D-8).
@@ -232,6 +232,29 @@ back coaches and cohorts (decisions D-1, D-6 to D-8).
   module that exists is shown).
 - **Fixed** calling an endpoint with the wrong HTTP method answered 500; it now answers 405.
 - **Added** `AiModuleFlowTests` (4) and `ModuleHelpCard.test.tsx` (2).
+
+### Phase 8: coach co-pilot
+
+- **Added** the **Weekly AI summary** on a participant's coach page (AI-FR-18): progress
+  against the plan, mood trend, risks with reasons and one suggested action. Kept for
+  the week (migration `V59__ai_coach_summaries.sql`), so reopening it costs nothing; the
+  coach can make it again and rate it accurate or not (AC-16).
+- **Added** risk signals with their reasons on the Coaching list (AI-FR-19): falling
+  completion, steps overdue again after a new date, three or more overdue items, and a
+  falling or low attitude (only when journals are shared). Plain rules, free and
+  repeatable; the summary explains them. A participant with signals but not yet quiet
+  for 7 days shows "Needs attention".
+- **Added** **Draft with AI** in the coach's comment box (AI-FR-20): a short comment on the
+  chosen dream, goal, step or the participant overall; the coach edits it and sends it.
+- **Added** the cohort summary on the Coaching page (AI-FR-21): overview, shared blockers,
+  modules where people are stuck and suggested actions, from participants who gave AI
+  consent only, with no names sent.
+- **Changed** the co-pilot sees only what the coach may see (D-6, D-8): journals only when
+  shared, and nothing about a participant without their own AI consent (AI-NFR-03). It
+  uses its own guidelines (describe behaviour, never diagnose), and its requests do not
+  use the coach's daily limit.
+- **Added** `AiCoachFlowTests` (5), `CoachSummaryCards.test.tsx` (2) and Khmer patterns for
+  the risk reasons.
 
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 

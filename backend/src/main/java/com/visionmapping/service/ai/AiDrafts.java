@@ -129,4 +129,24 @@ public final class AiDrafts {
             @JsonPropertyDescription("The number of the one module to focus on next, 1 to 15") int focusModule,
             @JsonPropertyDescription("Why that module, in one sentence") String reason) {
     }
+
+    // Phase 8: coach co-pilot.
+
+    public record CoachSummaryDraft(
+            @JsonPropertyDescription("Progress against the plan this week, two to four sentences") String progress,
+            @JsonPropertyDescription("Mood trend from attitude check-ins; empty when there are none in the records") String mood,
+            @JsonPropertyDescription("Risks, each with the reason from the records; empty when nothing stands out") String risks,
+            @JsonPropertyDescription("One specific action the coach could take this week") String suggestedAction) {
+    }
+
+    public record CoachFeedbackDraft(
+            @JsonPropertyDescription("The comment, in the coach's voice: one thing done well, one concrete suggestion, one question") String message) {
+    }
+
+    public record CohortSummaryDraft(
+            @JsonPropertyDescription("The cohort's week in two or three sentences") String overview,
+            @JsonPropertyDescription("Blockers several participants share, one per line") String commonBlockers,
+            @JsonPropertyDescription("Modules where people are stuck or slow, one per line") String strugglingModules,
+            @JsonPropertyDescription("Up to three actions for the coach, one per line") String suggestedActions) {
+    }
 }

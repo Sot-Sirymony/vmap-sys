@@ -556,6 +556,19 @@ All need AI consent and count toward the daily limit. Suggestions only.
 | POST | `/api/ai/modules/{number}/help` | `{ "mode": "START" \| "DRAFT" \| "FEEDBACK", "rows": [...], "language" }`. START → `questions` (up to 3) and `example`; DRAFT → `rows` keyed by the module's fields (forms only; rating fields blank); FEEDBACK → `feedback` and `improvements` (needs typed rows). 400 for a locked module. Nothing is saved |
 | POST | `/api/ai/assessment/explain?language=en` | `explanation`, `focusModule`, `focusTitle`, `reason`. 400 before the first assessment |
 
+### V9: coach co-pilot (Phase 8)
+
+Coach only, for participants of the coach's own active cohorts (404 otherwise). Participant summaries and drafts need that participant's AI consent (400 otherwise). These requests do not count toward the coach's daily limit.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET, POST | `/api/coach/participants/{id}/ai-summary?language=en` | GET: this week's saved summary or 204 (no AI call). POST: make it again. `progress`, `mood` (null unless journals are shared), `risks`, `suggestedAction`, `riskSignals[]`, `accurate` |
+| POST | `/api/coach/participants/{id}/feedback-draft` | `{ "targetType": "GENERAL" \| "DREAM" \| "GOAL" \| "STEP", "targetId", "language" }` → `message`. Nothing is sent |
+| GET, POST | `/api/coach/cohorts/{cohortId}/ai-summary?language=en` | `overview`, `commonBlockers`, `strugglingModules`, `suggestedActions`; consenting participants only, no names |
+| PUT | `/api/coach/ai-summaries/{id}/rating` | `{ "accurate": true, "note" }` (AC-16) |
+
+`GET /api/coach/participants` rows add `riskReasons[]` and `aiConsent`.
+
 ### V9: plan sharing (v0.1 FR-10)
 
 | Method | Path | Notes |

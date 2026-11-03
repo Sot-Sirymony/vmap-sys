@@ -67,6 +67,7 @@ public class CoachService {
     private final ActivityService activityService;
     private final ProgressMetricsService progressMetricsService;
     private final CoachCommentService coachCommentService;
+    private final CoachRiskSignals coachRiskSignals;
     private final ModuleCompletionRepository moduleCompletionRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -138,7 +139,21 @@ public class CoachService {
         Cohort cohort = participant.getCohort();
         return new CoachParticipantResponse(participant.getId(), participant.getFullName(), participant.getEmail(),
                 cohort.getId(), cohort.getName(), lastActive, daysInactive, daysInactive >= AT_RISK_AFTER_DAYS,
-                progressMetricsService.metricsFor(participant.getId(), LocalDate.now(clock)));
+                progressMetricsService.metricsFor(participant.getId(), LocalDate.now(clock)),
+                coachRiskSignals.reasons(participant), participant.getAiConsentAt() != null);
+    }
+
+    /** For the coach co-pilot: the same check as every coach request (D-6), then the participant. */
+    public AppUser requireVisibleParticipant(Long participantId) {
+        return visibleParticipant(participantId);
+    }
+
+    /** One of the active cohorts the current coach coaches, or 404. */
+    public Cohort requireOwnCohort(Long cohortId) {
+        AppUser coach = requireCoach();
+        return cohortRepository.findById(cohortId)
+                .filter(cohort -> !cohort.isArchived() && cohort.getCoach() != null && cohort.getCoach().getId().equals(coach.getId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Cohort not found: " + cohortId));
     }
 
     private AppUser visibleParticipant(Long participantId) {

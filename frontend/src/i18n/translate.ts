@@ -35,6 +35,13 @@ const SERVER_PATTERNS: [RegExp, string, string[]][] = [
   [/^\+(\d+)% from your baseline$/, '+{percent}% from your baseline', ['percent']],
   [/^(\d+)% or more of the last 7 days' steps$/, "{percent}% or more of the last 7 days' steps", ['percent']],
   [/^(\d+) of (\d+) \((\d+)%\)$/, '{done} of {total} ({percent}%)', ['done', 'total', 'percent']],
+  // V9 (AI-FR-19): risk signals from CoachRiskSignals.
+  [/^Finished (\d+) item\(s\) this week, down from (\d+) the week before\.$/,
+    'Finished {now} item(s) this week, down from {before} the week before.', ['now', 'before']],
+  [/^(\d+) step\(s\) overdue again after being given a new date\.$/, '{count} step(s) overdue again after being given a new date.', ['count']],
+  [/^(\d+) items overdue\.$/, '{count} items overdue.', ['count']],
+  [/^Attitude averaged ([\d.]+) this week, down from ([\d.]+)\.$/, 'Attitude averaged {now} this week, down from {before}.', ['now', 'before']],
+  [/^Attitude averaged ([\d.]+) of 5 this week\.$/, 'Attitude averaged {score} of 5 this week.', ['score']],
 ];
 
 // FR-20: interface text an admin changed, for the current language. Cached on

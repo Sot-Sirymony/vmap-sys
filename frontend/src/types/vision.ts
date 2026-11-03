@@ -645,6 +645,10 @@ export type CoachParticipant = {
   daysInactive: number;
   atRisk: boolean;
   metrics: ProgressMetrics;
+  // AI-FR-19: why they may need attention, each with its reason.
+  riskReasons: string[];
+  // AI-NFR-03: AI summaries and drafts about them need their own AI consent.
+  aiConsent: boolean;
 };
 
 /** Journal lists are null unless the participant shares them (D-8). */
@@ -1140,4 +1144,30 @@ export type AssessmentExplanation = {
   focusModule?: number | null;
   focusTitle?: string | null;
   reason?: string | null;
+};
+
+// V9 Phase 8 (AI-FR-18 to AI-FR-21): the coach co-pilot.
+export type AiParticipantSummary = {
+  id: number;
+  weekStart: string;
+  generatedAt: string;
+  progress?: string | null;
+  mood?: string | null;
+  risks?: string | null;
+  suggestedAction?: string | null;
+  riskSignals: string[];
+  accurate?: boolean | null;
+  ratingNote?: string | null;
+};
+
+export type AiCohortSummary = {
+  id: number;
+  weekStart: string;
+  generatedAt: string;
+  overview?: string | null;
+  commonBlockers?: string | null;
+  strugglingModules?: string | null;
+  suggestedActions?: string | null;
+  accurate?: boolean | null;
+  ratingNote?: string | null;
 };

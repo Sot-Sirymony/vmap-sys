@@ -9,7 +9,11 @@ import { CoachPage } from './CoachPage';
 let role = 'COACH';
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ token: 'token', user: { role } }) }));
 vi.mock('../api/cohortApi', () => ({ listCoachParticipants: vi.fn() }));
-vi.mock('../api/aiApi', () => ({ listAiSafetyAlerts: vi.fn().mockResolvedValue([]), acknowledgeAiSafetyAlert: vi.fn() }));
+vi.mock('../api/aiApi', () => ({
+  listAiSafetyAlerts: vi.fn().mockResolvedValue([]),
+  acknowledgeAiSafetyAlert: vi.fn(),
+  getAiStatus: vi.fn().mockResolvedValue({ available: false, reason: 'OFF', consentGiven: false, dailyLimit: 10, messagesLeftToday: 10 }),
+}));
 
 function participant(fullName: string, daysInactive: number): CoachParticipant {
   return {
@@ -22,6 +26,8 @@ function participant(fullName: string, daysInactive: number): CoachParticipant {
     daysInactive,
     atRisk: daysInactive >= 7,
     metrics: { metrics: [{ id: 'BO-01', label: 'Dreams written and ranked', value: '1', target: 'At least 1', met: true }] },
+    riskReasons: [],
+    aiConsent: true,
   };
 }
 

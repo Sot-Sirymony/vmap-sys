@@ -320,3 +320,8 @@ FR-05) and `overdueReschedules` (times it was given a new date while overdue, AI
 
 **V58.** **AiSettings** adds `aiReminders` (default false): add an AI encouragement that
 quotes the participant's passion statement to reminder emails (AI-FR-15).
+
+**V59.** **AiCoachSummary** (`ai_coach_summaries`): `scope` (`PARTICIPANT` or `COHORT`), `coach`,
+`participant` (deleted with their account) or `cohort`, `weekStart`, `progressText`, `moodText`,
+`risksText`, `actionText` (a cohort summary stores its overview, modules and blockers in the
+same columns), and the coach's `accurate`, `ratingNote`, `ratedAt` (AC-16).

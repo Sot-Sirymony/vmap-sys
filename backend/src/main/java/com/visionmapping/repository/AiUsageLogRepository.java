@@ -15,5 +15,6 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, Long> {
 
     long countByCreatedAtGreaterThanEqual(Instant from);
 
-    long countByUser_IdAndCreatedAtGreaterThanEqualAndOutcomeIn(Long userId, Instant from, Collection<AiOutcome> outcomes);
+    long countByUser_IdAndCreatedAtGreaterThanEqualAndOutcomeInAndFeatureNotIn(Long userId, Instant from,
+            Collection<AiOutcome> outcomes, Collection<String> excludedFeatures);
 }

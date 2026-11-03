@@ -40,6 +40,8 @@ public class AiAccessService {
     public static final String NO_CONSENT = "NO_CONSENT";
     public static final String DAILY_LIMIT = "DAILY_LIMIT";
     private static final Set<AiOutcome> COUNTED = EnumSet.of(AiOutcome.OK, AiOutcome.CUT_SHORT, AiOutcome.REFUSED);
+    /** Coach co-pilot requests are work for many participants, so they do not use the coach's own daily limit. */
+    public static final Set<String> COACH_FEATURES = Set.of("COACH_SUMMARY", "COACH_FEEDBACK", "COACH_COHORT");
 
     private final EntityLookup lookup;
     private final AiSettingsService aiSettingsService;
@@ -120,7 +122,26 @@ public class AiAccessService {
      */
     private long sentToday(AppUser user) {
         Instant dayStart = LocalDate.now(clock).atStartOfDay(clock.getZone()).toInstant();
-        return usageLogRepository.countByUser_IdAndCreatedAtGreaterThanEqualAndOutcomeIn(user.getId(), dayStart, COUNTED);
+        return usageLogRepository.countByUser_IdAndCreatedAtGreaterThanEqualAndOutcomeInAndFeatureNotIn(
+                user.getId(), dayStart, COUNTED, COACH_FEATURES);
+    }
+
+    /**
+     * For the coach co-pilot (Phase 8): AI must be on and inside the budget,
+     * and a participant's data goes to Claude only with that participant's
+     * own AI consent (AI-NFR-03). The coach's daily limit does not apply.
+     */
+    @Transactional(readOnly = true)
+    public String requireAvailableForCoach(AppUser participant) {
+        AiSettings settings = aiSettingsService.current();
+        String apiKey = aiSettingsService.activeApiKey();
+        if (!settings.isEnabled() || apiKey == null || spendThisMonth().compareTo(settings.getMonthlyBudgetUsd()) >= 0) {
+            throw new AiUnavailableException();
+        }
+        if (participant != null && participant.getAiConsentAt() == null) {
+            throw new BusinessRuleException("This participant has not turned on AI consent, so AI cannot read their plan.");
+        }
+        return apiKey;
     }
 
     /** The API key when AI may run for this person now, empty otherwise. Never throws. */

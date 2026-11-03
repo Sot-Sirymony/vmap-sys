@@ -66,3 +66,11 @@ describe('admin text changes', () => {
     expect(translate('km', 'Today')).toBe('ថ្ងៃនេះ');
   });
 });
+
+describe('coach risk signals (AI-FR-19)', () => {
+  it('translates the server reasons, numbers included', () => {
+    expect(translate('km', '3 items overdue.')).toBe('ធាតុ 3 ហួសកាលកំណត់។');
+    expect(translate('km', 'Attitude averaged 2.5 this week, down from 4.0.')).toBe('អាកប្បកិរិយាជាមធ្យម 2.5 ក្នុងសប្តាហ៍នេះ ធ្លាក់ពី 4.0។');
+    expect(translate('en', '3 items overdue.')).toBe('3 items overdue.');
+  });
+});

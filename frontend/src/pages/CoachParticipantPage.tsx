@@ -12,6 +12,10 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { addCoachComment, getCoachParticipant, ratePitch } from '../api/cohortApi';
+import { draftCoachFeedback } from '../api/aiCoachApi';
+import { ParticipantSummaryCard } from '../components/ai/CoachSummaryCards';
+import { WhenAiOn } from '../components/ai/WhenAiOn';
+import { useI18n } from '../i18n/I18nContext';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -70,6 +74,11 @@ export function CoachParticipantPage() {
               </Stack>
             </CardContent>
           </Card>
+          {token && (
+            <WhenAiOn token={token}>
+              <ParticipantSummaryCard token={token} userId={userId} aiConsent={detail.summary.aiConsent} />
+            </WhenAiOn>
+          )}
           <PlanCard detail={detail} />
           <JournalsCard detail={detail} />
           <PitchCard detail={detail} token={token} userId={userId} onRated={() => void load()} />
@@ -228,6 +237,26 @@ function CommentsCard({ detail, token, userId, onAdded }: CommentsCardProps) {
   const [body, setBody] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const { language } = useI18n();
+
+  // AI-FR-20: a draft fills the box; the coach edits it and decides whether to send.
+  async function handleDraft() {
+    if (!token) {
+      return;
+    }
+    const [type, id] = target.split(':');
+    setDrafting(true);
+    setError('');
+    try {
+      const draft = await draftCoachFeedback(token, userId, type as CoachCommentTarget, id ? Number(id) : null, language);
+      setBody(draft.message ?? '');
+    } catch (draftError) {
+      setError(draftError instanceof Error ? tr(draftError.message) : tr('AI help is temporarily unavailable.'));
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   const targets = useMemo(() => [
     { value: 'GENERAL', label: tr('General') },
@@ -273,7 +302,19 @@ function CommentsCard({ detail, token, userId, onAdded }: CommentsCardProps) {
               slotProps={{ htmlInput: { 'aria-label': tr('Comment'), maxLength: 2000 } }}
             />
             {error && <Alert severity="error">{error}</Alert>}
-            <Box><Button type="submit" disabled={busy || !body.trim()}>{tr('Send comment')}</Button></Box>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button type="submit" disabled={busy || !body.trim()}>{tr('Send comment')}</Button>
+              {detail.summary.aiConsent && (
+                <WhenAiOn token={token}>
+                  <Button variant="secondary" disabled={drafting} onClick={() => void handleDraft()}>
+                    {drafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
+                  </Button>
+                </WhenAiOn>
+              )}
+            </Box>
+            {body && drafting === false && (
+              <Typography variant="caption" color="text.secondary">{tr('Check and edit before you send. Nothing is sent until you click Send comment.')}</Typography>
+            )}
           </Box>
           {detail.comments.map((comment) => (
             <Box key={comment.id} sx={{ borderLeft: 3, borderColor: 'divider', pl: 1.5 }}>

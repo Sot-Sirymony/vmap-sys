@@ -20,6 +20,8 @@ import { useAuth } from '../context/AuthContext';
 import { tr } from '../i18n/translate';
 import type { CoachParticipant } from '../types/vision';
 import { SafetyAlertsCard } from '../components/common/SafetyAlertsCard';
+import { CohortSummaryCard } from '../components/ai/CoachSummaryCards';
+import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { PageSection } from './PageSection';
 
 /** V9 (v0.1 FR-16, FR-17): the participants of the cohorts this coach leads, quietest first. */
@@ -71,6 +73,13 @@ export function CoachPage() {
         )}
         {participants && participants.length > 0 && (
           <>
+            {token && (
+              <WhenAiOn token={token}>
+                <Stack spacing={1.5}>
+                  {cohorts.map(([id, name]) => <CohortSummaryCard key={id} token={token} cohortId={id} cohortName={name} />)}
+                </Stack>
+              </WhenAiOn>
+            )}
             {atRiskCount > 0 && (
               <Alert severity="warning">{tr('{count} participant(s) have done nothing for 7 days or more.', { count: atRiskCount })}</Alert>
             )}
@@ -106,7 +115,12 @@ export function CoachPage() {
                           {participant.cohortName} · {participant.email}
                         </Typography>
                       </Box>
-                      {participant.atRisk && <Chip size="small" color="warning" label={tr('At risk')} />}
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {participant.atRisk && <Chip size="small" color="warning" label={tr('At risk')} />}
+                        {!participant.atRisk && participant.riskReasons.length > 0 && (
+                          <Chip size="small" color="warning" variant="outlined" label={tr('Needs attention')} />
+                        )}
+                      </Box>
                     </Box>
                     <Typography variant="body2" sx={{ mt: 1 }}>
                       {participant.daysInactive === 0
@@ -115,6 +129,9 @@ export function CoachPage() {
                       {' · '}
                       {tr('{met} of {total} objectives reached', { met, total: participant.metrics.metrics.length })}
                     </Typography>
+                    {participant.riskReasons.map((reason) => (
+                      <Typography key={reason} variant="caption" color="warning.main" sx={{ display: 'block' }}>• {tr(reason)}</Typography>
+                    ))}
                   </CardContent>
                 </Card>
               );
