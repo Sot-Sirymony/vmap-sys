@@ -36,25 +36,30 @@ public class PlanStatusService {
     private final PartnerRepository partnerRepository;
 
     public PlanStatusResponse statusFor(Long dreamId) {
-        return evaluate(lookup.dream(dreamId));
+        return evaluate(lookup.dream(dreamId), lookup.userId());
     }
 
     public boolean anyPlanReady() {
-        return dreamRepository.findByUser_IdAndArchivedFalse(lookup.userId()).stream()
-                .anyMatch(dream -> evaluate(dream).planReady());
+        Long userId = lookup.userId();
+        return dreamRepository.findByUser_IdAndArchivedFalse(userId).stream()
+                .anyMatch(dream -> evaluate(dream, userId).planReady());
     }
 
     /** FR-75: dreams with goals, steps, dates and resources all in place. */
     public long countCompletePlans() {
-        return dreamRepository.findByUser_IdAndArchivedFalse(lookup.userId()).stream()
-                .map(this::evaluate)
+        return countCompletePlans(lookup.userId());
+    }
+
+    /** The same count for any user; callers check they may see that user (V9 coach view). */
+    public long countCompletePlans(Long userId) {
+        return dreamRepository.findByUser_IdAndArchivedFalse(userId).stream()
+                .map(dream -> evaluate(dream, userId))
                 .filter(status -> status.planReady() && status.stages().stream()
                         .anyMatch(stage -> stage.key().equals("RESOURCES") && stage.done()))
                 .count();
     }
 
-    private PlanStatusResponse evaluate(Dream dream) {
-        Long userId = lookup.userId();
+    private PlanStatusResponse evaluate(Dream dream, Long userId) {
         List<Goal> goals = goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), userId);
         List<VisionStep> steps = new ArrayList<>();
         long goalsWithoutSteps = 0;

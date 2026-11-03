@@ -473,6 +473,62 @@ accept `?language=km`; a language with no text falls back to English.
 | PUT | `/api/admin/ui-text` | Admin. `{ "language": "km", "sourceText": "Today", "text": "..." }`; placeholders such as `{count}` must be kept |
 | DELETE | `/api/admin/ui-text/{id}` | Admin. Removes a change, restoring the app's own text |
 
+### V9: cohorts and coaches
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/cohort` | The signed-in person's cohort, coach and journal sharing setting |
+| POST | `/api/cohort/join` | `{ "joinCode": "ABCD2345" }`; also accepted as `joinCode` on `POST /api/auth/register` |
+| POST | `/api/cohort/leave` | Leaves the cohort |
+| PUT | `/api/cohort/sharing` | `{ "shareJournalsWithCoach": true }` |
+| GET | `/api/coach-comments` | Comments from the coach, newest first |
+| POST | `/api/coach-comments/{id}/read` | Marks one as read |
+| GET | `/api/coach/participants` | Coach or admin. Participants of the active cohorts they coach, with objectives, last activity and `atRisk` (7 quiet days) |
+| GET | `/api/coach/participants/{userId}` | Coach. Read-only plan; `fearEntries` and `attitudeCheckIns` are null unless shared. 404 outside the coach's cohorts |
+| POST | `/api/coach/participants/{userId}/comments` | Coach. `{ "targetType": "GENERAL" \| "DREAM" \| "GOAL" \| "STEP", "targetId": 12, "body": "..." }`; the target must be in that participant's plan |
+| GET, POST | `/api/admin/cohorts` | Admin. List, or create `{ "name", "coachEmail", "startDate" }`; naming a coach gives them the COACH role |
+| PUT | `/api/admin/cohorts/{id}` | Admin. Update name, coach and start date |
+| POST | `/api/admin/cohorts/{id}/join-code` | Admin. New join code; the old one stops working |
+| POST | `/api/admin/cohorts/{id}/archive`, `/restore` | Admin. An archived cohort's coach loses access and its code stops working |
+| GET, POST | `/api/admin/cohorts/{id}/members` | Admin. List, or add `{ "email" }` (moves them from any other cohort) |
+| DELETE | `/api/admin/cohorts/{id}/members/{userId}` | Admin. Removes them from the cohort |
+| PUT | `/api/coach/participants/{userId}/pitch-rating` | Coach. `{ "rating": 1-5, "feedback": "..." }` on the participant's module 11 pitch (v0.1 FR-11); 400 if no pitch is saved. The participant sees it in `GET /api/modules/11` as `coachRating`, `coachFeedback`, `coachName`, `coachRatedAt`; saving a changed pitch clears it |
+
+### V9: AI settings (AI-FR-24, admin only)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/admin/ai-settings` | `enabled`, `model`, `models` (choices), `monthlyBudgetUsd`, `keySource` (`DATABASE`, `ENVIRONMENT`, `NONE`), `keyReadable`, `apiKeyLast4`, last test result. The key itself is never returned |
+| PUT | `/api/admin/ai-settings` | `{ "enabled", "model", "monthlyBudgetUsd": 0-1000 }`; turning AI on needs a key |
+| PUT | `/api/admin/ai-settings/api-key` | `{ "apiKey": "sk-ant-..." }`; stored AES-GCM encrypted; takes priority over `ANTHROPIC_API_KEY` |
+| DELETE | `/api/admin/ai-settings/api-key` | Removes the saved key; AI turns off unless `ANTHROPIC_API_KEY` is set |
+| POST | `/api/admin/ai-settings/test` | Looks up the chosen model with the key through the Models API (no tokens used) and stores the result |
+
+### V9: Dream Coach (Phase 3)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/ai/status` | `available`, `reason` (`OK`, `OFF`, `BUDGET_REACHED`, `NO_CONSENT`, `DAILY_LIMIT`), `consentGiven`, `consentAt`, `dailyLimit`, `messagesLeftToday` |
+| PUT | `/api/ai/consent` | `{ "consent": true \| false }`; each change is recorded |
+| GET | `/api/ai/conversations` | The signed-in person's conversations, newest first |
+| GET, DELETE | `/api/ai/conversations/{id}` | One conversation with its messages, or delete it (404 for anyone else's) |
+| POST | `/api/ai/chat` | `{ "conversationId": null, "message": "...", "language": "en" \| "km", "page": "/dreams/12", "dreamId": 12, "moduleNumber": null }` (page, dreamId and moduleNumber pick the context). 400 without consent, 429 at the daily limit, 503 "AI help is temporarily unavailable." when off, over budget or unreachable (nothing saved). A crisis message gets the help lines without calling Claude; `safetyFlag` is `CRISIS` |
+| POST | `/api/ai/chat/stream` | Same body; answers `text/event-stream`: `delta` events `{ "text" }`, then `done` (the saved turn, whose reply text is final) or `error` `{ "message" }`. Errors before streaming starts answer as JSON, like `/chat`. Replies carry `contextSources` (`plan`, `dream`, `tasks`, `attitude`, `fears`, `obstacles`, `module`) |
+| PUT | `/api/ai/messages/{id}/rating` | `{ "rating": 1 \| -1 \| 0, "comment" }` on a reply; 0 clears it |
+| GET | `/api/coach/ai-alerts` | Coach: wellbeing alerts for their participants; an admin also sees those with no coach. No message text |
+| POST | `/api/coach/ai-alerts/{id}/acknowledge` | Marks that someone checked in |
+
+`PUT /api/admin/ai-settings` also takes `dailyMessageLimit` (1-500) and `helpLines`; the response adds `spendThisMonthUsd` and `requestsThisMonth`.
+
+### V9: plan sharing (v0.1 FR-10)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/plan-shares?dreamId=12` | The signed-in person's share links, newest first; `dreamId` is optional. `token` is always null here |
+| POST | `/api/plan-shares` | `{ "dreamId", "partnerId", "message", "expiresInDays": 1-365 }` (default 90). The answer holds `token` once; only its SHA-256 is stored. The link is `/shared/{token}` |
+| POST | `/api/plan-shares/{id}/revoke` | Stops the link at once |
+| GET | `/api/shared-plans/{token}` | **Public.** One dream's title, description, success definition, target date, progress, goals and steps, the owner's first name and the ask. No journals, tasks, step owners or contact details. A stopped, expired or unknown link, or an archived dream, answers 404 |
+
 ## Excel
 
 ### Export

@@ -3,6 +3,11 @@ spring:
     name: vision-mapping-backend
   profiles:
     active: local
+  # V9 (AI-NFR-01): a streamed Dream Coach reply can take longer than the
+  # 30-second default; the Claude client itself gives up after 60 seconds.
+  mvc:
+    async:
+      request-timeout: 120s
   # Recovery email. With no host set, Spring builds no JavaMailSender and
   # PasswordResetMailer logs the link at WARN instead of sending — so the flow is
   # exercisable locally, and an unconfigured deployment issues valid tokens
@@ -35,6 +40,10 @@ app:
   security:
     jwt-secret: ${JWT_SECRET:vision-mapping-development-secret-key-change-before-production}
     jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+    # Encrypts secrets stored in the database, such as the Claude API key an
+    # admin enters on the AI settings page. Blank falls back to JWT_SECRET.
+    # Changing it makes saved secrets unreadable until they are entered again.
+    settings-encryption-key: ${SETTINGS_ENCRYPTION_KEY:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
   password-reset:
@@ -55,6 +64,10 @@ app:
       per-ip-window-minutes: ${PASSWORD_RESET_LIMIT_IP_WINDOW:60}
   mail:
     from: ${MAIL_FROM:no-reply@visionmapping.app}
+  ai:
+    # V9: optional fallback Claude API key. A key saved on the AI settings page
+    # takes priority, so it can be changed without a restart.
+    api-key: ${ANTHROPIC_API_KEY:}
   progress:
     # FR-75: the targets the personal progress card measures against.
     target-improvement-percent: ${PROGRESS_TARGET_IMPROVEMENT_PERCENT:25}

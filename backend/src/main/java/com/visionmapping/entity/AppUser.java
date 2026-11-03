@@ -15,10 +15,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -69,6 +73,20 @@ public class AppUser extends BaseAuditableEntity {
     /** Where reminders go; null sends them to the login email. */
     @Column(name = "reminder_email")
     private String reminderEmail;
+
+    // V9 (D-7): the cohort this person joined with its code, if any.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cohort_id")
+    private Cohort cohort;
+
+    // V9 (D-8): fear and attitude journals stay private from the coach until shared.
+    @Builder.Default
+    @Column(name = "share_journals_with_coach", nullable = false)
+    private boolean shareJournalsWithCoach = false;
+
+    // V9 (AI-NFR-03): when this person consented to AI reading their data; null means no consent.
+    @Column(name = "ai_consent_at")
+    private Instant aiConsentAt;
 
     // FR-39.6: appearance preferences live on the account so a chosen look
     // follows the user across browsers and devices. Every field is non-null

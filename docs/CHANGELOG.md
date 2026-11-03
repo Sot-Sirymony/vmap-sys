@@ -66,6 +66,98 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [9.0.0] — In progress (Phases 1–4 of 9)
+
+Implements [VMS_BRD_V9.0.0](VMS_BRD_V9.0.0.md): Claude AI integration, which first brings
+back coaches and cohorts (decisions D-1, D-6 to D-8).
+
+### Phase 1: cohorts and coaches
+
+- **Added** the COACH role, cohorts with join codes (migration `V52__cohorts_and_coaching.sql`),
+  and joining at registration (`/register?code=...`) or from Account settings.
+- **Added** Cohorts page for admins: create, name the coach, start date, new join code,
+  members by email, archive.
+- **Added** Coaching page for coaches: their cohorts' participants, quietest first, with
+  the six objectives and an at-risk flag after 7 days with no activity. A read-only
+  participant view shows the plan; journals only when the participant shares them.
+- **Added** coach comments on a participant's plan, shown on the participant's Today page.
+- **Changed** `CLAUDE.md` rule 14 now names the coach exception. Every coach request is
+  checked on the server; anyone outside the coach's active cohorts answers 404.
+- **Added** `CoachingFlowTests` (7) and `e2e/coaching.e2e.ts`, which runs only when
+  `PGPASSWORD` is set because it promotes a test account to admin.
+
+### Phase 2: partner view and coach pitch rating
+
+- **Added** share links (v0.1 FR-10): on a dream's page, a participant makes a read-only
+  link for a partner or mentor, optionally naming the partner and what they are asking
+  for. Links end after 30, 90 or 365 days and can be stopped at any time; the owner sees
+  how often each was opened. Migration `V53__plan_shares_and_pitch_rating.sql`.
+- **Added** the public page `/shared/{token}`: one dream's goals and steps, progress and
+  the ask, with no sign-in. Journals, tasks, step owners and other dreams are never shown.
+  Only a SHA-256 of the token is stored, so the link is shown once.
+- **Added** coach rating of a pitch (v0.1 FR-11): the coach's participant view shows the
+  module 11 pitch with a 1 to 5 rating and feedback; the participant sees it on the
+  module page. Changing the pitch clears the rating so it always matches.
+- **Added** `PlanShareFlowTests` (4), a pitch test in `CoachingFlowTests`, and
+  `SharedPlanPage.test.tsx` (2). Khmer drafts for every new string.
+
+### Phase 3 groundwork: AI settings
+
+- **Added** Settings → AI settings for admins (AI-FR-24): enter, replace or remove the
+  Claude API key without a restart, choose the model, set the monthly budget ($20 by
+  default, D-3) and turn AI on. The key is stored AES-GCM encrypted (migration
+  `V54__ai_settings.sql`); only its last four characters are shown. **Test connection**
+  looks up the model through the Models API, so it costs nothing.
+- **Added** the `anthropic-java` SDK and the optional `SETTINGS_ENCRYPTION_KEY` and
+  `ANTHROPIC_API_KEY` environment variables (a saved key takes priority).
+- **Added** `AiSettingsFlowTests` (4), `SecretCipherTest` (3), `AiSettingsPage.test.tsx` (2).
+
+### Phase 3: AI foundation
+
+- **Added** AI consent (AI-NFR-03): one switch in Account settings, also offered on the
+  Dream Coach page. Every give and withdraw is recorded. Without it, no AI runs.
+- **Added** the Dream Coach page (`/dream-coach`): conversations kept until deleted
+  (AI-FR-25), replies labelled "AI suggestion" (AI-FR-05), thumbs up/down (AI-FR-06),
+  answers in English or Khmer (AI-NFR-16). Plan and module context come in Phase 4.
+- **Added** one backend path to Claude (`ClaudeClient`, official Java SDK, low effort,
+  server-side refusal fallback on Opus and Sonnet) with coaching guidelines that decline
+  financial, legal, medical and therapy advice and forbid invented facts (AI-NFR-08, -10,
+  -11, -13).
+- **Added** spend control (AI-NFR-15): the monthly budget pauses AI when reached, a
+  warning at 80%, and a per-person daily message limit. Spend is shown on AI settings.
+- **Added** the fallback (AI-NFR-02): when AI is off, over budget or unreachable, the
+  API answers 503 "AI help is temporarily unavailable", nothing is saved, and the rest
+  of the app is unaffected.
+- **Added** crisis handling (AI-NFR-09, D-5): crisis words in English or Khmer get a
+  caring reply with the help lines (editable on AI settings) without calling Claude, and
+  Claude can flag one itself. The coach sees a wellbeing alert on the Coaching page (who
+  and when, never the text); with no coach, administrators see it.
+- **Added** the usage log (AI-NFR-14): time, feature, model, tokens, cost, outcome and
+  rating, no text. Deleting an account deletes the chat history and consent record and
+  removes the user from log rows, which still count toward the month's spend.
+- **Added** migration `V55__ai_foundation.sql`, `DreamCoachFlowTests` (6) and
+  `DreamCoachPage.test.tsx` (4).
+
+### Phase 4: Dream Coach
+
+- **Added** the Dream Coach on every screen (AI-FR-01): a button opens a side panel; the
+  conversation carries on between pages. Hidden while AI is switched off.
+- **Added** three quick questions per kind of page (AI-FR-02), such as "Help me start this
+  exercise" on a module or "What should I do first today?" on Today.
+- **Added** the context builder (AI-FR-01, AI-NFR-04, AI-NFR-13): the dream or module on
+  screen, the plan, tasks due within a week, and on journal pages the attitude check-ins,
+  fear log and open obstacles. Never partner names or contacts, never private conflict
+  notes. Records are wrapped as data and angle brackets are neutralised, so text in a
+  journal cannot change Claude's rules.
+- **Added** streamed replies (AI-NFR-01): `POST /api/ai/chat/stream` sends server-sent
+  events; the saved reply replaces the streamed text when it is done. A crisis marker at
+  the start is held back, never shown. If the browser leaves, the reply is still saved
+  and counted.
+- **Added** "Based on your plan and your tasks" under each reply (AI-FR-05), stored with
+  the message (migration `V56__ai_message_context.sql`), and a copy button.
+- **Added** 3 tests to `DreamCoachFlowTests`, `aiFocus.test.ts` (3) and
+  `DreamCoachLauncher.test.tsx` (2).
+
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 
 Implements [VMS_BRD_V8.0.0](VMS_BRD_V8.0.0.md) for personal use. See its

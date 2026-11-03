@@ -4,11 +4,13 @@ import com.visionmapping.security.AppUserDetailsService;
 import com.visionmapping.security.JwtAuthenticationFilter;
 import com.visionmapping.security.RestAccessDeniedHandler;
 import com.visionmapping.security.RestAuthenticationEntryPoint;
+import jakarta.servlet.DispatcherType;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -59,6 +61,13 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
+                        // V9 (AI-NFR-01): a streamed Dream Coach reply finishes on an
+                        // async dispatch, which the JWT filter does not run on. The
+                        // request it continues was already authorised.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+                        // The error page only renders the status of a request that
+                        // already ran; blocking it turned real errors into a 401.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(
                                 "/api/health",
                                 "/api/auth/register",
@@ -73,6 +82,9 @@ public class SecurityConfig {
                                 // sign-in to draw the sign-in page. Read-only.
                                 "/api/ui-text"
                         ).permitAll()
+                        // V9 (v0.1 FR-10): a partner opens a shared plan without an
+                        // account. Read-only; the 256-bit token in the path is the key.
+                        .requestMatchers(HttpMethod.GET, "/api/shared-plans/*").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Without these, Spring's default handling answers an anonymous

@@ -35,21 +35,33 @@ Answers from the review of this draft. Where they change a requirement, the requ
 | D-4 | Khmer review of AI answers | Yes, a Khmer speaker will review | AC-15 stands; the reviewer is a named dependency. |
 | D-5 | Crisis response | Show help lines and alert the participant's coach (confirmed) | AI-NFR-09 shows local and international help lines and alerts the coach per the safeguarding policy. |
 | D-6 | Coach access to data | A coach may read their own cohort's participants' data, and nothing else (confirmed) | Exception to the rule that no user sees another user's data; enforced on the server (AI-NFR-07, AC-13). |
+| D-7 | How participants join a cohort | With a join code from the admin, at registration or later in Account settings; an admin can move people between cohorts | Implements FR-01's cohort assignment. |
+| D-8 | What a coach sees | Dreams, goals, steps, tasks, progress and activity; fear and attitude journals only when the participant shares them | Keeps v0.1 NFR-04 (journals private by default) within D-6. |
 
 ### Prerequisites from v0.1
 
 V8 shipped these v0.1 requirements only in part, because it was scoped to personal use. Coaching AI (AI-FR-18 to AI-FR-21) cannot be built until they exist.
 
-| v0.1 ID | Needed for V9 | V8 state |
-| --- | --- | --- |
-| FR-01 | Cohort and coach assignment at registration | Registration only |
-| FR-10 | Partner or mentor read-only view (opt-in) | Not built |
-| FR-11 | Coach rating of a pitch | Self-rating only |
-| FR-16 | Coach dashboard | Personal card only |
-| FR-17 | Coach comments and at-risk flag | Not built |
-| FR-20 | Cohort settings | Module and interface text only |
+| v0.1 ID | Needed for V9 | V8 state | V9 status |
+| --- | --- | --- | --- |
+| FR-01 | Cohort and coach assignment at registration | Registration only | ✅ Done (Phase 1): join code at registration or in Account settings (D-7) |
+| FR-10 | Partner or mentor read-only view (opt-in) | Not built | ✅ Done (Phase 2): per-dream share links that end or can be stopped; public read-only page with no journals, tasks or contact details |
+| FR-11 | Coach rating of a pitch | Self-rating only | ✅ Done (Phase 2): coach rates the module 11 pitch 1 to 5 with feedback; the participant sees it on the module page |
+| FR-16 | Coach dashboard | Personal card only | ✅ Done (Phase 1): Coaching page, each participant's six objectives and last activity |
+| FR-17 | Coach comments and at-risk flag | Not built | ✅ Done (Phase 1): comments on a participant's plan, shown on their Today page; at risk after 7 days with no activity (AC-05) |
+| FR-20 | Cohort settings | Module and interface text only | ✅ Done (Phase 1): Cohorts page for name, coach, start date, join code, members and archiving |
 
-This also changes a standing project rule: today no user can see another user's data. A coach gets read access to their own cohort's participants, and nothing else (D-6, AI-NFR-07).
+This also changes a standing project rule: no user could see another user's data. A coach now has read-only access to the participants of the active cohorts they coach, and nothing else (D-6, AI-NFR-07); `CLAUDE.md` rule 14 records the exception.
+
+### Implementation status
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| 1 | Cohorts and coaches (FR-01, FR-16, FR-17, FR-20) | Built and tested locally, 3 Nov 2026 |
+| 2 | Partner view and coach pitch rating (FR-10, FR-11) | Built and tested locally, 3 Nov 2026 |
+| 3 | AI foundation: backend Claude service, consent, $20 cap, fallback, safety, logging, chat history | Built and tested locally (Claude mocked in tests), 3 Nov 2026: AI settings page with encrypted key (AI-FR-24 in part), consent (AI-NFR-03), basic Dream Coach chat with history, rating and deletion (AI-FR-05, AI-FR-06, AI-FR-25), budget cap, 80% warning and daily limit (AI-NFR-15), fallback (AI-NFR-02), crisis help lines and coach alerts (AI-NFR-09), usage log without text (AI-NFR-14). Not yet tried against the live API |
+| 4 | Dream Coach (AI-FR-01 to AI-FR-06, AI-NFR-01) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: on every screen with three quick questions per page, context from the dream, module, plan, tasks and journals on screen, streamed replies, "Based on ..." reasons, copy and rating. Not yet tried against the live API |
+| 5–9 | Goal and plan builder, daily use, module help, coach co-pilot, admin AI | Not started |
 
 ### How v0.1 IDs map to the app
 

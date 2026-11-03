@@ -23,7 +23,12 @@ public record LearningModuleDetailResponse(
         List<Map<String, String>> rows,
         String requirementMessage,
         ModuleStatus status,
-        Instant completedAt
+        Instant completedAt,
+        // V9 (v0.1 FR-11): the coach's rating of the saved exercise, or null.
+        Integer coachRating,
+        String coachFeedback,
+        String coachName,
+        Instant coachRatedAt
 ) {
 
     public record Field(String key, String label, String type) {

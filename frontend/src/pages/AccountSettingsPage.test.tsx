@@ -8,6 +8,7 @@ import { AccountSettingsPage } from './AccountSettingsPage';
 
 const logout = vi.fn();
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ token: 'token', logout }) }));
+vi.mock('../api/aiApi', () => ({ getAiStatus: vi.fn().mockResolvedValue({ available: false, reason: 'OFF', consentGiven: false, dailyLimit: 20, messagesLeftToday: 20 }), setAiConsent: vi.fn() }));
 vi.mock('../api/accountApi', () => ({
   deleteAccount: vi.fn(),
   exportAccountData: vi.fn(),

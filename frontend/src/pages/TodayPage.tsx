@@ -32,6 +32,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 import { formatDate } from '../i18n/formatDate';
+import { CoachCommentsCard } from '../components/common/CoachCommentsCard';
 
 const MAX_HABITS = 3;
 const ATTITUDE_SCORES = [1, 2, 3, 4, 5];
@@ -114,6 +115,7 @@ export function TodayPage() {
       {plan && (
         <Stack spacing={2}>
           {actionError && <Alert severity="error">{actionError}</Alert>}
+          <CoachCommentsCard token={token} />
           {plan.weeklyReviewDue && (
             <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate('/reviews')}>{t('Start review')}</Button>}>
               {plan.lastWeeklyReviewDate

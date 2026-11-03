@@ -5,6 +5,7 @@ import com.visionmapping.dto.request.LoginRequest;
 import com.visionmapping.dto.request.RegisterRequest;
 import com.visionmapping.dto.response.AuthResponse;
 import com.visionmapping.entity.AppUser;
+import com.visionmapping.entity.Cohort;
 import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
 import com.visionmapping.exception.BusinessRuleException;
@@ -29,12 +30,15 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserScope userScope;
+    private final CohortService cohortService;
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
         if (appUserRepository.existsByEmail(email)) {
             throw new BusinessRuleException("Email is already registered.");
         }
+        boolean hasCode = request.joinCode() != null && !request.joinCode().isBlank();
+        Cohort cohort = hasCode ? cohortService.cohortByCode(request.joinCode()) : null;
 
         AppUser user = AppUser.builder()
                 .fullName(request.fullName())
@@ -42,6 +46,7 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(UserRole.USER)
                 .status(UserStatus.ACTIVE)
+                .cohort(cohort)
                 .build();
         AppUser saved = appUserRepository.save(user);
         return response(saved);

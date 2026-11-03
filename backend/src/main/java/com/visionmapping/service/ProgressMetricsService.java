@@ -46,22 +46,26 @@ public class ProgressMetricsService {
     private int targetWeeklyCompletionPercent;
 
     public ProgressMetricsResponse metricsFor(LocalDate date) {
-        Long userId = lookup.userId();
+        return metricsFor(lookup.userId(), date);
+    }
+
+    /** The same metrics for any user; callers check they may see that user (V9 coach view). */
+    public ProgressMetricsResponse metricsFor(Long userId, LocalDate date) {
         long rankedDreams = dreamRepository.countByUser_IdAndArchivedFalseAndLetterRankIsNotNull(userId);
-        long completePlans = planStatusService.countCompletePlans();
+        long completePlans = planStatusService.countCompletePlans(userId);
         long recruited = partnerRepository.countByUser_IdAndArchivedFalseAndStatusIn(userId, RECRUITED);
         long milestones = milestoneRepository.countByUser_IdAndArchivedFalse(userId);
         return new ProgressMetricsResponse(List.of(
                 new Metric("BO-01", "Dreams written and ranked", String.valueOf(rankedDreams), "At least 1", rankedDreams > 0),
                 new Metric("BO-02", "Complete plans", String.valueOf(completePlans), "At least 1 with goals, steps, dates and resources", completePlans > 0),
-                improvementMetric(),
+                improvementMetric(userId),
                 weeklyStepsMetric(userId, date),
                 new Metric("BO-05", "Partners recruited", String.valueOf(recruited), "At least 1 agreed or active", recruited > 0),
                 new Metric("BO-06", "Milestones reached", String.valueOf(milestones), "At least 1", milestones > 0)));
     }
 
-    private Metric improvementMetric() {
-        ChainAssessmentSummaryResponse summary = chainAssessmentService.summary();
+    private Metric improvementMetric(Long userId) {
+        ChainAssessmentSummaryResponse summary = chainAssessmentService.summary(userId);
         BigDecimal improvement = summary.improvementPercent();
         String target = "+" + targetImprovementPercent + "% from your baseline";
         if (improvement == null) {

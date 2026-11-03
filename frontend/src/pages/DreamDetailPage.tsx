@@ -29,6 +29,7 @@ import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { DreamCommitmentCard } from '../components/vision-map/DreamCommitmentCard';
+import { PlanShareCard } from '../components/vision-map/PlanShareCard';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -277,6 +278,11 @@ export function DreamDetailPage() {
               defaultName={user?.fullName ?? ''}
               onChanged={load}
             />
+          </Box>
+        )}
+        {!selectedDream.archived && token && (
+          <Box sx={{ mb: 2 }}>
+            <PlanShareCard key={selectedDream.id} dream={selectedDream} token={token} />
           </Box>
         )}
         <VisionMapTree

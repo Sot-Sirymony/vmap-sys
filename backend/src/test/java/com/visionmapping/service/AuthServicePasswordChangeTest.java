@@ -45,6 +45,8 @@ class AuthServicePasswordChangeTest {
     private JwtService jwtService;
     @Mock
     private UserScope userScope;
+    @Mock
+    private CohortService cohortService;
 
     private PasswordEncoder passwordEncoder;
     private AuthService authService;
@@ -53,7 +55,7 @@ class AuthServicePasswordChangeTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, jwtService, userScope);
+        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, jwtService, userScope, cohortService);
         user = AppUser.builder()
                 .id(7L)
                 .fullName("Pat Owner")

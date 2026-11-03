@@ -239,6 +239,24 @@ Belongs to:
 - **Milestone:** `dreamId`, `title`, `achievedOn`, `note`, `archived`. Removed with its
   dream on permanent delete.
 
+## V9 Cohorts and coaches
+
+**UserRole** adds `COACH`. **Cohort** (`cohorts`, V52): `name`, `joinCode` (8 characters,
+unique), `coach` (nullable, set to null if the coach's account is deleted), `startDate`,
+`archived`. **AppUser** adds `cohort` (nullable) and `shareJournalsWithCoach` (default
+false). **CoachComment** (`coach_comments`): `user` (the participant), `coach`,
+`targetType` (`GENERAL`, `DREAM`, `GOAL`, `STEP`), `targetId`, `body`, `readAt`. Comments
+belong to the participant, so they are in their export and deleted with their account.
+
+**PlanShare** (`plan_shares`, V53; v0.1 FR-10): `user`, `dream` (deleted with the dream),
+`partner` (optional label, set to null if the partner is deleted), `tokenHash` (SHA-256 of
+the link token, unique), `message`, `expiresAt`, `revokedAt`, `lastViewedAt`, `viewCount`.
+In the owner's export without the hash; deleted with their account.
+
+**ModuleCompletion** adds the coach's pitch rating (V53; v0.1 FR-11): `coachRating` (1 to
+5), `coachFeedback`, `coachRatedBy` (set to null if the coach's account is deleted),
+`coachRatedAt`. Saving a changed exercise clears all four.
+
 ## V8 Interface text (FR-20)
 
 **UiTextOverride** (`ui_text_overrides`, V51): `language` (`en` or `km`), `sourceText`
@@ -276,3 +294,23 @@ email when it is null.
 
 
 https://claude.ai/code/artifact/199cd8cd-8af3-4bd9-b68f-9c2d414def2f?via=auto_preview
+
+**AiSettings** (`ai_settings`, V54; AI-FR-24): one row (`id` = 1). `enabled` (default false),
+`model` (default `claude-opus-5-5`), `monthlyBudgetUsd` (default 20, D-3), `apiKeyEncrypted`
+(AES-256-GCM, key from `SETTINGS_ENCRYPTION_KEY` or `JWT_SECRET`), `apiKeyLast4`,
+`apiKeyUpdatedAt`, `apiKeyUpdatedBy` (set to null if that admin's account is deleted),
+`lastTestAt`, `lastTestOk`, `lastTestMessage`.
+
+**V55 AI foundation.** **AppUser** adds `aiConsentAt` (null = no consent). **AiConsentEvent**
+(`ai_consent_events`): `user`, `action` (`GIVEN`, `WITHDRAWN`). **AiConversation**
+(`ai_conversations`): `user`, `title`. **AiMessage** (`ai_messages`): `user`, `conversation`
+(deleted with it), `role` (`USER`, `ASSISTANT`), `content`, `safetyFlag` (`CRISIS`), `usageLog`.
+**AiUsageLog** (`ai_usage_logs`): `user` (cleared, not deleted, with the account), `feature`,
+`model`, `inputTokens`, `outputTokens`, `costUsd`, `outcome` (`OK`, `CUT_SHORT`, `REFUSED`,
+`CRISIS_HANDLED`, `ERROR`), `rating` (1 or -1), `ratingComment`; never conversation text.
+**AiSafetyAlert** (`ai_safety_alerts`): `user`, `coach` (null means administrators see it),
+`alertType`, `acknowledgedAt`, `acknowledgedBy`. **AiSettings** adds `dailyMessageLimit`
+(default 20) and `helpLines`.
+
+**V56.** **AiMessage** adds `contextSources`: the comma-separated source keys a reply was
+based on (AI-FR-05), never the data itself.

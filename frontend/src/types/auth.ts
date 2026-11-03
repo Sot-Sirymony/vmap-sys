@@ -4,6 +4,8 @@ export type RegisterRequest = {
   fullName: string;
   email: string;
   password: string;
+  /** V9 (D-7): optional cohort join code. */
+  joinCode?: string;
 };
 
 export type LoginRequest = {

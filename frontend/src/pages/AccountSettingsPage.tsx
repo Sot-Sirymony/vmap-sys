@@ -11,6 +11,8 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { deleteAccount, exportAccountData } from '../api/accountApi';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
+import { AiConsentCard } from '../components/common/AiConsentCard';
+import { CohortCard } from '../components/common/CohortCard';
 import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
 import { useAuth } from '../context/AuthContext';
 import { localDateIso } from '../utils/localDate';
@@ -90,6 +92,10 @@ export function AccountSettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        <CohortCard token={token} />
+
+        <AiConsentCard token={token} />
 
         <ReminderSettingsCard token={token} />
 

@@ -29,7 +29,7 @@ type CommandPaletteProps = {
  */
 export function CommandPalette({ open, onClose, onShowShortcuts }: CommandPaletteProps) {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [dreams, setDreams] = useState<Dream[]>([]);
@@ -57,7 +57,7 @@ export function CommandPalette({ open, onClose, onShowShortcuts }: CommandPalett
       navigate(to);
     };
     return [
-      ...navItems.map((item) => ({ key: `go-${item.to}`, group: 'Go to' as const, label: tr(item.label), run: go(item.to) })),
+      ...navItems.filter((item) => !item.roles || (user?.role !== undefined && item.roles.includes(user.role))).map((item) => ({ key: `go-${item.to}`, group: 'Go to' as const, label: tr(item.label), run: go(item.to) })),
       { key: 'new-area', group: 'Create', label: tr('New vision area'), run: go('/vision-areas?create=area') },
       { key: 'new-dream', group: 'Create', label: tr('New dream'), run: go('/dreams?create=dream') },
       { key: 'new-goal', group: 'Create', label: tr('New goal'), run: go('/goals?create=goal') },
@@ -73,7 +73,7 @@ export function CommandPalette({ open, onClose, onShowShortcuts }: CommandPalett
       })),
       { key: 'help', group: 'Help', label: tr('Keyboard shortcuts'), run: () => { onClose(); onShowShortcuts(); } },
     ];
-  }, [dreams, navigate, onClose, onShowShortcuts]);
+  }, [dreams, navigate, onClose, onShowShortcuts, user?.role]);
 
   const matches = useMemo(() => {
     const needle = query.trim().toLowerCase();

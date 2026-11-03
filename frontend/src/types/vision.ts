@@ -532,6 +532,11 @@ export type LearningModuleDetail = LearningModuleSummary & {
   fields: ModuleField[];
   rows: ModuleRow[];
   requirementMessage?: string | null;
+  // V9 (v0.1 FR-11): the coach's rating of the saved exercise.
+  coachRating?: number | null;
+  coachFeedback?: string | null;
+  coachName?: string | null;
+  coachRatedAt?: string | null;
 };
 
 // FR-78: an admin's view of one module in one language.
@@ -583,6 +588,120 @@ export type ProgressMetric = { id: string; label: string; value: string; target:
 export type ProgressMetrics = { metrics: ProgressMetric[] };
 
 // FR-77: emailConfigured is false when the server cannot send mail at all.
+/** V9: a cohort as an admin manages it. */
+export type Cohort = {
+  id: number;
+  name: string;
+  joinCode: string;
+  coachId?: number | null;
+  coachName?: string | null;
+  coachEmail?: string | null;
+  startDate?: string | null;
+  archived: boolean;
+  memberCount: number;
+};
+
+export type CohortMember = {
+  userId: number;
+  fullName: string;
+  email: string;
+};
+
+/** The participant's own cohort; cohortId is null when they have not joined one. */
+export type MyCohort = {
+  cohortId?: number | null;
+  cohortName?: string | null;
+  coachName?: string | null;
+  startDate?: string | null;
+  shareJournalsWithCoach: boolean;
+};
+
+export type CoachCommentTarget = 'GENERAL' | 'DREAM' | 'GOAL' | 'STEP';
+
+export type CoachComment = {
+  id: number;
+  coachName?: string | null;
+  targetType: CoachCommentTarget;
+  targetId?: number | null;
+  targetTitle?: string | null;
+  body: string;
+  createdAt: string;
+  readAt?: string | null;
+};
+
+export type CoachParticipant = {
+  userId: number;
+  fullName: string;
+  email: string;
+  cohortId: number;
+  cohortName: string;
+  lastActiveAt: string;
+  daysInactive: number;
+  atRisk: boolean;
+  metrics: ProgressMetrics;
+};
+
+/** Journal lists are null unless the participant shares them (D-8). */
+export type CoachParticipantDetail = {
+  summary: CoachParticipant;
+  dreams: Dream[];
+  goals: Goal[];
+  steps: VisionStep[];
+  tasks: TaskItem[];
+  journalsShared: boolean;
+  fearEntries?: FearEntry[] | null;
+  attitudeCheckIns?: AttitudeCheckIn[] | null;
+  comments: CoachComment[];
+  pitch?: PitchReview | null;
+};
+
+// V9 (v0.1 FR-11): a participant's saved pitch (module 11) and the coach's rating.
+export type PitchReview = {
+  rows: ModuleRow[];
+  coachRating?: number | null;
+  coachFeedback?: string | null;
+  coachName?: string | null;
+  coachRatedAt?: string | null;
+};
+
+// V9 (v0.1 FR-10): a read-only link to one dream's plan. token is only set
+// in the answer that creates it; the server keeps only its hash.
+export type PlanShare = {
+  id: number;
+  dreamId: number;
+  dreamTitle: string;
+  partnerId?: number | null;
+  partnerName?: string | null;
+  message?: string | null;
+  createdAt: string;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+  open: boolean;
+  lastViewedAt?: string | null;
+  viewCount: number;
+  token?: string | null;
+};
+
+// V9 (v0.1 FR-10): what a partner sees through a share link.
+export type SharedPlan = {
+  ownerFirstName: string;
+  partnerName?: string | null;
+  message?: string | null;
+  dreamTitle: string;
+  dreamDescription?: string | null;
+  successDefinition?: string | null;
+  targetDate?: string | null;
+  progressPercent: number;
+  expiresAt?: string | null;
+  goals: {
+    title: string;
+    status: WorkStatus;
+    targetDate?: string | null;
+    progressPercent: number;
+    steps: { title: string; status: WorkStatus; targetDate?: string | null }[];
+  }[];
+};
+
 /** FR-20: one interface string an admin changed. sourceText is the English the app uses as its key. */
 export type UiTextOverride = {
   id: number;
@@ -832,4 +951,76 @@ export type DashboardAttention = {
   inactiveMoonshotDreams: Dream[];
   // FR-37.1: areas with an active goal but no recent progress while others moved.
   starvedVisionAreas: VisionArea[];
+};
+
+// V9 (AI-FR-24): admin AI settings. The API key itself is never sent to the browser.
+export type AiKeySource = 'DATABASE' | 'ENVIRONMENT' | 'NONE';
+
+export type AiSettings = {
+  enabled: boolean;
+  model: string;
+  models: { id: string; label: string }[];
+  monthlyBudgetUsd: number;
+  keySource: AiKeySource;
+  keyReadable: boolean;
+  apiKeyLast4?: string | null;
+  apiKeyUpdatedAt?: string | null;
+  apiKeyUpdatedBy?: string | null;
+  lastTestAt?: string | null;
+  lastTestOk?: boolean | null;
+  lastTestMessage?: string | null;
+  dailyMessageLimit: number;
+  helpLines: string;
+  spendThisMonthUsd: number;
+  requestsThisMonth: number;
+};
+
+// V9 Phase 3: the Dream Coach.
+export type AiStatusReason = 'OK' | 'OFF' | 'BUDGET_REACHED' | 'NO_CONSENT' | 'DAILY_LIMIT';
+
+export type AiStatus = {
+  available: boolean;
+  reason: AiStatusReason;
+  consentGiven: boolean;
+  consentAt?: string | null;
+  dailyLimit: number;
+  messagesLeftToday: number;
+};
+
+export type AiMessage = {
+  id: number;
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+  safetyFlag?: 'CRISIS' | null;
+  rating?: number | null;
+  createdAt: string;
+  // AI-FR-05: the records a reply was based on, such as plan or fears.
+  contextSources?: string[];
+};
+
+// AI-FR-01: what is on screen, so the Dream Coach picks the right context.
+export type AiFocus = { page: string; dreamId?: number | null; moduleNumber?: number | null };
+
+export type AiConversation = {
+  id: number;
+  title: string;
+  updatedAt: string;
+  messages?: AiMessage[] | null;
+};
+
+export type AiChatTurn = {
+  conversationId: number;
+  title: string;
+  participantMessage: AiMessage;
+  reply: AiMessage;
+};
+
+// AI-NFR-09: who may need a check-in, never what they wrote.
+export type AiSafetyAlert = {
+  id: number;
+  participantId: number;
+  participantName: string;
+  cohortName?: string | null;
+  createdAt: string;
+  acknowledgedAt?: string | null;
 };

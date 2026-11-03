@@ -35,7 +35,13 @@ public class ChainAssessmentService {
 
     @Transactional(readOnly = true)
     public ChainAssessmentSummaryResponse summary() {
-        List<ChainAssessmentResponse> assessments = chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(lookup.userId()).stream()
+        return summary(lookup.userId());
+    }
+
+    /** The same summary for any user; callers check they may see that user (V9 coach view). */
+    @Transactional(readOnly = true)
+    public ChainAssessmentSummaryResponse summary(Long userId) {
+        List<ChainAssessmentResponse> assessments = chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(userId).stream()
                 .map(ChainAssessmentService::toResponse)
                 .toList();
         BigDecimal improvement = null;

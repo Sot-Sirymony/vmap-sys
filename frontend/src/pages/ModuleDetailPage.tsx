@@ -97,6 +97,15 @@ export function ModuleDetailPage() {
             </CardContent>
           </Card>
 
+          {module.coachRating != null && (
+            <Alert severity="info">
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t('{name} rated this {score} of 5', { name: module.coachName ?? t('Your coach'), score: module.coachRating })}
+              </Typography>
+              {module.coachFeedback && <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{module.coachFeedback}</Typography>}
+            </Alert>
+          )}
+
           <Card>
             <CardHeader title={t('Your exercise')} subheader={module.exerciseInstructions} />
             <CardContent>

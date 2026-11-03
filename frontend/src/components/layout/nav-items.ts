@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Bot,
   Bug,
   CalendarCheck,
   CheckSquare,
@@ -19,9 +20,12 @@ import {
   Network,
   Palette,
   Send,
+  Sparkles,
   Target,
   TrafficCone,
   UserCog,
+  Users,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react';
 import { tr } from '../../i18n/translate';
@@ -30,6 +34,8 @@ export type NavItem = {
   to: string;
   label: string;
   icon: LucideIcon;
+  /** V9: shown only to these roles; every role sees an item without it. */
+  roles?: string[];
 };
 
 export type NavGroup = {
@@ -79,6 +85,8 @@ export const navGroups: NavGroup[] = [
   {
     label: tr('Support'),
     items: [
+      // V9: the AI Dream Coach.
+      { to: '/dream-coach', label: tr('Dream Coach'), icon: Bot },
       { to: '/partners', label: tr('Partners'), icon: Handshake },
       { to: '/work-style', label: tr('Work Style'), icon: Fingerprint },
       { to: '/communication', label: tr('Communication'), icon: Send },
@@ -91,9 +99,21 @@ export const navGroups: NavGroup[] = [
       { to: '/settings/appearance', label: tr('Appearance'), icon: Palette },
       { to: '/settings/security', label: tr('Security'), icon: KeyRound },
       { to: '/settings/account', label: tr('Account'), icon: UserCog },
+      // V9: the coach workspace and cohort management.
+      { to: '/coach', label: tr('Coaching'), icon: Users, roles: ['COACH', 'ADMIN'] },
+      { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, roles: ['ADMIN'] },
+      { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, roles: ['ADMIN'] },
     ],
   },
 ];
+
+/** The nav groups this role may see. */
+export function navGroupsFor(role: string | undefined): NavGroup[] {
+  return navGroups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.roles || (role !== undefined && item.roles.includes(role))),
+  }));
+}
 
 // Flat view of the same items — the Header's page-label lookup keys off this.
 export const navItems: NavItem[] = navGroups.flatMap((group) => group.items);

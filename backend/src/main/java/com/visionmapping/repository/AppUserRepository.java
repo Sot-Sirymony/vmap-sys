@@ -8,6 +8,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     Optional<AppUser> findByEmail(String email);
 
+    java.util.List<AppUser> findByCohort_IdOrderByFullNameAsc(Long cohortId);
+
+    long countByCohort_Id(Long cohortId);
+
     boolean existsByEmail(String email);
 
     /** FR-77: who the reminder job has to consider. */

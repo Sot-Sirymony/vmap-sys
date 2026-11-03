@@ -858,7 +858,7 @@ Implement these validation rules:
 11. When all child tasks are Completed, automatically suggest marking the parent step or goal completed.
 12. Do not delete records permanently by default. Prefer archive or soft delete.
 13. User data must be scoped to the authenticated user.
-14. One user must not access another user’s data.
+14. One user must not access another user’s data. The one exception (V9, decision D-6 in `docs/VMS_BRD_V9.0.0.md`): a coach may read, never change, the participants of the active cohorts they coach, and their fear and attitude journals only when the participant shares them. The server checks this on every coach request.
 
 ---
 

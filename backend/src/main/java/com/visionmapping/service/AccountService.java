@@ -4,6 +4,8 @@ import com.visionmapping.dto.request.DeleteAccountRequest;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
+import com.visionmapping.repository.AiConsentEventRepository;
+import com.visionmapping.repository.AiMessageRepository;
 import com.visionmapping.repository.AttitudeCheckInRepository;
 import com.visionmapping.repository.ChainAssessmentRepository;
 import com.visionmapping.repository.CommunicationMessageRepository;
@@ -20,6 +22,7 @@ import com.visionmapping.repository.MilestoneRepository;
 import com.visionmapping.repository.ModuleCompletionRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
+import com.visionmapping.repository.PlanShareRepository;
 import com.visionmapping.repository.ProgressLogRepository;
 import com.visionmapping.repository.ReviewRepository;
 import com.visionmapping.repository.TaskItemRepository;
@@ -47,8 +50,21 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AccountService {
 
+    /**
+     * AI-NFR-14: the usage log keeps no conversation text and its cost still
+     * counts against the month's budget, so a deleted account only loses its
+     * link to these rows.
+     */
+    static final List<String> USER_TABLES_ANONYMISED = List.of("ai_usage_logs");
+
     /** Children before parents. A test fails if a table with a user_id is missing here. */
     static final List<String> USER_TABLES_IN_DELETE_ORDER = List.of(
+            "ai_messages",
+            "ai_conversations",
+            "ai_consent_events",
+            "ai_safety_alerts",
+            "coach_comments",
+            "plan_shares",
             "password_reset_tokens",
             "issue_reports",
             "module_completions",
@@ -72,6 +88,7 @@ public class AccountService {
             "vision_areas");
 
     private final UserScope userScope;
+    private final CoachCommentService coachCommentService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
@@ -97,6 +114,9 @@ public class AccountService {
     private final IdealPartnerProfileRepository idealPartnerProfileRepository;
     private final IssueReportRepository issueReportRepository;
     private final GoalSynergyLinkRepository goalSynergyLinkRepository;
+    private final PlanShareRepository planShareRepository;
+    private final AiConsentEventRepository aiConsentEventRepository;
+    private final AiMessageRepository aiMessageRepository;
 
     /** The password hash is deliberately never part of this. Archived records are. */
     @Transactional(readOnly = true)
@@ -108,8 +128,12 @@ public class AccountService {
         account.put("fullName", user.getFullName());
         account.put("email", user.getEmail());
         account.put("reminderEmail", user.getReminderEmail());
+        account.put("aiConsentAt", user.getAiConsentAt());
+        account.put("cohort", user.getCohort() == null ? null : user.getCohort().getName());
+        account.put("shareJournalsWithCoach", user.isShareJournalsWithCoach());
         account.put("createdAt", user.getCreatedAt());
         data.put("account", account);
+        data.put("coachComments", coachCommentService.mine());
         data.put("visionAreas", visionAreaRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
         data.put("dreams", dreamRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
         data.put("goals", goalRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
@@ -138,6 +162,9 @@ public class AccountService {
                     row.put("moduleNumber", completion.getModuleNumber());
                     row.put("completedAt", completion.getCompletedAt());
                     row.put("rowsJson", completion.getRowsJson());
+                    row.put("coachRating", completion.getCoachRating());
+                    row.put("coachFeedback", completion.getCoachFeedback());
+                    row.put("coachRatedAt", completion.getCoachRatedAt());
                     return row;
                 })
                 .toList());
@@ -163,6 +190,35 @@ public class AccountService {
                     return row;
                 })
                 .toList());
+        // AI-FR-25 and AI-NFR-03: Dream Coach history and the consent record.
+        data.put("aiConsentEvents", aiConsentEventRepository.findByUser_IdOrderByCreatedAtAsc(userId).stream()
+                .map(event -> Map.of("action", event.getAction(), "at", event.getCreatedAt()))
+                .toList());
+        data.put("aiMessages", aiMessageRepository.findByUser_IdOrderByIdAsc(userId).stream()
+                .map(message -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("conversationId", message.getConversation().getId());
+                    row.put("conversationTitle", message.getConversation().getTitle());
+                    row.put("role", message.getRole());
+                    row.put("content", message.getContent());
+                    row.put("createdAt", message.getCreatedAt());
+                    return row;
+                })
+                .toList());
+        // The token hash is left out: it is a credential, not the user's content.
+        data.put("planShares", planShareRepository.findByUser_IdOrderByCreatedAtDesc(userId).stream()
+                .map(share -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("dreamId", share.getDream().getId());
+                    row.put("partnerId", share.getPartner() == null ? null : share.getPartner().getId());
+                    row.put("message", share.getMessage());
+                    row.put("createdAt", share.getCreatedAt());
+                    row.put("expiresAt", share.getExpiresAt());
+                    row.put("revokedAt", share.getRevokedAt());
+                    row.put("viewCount", share.getViewCount());
+                    return row;
+                })
+                .toList());
         return data;
     }
 
@@ -173,6 +229,9 @@ public class AccountService {
         }
         Long userId = user.getId();
         entityManager.clear();
+        for (String table : USER_TABLES_ANONYMISED) {
+            jdbcTemplate.update("UPDATE " + table + " SET user_id = NULL WHERE user_id = ?", userId);
+        }
         for (String table : USER_TABLES_IN_DELETE_ORDER) {
             jdbcTemplate.update("DELETE FROM " + table + " WHERE user_id = ?", userId);
         }

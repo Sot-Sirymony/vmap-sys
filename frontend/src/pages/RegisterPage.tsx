@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { register } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -12,6 +12,9 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // V9 (D-7): a link like /register?code=ABCD2345 fills the cohort join code in.
+  const [searchParams] = useSearchParams();
+  const [joinCode, setJoinCode] = useState(searchParams.get('code') ?? '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -27,7 +30,7 @@ export function RegisterPage() {
 
     setLoading(true);
     try {
-      await register({ fullName, email, password });
+      await register({ fullName, email, password, joinCode: joinCode.trim() || undefined });
       // Registering no longer signs the user straight in. It used to call
       // setSession() with the token the endpoint returns and jump to the
       // dashboard, which meant a successful sign-up produced no confirmation at
@@ -39,7 +42,7 @@ export function RegisterPage() {
       // the account exists, not that whoever filled the form can sign in to it.
       navigate('/login', { replace: true, state: { registeredEmail: email } });
     } catch (error) {
-      setError(error instanceof Error ? error.message : tr('Registration failed.'));
+      setError(error instanceof Error ? tr(error.message) : tr('Registration failed.'));
     } finally {
       setLoading(false);
     }
@@ -97,13 +100,22 @@ export function RegisterPage() {
           onChange={setConfirmPassword}
           required
         />
+        <AuthField
+          id="register-join-code"
+          label={tr('Cohort join code (optional)')}
+          name="joinCode"
+          autoComplete="off"
+          placeholder="ABCD2345"
+          value={joinCode}
+          onChange={setJoinCode}
+        />
         {error && <ErrorMessage message={error} />}
         <button className="auth-submit" type="submit" disabled={loading}>
           {loading ? tr('Creating...') : tr('Create account')}
         </button>
       </form>
       <p className="auth-link" style={{ textAlign: 'center' }}>
-        Already have an account? <Link to="/login">{tr('Sign in')}</Link>
+        {tr('Already have an account?')} <Link to="/login">{tr('Sign in')}</Link>
       </p>
     </AuthLayout>
   );

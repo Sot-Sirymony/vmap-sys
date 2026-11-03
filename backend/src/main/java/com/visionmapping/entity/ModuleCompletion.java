@@ -42,4 +42,25 @@ public class ModuleCompletion extends BaseAuditableEntity {
 
     @Column(name = "completed_at", nullable = false)
     private Instant completedAt;
+
+    /** V9 (v0.1 FR-11): the coach's 1 to 5 rating of a pitch. Cleared when the pitch changes. */
+    @Column(name = "coach_rating")
+    private Integer coachRating;
+
+    @Column(name = "coach_feedback", length = 2000)
+    private String coachFeedback;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coach_rated_by")
+    private AppUser coachRatedBy;
+
+    @Column(name = "coach_rated_at")
+    private Instant coachRatedAt;
+
+    public void clearCoachRating() {
+        coachRating = null;
+        coachFeedback = null;
+        coachRatedBy = null;
+        coachRatedAt = null;
+    }
 }

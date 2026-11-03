@@ -6,9 +6,6 @@ import com.visionmapping.dto.response.ReminderSettingsResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
-import com.visionmapping.repository.AttitudeCheckInRepository;
-import com.visionmapping.repository.TaskItemRepository;
-import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.mail.ReminderMailer;
 import com.visionmapping.util.UserScope;
 import java.time.DateTimeException;
@@ -20,8 +17,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.Objects;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -41,11 +36,9 @@ public class ReminderService {
 
     private final UserScope userScope;
     private final AppUserRepository appUserRepository;
-    private final VisionStepRepository visionStepRepository;
-    private final TaskItemRepository taskItemRepository;
-    private final AttitudeCheckInRepository attitudeCheckInRepository;
     private final DailyPlanService dailyPlanService;
     private final ReminderMailer reminderMailer;
+    private final ActivityService activityService;
 
     @Value("${app.reminders.send-hour:8}")
     private int sendHour;
@@ -152,14 +145,6 @@ public class ReminderService {
     }
 
     private boolean isInactive(AppUser user, Instant now) {
-        Instant cutoff = now.minus(inactiveAfterDays, ChronoUnit.DAYS);
-        Instant lastActivity = Stream.of(
-                        visionStepRepository.findLastUpdatedAt(user.getId()),
-                        taskItemRepository.findLastUpdatedAt(user.getId()),
-                        attitudeCheckInRepository.findLastUpdatedAt(user.getId()))
-                .filter(Objects::nonNull)
-                .max(Instant::compareTo)
-                .orElse(user.getCreatedAt());
-        return lastActivity.isBefore(cutoff);
+        return activityService.lastActivity(user).isBefore(now.minus(inactiveAfterDays, ChronoUnit.DAYS));
     }
 }

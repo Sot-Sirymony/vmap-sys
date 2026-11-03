@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -118,6 +119,9 @@ public class LearningModuleService {
                     .completedAt(Instant.now(clock))
                     .build();
         }
+        if (!Objects.equals(completion.getRowsJson(), rowsJson)) {
+            completion.clearCoachRating();
+        }
         completion.setRowsJson(rowsJson);
         completionRepository.saveAndFlush(completion);
         return toDetail(module, language);
@@ -131,7 +135,11 @@ public class LearningModuleService {
                 completion == null || completion.getRowsJson() == null ? List.of() : parse(completion.getRowsJson(), ROWS),
                 missingRequirement(module.getCompletionRule()),
                 status(completion, true),
-                completion == null ? null : completion.getCompletedAt());
+                completion == null ? null : completion.getCompletedAt(),
+                completion == null ? null : completion.getCoachRating(),
+                completion == null ? null : completion.getCoachFeedback(),
+                completion == null || completion.getCoachRatedBy() == null ? null : completion.getCoachRatedBy().getFullName(),
+                completion == null ? null : completion.getCoachRatedAt());
     }
 
     private static ModuleStatus status(ModuleCompletion completion, boolean earlierAllComplete) {

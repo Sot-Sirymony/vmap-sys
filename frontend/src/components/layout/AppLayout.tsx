@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router';
 import Box from '@mui/material/Box';
+import { DreamCoachLauncher } from '../ai/DreamCoachLauncher';
 import { BottomNav } from './BottomNav';
 import { GlobalShortcuts } from './GlobalShortcuts';
 import { Header } from './Header';
@@ -24,6 +25,8 @@ export function AppLayout() {
           </Box>
         </Box>
         <BottomNav />
+        {/* V9 (AI-FR-01): the Dream Coach on every screen. */}
+        <DreamCoachLauncher />
       </CommandPaletteProvider>
     </SidebarStateProvider>
   );

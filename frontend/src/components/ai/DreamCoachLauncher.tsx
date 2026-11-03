@@ -1,0 +1,84 @@
+import { useEffect, useState } from 'react';
+import { Link as RouterLink, useLocation } from 'react-router';
+import { Bot, X } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Drawer from '@mui/material/Drawer';
+import Fab from '@mui/material/Fab';
+import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
+import { getAiStatus } from '../../api/aiApi';
+import { useAuth } from '../../context/AuthContext';
+import { tr } from '../../i18n/translate';
+import type { AiStatus } from '../../types/vision';
+import { AiConsentCard } from '../common/AiConsentCard';
+import { Button } from '../common/Button';
+import { AiStatusNotice } from './AiStatusNotice';
+import { DreamCoachChat } from './DreamCoachChat';
+import { focusFor, quickActionsFor } from './aiFocus';
+
+/**
+ * V9 (AI-FR-01, AI-FR-02): the Dream Coach on every screen. The button opens a
+ * side panel that knows the page, dream or module on screen and offers three
+ * quick questions for it. The conversation carries on as the participant moves
+ * between pages. Hidden while AI is switched off for everyone.
+ */
+export function DreamCoachLauncher() {
+  const { token } = useAuth();
+  const { pathname } = useLocation();
+  const [status, setStatus] = useState<AiStatus | null>(null);
+  const [open, setOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    getAiStatus(token).then(setStatus).catch(() => setStatus(null));
+  }, [token, open]);
+
+  if (!token || !status || status.reason === 'OFF' || pathname.startsWith('/dream-coach')) {
+    return null;
+  }
+
+  return (
+    <>
+      <Fab
+        color="primary"
+        aria-label={tr('Open the Dream Coach')}
+        onClick={() => setOpen(true)}
+        sx={{ position: 'fixed', right: { xs: 16, md: 24 }, bottom: { xs: 88, md: 24 }, zIndex: (theme) => theme.zIndex.appBar + 1 }}
+      >
+        <Bot size={24} />
+      </Fab>
+      <Drawer
+        anchor="right"
+        open={open}
+        onClose={() => setOpen(false)}
+        slotProps={{ paper: { sx: { width: { xs: '100%', sm: 420 }, p: 2 }, 'aria-label': tr('Dream Coach') } }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="h6" component="h2">{tr('Dream Coach')}</Typography>
+          <IconButton aria-label={tr('Close')} onClick={() => setOpen(false)}><X size={18} /></IconButton>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={() => setConversationId(null)}>{tr('New conversation')}</Button>
+          <Link component={RouterLink} to="/dream-coach" onClick={() => setOpen(false)} variant="body2">{tr('All conversations')}</Link>
+        </Box>
+        {status.reason === 'NO_CONSENT' && <AiConsentCard token={token} onChange={setStatus} />}
+        <AiStatusNotice status={status} />
+        <Box sx={{ mt: 1 }}>
+          <DreamCoachChat
+            token={token}
+            status={status}
+            onStatusChange={setStatus}
+            conversationId={conversationId}
+            onConversationChange={setConversationId}
+            focus={focusFor(pathname)}
+            quickActions={quickActionsFor(pathname)}
+          />
+        </Box>
+      </Drawer>
+    </>
+  );
+}

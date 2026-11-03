@@ -20,7 +20,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeSettings } from '@/context/ThemeModeContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { navGroups, navPathname } from './nav-items';
+import { navGroupsFor, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
 import { tr } from '../../i18n/translate';
@@ -221,6 +221,7 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
 function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavigate: () => void; modern: boolean }) {
   const { t } = useI18n();
   const location = useLocation();
+  const { user } = useAuth();
   const pathname = navPathname(location.pathname);
 
   // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
@@ -229,7 +230,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
   return (
     <Box>
     <List sx={{ px: 1 }}>
-      {navGroups.map((group, groupIndex) => (
+      {navGroupsFor(user?.role).map((group, groupIndex) => (
         <li key={group.label} style={{ listStyle: 'none' }}>
           {collapsed
             ? groupIndex > 0 && <Divider sx={{ my: 1 }} />
