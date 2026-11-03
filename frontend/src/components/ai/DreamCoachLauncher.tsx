@@ -21,7 +21,8 @@ import { focusFor, quickActionsFor } from './aiFocus';
  * V9 (AI-FR-01, AI-FR-02): the Dream Coach on every screen. The button opens a
  * side panel that knows the page, dream or module on screen and offers three
  * quick questions for it. The conversation carries on as the participant moves
- * between pages. Hidden while AI is switched off for everyone.
+ * between pages. It also opens over a form dialog, so a reply can be copied
+ * into the form. Hidden while AI is switched off for everyone.
  */
 export function DreamCoachLauncher() {
   const { token } = useAuth();
@@ -56,9 +57,11 @@ export function DreamCoachLauncher() {
     <>
       <Fab
         color="primary"
+        className="dream-coach-fab"
         aria-label={tr('Open the Dream Coach')}
         onClick={() => setOpen(true)}
-        sx={{ position: 'fixed', right: { xs: 16, md: 24 }, bottom: { xs: 88, md: 24 }, zIndex: (theme) => theme.zIndex.appBar + 1 }}
+        // Above dialogs, so the coach can be opened while a form is open: ask, copy a reply, paste it into the form.
+        sx={{ position: 'fixed', right: { xs: 16, md: 24 }, bottom: { xs: 88, md: 24 }, zIndex: (theme) => theme.zIndex.modal + 1 }}
       >
         <Bot size={24} />
       </Fab>
@@ -66,6 +69,8 @@ export function DreamCoachLauncher() {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
+        // Over any open form dialog; while open it takes the keyboard focus, and closing it returns to the form untouched.
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 2 }}
         slotProps={{ paper: { sx: { width: { xs: '100%', sm: 420 }, p: 2 }, 'aria-label': tr('Dream Coach') } }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
