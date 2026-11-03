@@ -59,4 +59,74 @@ public final class AiDrafts {
             @JsonPropertyDescription("The kind of person who could help, as a role, never a name") String helper,
             @JsonPropertyDescription("One short, kind sentence on why the step may keep slipping") String reason) {
     }
+
+    // Phase 6: daily use.
+
+    public record PickDraft(
+            @JsonPropertyDescription("STEP or TASK") String itemType,
+            @JsonPropertyDescription("The id shown in brackets") long itemId,
+            @JsonPropertyDescription("Why this fits now, in one short sentence") String reason,
+            @JsonPropertyDescription("Minutes it should take, as a whole number") int minutes) {
+    }
+
+    public record NextStepDraft(
+            @JsonPropertyDescription("Best first, at most three") List<PickDraft> picks,
+            @JsonPropertyDescription("One short encouraging line; empty if nothing fits") String note) {
+    }
+
+    public record WeeklyReviewDraft(
+            @JsonPropertyDescription("Two or three sentences on how the week went") String summary,
+            @JsonPropertyDescription("What was finished, one item per line") String completedTasks,
+            @JsonPropertyDescription("What is late, one item per line") String delayedTasks,
+            @JsonPropertyDescription("What is blocked and why, one item per line") String blockedTasks,
+            @JsonPropertyDescription("One or two lessons, phrased as the participant's own reflection") String lessonsLearned,
+            @JsonPropertyDescription("The top three priorities for next week, one per line") String nextActions) {
+    }
+
+    public record PitchFeedbackDraft(
+            @JsonPropertyDescription("How the listener honestly reacts, in their voice, two or three sentences") String reaction,
+            @JsonPropertyDescription("1 to 5: how clear the pitch is") int clarity,
+            @JsonPropertyDescription("1 to 5: how clear the benefit to the listener is") int benefit,
+            @JsonPropertyDescription("1 to 5: how specific and easy to say yes to the ask is") int ask,
+            @JsonPropertyDescription("The pitch rewritten, keeping the participant's facts and voice") String improvedPitch,
+            @JsonPropertyDescription("The one change that would help most") String tip) {
+    }
+
+    public record OutreachDraft(
+            @JsonPropertyDescription("A short, specific subject line") String subject,
+            @JsonPropertyDescription("The full message: warm, brief, one clear ask, never demanding") String message) {
+    }
+
+    public record ResourceDraft(
+            @JsonPropertyDescription("COURSE, BOOK, TOOL, ORGANISATION, FUNDING, PERSON or OTHER") String kind,
+            @JsonPropertyDescription("A well-known name, or for PERSON the kind of person as a role") String name,
+            @JsonPropertyDescription("How it helps this goal, in one sentence") String why) {
+    }
+
+    public record ResourceDrafts(List<ResourceDraft> resources) {
+    }
+
+    // Phase 7: module help.
+
+    public record FieldValue(
+            @JsonPropertyDescription("The field key exactly as listed") String key,
+            @JsonPropertyDescription("The suggested answer for that field") String value) {
+    }
+
+    public record RowDraft(List<FieldValue> values) {
+    }
+
+    public record ModuleHelpDraft(
+            @JsonPropertyDescription("Up to three short questions to think through, most useful first; empty when not asked for") List<String> questions,
+            @JsonPropertyDescription("A short example answer about a made-up person, not the participant; empty when not asked for") String example,
+            @JsonPropertyDescription("Draft answers for the exercise, at most three rows; empty when not asked for") List<RowDraft> rows,
+            @JsonPropertyDescription("Two or three sentences of honest, kind feedback; empty when not asked for") String feedback,
+            @JsonPropertyDescription("Up to three specific improvements; empty when not asked for") List<String> improvements) {
+    }
+
+    public record AssessmentExplanationDraft(
+            @JsonPropertyDescription("Three to five plain sentences on what the scores say, strongest and weakest first") String explanation,
+            @JsonPropertyDescription("The number of the one module to focus on next, 1 to 15") int focusModule,
+            @JsonPropertyDescription("Why that module, in one sentence") String reason) {
+    }
 }

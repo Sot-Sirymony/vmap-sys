@@ -1,6 +1,7 @@
 package com.visionmapping.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +11,10 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -49,6 +52,25 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "Invalid value for '" + exception.getName() + "'.",
                 request);
+    }
+
+    /**
+     * A query or path parameter outside its declared limits, e.g. ?minutes=1
+     * where at least 5 is allowed. Spring raises one of these two depending on
+     * how the controller is validated; both are bad input, never a 500.
+     */
+    @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
+    public ResponseEntity<ErrorResponse> handleParameterValidation(Exception exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "One of the values sent is not allowed.", request);
+    }
+
+    /** A path that exists but not for this method, e.g. POST where only PUT is mapped: 405, not a 500. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "This action is not supported here.", request);
     }
 
     /** A required query parameter left out is the caller's mistake, like a wrong one above. */

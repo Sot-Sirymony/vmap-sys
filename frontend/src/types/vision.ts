@@ -979,6 +979,7 @@ export type AiSettings = {
   helpLines: string;
   spendThisMonthUsd: number;
   requestsThisMonth: number;
+  aiReminders: boolean;
 };
 
 // V9 Phase 3: the Dream Coach.
@@ -1082,5 +1083,61 @@ export type StepRescue = {
   smallerStep?: string | null;
   newDate?: string | null;
   helper?: string | null;
+  reason?: string | null;
+};
+
+// V9 Phase 6 (AI-FR-12 to AI-FR-17): daily-use suggestions.
+export type NextStepPick = {
+  itemType: 'STEP' | 'TASK';
+  itemId: number;
+  title: string;
+  dueDate?: string | null;
+  reason?: string | null;
+  minutes?: number | null;
+};
+
+export type NextStep = { picks: NextStepPick[]; note?: string | null };
+
+export type WeeklyReviewDraft = {
+  summary?: string | null;
+  completedTasks?: string | null;
+  delayedTasks?: string | null;
+  blockedTasks?: string | null;
+  lessonsLearned?: string | null;
+  nextActions?: string | null;
+};
+
+export type PitchAudience = 'PARTNER' | 'BUYER' | 'SPONSOR';
+
+export type PitchFeedback = {
+  audience: PitchAudience;
+  reaction?: string | null;
+  clarity: number;
+  benefit: number;
+  ask: number;
+  improvedPitch?: string | null;
+  tip?: string | null;
+};
+
+export type OutreachDraft = { subject?: string | null; message?: string | null };
+
+export type ResourceIdea = { kind: string; name: string; why?: string | null; checkBeforeUse: boolean };
+
+// V9 Phase 7: AI help in module exercises (drafts never save or unlock anything).
+export type ModuleHelpMode = 'START' | 'DRAFT' | 'FEEDBACK';
+
+export type ModuleHelp = {
+  mode: ModuleHelpMode;
+  questions: string[];
+  example?: string | null;
+  rows: ModuleRow[];
+  feedback?: string | null;
+  improvements: string[];
+};
+
+export type AssessmentExplanation = {
+  explanation?: string | null;
+  focusModule?: number | null;
+  focusTitle?: string | null;
   reason?: string | null;
 };

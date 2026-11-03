@@ -9,6 +9,7 @@ export type AiSettingsInput = {
   monthlyBudgetUsd: number;
   dailyMessageLimit?: number;
   helpLines?: string;
+  aiReminders?: boolean;
 };
 
 export function getAiSettings(token: string) {

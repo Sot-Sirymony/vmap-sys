@@ -317,3 +317,6 @@ based on (AI-FR-05), never the data itself.
 
 **V57.** **VisionStep** adds `resources` (the resources and people the step needs, v0.1
 FR-05) and `overdueReschedules` (times it was given a new date while overdue, AI-FR-11).
+
+**V58.** **AiSettings** adds `aiReminders` (default false): add an AI encouragement that
+quotes the participant's passion statement to reminder emails (AI-FR-15).

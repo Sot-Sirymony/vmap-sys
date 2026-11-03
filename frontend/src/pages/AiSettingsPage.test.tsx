@@ -26,6 +26,7 @@ const base: AiSettings = {
   helpLines: 'Call 117',
   spendThisMonthUsd: 0,
   requestsThisMonth: 0,
+  aiReminders: false,
 };
 
 describe('AiSettingsPage (AI-FR-24)', () => {

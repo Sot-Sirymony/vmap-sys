@@ -15,5 +15,6 @@ public record AiSettingsRequest(
         @NotBlank String model,
         @NotNull @DecimalMin("0.00") @DecimalMax("1000.00") BigDecimal monthlyBudgetUsd,
         @Min(1) @Max(500) Integer dailyMessageLimit,
-        @Size(max = 2000) String helpLines) {
+        @Size(max = 2000) String helpLines,
+        Boolean aiReminders) {
 }

@@ -535,6 +535,27 @@ All take `?language=en|km`. They only suggest; adding uses `POST /api/goals` and
 
 Steps now take and return `resources` (left out on update keeps the saved value; blank clears it) and return `overdueReschedules`.
 
+### V9: daily use (Phase 6)
+
+All need AI consent and count toward the daily limit. Suggestions only.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/daily/next-step?minutes=30&language=en` | `minutes` 5 to 480. `picks[]` (`itemType` STEP or TASK, `itemId`, `title`, `dueDate`, `reason`, `minutes`), best first, and a `note`. Empty with a note, and no AI call, when nothing is open |
+| POST | `/api/ai/daily/weekly-review-draft?language=en` | `summary`, `completedTasks`, `delayedTasks`, `blockedTasks`, `lessonsLearned`, `nextActions` |
+| POST | `/api/ai/daily/pitch-feedback` | `{ "audience": "PARTNER" \| "BUYER" \| "SPONSOR", "pitch", "language" }` → `reaction`, `clarity`, `benefit`, `ask` (1 to 5), `improvedPitch`, `tip` |
+| POST | `/api/ai/daily/outreach-draft` | `{ "partnerId", "relatedDreamId", "purpose", "request", "language" }` → `subject`, `message`. Uses the partner's name, role and organisation, never email or phone |
+| POST | `/api/ai/daily/goals/{goalId}/resource-ideas?language=en` | `resources[]` (`kind`, `name`, `why`, `checkBeforeUse`), without links |
+
+`PUT /api/admin/ai-settings` also takes `aiReminders` (AI encouragement in reminder emails); the response returns it.
+
+### V9: module help (Phase 7)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/modules/{number}/help` | `{ "mode": "START" \| "DRAFT" \| "FEEDBACK", "rows": [...], "language" }`. START → `questions` (up to 3) and `example`; DRAFT → `rows` keyed by the module's fields (forms only; rating fields blank); FEEDBACK → `feedback` and `improvements` (needs typed rows). 400 for a locked module. Nothing is saved |
+| POST | `/api/ai/assessment/explain?language=en` | `explanation`, `focusModule`, `focusTitle`, `reason`. 400 before the first assessment |
+
 ### V9: plan sharing (v0.1 FR-10)
 
 | Method | Path | Notes |

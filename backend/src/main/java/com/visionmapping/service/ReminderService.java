@@ -17,6 +17,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import com.visionmapping.service.ai.AiReminderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class ReminderService {
     private final DailyPlanService dailyPlanService;
     private final ReminderMailer reminderMailer;
     private final ActivityService activityService;
+    private final AiReminderService aiReminderService;
 
     @Value("${app.reminders.send-hour:8}")
     private int sendHour;
@@ -135,6 +137,11 @@ public class ReminderService {
         if (inactive) {
             lines.add("You have not updated anything for %d days or more. One small step counts.".formatted(inactiveAfterDays));
         }
+        // AI-FR-15: only when the admin has switched it on and the participant consented.
+        aiReminderService.encouragement(user).ifPresent(line -> {
+            lines.add("");
+            lines.add(line);
+        });
         if (!todayUrl.isBlank()) {
             lines.add("");
             lines.add("Open your day: " + todayUrl);

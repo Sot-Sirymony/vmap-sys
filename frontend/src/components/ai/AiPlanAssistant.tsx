@@ -12,12 +12,13 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { getAiStatus } from '../../api/aiApi';
+import { getResourceIdeas } from '../../api/aiDailyApi';
 import { checkPlan, suggestGoals, suggestSteps } from '../../api/aiPlanApi';
 import { createGoal } from '../../api/goalApi';
 import { createStep } from '../../api/stepApi';
 import { useI18n } from '../../i18n/I18nContext';
 import { tr } from '../../i18n/translate';
-import type { AiStatus, Dream, Goal, GoalSuggestion, PlanCheck, StepSuggestion, VisionStep } from '../../types/vision';
+import type { AiStatus, Dream, Goal, GoalSuggestion, PlanCheck, ResourceIdea, StepSuggestion, VisionStep } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 
@@ -34,7 +35,8 @@ type StepRow = StepSuggestion & { picked: boolean };
 type Result =
   | { kind: 'goals'; rows: GoalRow[]; question?: string | null }
   | { kind: 'steps'; goalId: number; rows: StepRow[]; question?: string | null }
-  | { kind: 'check'; check: PlanCheck };
+  | { kind: 'check'; check: PlanCheck }
+  | { kind: 'resources'; ideas: ResourceIdea[] };
 
 const ISSUE_LABELS: Record<string, string> = {
   MISSING_OWNER: 'No owner',
@@ -96,6 +98,9 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   });
 
   const askCheck = () => run(async () => ({ kind: 'check', check: await checkPlan(token, dream.id, language) }));
+
+  // AI-FR-13: ideas only, each to check before use until admins keep an approved list.
+  const askResources = () => run(async () => ({ kind: 'resources', ideas: (await getResourceIdeas(token, Number(goalId), language)).resources }));
 
   async function addGoals(rows: GoalRow[]) {
     setBusy(true);
@@ -195,6 +200,9 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
               <Button variant="secondary" disabled={busy || !aiReady || !goalId} onClick={() => void askSteps()}>
                 {tr('Suggest steps')}
               </Button>
+              <Button variant="secondary" disabled={busy || !aiReady || !goalId} onClick={() => void askResources()}>
+                {tr('Resource ideas')}
+              </Button>
             </Box>
           )}
           {busy && (
@@ -212,6 +220,7 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
             <StepRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addSteps(result.goalId, rows)} />
           )}
           {result?.kind === 'check' && <CheckResult check={result.check} />}
+          {result?.kind === 'resources' && <ResourceList ideas={result.ideas} />}
         </Stack>
       </CardContent>
     </Card>
@@ -333,6 +342,37 @@ function CheckResult({ check }: { check: PlanCheck }) {
           </Box>
           <Typography variant="body2">{tr(issue.problem)}</Typography>
           {issue.fix && <Typography variant="body2" color="text.secondary">{tr(issue.fix)}</Typography>}
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+const RESOURCE_KIND_LABELS: Record<string, string> = {
+  COURSE: 'Course',
+  BOOK: 'Book',
+  TOOL: 'Tool',
+  ORGANISATION: 'Organisation',
+  FUNDING: 'Funding',
+  PERSON: 'Person to ask',
+  OTHER: 'Other',
+};
+
+function ResourceList({ ideas }: { ideas: ResourceIdea[] }) {
+  if (ideas.length === 0) {
+    return <Typography variant="body2" color="text.secondary">{tr('No resource ideas this time.')}</Typography>;
+  }
+  return (
+    <Stack spacing={1}>
+      <Alert severity="warning">{tr('AI ideas, not recommendations. Check each one yourself before you rely on it or pay for it.')}</Alert>
+      {ideas.map((idea, index) => (
+        <Box key={index} sx={{ borderLeft: 3, borderColor: 'divider', pl: 1.5 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Chip size="small" label={tr(RESOURCE_KIND_LABELS[idea.kind] ?? 'Other')} />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{idea.name}</Typography>
+            {idea.checkBeforeUse && <Chip size="small" variant="outlined" color="warning" label={tr('Check before use')} />}
+          </Box>
+          {idea.why && <Typography variant="body2" color="text.secondary">{idea.why}</Typography>}
         </Box>
       ))}
     </Stack>

@@ -27,7 +27,8 @@ public record AiSettingsResponse(
         int dailyMessageLimit,
         String helpLines,
         BigDecimal spendThisMonthUsd,
-        long requestsThisMonth) {
+        long requestsThisMonth,
+        boolean aiReminders) {
 
     public record ModelOption(String id, String label) {
     }

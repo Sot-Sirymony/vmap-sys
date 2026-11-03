@@ -63,7 +63,7 @@ export function AiSettingsPage() {
       {settings && token && (
         <Stack spacing={2}>
           <ApiKeyCard settings={settings} token={token} onChanged={setSettings} />
-          <OptionsCard key={`${settings.model}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}`} settings={settings} token={token} onChanged={setSettings} />
+          <OptionsCard key={`${settings.model}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
     </PageSection>
@@ -176,6 +176,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [budget, setBudget] = useState(String(settings.monthlyBudgetUsd));
   const [dailyLimit, setDailyLimit] = useState(String(settings.dailyMessageLimit));
   const [helpLines, setHelpLines] = useState(settings.helpLines);
+  const [aiReminders, setAiReminders] = useState(settings.aiReminders);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -192,6 +193,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         monthlyBudgetUsd: Number(budget),
         dailyMessageLimit: Number(dailyLimit),
         helpLines: helpLines.trim(),
+        aiReminders,
       }));
       setSaved(true);
     } catch (saveError) {
@@ -244,6 +246,13 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
             onChange={(event) => setDailyLimit(event.target.value)}
             slotProps={{ htmlInput: { min: 1, max: 500 } }}
           />
+          <FormControlLabel
+            control={<Switch checked={aiReminders} onChange={(event) => setAiReminders(event.target.checked)} />}
+            label={tr('Add an AI encouragement to reminder emails')}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>
+            {tr('Quotes each person\'s own "why it matters". Only for people who gave AI consent. Each email is one AI request, about $0.005.')}
+          </Typography>
           <TextField
             multiline
             minRows={3}

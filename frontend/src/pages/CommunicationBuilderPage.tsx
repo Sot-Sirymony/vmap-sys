@@ -1,4 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
 import { archiveCommunicationMessage, permanentlyDeleteCommunicationMessage, createCommunicationMessage, listCommunicationMessages, restoreCommunicationMessage, updateCommunicationMessage } from '../api/communicationApi';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
@@ -32,7 +34,9 @@ import type { CommunicationMessage, CommunicationMessageRequest, CommunicationSt
 import { communicationStatusLabels } from '../utils/enumLabels';
 import { generateMessageBody, type MessageTone } from '../utils/communicationMessageGenerator';
 import { PageSection } from './PageSection';
-import { tr } from '../i18n/translate';
+import { currentLanguage, tr } from '../i18n/translate';
+import { draftOutreach } from '../api/aiDailyApi';
+import { PitchCoachCard } from '../components/ai/PitchCoachCard';
 
 export function CommunicationBuilderPage() {
   const { token } = useAuth();
@@ -99,6 +103,9 @@ export function CommunicationBuilderPage() {
   const [tone, setTone] = useState<MessageTone>('DEFAULT');
   const [status, setStatus] = useState<CommunicationStatus>('DRAFT');
   const [followUpDate, setFollowUpDate] = useState('');
+  // AI-FR-17: a draft the participant edits and sends themselves.
+  const [aiDrafting, setAiDrafting] = useState(false);
+  const [aiDraftError, setAiDraftError] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -123,6 +130,34 @@ export function CommunicationBuilderPage() {
       setFilter(value);
       setPage(0);
     };
+  }
+
+  async function handleAiDraft() {
+    if (!token) {
+      return;
+    }
+    if (!request.trim()) {
+      setAiDraftError(tr('Write what you are asking for in Request first.'));
+      return;
+    }
+    setAiDrafting(true);
+    setAiDraftError('');
+    try {
+      const draft = await draftOutreach(token, {
+        partnerId: optionalNumber(partnerId) ?? null,
+        relatedDreamId: optionalNumber(relatedDreamId) ?? null,
+        purpose,
+        request,
+      }, currentLanguage());
+      if (draft.subject) {
+        setSubject(draft.subject);
+      }
+      setMessageBody(draft.message ?? '');
+    } catch (draftError) {
+      setAiDraftError(draftError instanceof Error ? tr(draftError.message) : tr('AI help is temporarily unavailable.'));
+    } finally {
+      setAiDrafting(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -419,6 +454,7 @@ export function CommunicationBuilderPage() {
       <label className="field-full">
         Message
         <Textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
+        {aiDraftError && <Alert severity="error" sx={{ mt: 1 }}>{aiDraftError}</Alert>}
       </label>
     </>
   );
@@ -462,11 +498,15 @@ export function CommunicationBuilderPage() {
               </Select>
             </FormControl>
             <Button type="button" variant="secondary" onClick={handleGenerateMessage}>{tr('Generate message')}</Button>
+            <Button type="button" variant="secondary" disabled={aiDrafting} onClick={() => void handleAiDraft()}>
+              {aiDrafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
+            </Button>
           </>
         }
       >
         {formFields}
       </CrudModalForm>
+      {token && <Box sx={{ my: 2 }}><PitchCoachCard token={token} /></Box>}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
       <FilterPanel activeCount={[searchTerm, filterPartnerId, filterStatus].filter(Boolean).length}>

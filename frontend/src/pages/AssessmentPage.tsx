@@ -13,6 +13,7 @@ import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { useAuth } from '../context/AuthContext';
+import { AssessmentExplainCard } from '../components/ai/AssessmentExplainCard';
 import type { ChainAssessmentSummary, ChainScoreKey } from '../types/vision';
 import { localDateIso } from '../utils/localDate';
 import { useI18n } from '../i18n/I18nContext';
@@ -128,6 +129,8 @@ export function AssessmentPage() {
               </CardContent>
             </Card>
           )}
+
+          {baseline && token && <AssessmentExplainCard token={token} />}
 
           <Card>
             <CardHeader

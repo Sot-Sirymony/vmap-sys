@@ -65,6 +65,10 @@ public class AiSettings extends BaseAuditableEntity {
     @Column(name = "daily_message_limit", nullable = false)
     private int dailyMessageLimit;
 
+    /** AI-FR-15: add an AI encouragement to reminder emails. Off by default. */
+    @Column(name = "ai_reminders", nullable = false)
+    private boolean aiReminders;
+
     /** AI-NFR-09: shown with every crisis response. */
     @Column(name = "help_lines", nullable = false, length = 2000)
     private String helpLines;

@@ -72,6 +72,9 @@ public class AiSettingsService {
         if (request.dailyMessageLimit() != null) {
             settings.setDailyMessageLimit(request.dailyMessageLimit());
         }
+        if (request.aiReminders() != null) {
+            settings.setAiReminders(request.aiReminders());
+        }
         if (request.helpLines() != null) {
             if (request.helpLines().isBlank()) {
                 throw new BusinessRuleException("Help lines cannot be empty; they are shown to anyone in crisis.");
@@ -155,7 +158,8 @@ public class AiSettingsService {
                 settings.getApiKeyUpdatedBy() == null ? null : settings.getApiKeyUpdatedBy().getFullName(),
                 settings.getLastTestAt(), settings.getLastTestOk(), settings.getLastTestMessage(),
                 settings.getDailyMessageLimit(), settings.getHelpLines(),
-                usageLogRepository.totalCostSince(monthStart()), usageLogRepository.countByCreatedAtGreaterThanEqual(monthStart()));
+                usageLogRepository.totalCostSince(monthStart()), usageLogRepository.countByCreatedAtGreaterThanEqual(monthStart()),
+                settings.isAiReminders());
     }
 
     private Instant monthStart() {

@@ -92,6 +92,9 @@ class AiPlanFlowTests {
         assertThat(jdbcTemplate.queryForObject("select feature from ai_usage_logs order by id desc limit 1", String.class))
                 .isEqualTo("GOAL_BUILDER");
 
+        mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/goal-suggestions?language=fr").header("Authorization", "Bearer " + user))
+                .andExpect(status().isBadRequest());
+
         String other = consented(email("goals-other"));
         mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/goal-suggestions").header("Authorization", "Bearer " + other))
                 .andExpect(status().isNotFound());

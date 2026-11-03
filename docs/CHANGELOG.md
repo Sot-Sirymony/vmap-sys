@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [9.0.0] — In progress (Phases 1–5 of 9)
+## [9.0.0] — In progress (Phases 1–7 of 9)
 
 Implements [VMS_BRD_V9.0.0](VMS_BRD_V9.0.0.md): Claude AI integration, which first brings
 back coaches and cohorts (decisions D-1, D-6 to D-8).
@@ -188,6 +188,50 @@ back coaches and cohorts (decisions D-1, D-6 to D-8).
   requests".
 - **Added** `AiPlanFlowTests` (7), `AiPlanAssistant.test.tsx` (3) and
   `SlippingStepsCard.test.tsx` (2).
+
+### Phase 6: daily use
+
+- **Added** **What should I do now?** on Today (AI-FR-12): pick 15 minutes to 2 hours and
+  get the best next step or task from the participant's own open work, with up to two
+  alternatives and a reason. Items from anyone else's plan are dropped. No AI call when
+  nothing is open.
+- **Added** **Resource ideas** for a goal in the plan assistant (AI-FR-13): courses, books,
+  tools, organisations, funding and kinds of people. Links are stripped and every idea is
+  marked "check before use" until admins keep an approved list (AI-FR-26, Phase 9).
+- **Added** **Draft with AI** on the weekly review form (AI-FR-14): fills summary, done,
+  blocked, lessons and next priorities from the last seven days; the participant edits
+  and saves.
+- **Added** AI encouragement in reminder emails (AI-FR-15): a line quoting the
+  participant's own "why it matters". Admin switch on AI settings, off by default
+  (migration `V58__ai_reminders.sql`); needs the participant's consent, counts toward
+  budget and daily limit, and any failure leaves the reminder as it was.
+- **Added** the **Pitch coach** on module 11 and the Communication page (AI-FR-16): the AI
+  plays a partner, buyer or sponsor, reacts, scores clarity, benefit and ask from 1 to 5,
+  and suggests better wording.
+- **Added** **Draft with AI** on the Communication form (AI-FR-17): subject and message
+  from the request, purpose, dream and partner. The partner's name and role may be used;
+  their email and phone are never sent. The participant sends it themselves.
+- **Fixed** a query parameter outside its limits (such as `?minutes=1` or `?language=fr`)
+  answered 500; it now answers 400.
+- **Added** `AiDailyFlowTests` (6), `NextStepCard.test.tsx` (2), `PitchCoachCard.test.tsx` (1).
+
+### Phase 7: module help
+
+- **Added** the **Module helper** on every module page (AIB-01 to AIB-15): **Help me start**
+  gives up to three questions, shown one at a time (AI-FR-03), and an example about a
+  made-up person; **Draft my answer** fills the exercise form from the participant's own
+  records; **Feedback on my answer** reviews what they have typed. Each module has its own
+  focus, such as the smallest safe test for fears (module 2) or a passion statement
+  (module 14). Modules 2, 3 and 10 also see the fear log, attitude check-ins and open
+  obstacles.
+- **Changed** a draft only fills the form on screen: the module counts, and unlocks the
+  next one, only when the participant saves it (FR-07 change, AC-09). Only the module's
+  own text fields are sent or filled; rating fields stay for the participant to score.
+- **Added** **Explain my result** on the Assessment page (FR-02 change): the latest scores in
+  plain words, change since the first assessment, and one module to focus on next (only a
+  module that exists is shown).
+- **Fixed** calling an endpoint with the wrong HTTP method answered 500; it now answers 405.
+- **Added** `AiModuleFlowTests` (4) and `ModuleHelpCard.test.tsx` (2).
 
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 

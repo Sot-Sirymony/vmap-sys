@@ -34,6 +34,7 @@ import { tr } from '../i18n/translate';
 import { formatDate } from '../i18n/formatDate';
 import { CoachCommentsCard } from '../components/common/CoachCommentsCard';
 import { SlippingStepsCard } from '../components/ai/SlippingStepsCard';
+import { NextStepCard } from '../components/ai/NextStepCard';
 
 const MAX_HABITS = 3;
 const ATTITUDE_SCORES = [1, 2, 3, 4, 5];
@@ -117,6 +118,7 @@ export function TodayPage() {
         <Stack spacing={2}>
           {actionError && <Alert severity="error">{actionError}</Alert>}
           <CoachCommentsCard token={token} />
+          <NextStepCard token={token} />
           <SlippingStepsCard token={token} />
           {plan.weeklyReviewDue && (
             <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate('/reviews')}>{t('Start review')}</Button>}>

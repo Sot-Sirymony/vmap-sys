@@ -18,7 +18,12 @@ import { Loading } from '../components/common/Loading';
 import { useAuth } from '../context/AuthContext';
 import type { LearningModuleDetail, ModuleField, ModuleRow } from '../types/vision';
 import { useI18n } from '../i18n/I18nContext';
+import { PitchCoachCard } from '../components/ai/PitchCoachCard';
+import { ModuleHelpCard } from '../components/ai/ModuleHelpCard';
 import { PageSection } from './PageSection';
+
+/** v0.1 FR-11: module 11, Make a Clear Ask, holds the pitch (AI-FR-16 practises it). */
+const PITCH_MODULE = 11;
 
 function emptyRow(fields: ModuleField[]): ModuleRow {
   return Object.fromEntries(fields.map((field) => [field.key, '']));
@@ -104,6 +109,22 @@ export function ModuleDetailPage() {
               </Typography>
               {module.coachFeedback && <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{module.coachFeedback}</Typography>}
             </Alert>
+          )}
+
+          {token && (
+            <ModuleHelpCard
+              token={token}
+              module={module}
+              rows={rows}
+              onUseDraft={(draft) => {
+                setJustSaved(false);
+                setRows(draft.length > 0 ? draft : [emptyRow(module.fields)]);
+              }}
+            />
+          )}
+
+          {module.number === PITCH_MODULE && token && (
+            <PitchCoachCard token={token} initialPitch={module.rows[0]?.pitch ?? ''} />
           )}
 
           <Card>

@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import Alert from '@mui/material/Alert';
 import { listDreams } from '../api/dreamApi';
 import { archiveReview, permanentlyDeleteReview, createReview, listReviews, restoreReview, updateReview } from '../api/reviewApi';
 import { listVisionAreas } from '../api/visionAreaApi';
@@ -28,7 +29,9 @@ import type { Dream, Review, ReviewRequest, ReviewType, VisionArea } from '../ty
 import { reviewTypeLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { PageSection } from './PageSection';
-import { tr } from '../i18n/translate';
+import { currentLanguage, tr } from '../i18n/translate';
+import { draftWeeklyReview } from '../api/aiDailyApi';
+import { Button } from '../components/common/Button';
 
 // FR-16.3: guided questions per review type, shown alongside the form.
 const REVIEW_GUIDES: Record<ReviewType, string[]> = {
@@ -125,6 +128,9 @@ export function ReviewsPage() {
   // FR-59.3: transient — never stored on the Review, so it always starts
   // blank (including on edit) and clears itself right after a successful save.
   const [gratitudeNote, setGratitudeNote] = useState('');
+  // AI-FR-14: the draft fills the form; the participant edits and saves it.
+  const [aiDrafting, setAiDrafting] = useState(false);
+  const [aiDraftError, setAiDraftError] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterReviewType, setFilterReviewType] = useState('');
@@ -145,6 +151,27 @@ export function ReviewsPage() {
   }, [token]);
 
   const checklistApplies = reviewType === 'WEEKLY' || reviewType === 'MONTHLY';
+
+  async function handleAiDraft() {
+    if (!token) {
+      return;
+    }
+    setAiDrafting(true);
+    setAiDraftError('');
+    try {
+      const draft = await draftWeeklyReview(token, currentLanguage());
+      const delayed = draft.delayedTasks ? `\n\n${tr('Delayed')}:\n${draft.delayedTasks}` : '';
+      setSummary(`${draft.summary ?? ''}${delayed}`.trim());
+      setCompletedTasks(draft.completedTasks ?? '');
+      setBlockedTasks(draft.blockedTasks ?? '');
+      setLessonsLearned(draft.lessonsLearned ?? '');
+      setNextActions(draft.nextActions ?? '');
+    } catch (draftError) {
+      setAiDraftError(draftError instanceof Error ? tr(draftError.message) : tr('AI help is temporarily unavailable.'));
+    } finally {
+      setAiDrafting(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -358,6 +385,15 @@ export function ReviewsPage() {
           </Select>
         </FormControl>
       </label>
+      {reviewType === 'WEEKLY' && (
+        <div className="field-full">
+          <Button type="button" variant="secondary" disabled={aiDrafting} onClick={() => void handleAiDraft()}>
+            {aiDrafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
+          </Button>
+          <span className="field-hint">{tr('Fills the form from your last seven days. Check and edit it before you save.')}</span>
+          {aiDraftError && <Alert severity="error" sx={{ mt: 1 }}>{aiDraftError}</Alert>}
+        </div>
+      )}
       <label>
         {tr('Date')}
         <Input type="datetime-local" step={1} value={reviewDate} onChange={(event) => setReviewDate(event.target.value)} required />
