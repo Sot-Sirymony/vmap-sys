@@ -85,7 +85,7 @@ class VisionStepServiceTest {
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, gratitudeEntryRepository, idealPartnerProfileRepository);
         service = new VisionStepService(lookup, progress, archiveCascade, permanentDeleteCascade,
-                new VisionMappingMapper(), visionStepRepository, taskItemRepository);
+                new VisionMappingMapper(), visionStepRepository, taskItemRepository, java.time.Clock.systemDefaultZone());
         testUser = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         lenient().when(userScope.currentUser()).thenReturn(testUser);
@@ -122,7 +122,7 @@ class VisionStepServiceTest {
     private com.visionmapping.dto.request.VisionStepRequest requestFrom(VisionStep step) {
         return new com.visionmapping.dto.request.VisionStepRequest(step.getGoal().getId(), step.getTitle(),
                 step.getDescription(), "Me", step.getSequenceNumber(), step.isComplex(), step.getPriority(),
-                step.getTargetDate(), step.getStatus());
+                step.getTargetDate(), step.getStatus(), step.getResources());
     }
 
     @Test

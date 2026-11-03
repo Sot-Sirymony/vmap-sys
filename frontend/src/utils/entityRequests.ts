@@ -56,6 +56,7 @@ export const stepRequest = (step: VisionStep): VisionStepRequest => ({
   priority: step.priority,
   targetDate: step.targetDate,
   status: step.status,
+  resources: step.resources ?? null,
 });
 
 export const taskRequest = (task: TaskItem): TaskItemRequest => ({

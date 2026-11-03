@@ -77,6 +77,7 @@ export function StepsPage() {
   const [priority, setPriority] = useState<Priority>('HIGH');
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
+  const [resources, setResources] = useState('');
   // In the URL, not component state: the dashboard links straight into a
   // filtered view, and a filtered list stays shareable and bookmarkable.
   const [filterVisionAreaId] = useUrlFilter('visionAreaId');
@@ -220,10 +221,12 @@ export function StepsPage() {
       priority,
       targetDate,
       status,
+      resources,
     });
     if (success) {
       setTitle('');
       setDescription('');
+      setResources('');
       if (wasCreating) {
         setSequenceNumber(sequenceNumber + 1);
       }
@@ -242,6 +245,7 @@ export function StepsPage() {
     setPriority(step.priority);
     setTargetDate(step.targetDate ?? '');
     setStatus(step.status);
+    setResources(step.resources ?? '');
   }
 
   function cancelEdit() {
@@ -252,6 +256,7 @@ export function StepsPage() {
     setPriority('HIGH');
     setTargetDate('');
     setStatus('NOT_STARTED');
+    setResources('');
   }
 
   // Same idea as the quick-add row below: an active goal filter is a strong
@@ -545,6 +550,14 @@ export function StepsPage() {
       <label className="field-full">
         Description
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
+      </label>
+      <label className="field-full">
+        {tr('Resources and people')}
+        <Textarea
+          value={resources}
+          placeholder={tr('Money, tools, skills, information, and who could help')}
+          onChange={(event) => setResources(event.target.value)}
+        />
       </label>
     </>
   );

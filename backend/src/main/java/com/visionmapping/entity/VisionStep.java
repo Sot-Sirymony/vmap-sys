@@ -80,4 +80,13 @@ public class VisionStep extends BaseAuditableEntity {
 
     @Column(nullable = false)
     private boolean archived;
+
+    /** v0.1 FR-05: the resources and people this step needs. */
+    @Column(length = 1000)
+    private String resources;
+
+    /** AI-FR-11: how often this step was given a new date while overdue. */
+    @Builder.Default
+    @Column(name = "overdue_reschedules", nullable = false)
+    private int overdueReschedules = 0;
 }

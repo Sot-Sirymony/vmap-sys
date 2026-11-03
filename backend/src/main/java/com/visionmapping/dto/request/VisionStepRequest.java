@@ -17,6 +17,8 @@ public record VisionStepRequest(
         boolean complex,
         @NotNull Priority priority,
         @NotNull LocalDate targetDate,
-        @NotNull WorkStatus status
+        @NotNull WorkStatus status,
+        // v0.1 FR-05: resources and people. Left out keeps what is saved; blank clears it.
+        @Size(max = 1000) String resources
 ) {
 }

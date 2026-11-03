@@ -24,6 +24,7 @@ import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -53,6 +54,7 @@ public class VisionStepService {
     private final VisionMappingMapper mapper;
     private final VisionStepRepository visionStepRepository;
     private final TaskItemRepository taskItemRepository;
+    private final Clock clock;
 
     @Cacheable(CacheConfig.STEP_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -78,6 +80,7 @@ public class VisionStepService {
                 .priority(request.priority())
                 .targetDate(request.targetDate())
                 .status(request.status())
+                .resources(blankToNull(request.resources()))
                 .progressPercent(ZERO)
                 .manualProgressOverride(false)
                 .build();
@@ -102,8 +105,18 @@ public class VisionStepService {
         entity.setSequenceNumber(request.sequenceNumber());
         entity.setComplex(request.complex());
         entity.setPriority(request.priority());
+        // AI-FR-11: moving an overdue, unfinished step to a new date counts as a slip.
+        LocalDate today = LocalDate.now(clock);
+        if (entity.getTargetDate() != null && entity.getTargetDate().isBefore(today)
+                && entity.getStatus() != WorkStatus.COMPLETED
+                && request.targetDate() != null && !request.targetDate().equals(entity.getTargetDate())) {
+            entity.setOverdueReschedules(entity.getOverdueReschedules() + 1);
+        }
         entity.setTargetDate(request.targetDate());
         entity.setStatus(request.status());
+        if (request.resources() != null) {
+            entity.setResources(blankToNull(request.resources()));
+        }
         validateComplexStep(entity);
         validateScheduleCascade(entity);
         progress.recalculateGoal(oldGoal);
@@ -190,5 +203,9 @@ public class VisionStepService {
                     "This step's target date (%s) is earlier than one of its tasks' due date (%s). Move the step's date later or adjust the task."
                             .formatted(step.getTargetDate(), latestTaskDueDate));
         }
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

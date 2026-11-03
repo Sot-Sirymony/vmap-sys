@@ -314,3 +314,6 @@ https://claude.ai/code/artifact/199cd8cd-8af3-4bd9-b68f-9c2d414def2f?via=auto_pr
 
 **V56.** **AiMessage** adds `contextSources`: the comma-separated source keys a reply was
 based on (AI-FR-05), never the data itself.
+
+**V57.** **VisionStep** adds `resources` (the resources and people the step needs, v0.1
+FR-05) and `overdueReschedules` (times it was given a new date while overdue, AI-FR-11).

@@ -8,7 +8,7 @@ export function AiStatusNotice({ status }: { status: AiStatus }) {
     return <Alert severity="info">{tr('AI help is temporarily unavailable. Everything else in the app works as usual.')}</Alert>;
   }
   if (status.reason === 'DAILY_LIMIT') {
-    return <Alert severity="warning">{tr('You have used today\'s Dream Coach messages. They reset tomorrow.')}</Alert>;
+    return <Alert severity="warning">{tr('You have used today\'s AI requests. They reset tomorrow.')}</Alert>;
   }
   return null;
 }

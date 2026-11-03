@@ -238,8 +238,8 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
           <TextField
             size="small"
             type="number"
-            label={tr('Dream Coach messages per person per day')}
-            helperText={tr('Keeps one person from using the whole budget.')}
+            label={tr('AI requests per person per day')}
+            helperText={tr('Chat messages, goal and step suggestions and plan reviews all count. Keeps one person from using the whole budget.')}
             value={dailyLimit}
             onChange={(event) => setDailyLimit(event.target.value)}
             slotProps={{ htmlInput: { min: 1, max: 500 } }}

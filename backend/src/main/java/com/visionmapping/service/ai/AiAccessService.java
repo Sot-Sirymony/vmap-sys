@@ -5,12 +5,11 @@ import com.visionmapping.entity.AiConsentEvent;
 import com.visionmapping.entity.AiSettings;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.enums.AiConsentAction;
-import com.visionmapping.entity.enums.AiMessageRole;
+import com.visionmapping.entity.enums.AiOutcome;
 import com.visionmapping.exception.AiUnavailableException;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.TooManyRequestsException;
 import com.visionmapping.repository.AiConsentEventRepository;
-import com.visionmapping.repository.AiMessageRepository;
 import com.visionmapping.repository.AiUsageLogRepository;
 import com.visionmapping.service.AiSettingsService;
 import com.visionmapping.service.support.EntityLookup;
@@ -18,6 +17,9 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.EnumSet;
+import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,11 +39,11 @@ public class AiAccessService {
     public static final String BUDGET_REACHED = "BUDGET_REACHED";
     public static final String NO_CONSENT = "NO_CONSENT";
     public static final String DAILY_LIMIT = "DAILY_LIMIT";
+    private static final Set<AiOutcome> COUNTED = EnumSet.of(AiOutcome.OK, AiOutcome.CUT_SHORT, AiOutcome.REFUSED);
 
     private final EntityLookup lookup;
     private final AiSettingsService aiSettingsService;
     private final AiConsentEventRepository consentEventRepository;
-    private final AiMessageRepository messageRepository;
     private final AiUsageLogRepository usageLogRepository;
     private final Clock clock;
 
@@ -77,7 +79,7 @@ public class AiAccessService {
         }
         switch (reason) {
             case NO_CONSENT -> throw new BusinessRuleException("Turn on AI consent in Account settings to use the Dream Coach.");
-            case DAILY_LIMIT -> throw new TooManyRequestsException("You have used today's Dream Coach messages. They reset tomorrow.");
+            case DAILY_LIMIT -> throw new TooManyRequestsException("You have used today's AI requests. They reset tomorrow.");
             default -> throw new AiUnavailableException();
         }
     }
@@ -111,8 +113,20 @@ public class AiAccessService {
         return null;
     }
 
+    /**
+     * AI requests that reached Claude today, from any feature: chat, goal and
+     * plan builders, plan check. Failed requests and crisis answers (which
+     * never call Claude) do not count.
+     */
     private long sentToday(AppUser user) {
         Instant dayStart = LocalDate.now(clock).atStartOfDay(clock.getZone()).toInstant();
-        return messageRepository.countByUser_IdAndRoleAndCreatedAtGreaterThanEqual(user.getId(), AiMessageRole.USER, dayStart);
+        return usageLogRepository.countByUser_IdAndCreatedAtGreaterThanEqualAndOutcomeIn(user.getId(), dayStart, COUNTED);
+    }
+
+    /** The API key when AI may run for this person now, empty otherwise. Never throws. */
+    @Transactional(readOnly = true)
+    public Optional<String> availableKey(AppUser user) {
+        return reason(user, aiSettingsService.current()) == null
+                ? Optional.ofNullable(aiSettingsService.activeApiKey()) : Optional.empty();
     }
 }

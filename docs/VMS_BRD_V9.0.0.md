@@ -61,7 +61,8 @@ This also changes a standing project rule: no user could see another user's data
 | 2 | Partner view and coach pitch rating (FR-10, FR-11) | Built and tested locally, 3 Nov 2026 |
 | 3 | AI foundation: backend Claude service, consent, $20 cap, fallback, safety, logging, chat history | Built and tested locally (Claude mocked in tests), 3 Nov 2026: AI settings page with encrypted key (AI-FR-24 in part), consent (AI-NFR-03), basic Dream Coach chat with history, rating and deletion (AI-FR-05, AI-FR-06, AI-FR-25), budget cap, 80% warning and daily limit (AI-NFR-15), fallback (AI-NFR-02), crisis help lines and coach alerts (AI-NFR-09), usage log without text (AI-NFR-14). Not yet tried against the live API |
 | 4 | Dream Coach (AI-FR-01 to AI-FR-06, AI-NFR-01) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: on every screen with three quick questions per page, context from the dream, module, plan, tasks and journals on screen, streamed replies, "Based on ..." reasons, copy and rating. Not yet tried against the live API |
-| 5–9 | Goal and plan builder, daily use, module help, coach co-pilot, admin AI | Not started |
+| 5 | Goal and plan builder (AI-FR-07 to AI-FR-11) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: plan assistant on each dream (SMART goals, stretch goal, steps with owner, date, resources and people, plan check whose rule-based half works without AI), steps that keep slipping on Today, and a Resources and people field on steps. Suggestions are edited and added by the participant; the AI never saves (AI-FR-04, AC-09) |
+| 6–9 | Daily use, module help, coach co-pilot, admin AI | Not started |
 
 ### How v0.1 IDs map to the app
 

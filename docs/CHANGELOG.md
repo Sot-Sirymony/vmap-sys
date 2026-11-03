@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [9.0.0] — In progress (Phases 1–4 of 9)
+## [9.0.0] — In progress (Phases 1–5 of 9)
 
 Implements [VMS_BRD_V9.0.0](VMS_BRD_V9.0.0.md): Claude AI integration, which first brings
 back coaches and cohorts (decisions D-1, D-6 to D-8).
@@ -161,6 +161,33 @@ back coaches and cohorts (decisions D-1, D-6 to D-8).
   **Clear this chat** in the side panel, and a note suggesting a new conversation once a
   chat reaches 20 messages (only the latest 20 are sent to Claude, and long chats cost
   more). `DELETE /api/ai/conversations`; one more test on each side.
+
+### Phase 5: goal and plan builders
+
+- **Added** the plan assistant on each dream's page: **Suggest goals** turns the dream into
+  1 to 5 SMART goals (AI-FR-07); **Suggest a stretch goal** offers one bold goal (AI-FR-10);
+  **Suggest steps** breaks a chosen goal into 3 to 10 steps with owner, date, resources and
+  people (AI-FR-08). Every suggestion is shown as an editable draft with a reason; only the
+  ones the participant ticks and adds are saved (AI-FR-04, AC-09). A vague dream or goal
+  gets one clarifying question instead of guesses (AI-FR-03).
+- **Added** **Check my plan** (AI-FR-09): built-in rules always flag a missing owner, date
+  or resources, a goal with no steps, a step due after its goal and overdue steps, so they
+  work with AI off (AC-10, AI-NFR-02). With AI, Claude adds vague steps, unrealistic
+  timing and gaps, each with a fix; issues pointing outside the participant's plan are
+  dropped.
+- **Added** **Steps that keep slipping** on Today (AI-FR-11): a step given a new date while
+  overdue, and overdue again, gets **Get ideas**: a smaller step, a new date or a helper,
+  each one used only if the participant chooses it.
+- **Added** a **Resources and people** field on steps (v0.1 FR-05), and a count of how often
+  an overdue step was moved (migration `V57__step_resources_and_slips.sql`). Saving a step
+  without the field keeps what was there.
+- **Changed** Claude answers the builders in structured JSON at medium effort; every field
+  is checked (dates in the future, known priorities, length limits) before it is shown.
+- **Changed** the daily limit now counts all AI requests (chat, builders, plan check), not
+  only chat messages; failed requests and crisis answers do not count. Labels say "AI
+  requests".
+- **Added** `AiPlanFlowTests` (7), `AiPlanAssistant.test.tsx` (3) and
+  `SlippingStepsCard.test.tsx` (2).
 
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 

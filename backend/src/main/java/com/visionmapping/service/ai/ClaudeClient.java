@@ -3,6 +3,7 @@ package com.visionmapping.service.ai;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.core.JsonValue;
+import com.anthropic.errors.AnthropicInvalidDataException;
 import com.anthropic.errors.AnthropicIoException;
 import com.anthropic.core.http.StreamResponse;
 import com.anthropic.errors.AnthropicServiceException;
@@ -13,6 +14,8 @@ import com.anthropic.models.beta.messages.BetaRawMessageStreamEvent;
 import com.anthropic.models.beta.messages.BetaStopReason;
 import com.anthropic.models.beta.messages.BetaTextBlock;
 import com.anthropic.models.beta.messages.MessageCreateParams;
+import com.anthropic.models.beta.messages.StructuredMessage;
+import com.anthropic.models.beta.messages.StructuredTextBlock;
 import com.visionmapping.exception.AiUnavailableException;
 import java.time.Duration;
 import java.util.List;
@@ -34,6 +37,8 @@ public class ClaudeClient {
 
     /** Short chat replies; MAX_TOKENS is reported as cut short rather than failing. */
     static final long MAX_TOKENS = 4096;
+    /** Room for a full set of goals or steps plus the thinking behind them. */
+    static final long STRUCTURED_MAX_TOKENS = 16000;
     private static final String FALLBACK_BETA = "server-side-fallback-2026-07-01";
     private static final Set<String> MODELS_WITH_FALLBACK = Set.of("claude-opus-5-5", "claude-sonnet-5-5");
 
@@ -79,6 +84,44 @@ public class ClaudeClient {
             throw new AiUnavailableException();
         } catch (AnthropicIoException exception) {
             log.warn("Lost the Claude API stream: {}", exception.getMessage());
+            throw new AiUnavailableException();
+        }
+    }
+
+    public record Structured<T>(T value, String model, long inputTokens, long outputTokens, boolean refused) {
+    }
+
+    /**
+     * V9 Phase 5: one request whose answer must be JSON in the shape of type,
+     * such as suggested goals. Medium effort: building a plan repays more
+     * thought than chat (AI-NFR-15 names a stronger model for plan building).
+     * value is null when Claude's safeguards declined.
+     */
+    public <T> Structured<T> structured(String apiKey, String model, String system, String prompt, Class<T> type) {
+        MessageCreateParams.Builder params = MessageCreateParams.builder()
+                .model(model)
+                .maxTokens(STRUCTURED_MAX_TOKENS)
+                .system(system)
+                .addUserMessage(prompt);
+        if (MODELS_WITH_FALLBACK.contains(model)) {
+            params.addBeta(FALLBACK_BETA).putAdditionalBodyProperty("fallbacks", JsonValue.from("default"));
+        }
+        try {
+            StructuredMessage<T> message = client(apiKey).beta().messages()
+                    .create(params.outputConfig(type, BetaOutputConfig.Effort.MEDIUM).build());
+            boolean refused = message.stopReason().map(BetaStopReason.REFUSAL::equals).orElse(false);
+            T value = refused ? null : message.content().stream()
+                    .flatMap(block -> block.text().stream())
+                    .map(StructuredTextBlock::text)
+                    .findFirst()
+                    .orElse(null);
+            return new Structured<>(value, message.model().asString(), message.usage().inputTokens(),
+                    message.usage().outputTokens(), refused);
+        } catch (AnthropicServiceException exception) {
+            log.warn("Claude API answered {} for model {} (structured)", exception.statusCode(), model);
+            throw new AiUnavailableException();
+        } catch (AnthropicIoException | AnthropicInvalidDataException exception) {
+            log.warn("Claude structured request failed: {}", exception.getMessage());
             throw new AiUnavailableException();
         }
     }

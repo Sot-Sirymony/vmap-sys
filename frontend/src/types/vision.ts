@@ -212,6 +212,10 @@ export type VisionStep = {
   status: WorkStatus;
   progressPercent: number;
   archived: boolean;
+  // v0.1 FR-05: the resources and people this step needs.
+  resources?: string | null;
+  // AI-FR-11: times it was given a new date while overdue.
+  overdueReschedules?: number;
 };
 
 export type VisionStepRequest = {
@@ -224,6 +228,8 @@ export type VisionStepRequest = {
   priority: Priority;
   targetDate?: string;
   status: WorkStatus;
+  // Left out keeps what is saved; an empty string clears it.
+  resources?: string | null;
 };
 
 export type TaskItem = {
@@ -1023,4 +1029,58 @@ export type AiSafetyAlert = {
   cohortName?: string | null;
   createdAt: string;
   acknowledgedAt?: string | null;
+};
+
+// V9 Phase 5 (AI-FR-07 to AI-FR-11): suggestions only; nothing is saved until the participant adds it.
+export type GoalSuggestion = {
+  title: string;
+  description?: string | null;
+  successCriteria?: string | null;
+  targetDate?: string | null;
+  priority: Priority;
+  moonshot: boolean;
+  reason?: string | null;
+};
+
+export type GoalSuggestions = { goals: GoalSuggestion[]; clarifyingQuestion?: string | null };
+
+export type StepSuggestion = {
+  title: string;
+  description?: string | null;
+  owner: string;
+  targetDate?: string | null;
+  resources?: string | null;
+  people?: string | null;
+  reason?: string | null;
+};
+
+export type StepSuggestions = { steps: StepSuggestion[]; clarifyingQuestion?: string | null };
+
+export type PlanIssue = {
+  kind: string;
+  itemType: 'GOAL' | 'STEP';
+  itemId: number;
+  itemTitle: string;
+  problem: string;
+  fix?: string | null;
+  fromAi: boolean;
+};
+
+export type PlanCheck = { issues: PlanIssue[]; aiChecked: boolean };
+
+export type SlippingStep = {
+  stepId: number;
+  title: string;
+  goalId: number;
+  goalTitle: string;
+  targetDate: string;
+  overdueReschedules: number;
+};
+
+export type StepRescue = {
+  stepId: number;
+  smallerStep?: string | null;
+  newDate?: string | null;
+  helper?: string | null;
+  reason?: string | null;
 };

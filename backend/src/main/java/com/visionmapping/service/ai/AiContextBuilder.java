@@ -327,7 +327,7 @@ public class AiContextBuilder {
         }
     }
 
-    static String clip(String value) {
+    public static String clip(String value) {
         if (value == null) {
             return "";
         }

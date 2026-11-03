@@ -175,7 +175,7 @@ export function DreamCoachChat({
         />
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
           <Typography variant="caption" color="text.secondary">
-            {canSend ? tr('{count} messages left today', { count: status.messagesLeftToday }) : ''}
+            {canSend ? tr('{count} AI requests left today', { count: status.messagesLeftToday }) : ''}
           </Typography>
           <Button type="submit" disabled={!canSend || sending || !draft.trim()}>{sending ? tr('The Dream Coach is thinking…') : tr('Send')}</Button>
         </Box>

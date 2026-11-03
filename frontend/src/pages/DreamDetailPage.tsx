@@ -30,6 +30,7 @@ import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vis
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { DreamCommitmentCard } from '../components/vision-map/DreamCommitmentCard';
 import { PlanShareCard } from '../components/vision-map/PlanShareCard';
+import { AiPlanAssistant } from '../components/ai/AiPlanAssistant';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -283,6 +284,11 @@ export function DreamDetailPage() {
         {!selectedDream.archived && token && (
           <Box sx={{ mb: 2 }}>
             <PlanShareCard key={selectedDream.id} dream={selectedDream} token={token} />
+          </Box>
+        )}
+        {!selectedDream.archived && token && (
+          <Box sx={{ mb: 2 }}>
+            <AiPlanAssistant key={selectedDream.id} dream={selectedDream} goals={goals} steps={steps} token={token} onDataChange={load} />
           </Box>
         )}
         <VisionMapTree

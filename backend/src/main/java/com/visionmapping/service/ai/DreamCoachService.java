@@ -267,15 +267,7 @@ public class DreamCoachService {
     }
 
     private static AiUsageLog log(AppUser user, String model, long inputTokens, long outputTokens, AiOutcome outcome) {
-        return AiUsageLog.builder()
-                .user(user)
-                .feature(FEATURE)
-                .model(model)
-                .inputTokens((int) inputTokens)
-                .outputTokens((int) outputTokens)
-                .costUsd(model == null ? BigDecimal.ZERO : AiPricing.cost(model, inputTokens, outputTokens))
-                .outcome(outcome)
-                .build();
+        return AiUsage.entry(user, FEATURE, model, inputTokens, outputTokens, outcome);
     }
 
     private AiConversation owned(Long id) {

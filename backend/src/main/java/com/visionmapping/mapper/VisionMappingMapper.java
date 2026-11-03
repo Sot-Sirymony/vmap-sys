@@ -80,7 +80,8 @@ public class VisionMappingMapper {
         return new VisionStepResponse(entity.getId(), entity.getCode(), entity.getGoal().getId(), entity.getTitle(),
                 entity.getDescription(), entity.getOwner(), entity.getSequenceNumber(), entity.isComplex(), entity.getPriority(),
                 entity.getTargetDate(), entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
-                entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+                entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getResources(),
+                entity.getOverdueReschedules());
     }
 
     public TaskItemResponse toResponse(TaskItem entity) {

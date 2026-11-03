@@ -35,6 +35,6 @@ describe('DreamCoachLauncher (AI-FR-01)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Open the Dream Coach' }));
     expect(await screen.findByText('Help me start this exercise')).toBeInTheDocument();
     expect(screen.getByText('Improve my answer')).toBeInTheDocument();
-    expect(screen.getByText('5 messages left today')).toBeInTheDocument();
+    expect(screen.getByText('5 AI requests left today')).toBeInTheDocument();
   });
 });

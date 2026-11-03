@@ -245,6 +245,7 @@ export function VisionMapTree({
   const [editingStepId, setEditingStepId] = useState<number | null>(null);
   const [stepTitle, setStepTitle] = useState('');
   const [stepDescription, setStepDescription] = useState('');
+  const [stepResources, setStepResources] = useState('');
   const [stepOwner, setStepOwner] = useState('');
   const [stepSequenceNumber, setStepSequenceNumber] = useState(1);
   const [stepComplex, setStepComplex] = useState(false);
@@ -656,6 +657,7 @@ export function VisionMapTree({
     setEditingStepId(step.id);
     setStepTitle(step.title);
     setStepDescription(step.description ?? '');
+    setStepResources(step.resources ?? '');
     setStepOwner(step.owner);
     setStepSequenceNumber(step.sequenceNumber);
     setStepComplex(step.complex);
@@ -687,6 +689,7 @@ export function VisionMapTree({
         priority: stepPriority,
         targetDate: stepTargetDate,
         status: stepStatus,
+        resources: stepResources,
       };
       await updateStep(token, editingStepId, request);
       await onDataChange();
@@ -1315,6 +1318,14 @@ export function VisionMapTree({
           <label className="field-full">
             Description
             <Textarea value={stepDescription} onChange={(event) => setStepDescription(event.target.value)} />
+          </label>
+          <label className="field-full">
+            {tr('Resources and people')}
+            <Textarea
+              value={stepResources}
+              placeholder={tr('Money, tools, skills, information, and who could help')}
+              onChange={(event) => setStepResources(event.target.value)}
+            />
           </label>
         </CrudModalForm>
       )}

@@ -22,6 +22,9 @@ public record VisionStepResponse(
         boolean manualProgressOverride,
         boolean archived,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String resources,
+        // AI-FR-11: times this step was given a new date while overdue.
+        int overdueReschedules
 ) {
 }
