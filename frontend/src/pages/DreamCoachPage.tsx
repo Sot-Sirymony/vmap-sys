@@ -10,7 +10,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { deleteAiConversation, getAiStatus, listAiConversations } from '../api/aiApi';
+import { deleteAiConversation, deleteAllAiConversations, getAiStatus, listAiConversations } from '../api/aiApi';
 import { DreamCoachChat } from '../components/ai/DreamCoachChat';
 import { quickActionsFor } from '../components/ai/aiFocus';
 import { AiConsentCard } from '../components/common/AiConsentCard';
@@ -68,6 +68,19 @@ export function DreamCoachPage() {
     }
   }
 
+  async function handleDeleteAll() {
+    if (!token || !window.confirm(tr('Delete all your Dream Coach conversations? This cannot be undone. Your plan and journals are not affected.'))) {
+      return;
+    }
+    try {
+      await deleteAllAiConversations(token);
+      setActiveId(null);
+      await loadList();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? tr(deleteError.message) : tr('Unable to delete your conversations.'));
+    }
+  }
+
   return (
     <PageSection title={tr('Dream Coach')} subtitle={tr('An AI assistant for your dreams, goals and next steps')}>
       {!status && !error && <Loading />}
@@ -101,6 +114,11 @@ export function DreamCoachPage() {
                     </Box>
                   ))}
                 </List>
+                {conversations.length > 0 && (
+                  <Button variant="secondary" onClick={() => void handleDeleteAll()}>
+                    <Trash2 size={14} aria-hidden="true" /> {tr('Delete all conversations')}
+                  </Button>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -114,6 +132,7 @@ export function DreamCoachPage() {
                   onSent={() => void loadList()}
                   focus={{ page: '/dream-coach' }}
                   quickActions={quickActionsFor('/dream-coach')}
+                  onNewConversation={() => setActiveId(null)}
                 />
               </CardContent>
             </Card>

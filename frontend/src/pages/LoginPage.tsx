@@ -25,6 +25,7 @@ export function LoginPage() {
     from?: { pathname?: string };
     registeredEmail?: string;
     notice?: string;
+    sessionExpired?: boolean;
   } | null;
   // Both are set by the page that sent the user here — RegisterPage after a
   // sign-up, ResetPasswordPage after a recovery. They are the only confirmation
@@ -80,7 +81,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout subtitle={tr('Sign in to continue to your dashboard')}>
-      {showNotice && notice && <MuiAlert severity="success">{notice}</MuiAlert>}
+      {showNotice && notice && <MuiAlert severity={state?.sessionExpired ? 'info' : 'success'}>{notice}</MuiAlert>}
       <GoogleSignInButton onClick={() => navigate('/oauth/google', { state: { from } })} />
       <div className="auth-divider" aria-hidden="true">
         <span>{tr('or sign in with email')}</span>

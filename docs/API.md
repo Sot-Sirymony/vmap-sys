@@ -511,6 +511,7 @@ accept `?language=km`; a language with no text falls back to English.
 | GET | `/api/ai/status` | `available`, `reason` (`OK`, `OFF`, `BUDGET_REACHED`, `NO_CONSENT`, `DAILY_LIMIT`), `consentGiven`, `consentAt`, `dailyLimit`, `messagesLeftToday` |
 | PUT | `/api/ai/consent` | `{ "consent": true \| false }`; each change is recorded |
 | GET | `/api/ai/conversations` | The signed-in person's conversations, newest first |
+| DELETE | `/api/ai/conversations` | Clears all of the signed-in person's Dream Coach conversations (204). The usage log keeps cost and ratings, never text |
 | GET, DELETE | `/api/ai/conversations/{id}` | One conversation with its messages, or delete it (404 for anyone else's) |
 | POST | `/api/ai/chat` | `{ "conversationId": null, "message": "...", "language": "en" \| "km", "page": "/dreams/12", "dreamId": 12, "moduleNumber": null }` (page, dreamId and moduleNumber pick the context). 400 without consent, 429 at the daily limit, 503 "AI help is temporarily unavailable." when off, over budget or unreachable (nothing saved). A crisis message gets the help lines without calling Claude; `safetyFlag` is `CRISIS` |
 | POST | `/api/ai/chat/stream` | Same body; answers `text/event-stream`: `delta` events `{ "text" }`, then `done` (the saved turn, whose reply text is final) or `error` `{ "message" }`. Errors before streaming starts answer as JSON, like `/chat`. Replies carry `contextSources` (`plan`, `dream`, `tasks`, `attitude`, `fears`, `obstacles`, `module`) |

@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAiStatus, listAiConversations, rateAiMessage, streamAiMessage } from '../api/aiApi';
+import { deleteAllAiConversations, getAiConversation, getAiStatus, listAiConversations, rateAiMessage, streamAiMessage } from '../api/aiApi';
 import type { AiChatTurn, AiStatus } from '../types/vision';
 import { DreamCoachPage } from './DreamCoachPage';
 
@@ -12,6 +12,7 @@ vi.mock('../api/aiApi', () => ({
   listAiConversations: vi.fn(),
   getAiConversation: vi.fn(),
   deleteAiConversation: vi.fn(),
+  deleteAllAiConversations: vi.fn(),
   streamAiMessage: vi.fn(),
   rateAiMessage: vi.fn(),
 }));
@@ -86,5 +87,28 @@ describe('DreamCoachPage (V9 Phases 3 and 4)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send' }));
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText('Please call 117')).toBeInTheDocument();
+  });
+
+  it('clears the whole history after confirming, and suggests a fresh start when a chat gets long', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    const long = Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1,
+      role: index % 2 === 0 ? 'USER' as const : 'ASSISTANT' as const,
+      content: `Message ${index + 1}`,
+      createdAt: '2026-11-03T08:00:00Z',
+    }));
+    vi.mocked(listAiConversations).mockResolvedValueOnce([{ id: 9, title: 'Old chat', updatedAt: '2026-11-03T08:00:00Z' }]);
+    vi.mocked(getAiConversation).mockResolvedValue({ id: 9, title: 'Old chat', updatedAt: '2026-11-03T08:00:00Z', messages: long });
+    vi.mocked(deleteAllAiConversations).mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<DreamCoachPage />);
+
+    await userEvent.click(await screen.findByText('Old chat'));
+    expect(await screen.findByText(/This conversation is getting long/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Delete all conversations' }));
+    expect(confirm).toHaveBeenCalled();
+    expect(deleteAllAiConversations).toHaveBeenCalledWith('token');
+    expect(await screen.findByText('No conversations yet.')).toBeInTheDocument();
+    confirm.mockRestore();
   });
 });

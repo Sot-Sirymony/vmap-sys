@@ -16,6 +16,8 @@ import { basedOn } from './aiFocus';
 
 const PENDING_ID = -1;
 const STREAMING_ID = -2;
+/** The backend sends Claude only the most recent 20 messages; past that, a new chat costs less and loses little. */
+export const LONG_CHAT_MESSAGES = 20;
 
 type Props = {
   token: string;
@@ -26,6 +28,8 @@ type Props = {
   onSent?: (turn: AiChatTurn) => void;
   focus: AiFocus;
   quickActions: string[];
+  /** Starts a fresh conversation; offered when this one gets long. */
+  onNewConversation?: () => void;
 };
 
 /**
@@ -34,7 +38,9 @@ type Props = {
  * it. Replies are labelled AI suggestions with the records they used, can be
  * copied, and can be rated.
  */
-export function DreamCoachChat({ token, status, onStatusChange, conversationId, onConversationChange, onSent, focus, quickActions }: Props) {
+export function DreamCoachChat({
+  token, status, onStatusChange, conversationId, onConversationChange, onSent, focus, quickActions, onNewConversation,
+}: Props) {
   const { language } = useI18n();
   const [messages, setMessages] = useState<AiMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -139,6 +145,14 @@ export function DreamCoachChat({ token, status, onStatusChange, conversationId, 
         <div ref={endRef} />
       </Box>
       {error && <Alert severity="error">{error}</Alert>}
+      {onNewConversation && !sending && messages.filter((item) => item.id > 0).length >= LONG_CHAT_MESSAGES && (
+        <Alert
+          severity="info"
+          action={<Button variant="secondary" onClick={onNewConversation}>{tr('New conversation')}</Button>}
+        >
+          {tr('This conversation is getting long. The Dream Coach only reads the most recent part, and long chats cost more. A new conversation is a fresh start.')}
+        </Alert>
+      )}
       {messages.length > 0 && canSend && !sending && (
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
           {quickActions.map((action) => (

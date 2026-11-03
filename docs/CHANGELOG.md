@@ -157,6 +157,10 @@ back coaches and cohorts (decisions D-1, D-6 to D-8).
   the message (migration `V56__ai_message_context.sql`), and a copy button.
 - **Added** 3 tests to `DreamCoachFlowTests`, `aiFocus.test.ts` (3) and
   `DreamCoachLauncher.test.tsx` (2).
+- **Added** ways to keep chats short: **Delete all conversations** on the Dream Coach page,
+  **Clear this chat** in the side panel, and a note suggesting a new conversation once a
+  chat reaches 20 messages (only the latest 20 are sent to Claude, and long chats cost
+  more). `DELETE /api/ai/conversations`; one more test on each side.
 
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 

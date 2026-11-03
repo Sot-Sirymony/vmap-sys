@@ -298,6 +298,29 @@ class DreamCoachFlowTests {
                 .andExpect(status().isServiceUnavailable());
     }
 
+    @Test
+    void clearingTheHistoryRemovesOnlyMyConversationsAndKeepsTheCost() throws Exception {
+        when(claudeClient.send(anyString(), anyString(), anyString(), anyList()))
+                .thenReturn(new ClaudeClient.Reply("Hi", "claude-opus-5-5", 10, 10, false, false));
+        String me = consented(email("clear-me"));
+        String other = consented(email("clear-other"));
+        chat(me, null, "One").andExpect(status().isOk());
+        chat(me, null, "Two").andExpect(status().isOk());
+        long othersConversation = read(chat(other, null, "Theirs")).get("conversationId").asLong();
+
+        mockMvc.perform(delete("/api/ai/conversations").header("Authorization", "Bearer " + me)).andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/ai/conversations").header("Authorization", "Bearer " + me)).andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/ai/conversations/" + othersConversation).header("Authorization", "Bearer " + other))
+                .andExpect(jsonPath("$.messages.length()").value(2));
+        assertThat(jdbcTemplate.queryForObject("select count(*) from ai_messages m join app_users u on u.id = m.user_id "
+                + "where u.email like 'clear-me-%'", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("select count(*) from ai_usage_logs l join app_users u on u.id = l.user_id "
+                + "where u.email like 'clear-me-%'", Integer.class)).isEqualTo(2);
+        // Sending again still works, and starts a fresh conversation.
+        chat(me, null, "Fresh start").andExpect(status().isOk());
+    }
+
     private ResultActions chat(String token, Long conversationId, String message) throws Exception {
         Map<String, Object> body = new HashMap<>(Map.of("message", message, "language", "en"));
         if (conversationId != null) {

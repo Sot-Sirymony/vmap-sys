@@ -61,6 +61,13 @@ public class AiController {
         return dreamCoachService.conversation(id);
     }
 
+    /** AI-FR-25: a participant may clear their whole Dream Coach history at once. */
+    @DeleteMapping("/api/ai/conversations")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAll() {
+        dreamCoachService.deleteAll();
+    }
+
     @DeleteMapping("/api/ai/conversations/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiClient, clearApiCache } from './apiClient';
+import { API_BASE_URL, apiClient, clearApiCache, reportSessionEnded } from './apiClient';
 import type { AiChatTurn, AiConversation, AiFocus, AiMessage, AiSafetyAlert, AiStatus } from '../types/vision';
 
 // V9 Phase 3: AI consent, the Dream Coach chat and crisis alerts.
@@ -21,6 +21,11 @@ export function getAiConversation(token: string, id: number) {
 
 export function deleteAiConversation(token: string, id: number) {
   return apiClient<void>(`/ai/conversations/${id}`, { method: 'DELETE', token });
+}
+
+/** Clears the whole Dream Coach history of the signed-in person. */
+export function deleteAllAiConversations(token: string) {
+  return apiClient<void>('/ai/conversations', { method: 'DELETE', token });
 }
 
 export function sendAiMessage(token: string, conversationId: number | null, message: string, language: string, focus?: AiFocus) {
@@ -53,6 +58,7 @@ export async function streamAiMessage(
   });
   clearApiCache();
   if (!response.ok || !response.body) {
+    reportSessionEnded(response, token);
     let errorMessage = 'AI help is temporarily unavailable.';
     try {
       const error = (await response.json()) as { message?: string };

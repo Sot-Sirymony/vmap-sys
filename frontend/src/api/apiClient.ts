@@ -81,6 +81,34 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
   }
 }
 
+type SessionEndedListener = () => void;
+
+const sessionEndedListeners = new Set<SessionEndedListener>();
+
+/**
+ * Called when the server says a signed-in request is no longer signed in: the
+ * token expired or was revoked. AuthProvider listens and signs the user out,
+ * so pages stop failing one request at a time and the login page opens.
+ * Returns a function that stops listening.
+ */
+export function onSessionEnded(listener: SessionEndedListener) {
+  sessionEndedListeners.add(listener);
+  return () => {
+    sessionEndedListeners.delete(listener);
+  };
+}
+
+/**
+ * For every call that carries a token, including the few that use fetch
+ * directly (downloads, the Dream Coach stream). A 401 without a token is a
+ * failed sign-in, not an ended session, so it is left alone.
+ */
+export function reportSessionEnded(response: Response, token: string | null | undefined) {
+  if (response.status === 401 && token) {
+    sessionEndedListeners.forEach((listener) => listener());
+  }
+}
+
 async function sendRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (!(options.body instanceof FormData)) {
@@ -97,6 +125,7 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
   });
 
   if (!response.ok) {
+    reportSessionEnded(response, options.token);
     throw new Error(await readErrorMessage(response));
   }
 

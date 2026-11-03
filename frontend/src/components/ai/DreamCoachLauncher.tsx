@@ -7,7 +7,7 @@ import Fab from '@mui/material/Fab';
 import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
-import { getAiStatus } from '../../api/aiApi';
+import { deleteAiConversation, getAiStatus } from '../../api/aiApi';
 import { useAuth } from '../../context/AuthContext';
 import { tr } from '../../i18n/translate';
 import type { AiStatus } from '../../types/vision';
@@ -37,6 +37,17 @@ export function DreamCoachLauncher() {
     getAiStatus(token).then(setStatus).catch(() => setStatus(null));
   }, [token, open]);
 
+  async function handleClear() {
+    if (!token || conversationId === null || !window.confirm(tr('Delete this conversation? This cannot be undone.'))) {
+      return;
+    }
+    try {
+      await deleteAiConversation(token, conversationId);
+    } finally {
+      setConversationId(null);
+    }
+  }
+
   if (!token || !status || status.reason === 'OFF' || pathname.startsWith('/dream-coach')) {
     return null;
   }
@@ -63,6 +74,9 @@ export function DreamCoachLauncher() {
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
           <Button variant="secondary" onClick={() => setConversationId(null)}>{tr('New conversation')}</Button>
+          {conversationId !== null && (
+            <Button variant="secondary" onClick={() => void handleClear()}>{tr('Clear this chat')}</Button>
+          )}
           <Link component={RouterLink} to="/dream-coach" onClick={() => setOpen(false)} variant="body2">{tr('All conversations')}</Link>
         </Box>
         {status.reason === 'NO_CONSENT' && <AiConsentCard token={token} onChange={setStatus} />}
@@ -76,6 +90,7 @@ export function DreamCoachLauncher() {
             onConversationChange={setConversationId}
             focus={focusFor(pathname)}
             quickActions={quickActionsFor(pathname)}
+            onNewConversation={() => setConversationId(null)}
           />
         </Box>
       </Drawer>

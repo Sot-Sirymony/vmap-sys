@@ -1,7 +1,5 @@
-import { apiClient } from './apiClient';
+import { API_BASE_URL, apiClient, reportSessionEnded } from './apiClient';
 import type { ExcelImportSummary } from '../types/vision';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
 
 export async function exportExcelWorkbook(token: string) {
   const response = await fetch(`${API_BASE_URL}/excel/export`, {
@@ -12,6 +10,7 @@ export async function exportExcelWorkbook(token: string) {
   });
 
   if (!response.ok) {
+    reportSessionEnded(response, token);
     throw new Error(`Export failed with status ${response.status}`);
   }
 

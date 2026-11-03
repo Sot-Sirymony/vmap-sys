@@ -1643,4 +1643,12 @@ export const km: Record<string, string> = {
   'Copy': 'ចម្លង',
   'Open the Dream Coach': 'បើកគ្រូបង្វឹកក្តីស្រមៃ',
   'All conversations': 'ការសន្ទនាទាំងអស់',
+  // V9: clearing Dream Coach history
+  'Delete all conversations': 'លុបការសន្ទនាទាំងអស់',
+  'Delete all your Dream Coach conversations? This cannot be undone. Your plan and journals are not affected.': 'លុបការសន្ទនាគ្រូបង្វឹកក្តីស្រមៃទាំងអស់របស់អ្នកមែនទេ? មិនអាចត្រឡប់វិញបានទេ។ ផែនការ និងកំណត់ហេតុរបស់អ្នកមិនរងផលប៉ះពាល់ទេ។',
+  'Unable to delete your conversations.': 'មិនអាចលុបការសន្ទនារបស់អ្នកបានទេ។',
+  'Clear this chat': 'សម្អាតការជជែកនេះ',
+  'This conversation is getting long. The Dream Coach only reads the most recent part, and long chats cost more. A new conversation is a fresh start.': 'ការសន្ទនានេះកំពុងវែងហើយ។ គ្រូបង្វឹកក្តីស្រមៃអានតែផ្នែកថ្មីៗបំផុត ហើយការជជែកវែងៗចំណាយច្រើនជាង។ ការសន្ទនាថ្មីគឺជាការចាប់ផ្តើមថ្មី។',
+  // Session expiry
+  'Your session has expired. Please sign in again.': 'វគ្គចូលរបស់អ្នកបានផុតកំណត់ហើយ។ សូមចូលម្តងទៀត។',
 };

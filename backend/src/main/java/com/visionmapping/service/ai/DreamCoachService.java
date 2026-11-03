@@ -81,6 +81,12 @@ public class DreamCoachService {
         conversationRepository.delete(owned(id));
     }
 
+    /** Clears the whole Dream Coach history of the signed-in person; nothing else is touched. */
+    @Transactional
+    public void deleteAll() {
+        conversationRepository.deleteAll(conversationRepository.findByUser_IdOrderByUpdatedAtDesc(lookup.userId()));
+    }
+
     @Transactional
     public AiMessageResponse rate(Long messageId, AiRatingRequest request) {
         AiMessage message = messageRepository.findById(messageId)

@@ -1291,6 +1291,10 @@ button:focus-visible,
 .stack-list {
   display: grid;
   gap: 12px;
+  /* Cards keep their own height. Without this, a list that is taller than its
+     cards (a board column stretched to match the tallest column beside it)
+     shares the spare height out, and a lone card grows to fill the column. */
+  align-content: start;
 }
 
 .list-card {

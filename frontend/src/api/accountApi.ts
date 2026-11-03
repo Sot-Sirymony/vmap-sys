@@ -1,7 +1,5 @@
-import { apiClient } from './apiClient';
+import { API_BASE_URL, apiClient, reportSessionEnded } from './apiClient';
 import type { ProgressMetrics, ReminderSettings } from '../types/vision';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
 
 export function getProgressMetrics(token: string, date: string) {
   return apiClient<ProgressMetrics>(`/progress-metrics?date=${date}`, { token });
@@ -29,6 +27,7 @@ export async function exportAccountData(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
+    reportSessionEnded(response, token);
     throw new Error(`Export failed with status ${response.status}`);
   }
   return response.blob();
@@ -39,6 +38,7 @@ export async function downloadPlanPdf(token: string, dreamId: number) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) {
+    reportSessionEnded(response, token);
     throw new Error(`Download failed with status ${response.status}`);
   }
   return response.blob();
