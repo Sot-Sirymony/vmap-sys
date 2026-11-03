@@ -36,6 +36,7 @@ import { SummaryStrip } from '../components/common/SummaryStrip';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
+import { AiDreamAssistant } from '../components/ai/AiStartAssistant';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
@@ -715,6 +716,15 @@ export function DreamsPage() {
       )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      {token && (
+        <AiDreamAssistant
+          key={filterVisionAreaId}
+          token={token}
+          visionAreas={visionAreas}
+          initialVisionAreaId={filterVisionAreaId}
+          onDataChange={() => crud.reload()}
+        />
+      )}
       <SummaryStrip
         chips={[
           { key: 'total', label: crud.items.length === 1 ? 'dream' : 'dreams', count: crud.items.length },

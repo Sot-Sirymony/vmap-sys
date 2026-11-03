@@ -1040,6 +1040,30 @@ export type AiSafetyAlert = {
 };
 
 // V9 Phase 5 (AI-FR-07 to AI-FR-11): suggestions only; nothing is saved until the participant adds it.
+export type VisionAreaSuggestion = {
+  name: string;
+  description?: string | null;
+  visionStatement?: string | null;
+  priority: Priority;
+  reason?: string | null;
+};
+
+export type VisionAreaSuggestions = { areas: VisionAreaSuggestion[] };
+
+export type DreamSuggestion = {
+  title: string;
+  description?: string | null;
+  whyImportant?: string | null;
+  successDefinition?: string | null;
+  dreamType: DreamType;
+  priority: Priority;
+  targetDate?: string | null;
+  moonshot: boolean;
+  reason?: string | null;
+};
+
+export type DreamSuggestions = { dreams: DreamSuggestion[]; clarifyingQuestion?: string | null };
+
 export type GoalSuggestion = {
   title: string;
   description?: string | null;

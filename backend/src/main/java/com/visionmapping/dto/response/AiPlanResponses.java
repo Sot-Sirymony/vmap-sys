@@ -1,17 +1,32 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.Priority;
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * V9 Phase 5 (AI-FR-07 to AI-FR-11): what the goal and plan builders return.
+ * V9 Phase 5 (AI-FR-07 to AI-FR-11): what the goal and plan builders return,
+ * plus the vision area and dream builders that start a plan.
  * Every item is a suggestion: nothing here is saved until the participant
  * adds it (AI-FR-04, AC-09).
  */
 public final class AiPlanResponses {
 
     private AiPlanResponses() {
+    }
+
+    public record VisionAreaSuggestion(String name, String description, String visionStatement, Priority priority, String reason) {
+    }
+
+    public record VisionAreaSuggestions(List<VisionAreaSuggestion> areas) {
+    }
+
+    public record DreamSuggestion(String title, String description, String whyImportant, String successDefinition,
+                                  DreamType dreamType, Priority priority, LocalDate targetDate, boolean moonshot, String reason) {
+    }
+
+    public record DreamSuggestions(List<DreamSuggestion> dreams, String clarifyingQuestion) {
     }
 
     public record GoalSuggestion(String title, String description, String successCriteria, LocalDate targetDate,

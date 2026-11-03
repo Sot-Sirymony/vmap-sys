@@ -2,6 +2,8 @@ package com.visionmapping.service.ai;
 
 import static com.visionmapping.service.ai.AiContextBuilder.clip;
 
+import com.visionmapping.dto.response.AiPlanResponses.DreamSuggestion;
+import com.visionmapping.dto.response.AiPlanResponses.DreamSuggestions;
 import com.visionmapping.dto.response.AiPlanResponses.GoalSuggestion;
 import com.visionmapping.dto.response.AiPlanResponses.GoalSuggestions;
 import com.visionmapping.dto.response.AiPlanResponses.PlanCheck;
@@ -10,14 +12,20 @@ import com.visionmapping.dto.response.AiPlanResponses.SlippingStep;
 import com.visionmapping.dto.response.AiPlanResponses.StepRescue;
 import com.visionmapping.dto.response.AiPlanResponses.StepSuggestion;
 import com.visionmapping.dto.response.AiPlanResponses.StepSuggestions;
+import com.visionmapping.dto.response.AiPlanResponses.VisionAreaSuggestion;
+import com.visionmapping.dto.response.AiPlanResponses.VisionAreaSuggestions;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.AiUnavailableException;
+import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
@@ -46,6 +54,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 @RequiredArgsConstructor
 public class AiPlanService {
 
+    static final int MAX_AREAS = 5;
+    static final int MAX_DREAMS = 5;
     static final int MAX_GOALS = 5;
     static final int MAX_STEPS = 10;
     static final int MAX_AI_ISSUES = 8;
@@ -53,11 +63,68 @@ public class AiPlanService {
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
+    private final VisionAreaRepository visionAreaRepository;
+    private final DreamRepository dreamRepository;
     private final GoalRepository goalRepository;
     private final VisionStepRepository visionStepRepository;
     private final AiStructuredRequests requests;
     private final TransactionTemplate transactions;
     private final Clock clock;
+
+    /** Vision areas the participant does not have yet, to start a plan from. */
+    public VisionAreaSuggestions suggestVisionAreas(String language) {
+        AppUser user = lookup.currentUser();
+        String apiKey = accessService.requireAvailable(user);
+        String plan = transactions.execute(status -> describeAreas(user));
+        String prompt = "Suggest between 1 and " + MAX_AREAS + " vision areas (major parts of life or work) this participant "
+                + "could plan in. Do not repeat or rename areas they already have. Fit them to what their current areas and "
+                + "dreams show; when they have none yet, suggest common, balanced ones.";
+        AiDrafts.AreaDrafts drafts = requests.ask(user, apiKey, "AREA_BUILDER", language, plan, prompt, AiDrafts.AreaDrafts.class);
+        List<VisionAreaSuggestion> areas = new ArrayList<>();
+        for (AiDrafts.AreaDraft draft : Optional.ofNullable(drafts.areas()).orElse(List.of())) {
+            if (blank(draft.name()) || areas.size() >= MAX_AREAS) {
+                continue;
+            }
+            areas.add(new VisionAreaSuggestion(limit(draft.name(), 160), limit(draft.description(), 2000),
+                    limit(draft.visionStatement(), 3000), priority(draft.priority()), limit(draft.reason(), 300)));
+        }
+        return new VisionAreaSuggestions(areas);
+    }
+
+    /** Dreams for one vision area, or with stretch one bold moonshot dream. */
+    public DreamSuggestions suggestDreams(Long visionAreaId, boolean stretch, String language) {
+        AppUser user = lookup.currentUser();
+        String apiKey = accessService.requireAvailable(user);
+        String plan = transactions.execute(status -> {
+            VisionArea area = lookup.visionArea(visionAreaId);
+            StringBuilder out = new StringBuilder(describeAreas(user));
+            out.append("\nThe area to plan: [").append(area.getId()).append("] ").append(clip(area.getName())).append('\n');
+            appendLine(out, "Area description", area.getDescription());
+            appendLine(out, "Area vision", area.getVisionStatement());
+            return out.toString();
+        });
+        LocalDate today = LocalDate.now(clock);
+        String task = stretch
+                ? "Suggest exactly one moonshot dream for the area to plan: bold enough to excite, still possible with years "
+                + "of effort, and different from the dreams the participant already has."
+                : "Suggest between 1 and " + MAX_DREAMS + " meaningful dreams for the area to plan. Each needs a clear title, "
+                + "why it matters and what success looks like, so it can be turned into goals. Do not repeat dreams the "
+                + "participant already has.";
+        String prompt = task + " Every target date must be after " + today + ". If too little is known about what the "
+                + "participant wants in this area, return no dreams and ask one clarifying question.";
+        AiDrafts.DreamDrafts drafts = requests.ask(user, apiKey, stretch ? "STRETCH_DREAM" : "DREAM_BUILDER",
+                language, plan, prompt, AiDrafts.DreamDrafts.class);
+        List<DreamSuggestion> dreams = new ArrayList<>();
+        for (AiDrafts.DreamDraft draft : Optional.ofNullable(drafts.dreams()).orElse(List.of())) {
+            if (blank(draft.title()) || dreams.size() >= (stretch ? 1 : MAX_DREAMS)) {
+                continue;
+            }
+            dreams.add(new DreamSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
+                    limit(draft.whyImportant(), 3000), limit(draft.successDefinition(), 3000), dreamType(draft.dreamType()),
+                    priority(draft.priority()), futureDate(draft.targetDate(), today), stretch, limit(draft.reason(), 300)));
+        }
+        return new DreamSuggestions(dreams, dreams.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null);
+    }
 
     /** AI-FR-07, or with stretch one bold goal (AI-FR-10). */
     public GoalSuggestions suggestGoals(Long dreamId, boolean stretch, String language) {
@@ -203,6 +270,24 @@ public class AiPlanService {
                 limit(draft.helper(), 300), limit(draft.reason(), 300));
     }
 
+    /** The participant's vision areas and the dream titles under each. Never partner names or contacts (AI-NFR-04). */
+    private String describeAreas(AppUser user) {
+        StringBuilder out = new StringBuilder();
+        out.append("Today is ").append(LocalDate.now(clock)).append(".\n");
+        List<VisionArea> areas = visionAreaRepository.findByUser_IdAndArchivedFalse(user.getId());
+        if (areas.isEmpty()) {
+            out.append("No vision areas yet.\n");
+        }
+        for (VisionArea area : areas) {
+            out.append("Vision area [").append(area.getId()).append("] ").append(clip(area.getName()))
+                    .append(" (").append(area.getPriority()).append(")\n");
+            dreamRepository.findByVisionArea_IdAndUser_IdAndArchivedFalse(area.getId(), user.getId())
+                    .forEach(dream -> out.append("  Dream: ").append(clip(dream.getTitle())).append(" | ")
+                            .append(dream.getStatus()).append('\n'));
+        }
+        return out.toString();
+    }
+
     /** The dream and its plan, with ids so Claude can point at items. Never partner names or contacts (AI-NFR-04). */
     private String describeDream(AppUser user, Dream dream) {
         StringBuilder out = new StringBuilder();
@@ -291,6 +376,14 @@ public class AiPlanService {
             return value == null ? Priority.MEDIUM : Priority.valueOf(value.trim().toUpperCase());
         } catch (IllegalArgumentException exception) {
             return Priority.MEDIUM;
+        }
+    }
+
+    static DreamType dreamType(String value) {
+        try {
+            return value == null ? DreamType.LONG_TERM : DreamType.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            return DreamType.LONG_TERM;
         }
     }
 

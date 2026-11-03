@@ -27,6 +27,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { StatusBoard } from '../components/common/StatusBoard';
 import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
+import { AiVisionAreaAssistant } from '../components/ai/AiStartAssistant';
 import { useAuth } from '../context/AuthContext';
 import { visionAreaDotColor } from '../theme';
 import { useCrudEntity } from '../hooks/useCrudEntity';
@@ -393,6 +394,7 @@ export function VisionAreasPage() {
       )}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      {token && <AiVisionAreaAssistant token={token} onDataChange={() => crud.reload()} />}
       <FilterPanel activeCount={[searchTerm, filterPriority, filterLetterRank, filterStatus].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel={tr('vision areas')} />
         <FilterSelect

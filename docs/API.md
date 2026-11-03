@@ -521,12 +521,14 @@ accept `?language=km`; a language with no text falls back to English.
 
 `PUT /api/admin/ai-settings` also takes `dailyMessageLimit` (1-500) and `helpLines`; the response adds `spendThisMonthUsd` and `requestsThisMonth`.
 
-### V9: goal and plan builders (Phase 5)
+### V9: vision area, dream, goal and plan builders (Phase 5)
 
-All take `?language=en|km`. They only suggest; adding uses `POST /api/goals` and `POST /api/steps`. Each AI call needs consent and counts toward the daily limit.
+All take `?language=en|km`. They only suggest; adding uses `POST /api/vision-areas`, `POST /api/dreams`, `POST /api/goals` and `POST /api/steps`. Each AI call needs consent and counts toward the daily limit.
 
 | Method | Path | Notes |
 | --- | --- | --- |
+| POST | `/api/ai/plan/vision-area-suggestions` | `areas[]` (`name`, `description`, `visionStatement`, `priority`, `reason`), up to 5, none repeating the user's areas |
+| POST | `/api/ai/plan/vision-areas/{visionAreaId}/dream-suggestions` | `dreams[]` (`title`, `description`, `whyImportant`, `successDefinition`, `dreamType`, `priority`, `targetDate`, `moonshot`, `reason`) or a `clarifyingQuestion`. `?stretch=true` returns one moonshot dream |
 | POST | `/api/ai/plan/dreams/{dreamId}/goal-suggestions` | `goals[]` (`title`, `description`, `successCriteria`, `targetDate`, `priority`, `moonshot`, `reason`) or a `clarifyingQuestion`. `?stretch=true` returns one stretch goal |
 | POST | `/api/ai/plan/goals/{goalId}/step-suggestions` | `steps[]` (`title`, `description`, `owner`, `targetDate`, `resources`, `people`, `reason`) or a `clarifyingQuestion` |
 | POST | `/api/ai/plan/dreams/{dreamId}/check` | `issues[]` (`kind`, `itemType`, `itemId`, `itemTitle`, `problem`, `fix`, `fromAi`) and `aiChecked`. Works without AI, with the rule-based checks only |

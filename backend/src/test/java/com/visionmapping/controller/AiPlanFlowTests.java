@@ -68,6 +68,61 @@ class AiPlanFlowTests {
     }
 
     @Test
+    void visionAreaSuggestionsKnowExistingAreasAndNothingIsSaved() throws Exception {
+        String user = consented(email("areas"));
+        dream(user);
+        List<AiDrafts.AreaDraft> drafts = new java.util.ArrayList<>();
+        for (int index = 1; index <= 7; index++) {
+            drafts.add(new AiDrafts.AreaDraft("Area " + index, "d", "v", "HIGH", "r"));
+        }
+        drafts.set(1, new AiDrafts.AreaDraft(" ", "d", "v", "LOW", "r"));
+        drafts.set(2, new AiDrafts.AreaDraft("Health", "d", "v", "SOMETIMES", "r"));
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.AreaDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.AreaDrafts(drafts), "claude-opus-5-5", 10, 10, false));
+
+        JsonNode answer = read(mockMvc.perform(post("/api/ai/plan/vision-area-suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(status().isOk()));
+
+        assertThat(answer.get("areas")).hasSize(5);
+        assertThat(answer.get("areas").get(1).get("name").asText()).isEqualTo("Health");
+        assertThat(answer.get("areas").get(1).get("priority").asText()).isEqualTo("MEDIUM");
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), anyString(), eq(AiDrafts.AreaDrafts.class));
+        assertThat(system.getValue()).contains("Home").contains("Own a home");
+        assertThat(jdbcTemplate.queryForObject("select count(*) from vision_areas where name = 'Area 1'", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("select feature from ai_usage_logs order by id desc limit 1", String.class))
+                .isEqualTo("AREA_BUILDER");
+    }
+
+    @Test
+    void dreamSuggestionsAreCheckedAndAStretchDreamIsOneMoonshot() throws Exception {
+        String user = consented(email("dreams"));
+        long areaId = read(send(post("/api/vision-areas"), user, Map.of("name", "Career", "priority", "HIGH", "status", "ACTIVE")))
+                .get("id").asLong();
+        AiDrafts.DreamDraft good = new AiDrafts.DreamDraft("Lead a research team", "d", "w", "s", "LONG_TERM", "HIGH",
+                TODAY.plusYears(2).toString(), "r");
+        AiDrafts.DreamDraft odd = new AiDrafts.DreamDraft("Write a book", "d", "w", "s", "SOMEDAY", "HIGH",
+                TODAY.minusDays(3).toString(), "r");
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.DreamDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.DreamDrafts(List.of(good, odd), ""), "claude-opus-5-5", 10, 10, false));
+
+        mockMvc.perform(post("/api/ai/plan/vision-areas/" + areaId + "/dream-suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(jsonPath("$.dreams.length()").value(2))
+                .andExpect(jsonPath("$.dreams[0].moonshot").value(false))
+                .andExpect(jsonPath("$.dreams[1].dreamType").value("LONG_TERM"))
+                .andExpect(jsonPath("$.dreams[1].targetDate").isEmpty())
+                .andExpect(jsonPath("$.clarifyingQuestion").isEmpty());
+        mockMvc.perform(post("/api/ai/plan/vision-areas/" + areaId + "/dream-suggestions?stretch=true").header("Authorization", "Bearer " + user))
+                .andExpect(jsonPath("$.dreams.length()").value(1))
+                .andExpect(jsonPath("$.dreams[0].moonshot").value(true));
+        assertThat(jdbcTemplate.queryForObject("select count(*) from dreams where vision_area_id = ?", Integer.class, areaId)).isZero();
+
+        String other = consented(email("dreams-other"));
+        mockMvc.perform(post("/api/ai/plan/vision-areas/" + areaId + "/dream-suggestions").header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void goalSuggestionsAreCheckedAndNothingIsSaved() throws Exception {
         String user = consented(email("goals"));
         long dreamId = dream(user);

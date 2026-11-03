@@ -13,6 +13,33 @@ public final class AiDrafts {
     private AiDrafts() {
     }
 
+    public record AreaDraft(
+            @JsonPropertyDescription("A short area name such as Health or Career, under 40 characters") String name,
+            @JsonPropertyDescription("One sentence on what this area covers") String description,
+            @JsonPropertyDescription("A vision statement in the participant's voice, present tense, one or two sentences") String visionStatement,
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String priority,
+            @JsonPropertyDescription("One short sentence on why this area may matter to the participant") String reason) {
+    }
+
+    public record AreaDrafts(List<AreaDraft> areas) {
+    }
+
+    public record DreamDraft(
+            @JsonPropertyDescription("A clear, meaningful dream in under 120 characters") String title,
+            @JsonPropertyDescription("One or two sentences describing the dream") String description,
+            @JsonPropertyDescription("Why this dream could matter to the participant, in their voice") String whyImportant,
+            @JsonPropertyDescription("What success looks like, concrete enough to know when it is reached") String successDefinition,
+            @JsonPropertyDescription("SHORT_TERM, LONG_TERM or LIFETIME") String dreamType,
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String priority,
+            @JsonPropertyDescription("Target date as YYYY-MM-DD; empty for a lifetime dream") String targetDate,
+            @JsonPropertyDescription("One short sentence on why this dream fits the area") String reason) {
+    }
+
+    public record DreamDrafts(
+            List<DreamDraft> dreams,
+            @JsonPropertyDescription("One question to ask first when too little is known to suggest dreams; empty otherwise") String clarifyingQuestion) {
+    }
+
     public record GoalDraft(
             @JsonPropertyDescription("A specific, measurable goal in under 120 characters") String title,
             @JsonPropertyDescription("One or two sentences on what doing this involves") String description,
