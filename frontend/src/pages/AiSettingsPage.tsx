@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../i18n/formatDate';
 import { tr } from '../i18n/translate';
 import type { AiSettings } from '../types/vision';
+import { ApprovedResourcesCard } from '../components/ai/ApprovedResourcesCard';
 import { PageSection } from './PageSection';
 
 /**
@@ -63,7 +64,8 @@ export function AiSettingsPage() {
       {settings && token && (
         <Stack spacing={2}>
           <ApiKeyCard settings={settings} token={token} onChanged={setSettings} />
-          <OptionsCard key={`${settings.model}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}`} settings={settings} token={token} onChanged={setSettings} />
+          <ApprovedResourcesCard token={token} />
+          <OptionsCard key={`${settings.model}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
     </PageSection>
@@ -177,6 +179,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [dailyLimit, setDailyLimit] = useState(String(settings.dailyMessageLimit));
   const [helpLines, setHelpLines] = useState(settings.helpLines);
   const [aiReminders, setAiReminders] = useState(settings.aiReminders);
+  const [guidelines, setGuidelines] = useState(settings.coachingGuidelines ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -194,6 +197,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         dailyMessageLimit: Number(dailyLimit),
         helpLines: helpLines.trim(),
         aiReminders,
+        coachingGuidelines: guidelines,
       }));
       setSaved(true);
     } catch (saveError) {
@@ -253,6 +257,16 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
           <Typography variant="caption" color="text.secondary" sx={{ mt: -1.5 }}>
             {tr('Quotes each person\'s own "why it matters". Only for people who gave AI consent. Each email is one AI request, about $0.005.')}
           </Typography>
+          <TextField
+            multiline
+            minRows={3}
+            size="small"
+            label={tr('Program coaching guidelines (optional)')}
+            helperText={tr('Added to the built-in guidelines, for example your program\'s tone or local examples. The built-in safety rules always apply and cannot be turned off here. Try a few conversations after a change.')}
+            value={guidelines}
+            onChange={(event) => setGuidelines(event.target.value)}
+            slotProps={{ htmlInput: { maxLength: 4000 } }}
+          />
           <TextField
             multiline
             minRows={3}

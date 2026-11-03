@@ -128,7 +128,8 @@ public class DreamCoachService {
                 new AiContextBuilder.Focus(request.page(), request.dreamId(), request.moduleNumber()), language);
         List<ClaudeClient.Turn> turns = new ArrayList<>(conversationId == null ? List.of() : history(conversationId));
         turns.add(new ClaudeClient.Turn(true, text));
-        String system = CoachingGuidelines.system(language, firstName(user.getFullName())) + "\n\n" + context.text();
+        String system = CoachingGuidelines.system(language, firstName(user.getFullName()), settings.getCoachingGuidelines())
+                + "\n\n" + context.text();
         return new Prepared(user, apiKey, settings.getModel(), settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
                 conversationId, text, language, system, List.copyOf(turns), context.sources(), false);
     }

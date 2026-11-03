@@ -65,7 +65,7 @@ This also changes a standing project rule: no user could see another user's data
 | 6 | Daily use (AI-FR-12 to AI-FR-17) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: next best step on Today for the time available, resource ideas per goal (all "check before use", no links, until AI-FR-26), weekly review draft, AI encouragement in reminder emails (admin switch, off by default), pitch coach on module 11 and Communication, outreach drafts on Communication |
 | 7 | Module help (AIB-01 to AIB-15) and assessment explanation (FR-02 change) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: Module helper on every module (questions one at a time, an example, a draft that fills the form, feedback), each module with its own AIB focus; drafts never save or unlock (AC-09); "Explain my result" on the assessment names one module to focus on |
 | 8 | Coach co-pilot (AI-FR-18 to AI-FR-21) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: weekly AI summary per participant (progress, mood only when journals are shared, risks, one action), kept for the week and rated accurate or not (AC-16); risk signals with reasons on the coach list (rule-based, explained by the summary); feedback drafts the coach edits and sends; cohort summary from participants who gave AI consent, without names. Needs the participant's AI consent; does not use the coach's daily limit |
-| 9 | Admin AI (AI-FR-22 to AI-FR-24, AI-FR-26) | Not started |
+| 9 | Admin AI (AI-FR-22 to AI-FR-24, AI-FR-26) | Built and tested locally (Claude mocked in tests), 3 Nov 2026: AI on or off per cohort (on by default), program coaching guidelines added after the fixed safety rules, approved resource list used first by resource ideas (only approved ones carry links), AI drafts of module text, examples and quiz questions, and Khmer translation drafts for module and interface text, all reviewed and saved by an admin |
 
 ### How v0.1 IDs map to the app
 
@@ -410,7 +410,7 @@ Phase 1 with AI is accepted when the pilot cohort (at least 20 participants) com
 
 - [ ] Which Claude access route: Claude API directly, or through a cloud provider? (affects contract and data residency)
 - [x] Monthly AI budget: $20 per month in total (D-3).
-- [ ] Is AI on by default for all cohorts, or opt-in per cohort?
+- [ ] Is AI on by default for all cohorts, or opt-in per cohort? (Built as on by default, with a per-cohort switch for admins; confirm.)
 - [ ] Safeguarding owner and escalation process for crisis alerts? (The coach is alerted, D-5; who backs up an absent coach is still open.)
 - [x] Coach access: own cohort only (D-6).
 - [x] Coaches and cohorts: back in scope (D-1).

@@ -6,6 +6,7 @@ import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
+import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
@@ -364,13 +365,19 @@ function ResourceList({ ideas }: { ideas: ResourceIdea[] }) {
   }
   return (
     <Stack spacing={1}>
-      <Alert severity="warning">{tr('AI ideas, not recommendations. Check each one yourself before you rely on it or pay for it.')}</Alert>
+      {ideas.some((idea) => idea.checkBeforeUse) && (
+        <Alert severity="warning">{tr('AI ideas, not recommendations. Check each one yourself before you rely on it or pay for it.')}</Alert>
+      )}
       {ideas.map((idea, index) => (
         <Box key={index} sx={{ borderLeft: 3, borderColor: 'divider', pl: 1.5 }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <Chip size="small" label={tr(RESOURCE_KIND_LABELS[idea.kind] ?? 'Other')} />
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>{idea.name}</Typography>
-            {idea.checkBeforeUse && <Chip size="small" variant="outlined" color="warning" label={tr('Check before use')} />}
+            {idea.url
+              ? <Link href={idea.url} target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 600 }}>{idea.name}</Link>
+              : <Typography variant="body2" sx={{ fontWeight: 600 }}>{idea.name}</Typography>}
+            {idea.checkBeforeUse
+              ? <Chip size="small" variant="outlined" color="warning" label={tr('Check before use')} />
+              : <Chip size="small" color="success" label={tr('Approved by the program')} />}
           </Box>
           {idea.why && <Typography variant="body2" color="text.secondary">{idea.why}</Typography>}
         </Box>

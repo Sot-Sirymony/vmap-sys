@@ -605,6 +605,8 @@ export type Cohort = {
   startDate?: string | null;
   archived: boolean;
   memberCount: number;
+  // V9 (AI-FR-24): AI for this cohort's members.
+  aiEnabled: boolean;
 };
 
 export type CohortMember = {
@@ -984,6 +986,7 @@ export type AiSettings = {
   spendThisMonthUsd: number;
   requestsThisMonth: number;
   aiReminders: boolean;
+  coachingGuidelines?: string | null;
 };
 
 // V9 Phase 3: the Dream Coach.
@@ -1125,7 +1128,7 @@ export type PitchFeedback = {
 
 export type OutreachDraft = { subject?: string | null; message?: string | null };
 
-export type ResourceIdea = { kind: string; name: string; why?: string | null; checkBeforeUse: boolean };
+export type ResourceIdea = { kind: string; name: string; why?: string | null; checkBeforeUse: boolean; url?: string | null };
 
 // V9 Phase 7: AI help in module exercises (drafts never save or unlock anything).
 export type ModuleHelpMode = 'START' | 'DRAFT' | 'FEEDBACK';
@@ -1170,4 +1173,23 @@ export type AiCohortSummary = {
   suggestedActions?: string | null;
   accurate?: boolean | null;
   ratingNote?: string | null;
+};
+
+// V9 Phase 9: admin AI.
+export type ApprovedResource = {
+  id: number;
+  kind: string;
+  name: string;
+  url?: string | null;
+  description?: string | null;
+  active: boolean;
+};
+
+export type ModuleContentDraft = {
+  title?: string | null;
+  summary?: string | null;
+  guidance?: string | null;
+  exerciseInstructions?: string | null;
+  examples?: string | null;
+  quiz: { question: string; answer?: string | null }[];
 };

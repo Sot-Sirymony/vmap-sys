@@ -10,6 +10,7 @@ export type AiSettingsInput = {
   dailyMessageLimit?: number;
   helpLines?: string;
   aiReminders?: boolean;
+  coachingGuidelines?: string;
 };
 
 export function getAiSettings(token: string) {

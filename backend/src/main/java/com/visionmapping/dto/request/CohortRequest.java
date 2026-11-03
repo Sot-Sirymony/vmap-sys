@@ -8,5 +8,7 @@ import java.time.LocalDate;
 public record CohortRequest(
         @NotBlank @Size(max = 120) String name,
         @Size(max = 180) String coachEmail,
-        LocalDate startDate) {
+        LocalDate startDate,
+        // V9 (AI-FR-24): left out keeps the current setting.
+        Boolean aiEnabled) {
 }

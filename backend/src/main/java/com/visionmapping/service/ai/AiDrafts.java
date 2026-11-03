@@ -98,6 +98,7 @@ public final class AiDrafts {
     }
 
     public record ResourceDraft(
+            @JsonPropertyDescription("The id in brackets when this is one of the approved resources; 0 otherwise") long approvedId,
             @JsonPropertyDescription("COURSE, BOOK, TOOL, ORGANISATION, FUNDING, PERSON or OTHER") String kind,
             @JsonPropertyDescription("A well-known name, or for PERSON the kind of person as a role") String name,
             @JsonPropertyDescription("How it helps this goal, in one sentence") String why) {
@@ -148,5 +149,25 @@ public final class AiDrafts {
             @JsonPropertyDescription("Blockers several participants share, one per line") String commonBlockers,
             @JsonPropertyDescription("Modules where people are stuck or slow, one per line") String strugglingModules,
             @JsonPropertyDescription("Up to three actions for the coach, one per line") String suggestedActions) {
+    }
+
+    // Phase 9: admin content.
+
+    public record QuizItem(
+            @JsonPropertyDescription("A short question that checks understanding of the module") String question,
+            @JsonPropertyDescription("The answer, in one or two sentences") String answer) {
+    }
+
+    public record ModuleContentDraft(
+            @JsonPropertyDescription("Module title, under 80 characters") String title,
+            @JsonPropertyDescription("One or two sentences on what the module does for the participant") String summary,
+            @JsonPropertyDescription("The teaching text, in plain words, under 1500 characters") String guidance,
+            @JsonPropertyDescription("What the participant does to complete it, one or two sentences") String exerciseInstructions,
+            @JsonPropertyDescription("Two or three short worked examples about made-up people") String examples,
+            @JsonPropertyDescription("Three to five quiz questions with answers") List<QuizItem> quiz) {
+    }
+
+    public record TranslationDraft(
+            @JsonPropertyDescription("One translation per input text, in the same order") List<String> translations) {
     }
 }

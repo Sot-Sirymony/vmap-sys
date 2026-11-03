@@ -569,6 +569,19 @@ Coach only, for participants of the coach's own active cohorts (404 otherwise). 
 
 `GET /api/coach/participants` rows add `riskReasons[]` and `aiConsent`.
 
+### V9: admin AI (Phase 9)
+
+Admin only.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET, POST | `/api/admin/ai/resources` | Approved resources: `{ "kind", "name", "url", "description", "active" }`; `url` must start with http:// or https:// |
+| PUT, DELETE | `/api/admin/ai/resources/{id}` | Update or remove one |
+| POST | `/api/admin/ai/modules/{number}/draft` | `{ "instruction" }` → `title`, `summary`, `guidance`, `exerciseInstructions`, `examples`, `quiz[]`. Nothing is saved |
+| POST | `/api/admin/ai/translate` | `{ "texts": [...], "targetLanguage": "km" }` (up to 40 texts, 20,000 characters) → `translations[]`, same order, null where a draft was dropped |
+
+`PUT /api/admin/cohorts/{id}` also takes `aiEnabled` (left out keeps it); cohorts return `aiEnabled`. `PUT /api/admin/ai-settings` also takes `coachingGuidelines` (blank removes them). Resource ideas now return `url` for approved resources only.
+
 ### V9: plan sharing (v0.1 FR-10)
 
 | Method | Path | Notes |

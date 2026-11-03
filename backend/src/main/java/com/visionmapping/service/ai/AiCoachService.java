@@ -107,7 +107,7 @@ public class AiCoachService {
             List<String> signals = coachRiskSignals.reasons(participant);
             return new Prepared(participant, describe(participant, signals, true), signals);
         });
-        String apiKey = accessService.requireAvailableForCoach(prepared.participant());
+        String apiKey = accessService.requireAvailableForStaff(prepared.participant());
         String task = "Write this week's one-page summary of the participant for their coach: progress against the plan, the mood "
                 + "trend (only from attitude check-ins in the records; leave it empty if there are none), risks with the reason "
                 + "for each (use the risk signals listed and anything else the records clearly show), and one specific action "
@@ -144,7 +144,7 @@ public class AiCoachService {
             };
             return new Prepared(participant, describe(participant, coachRiskSignals.reasons(participant), false) + "\n" + about + "\n");
         });
-        String apiKey = accessService.requireAvailableForCoach(prepared.participant());
+        String apiKey = accessService.requireAvailableForStaff(prepared.participant());
         String task = "Draft a short comment from the coach to the participant about the item named at the end of the records. "
                 + "Name one thing done well, one concrete suggestion, and ask one question. Under 120 words.";
         AiDrafts.CoachFeedbackDraft draft = requests.askForCoach(coach, apiKey, FEEDBACK, language, prepared.records(), task,
@@ -168,6 +168,9 @@ public class AiCoachService {
         }
         Prepared prepared = transactions.execute(status -> {
             Cohort cohort = coachService.requireOwnCohort(cohortId);
+            if (!cohort.isAiEnabled()) {
+                throw new BusinessRuleException("AI is switched off for this cohort.");
+            }
             List<AppUser> members = appUserRepository.findByCohort_IdOrderByFullNameAsc(cohort.getId()).stream()
                     .filter(member -> !member.getId().equals(coach.getId())).toList();
             List<AppUser> consented = members.stream().filter(member -> member.getAiConsentAt() != null).toList();
@@ -176,7 +179,7 @@ public class AiCoachService {
             }
             return new Prepared(cohort, describeCohort(consented, members.size()));
         });
-        String apiKey = accessService.requireAvailableForCoach(null);
+        String apiKey = accessService.requireAvailableForStaff(null);
         String task = "Summarise this cohort's week for the coach: an overview, blockers several people share, modules where "
                 + "people are stuck or slow, and up to three actions for the coach. Talk about patterns, not individuals.";
         AiDrafts.CohortSummaryDraft draft = requests.askForCoach(coach, apiKey, COHORT, language, prepared.records(), task,

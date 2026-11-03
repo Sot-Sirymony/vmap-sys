@@ -32,8 +32,11 @@ public final class AiDailyResponses {
     public record OutreachDraft(String subject, String message) {
     }
 
-    /** AI-FR-13: checkBeforeUse is true for every named item until admins keep an approved list (AI-FR-26). */
-    public record ResourceIdea(String kind, String name, String why, boolean checkBeforeUse) {
+    /**
+     * AI-FR-13: an idea from the admin-approved list (AI-FR-26) has checkBeforeUse
+     * false and may carry its url; any other is to be checked, and never has a link.
+     */
+    public record ResourceIdea(String kind, String name, String why, boolean checkBeforeUse, String url) {
     }
 
     public record ResourceIdeas(List<ResourceIdea> resources) {

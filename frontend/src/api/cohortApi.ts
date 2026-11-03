@@ -65,7 +65,7 @@ export function ratePitch(token: string, userId: number, rating: number, feedbac
 
 // V9: cohort management (admin only).
 
-export type CohortInput = { name: string; coachEmail: string; startDate: string | null };
+export type CohortInput = { name: string; coachEmail: string; startDate: string | null; aiEnabled?: boolean };
 
 export function listCohorts(token: string) {
   return apiClient<Cohort[]>('/admin/cohorts', { token });

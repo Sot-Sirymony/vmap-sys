@@ -16,5 +16,7 @@ public record AiSettingsRequest(
         @NotNull @DecimalMin("0.00") @DecimalMax("1000.00") BigDecimal monthlyBudgetUsd,
         @Min(1) @Max(500) Integer dailyMessageLimit,
         @Size(max = 2000) String helpLines,
-        Boolean aiReminders) {
+        Boolean aiReminders,
+        // AI-FR-24: left out keeps the current text; blank removes it.
+        @Size(max = 4000) String coachingGuidelines) {
 }

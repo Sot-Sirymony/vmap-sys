@@ -11,6 +11,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.TooManyRequestsException;
 import com.visionmapping.repository.AiConsentEventRepository;
 import com.visionmapping.repository.AiUsageLogRepository;
+import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.service.AiSettingsService;
 import com.visionmapping.service.support.EntityLookup;
 import java.math.BigDecimal;
@@ -40,13 +41,15 @@ public class AiAccessService {
     public static final String NO_CONSENT = "NO_CONSENT";
     public static final String DAILY_LIMIT = "DAILY_LIMIT";
     private static final Set<AiOutcome> COUNTED = EnumSet.of(AiOutcome.OK, AiOutcome.CUT_SHORT, AiOutcome.REFUSED);
-    /** Coach co-pilot requests are work for many participants, so they do not use the coach's own daily limit. */
-    public static final Set<String> COACH_FEATURES = Set.of("COACH_SUMMARY", "COACH_FEEDBACK", "COACH_COHORT");
+    /** Coach and admin requests are work for many people, so they do not use the person's own daily limit. */
+    public static final Set<String> STAFF_FEATURES = Set.of("COACH_SUMMARY", "COACH_FEEDBACK", "COACH_COHORT",
+            "ADMIN_MODULE_DRAFT", "ADMIN_TRANSLATE");
 
     private final EntityLookup lookup;
     private final AiSettingsService aiSettingsService;
     private final AiConsentEventRepository consentEventRepository;
     private final AiUsageLogRepository usageLogRepository;
+    private final AppUserRepository appUserRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -100,7 +103,8 @@ public class AiAccessService {
     }
 
     private String reason(AppUser user, AiSettings settings) {
-        if (!settings.isEnabled() || aiSettingsService.activeApiKey() == null) {
+        if (!settings.isEnabled() || aiSettingsService.activeApiKey() == null
+                || appUserRepository.existsByIdAndCohort_ArchivedFalseAndCohort_AiEnabledFalse(user.getId())) {
             return OFF;
         }
         if (spendThisMonth().compareTo(settings.getMonthlyBudgetUsd()) >= 0) {
@@ -123,7 +127,7 @@ public class AiAccessService {
     private long sentToday(AppUser user) {
         Instant dayStart = LocalDate.now(clock).atStartOfDay(clock.getZone()).toInstant();
         return usageLogRepository.countByUser_IdAndCreatedAtGreaterThanEqualAndOutcomeInAndFeatureNotIn(
-                user.getId(), dayStart, COUNTED, COACH_FEATURES);
+                user.getId(), dayStart, COUNTED, STAFF_FEATURES);
     }
 
     /**
@@ -132,11 +136,14 @@ public class AiAccessService {
      * own AI consent (AI-NFR-03). The coach's daily limit does not apply.
      */
     @Transactional(readOnly = true)
-    public String requireAvailableForCoach(AppUser participant) {
+    public String requireAvailableForStaff(AppUser participant) {
         AiSettings settings = aiSettingsService.current();
         String apiKey = aiSettingsService.activeApiKey();
         if (!settings.isEnabled() || apiKey == null || spendThisMonth().compareTo(settings.getMonthlyBudgetUsd()) >= 0) {
             throw new AiUnavailableException();
+        }
+        if (participant != null && appUserRepository.existsByIdAndCohort_ArchivedFalseAndCohort_AiEnabledFalse(participant.getId())) {
+            throw new BusinessRuleException("AI is switched off for this participant's cohort.");
         }
         if (participant != null && participant.getAiConsentAt() == null) {
             throw new BusinessRuleException("This participant has not turned on AI consent, so AI cannot read their plan.");

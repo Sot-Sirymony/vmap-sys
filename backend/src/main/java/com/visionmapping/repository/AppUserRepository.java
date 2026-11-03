@@ -8,6 +8,9 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     Optional<AppUser> findByEmail(String email);
 
+    /** V9 (AI-FR-24): true when this person's active cohort has AI switched off. */
+    boolean existsByIdAndCohort_ArchivedFalseAndCohort_AiEnabledFalse(Long id);
+
     java.util.List<AppUser> findByCohort_IdOrderByFullNameAsc(Long cohortId);
 
     long countByCohort_Id(Long cohortId);

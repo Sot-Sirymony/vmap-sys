@@ -19,6 +19,8 @@ import { Loading } from '../components/common/Loading';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import type { ModuleContent } from '../types/vision';
+import { ModuleContentAiCard } from '../components/ai/ModuleContentAiCard';
+import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -152,6 +154,25 @@ export function ModuleContentPage() {
             <Card>
               <CardHeader title={tr('Edit text')} subheader={selected.translated ? undefined : tr('Showing English because this language has no text for this module yet.')} />
               <CardContent>
+                {token && (
+                  <WhenAiOn token={token}>
+                    <Box sx={{ mb: 1.5 }}>
+                      <ModuleContentAiCard
+                        token={token}
+                        module={selected}
+                        language={language}
+                        onFill={(fields) => {
+                          setSaved(false);
+                          if (fields.title) { setTitle(fields.title); }
+                          if (fields.summary) { setSummary(fields.summary); }
+                          if (fields.guidance) { setGuidance(fields.guidance); }
+                          if (fields.exerciseInstructions) { setInstructions(fields.exerciseInstructions); }
+                          if (fields.labels) { setLabels((current) => ({ ...current, ...fields.labels })); }
+                        }}
+                      />
+                    </Box>
+                  </WhenAiOn>
+                )}
                 <Box component="form" onSubmit={(event) => void handleSave(event)} sx={{ display: 'grid', gap: 1.5 }}>
                   <label>{tr('Title')}<Input aria-label={tr('Title')} value={title} onChange={(event) => setTitle(event.target.value)} required /></label>
                   <label>{tr('Summary')}<Textarea value={summary} onChange={(event) => setSummary(event.target.value)} required /></label>

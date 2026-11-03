@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [9.0.0] — In progress (Phases 1–8 of 9)
+## [9.0.0] — All 9 phases built; awaiting UAT
 
 Implements [VMS_BRD_V9.0.0](VMS_BRD_V9.0.0.md): Claude AI integration, which first brings
 back coaches and cohorts (decisions D-1, D-6 to D-8).
@@ -255,6 +255,28 @@ back coaches and cohorts (decisions D-1, D-6 to D-8).
   use the coach's daily limit.
 - **Added** `AiCoachFlowTests` (5), `CoachSummaryCards.test.tsx` (2) and Khmer patterns for
   the risk reasons.
+
+### Phase 9: admin AI
+
+- **Added** an **AI help** switch per cohort on the Cohorts page (AI-FR-24), on by default.
+  Off means no AI for that cohort's members (the Dream Coach hides, AI requests answer
+  "unavailable") and no co-pilot summaries for their coach (migration `V60__ai_admin.sql`).
+- **Added** **Program coaching guidelines** on AI settings (AI-FR-24): the admin's own
+  guidance, added after the built-in rules and marked as never overriding them, so an
+  edit can tune tone and examples but cannot switch off a safety rule.
+- **Added** **Approved resources** on AI settings (AI-FR-26). Resource ideas use these
+  first, with the admin's own name, kind and link and an "Approved by the program" mark;
+  anything else stays "check before use" without a link (AI-FR-13).
+- **Added** **Draft with AI** in the English module editor (AI-FR-22): clearer text in
+  original wording, two or three examples and up to five quiz questions; the text only
+  fills the form for the admin to save (the app has no quiz yet, so questions are for
+  copying).
+- **Added** **Translate from English with AI** in the Khmer module editor and **Suggest
+  Khmer** for each interface text (AI-FR-23), using a fixed glossary for the app's terms.
+  A draft that loses a `{placeholder}` is dropped. Drafts go to the admin, ideally checked
+  by the Khmer reviewer (D-4), before saving.
+- **Changed** admin AI requests, like coach ones, do not use the admin's own daily limit.
+- **Added** `AiAdminFlowTests` (5) and `ModuleContentAiCard.test.tsx` (2).
 
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 

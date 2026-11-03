@@ -5,7 +5,9 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import {
   addCohortMember,
@@ -183,6 +185,22 @@ function CohortRow({ token, cohort, onChanged, onReload }: CohortRowProps) {
             </Box>
             {cohort.archived && <Chip size="small" label={tr('Archived')} />}
           </Box>
+          <FormControlLabel
+            control={(
+              <Switch
+                checked={cohort.aiEnabled}
+                disabled={busy}
+                onChange={(event) => void run(async () => {
+                  if (token) {
+                    onChanged(await updateCohort(token, cohort.id, {
+                      name: cohort.name, coachEmail: cohort.coachEmail ?? '', startDate: cohort.startDate ?? null, aiEnabled: event.target.checked,
+                    }));
+                  }
+                })}
+              />
+            )}
+            label={cohort.aiEnabled ? tr('AI help is on for this cohort') : tr('AI help is off for this cohort')}
+          />
           <Typography variant="body2">
             {tr('Join code')}: <strong style={{ letterSpacing: '0.1em' }}>{cohort.joinCode}</strong>
           </Typography>

@@ -28,7 +28,8 @@ public record AiSettingsResponse(
         String helpLines,
         BigDecimal spendThisMonthUsd,
         long requestsThisMonth,
-        boolean aiReminders) {
+        boolean aiReminders,
+        String coachingGuidelines) {
 
     public record ModelOption(String id, String label) {
     }

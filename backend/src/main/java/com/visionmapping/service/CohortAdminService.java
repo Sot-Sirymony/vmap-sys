@@ -103,6 +103,9 @@ public class CohortAdminService {
     private void apply(Cohort cohort, CohortRequest request) {
         cohort.setName(request.name().trim());
         cohort.setStartDate(request.startDate());
+        if (request.aiEnabled() != null) {
+            cohort.setAiEnabled(request.aiEnabled());
+        }
         String coachEmail = request.coachEmail() == null ? "" : request.coachEmail().trim();
         if (coachEmail.isEmpty()) {
             cohort.setCoach(null);
@@ -141,7 +144,7 @@ public class CohortAdminService {
         AppUser coach = cohort.getCoach();
         return new CohortResponse(cohort.getId(), cohort.getName(), cohort.getJoinCode(),
                 coach == null ? null : coach.getId(), coach == null ? null : coach.getFullName(), coach == null ? null : coach.getEmail(),
-                cohort.getStartDate(), cohort.isArchived(), appUserRepository.countByCohort_Id(cohort.getId()));
+                cohort.getStartDate(), cohort.isArchived(), appUserRepository.countByCohort_Id(cohort.getId()), cohort.isAiEnabled());
     }
 
     private void requireAdmin() {

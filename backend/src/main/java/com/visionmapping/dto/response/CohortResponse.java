@@ -11,5 +11,6 @@ public record CohortResponse(
         String coachEmail,
         LocalDate startDate,
         boolean archived,
-        long memberCount) {
+        long memberCount,
+        boolean aiEnabled) {
 }

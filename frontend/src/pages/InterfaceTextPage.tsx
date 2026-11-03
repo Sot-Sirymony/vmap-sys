@@ -16,6 +16,8 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { SearchBar } from '../components/common/SearchBar';
 import { useAuth } from '../context/AuthContext';
+import { translateToKhmer } from '../api/aiAdminApi';
+import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { km } from '../i18n/km';
 import { currentLanguage, setOverrides, tr, type Language } from '../i18n/translate';
 import type { UiTextOverride } from '../types/vision';
@@ -157,6 +159,27 @@ function TextRow({ token, language, source, change, onSaved, onReset }: TextRowP
   const [busy, setBusy] = useState(false);
   const dirty = draft.trim() !== (change?.text ?? fallback);
 
+  // AI-FR-23: a draft in the box; the admin reviews it and saves.
+  async function suggestKhmer() {
+    if (!token) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const [suggestion] = (await translateToKhmer(token, [source])).translations;
+      if (suggestion) {
+        setDraft(suggestion);
+      } else {
+        setError(tr('No usable draft this time. Try again, or write it yourself.'));
+      }
+    } catch (suggestError) {
+      setError(suggestError instanceof Error ? tr(suggestError.message) : tr('AI help is temporarily unavailable.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     if (!token) {
       return;
@@ -211,6 +234,11 @@ function TextRow({ token, language, source, change, onSaved, onReset }: TextRowP
           {error && <Alert severity="error">{error}</Alert>}
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button type="button" disabled={busy || !dirty || !draft.trim()} onClick={() => void save()}>{tr('Save')}</Button>
+            {language === 'km' && (
+              <WhenAiOn token={token}>
+                <Button type="button" variant="secondary" disabled={busy} onClick={() => void suggestKhmer()}>{tr('Suggest Khmer')}</Button>
+              </WhenAiOn>
+            )}
             {change && (
               <Button type="button" variant="secondary" disabled={busy} onClick={() => void reset()}>{tr('Reset to default')}</Button>
             )}

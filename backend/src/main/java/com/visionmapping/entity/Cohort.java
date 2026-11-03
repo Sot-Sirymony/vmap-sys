@@ -46,4 +46,9 @@ public class Cohort extends BaseAuditableEntity {
     @Builder.Default
     @Column(nullable = false)
     private boolean archived = false;
+
+    /** V9 (AI-FR-24): AI for this cohort's members. On by default. */
+    @Builder.Default
+    @Column(name = "ai_enabled", nullable = false)
+    private boolean aiEnabled = true;
 }

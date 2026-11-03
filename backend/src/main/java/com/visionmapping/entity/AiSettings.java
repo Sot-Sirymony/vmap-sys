@@ -69,6 +69,10 @@ public class AiSettings extends BaseAuditableEntity {
     @Column(name = "ai_reminders", nullable = false)
     private boolean aiReminders;
 
+    /** AI-FR-24: the program's own coaching guidelines, added to the built-in ones. */
+    @Column(name = "coaching_guidelines", length = 4000)
+    private String coachingGuidelines;
+
     /** AI-NFR-09: shown with every crisis response. */
     @Column(name = "help_lines", nullable = false, length = 2000)
     private String helpLines;

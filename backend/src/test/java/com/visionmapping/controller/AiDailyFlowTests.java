@@ -171,9 +171,9 @@ class AiDailyFlowTests {
         long goalId = goal(user, dream(user));
         when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.ResourceDrafts.class)))
                 .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.ResourceDrafts(List.of(
-                        new AiDrafts.ResourceDraft("COURSE", "Home buying basics https://example.com/course", "Explains loans"),
-                        new AiDrafts.ResourceDraft("WIZARD", "A loan officer", "Knows the rules"),
-                        new AiDrafts.ResourceDraft("BOOK", " ", "no name"))), "claude-opus-5-5", 10, 10, false));
+                        new AiDrafts.ResourceDraft(0, "COURSE", "Home buying basics https://example.com/course", "Explains loans"),
+                        new AiDrafts.ResourceDraft(0, "WIZARD", "A loan officer", "Knows the rules"),
+                        new AiDrafts.ResourceDraft(0, "BOOK", " ", "no name"))), "claude-opus-5-5", 10, 10, false));
         mockMvc.perform(post("/api/ai/daily/goals/" + goalId + "/resource-ideas").header("Authorization", "Bearer " + user))
                 .andExpect(jsonPath("$.resources.length()").value(2))
                 .andExpect(jsonPath("$.resources[0].name").value("Home buying basics"))

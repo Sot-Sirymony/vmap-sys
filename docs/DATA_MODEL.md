@@ -325,3 +325,7 @@ quotes the participant's passion statement to reminder emails (AI-FR-15).
 `participant` (deleted with their account) or `cohort`, `weekStart`, `progressText`, `moodText`,
 `risksText`, `actionText` (a cohort summary stores its overview, modules and blockers in the
 same columns), and the coach's `accurate`, `ratingNote`, `ratedAt` (AC-16).
+
+**V60.** **Cohort** adds `aiEnabled` (default true). **AiSettings** adds `coachingGuidelines`
+(the program's own, added after the built-in rules). **AiApprovedResource**
+(`ai_approved_resources`, AI-FR-26): `kind`, `name`, `url`, `description`, `active`.
