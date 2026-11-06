@@ -12,7 +12,7 @@ COPY src ./src
 RUN mvn -B -ntp -s maven-settings.xml clean package -DskipTests
 
 # Run stage
-FROM eclipse-temurin:17.0.21_9-jre-alpine@sha256:e2ba4e947bd5e236a9866fbdda03e4936036cb9e9d16ea0d84d103d6634a5c21
+FROM eclipse-temurin:24.0.2_12-jre-alpine@sha256:4044b6c87cb088885bcd0220f7dc7a8a4aab76577605fa471945d2e98270741f
 # The plan PDF lays out Khmer text through Java's font engine, which needs these.
 RUN apk add --no-cache fontconfig freetype
 # V10 (SEC-02-06): the app runs as an ordinary user, not root. /app is its own
