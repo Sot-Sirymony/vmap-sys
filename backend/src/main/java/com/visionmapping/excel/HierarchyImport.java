@@ -1,5 +1,9 @@
 package com.visionmapping.excel;
 
+import java.util.Set;
+import java.util.Comparator;
+import jakarta.validation.Validator;
+import jakarta.validation.ConstraintViolation;
 import static com.visionmapping.excel.WorkbookSchema.PRIORITY;
 import static com.visionmapping.excel.WorkbookSchema.STATUS;
 import static com.visionmapping.excel.WorkbookSchema.TITLE;
@@ -48,6 +52,7 @@ class HierarchyImport {
     private final GoalService goalService;
     private final VisionStepService stepService;
     private final TaskItemService taskService;
+    private final Validator validator;
     private final Map<Long, Long> newVisionAreaIds = new HashMap<>();
     private final Map<Long, Long> newDreamIds = new HashMap<>();
     private final Map<Long, Long> newGoalIds = new HashMap<>();
@@ -58,12 +63,14 @@ class HierarchyImport {
     private int created;
     private int skipped;
 
-    HierarchyImport(VisionAreaService visionAreaService, DreamService dreamService, GoalService goalService, VisionStepService stepService, TaskItemService taskService) {
+    HierarchyImport(VisionAreaService visionAreaService, DreamService dreamService, GoalService goalService, VisionStepService stepService, TaskItemService taskService,
+                    Validator validator) {
         this.visionAreaService = visionAreaService;
         this.dreamService = dreamService;
         this.goalService = goalService;
         this.stepService = stepService;
         this.taskService = taskService;
+        this.validator = validator;
     }
 
     ExcelImportSummaryResponse run(Workbook workbook, List<String> errors) {
@@ -85,7 +92,7 @@ class HierarchyImport {
                     reader.enumValue(Priority.class, 4, PRIORITY),
                     null,
                     reader.enumValue(LifecycleStatus.class, 5, STATUS));
-            long newId = visionAreaService.createVisionArea(request).id();
+            long newId = visionAreaService.createVisionArea(valid(request)).id();
             mapWorkbookId(reader, newVisionAreaIds, newId);
         });
     }
@@ -109,7 +116,7 @@ class HierarchyImport {
                     null,
                     ScheduleMode.BOTTOM_UP,
                     null, null, null, null, null, null, null, null);
-            long newId = dreamService.createDream(request).id();
+            long newId = dreamService.createDream(valid(request)).id();
             mapWorkbookId(reader, newDreamIds, newId);
         });
     }
@@ -129,7 +136,7 @@ class HierarchyImport {
                     false,
                     null,
                     ScheduleMode.BOTTOM_UP);
-            long newId = goalService.createGoal(request).id();
+            long newId = goalService.createGoal(valid(request)).id();
             mapWorkbookId(reader, newGoalIds, newId);
         });
     }
@@ -148,7 +155,7 @@ class HierarchyImport {
                     reader.dateOrNull(7),
                     reader.enumValue(WorkStatus.class, 8, STATUS),
                     null);
-            long newId = stepService.createStep(request).id();
+            long newId = stepService.createStep(valid(request)).id();
             mapWorkbookId(reader, newStepIds, newId);
         });
     }
@@ -183,7 +190,7 @@ class HierarchyImport {
                     // FR-34: energy demand isn't imported from the workbook — it's
                     // an in-app tag; existing rows read as NEUTRAL (BR-27).
                     null);
-            taskService.createTask(request);
+            taskService.createTask(valid(request));
         });
     }
 
@@ -225,6 +232,22 @@ class HierarchyImport {
                 errors.add(sheetName + " row " + (rowIndex + 1) + ": " + exception.getMessage());
             }
         }
+    }
+
+    /**
+     * V10 (SEC-08-01): the same checks a form submission gets, before anything
+     * is saved. A row that fails is skipped with the reason, instead of failing
+     * later at the database.
+     */
+    private <T> T valid(T request) {
+        Set<ConstraintViolation<T>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            ConstraintViolation<T> first = violations.stream()
+                    .min(Comparator.comparing(violation -> violation.getPropertyPath().toString()))
+                    .orElseThrow();
+            throw new RowParseException(first.getPropertyPath() + ": " + first.getMessage());
+        }
+        return request;
     }
 
     @FunctionalInterface

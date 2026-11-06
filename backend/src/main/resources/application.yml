@@ -45,7 +45,19 @@ server:
 app:
   security:
     jwt-secret: ${JWT_SECRET:vision-mapping-development-secret-key-change-before-production}
-    jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+    # V10 (SEC-07-04): the access token's lifetime. Short, because it cannot be
+    # recalled once handed out except by ending its session; the client renews
+    # it in the background with the refresh token.
+    jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:30}
+    # V10 (SEC-07-03, SEC-07-04): server-side sessions. "Remember me" keeps one
+    # for remember-me-days; otherwise it lasts session-hours (and the browser
+    # forgets it when the tab closes). A replaced refresh token used again
+    # within refresh-grace-seconds is two tabs racing (409, retry); later, the
+    # session is ended as stolen.
+    session:
+      remember-me-days: ${SESSION_REMEMBER_ME_DAYS:30}
+      session-hours: ${SESSION_HOURS:12}
+      refresh-grace-seconds: ${SESSION_REFRESH_GRACE_SECONDS:30}
     # Encrypts secrets stored in the database, such as the Claude API key an
     # admin enters on the AI settings page. Locally, blank falls back to
     # JWT_SECRET. Changing it later makes saved secrets unreadable until they

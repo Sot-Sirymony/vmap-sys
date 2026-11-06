@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiClient, clearApiCache, reportSessionEnded } from './apiClient';
+import { apiClient, authorizedFetch, clearApiCache, reportSessionEnded } from './apiClient';
 import type { AiChatTurn, AiConversation, AiFocus, AiMessage, AiSafetyAlert, AiStatus } from '../types/vision';
 
 // V9 Phase 3: AI consent, the Dream Coach chat and crisis alerts.
@@ -50,12 +50,12 @@ export async function streamAiMessage(
   focus: AiFocus,
   onText: (text: string) => void,
 ): Promise<AiChatTurn> {
-  const response = await fetch(`${API_BASE_URL}/ai/chat/stream`, {
+  const response = await authorizedFetch('/ai/chat/stream', {
     method: 'POST',
     // JSON too: a problem found before streaming starts answers as a JSON error.
-    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream, application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream, application/json' },
     body: JSON.stringify({ conversationId, message, language, ...focus }),
-  });
+  }, token);
   clearApiCache();
   if (!response.ok || !response.body) {
     reportSessionEnded(response, token);

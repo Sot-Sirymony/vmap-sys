@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
@@ -9,6 +10,6 @@ import java.util.List;
  * per user. Every other entity uses ReorderRequest instead.
  */
 public record SimpleReorderRequest(
-        @NotEmpty List<Long> orderedIds
+        @NotEmpty @Size(max = 1000) List<Long> orderedIds
 ) {
 }

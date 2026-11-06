@@ -60,6 +60,7 @@ public class PasswordResetService {
     private final PasswordResetMailer mailer;
     private final PasswordResetRateLimiter rateLimiter;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    private final AuthSessionService authSessionService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     /** Long enough to find the mail, short enough that a leaked inbox ages out. */
@@ -149,6 +150,9 @@ public class PasswordResetService {
         // sign-in lock on this email (perhaps caused by someone else guessing)
         // is lifted and they can sign in with the new password straight away.
         loginAttemptLimiter.recordSuccess(user.getEmail());
+        // V10 (SEC-07-03): whoever had the old password may be signed in
+        // somewhere; every session ends and the owner signs in afresh.
+        authSessionService.endAllSessions(user.getId());
     }
 
     private String buildLink(String token) {

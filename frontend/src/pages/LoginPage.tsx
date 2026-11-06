@@ -62,7 +62,7 @@ export function LoginPage() {
     // will request the same module again on navigation and get the cached one.
     void import('./DashboardPage').catch(() => undefined);
     try {
-      const response = await login({ email, password });
+      const response = await login({ email, password, rememberMe: remember });
 
       if (remember) {
         localStorage.setItem(REMEMBERED_EMAIL_KEY, email);

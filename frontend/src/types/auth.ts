@@ -11,6 +11,8 @@ export type RegisterRequest = {
 export type LoginRequest = {
   email: string;
   password: string;
+  /** V10: a 30-day session, or one that ends with the browser tab. */
+  rememberMe?: boolean;
 };
 
 /**
@@ -56,14 +58,25 @@ export type AuthResponse = {
    * backend that predates FR-39.
    */
   appearance?: AppearancePreferences;
+  /**
+   * V10 (SEC-07-04): `token` above is a short-lived access token, kept in
+   * memory only. The refresh token renews it and is the one value kept in
+   * browser storage. Optional for responses that predate V10.
+   */
+  refreshToken?: string;
+  /** Seconds until `token` runs out. */
+  expiresIn?: number;
+};
+
+export type AuthUser = {
+  id: number;
+  fullName: string;
+  email: string;
+  role: string;
 };
 
 export type AuthState = {
+  /** The access token. In memory only; never written to browser storage. */
   token: string | null;
-  user: {
-    id: number;
-    fullName: string;
-    email: string;
-    role: string;
-  } | null;
+  user: AuthUser | null;
 };

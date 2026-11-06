@@ -73,6 +73,8 @@ class AccessControlSweepTests {
             "GET /api/health",
             "POST /api/auth/register",
             "POST /api/auth/login",
+            "POST /api/auth/refresh",
+            "POST /api/auth/logout",
             "POST /api/auth/forgot-password",
             "POST /api/auth/reset-password",
             "GET /api/ui-text",
@@ -367,6 +369,49 @@ class AccessControlSweepTests {
         }
         assertThat(bodies).as("request body types found").hasSizeGreaterThan(40);
         assertThat(problems).as("request bodies with a field the caller must not set").isEmpty();
+    }
+
+    // ---------- 5. every text field has a size limit (SEC-05-09) ----------
+
+    /**
+     * Every String, list or map in a request body must have @Size with a max,
+     * or a @Pattern that cannot match long text (no *, + or open {n,}). Without
+     * a limit, one request could store megabytes or make a slow hash of them.
+     */
+    @Test
+    void everyTextListAndMapInARequestBodyHasAMaximumSize() throws Exception {
+        List<String> unbounded = new ArrayList<>();
+        for (Class<?> body : requestBodyTypes()) {
+            for (var component : body.getRecordComponents()) {
+                Class<?> type = component.getType();
+                boolean sized = String.class.equals(type) || java.util.Collection.class.isAssignableFrom(type)
+                        || Map.class.isAssignableFrom(type);
+                if (!sized) {
+                    continue;
+                }
+                var field = body.getDeclaredField(component.getName());
+                jakarta.validation.constraints.Size size = field.getAnnotation(jakarta.validation.constraints.Size.class);
+                jakarta.validation.constraints.Pattern pattern = field.getAnnotation(jakarta.validation.constraints.Pattern.class);
+                boolean boundedPattern = String.class.equals(type) && pattern != null
+                        && !pattern.regexp().matches(".*([*+]|\\{\\d+,}).*");
+                if ((size == null || size.max() == Integer.MAX_VALUE) && !boundedPattern) {
+                    unbounded.add(body.getSimpleName() + "." + component.getName());
+                }
+            }
+        }
+        assertThat(unbounded).as("request fields without a maximum size").isEmpty();
+    }
+
+    private Set<Class<?>> requestBodyTypes() {
+        Set<Class<?>> bodies = new TreeSet<>(Comparator.comparing(Class::getSimpleName));
+        handlerMapping.getHandlerMethods().values().forEach(method -> {
+            for (var parameter : method.getMethodParameters()) {
+                if (parameter.hasParameterAnnotation(org.springframework.web.bind.annotation.RequestBody.class)) {
+                    bodies.add(parameter.getParameterType());
+                }
+            }
+        });
+        return bodies;
     }
 
     // ---------- route table ----------

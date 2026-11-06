@@ -61,6 +61,8 @@ class PasswordResetServiceTest {
     private PasswordResetRateLimiter rateLimiter;
     @Mock
     private LoginAttemptLimiter loginAttemptLimiter;
+    @Mock
+    private AuthSessionService authSessionService;
 
     private PasswordEncoder passwordEncoder;
     private PasswordResetService service;
@@ -69,7 +71,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter);
+        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService);
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
@@ -184,6 +186,8 @@ class PasswordResetServiceTest {
         verify(appUserRepository).save(user);
         // V10 (SEC-07-01): a reset lifts any sign-in lock on the email.
         verify(loginAttemptLimiter).recordSuccess(EMAIL);
+        // SEC-07-03: every session of the account ends.
+        verify(authSessionService).endAllSessions(user.getId());
     }
 
     @Test

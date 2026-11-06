@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [10.0.0] — In progress (phases 1 and 2 of 7 built)
+## [10.0.0] — In progress (phases 1 to 4 of 7 built)
 
 Implements [VMS_BRD_V10.0.0](VMS_BRD_V10.0.0.md): security hardening to the OWASP Top 10:2025.
 No new user features.
@@ -143,6 +143,78 @@ which tells a caller an email has an account. Fixing it properly needs email ver
   are shown only when they are http or https addresses; anything else, such as
   `javascript:`, shows as plain text. The server already limited both fields;
   `LinkFieldValidationTest` now proves it.
+
+### Phase 3: sessions
+
+- **Added** server-side sessions (SEC-07-03, migration `V61__auth_sessions.sql`). Every sign-in
+  opens one; the access token names it (claim `sid`), and every request checks that the
+  session is still open and belongs to the same active user, in one query that replaced the
+  old user lookup. Ending a session stops its tokens at once.
+- **Changed** access tokens last 30 minutes instead of 24 hours (SEC-07-04). A refresh token
+  (random 256 bits, stored on the server only as a SHA-256) renews them through the new public
+  `POST /api/auth/refresh`, and is replaced on every use. A replaced token used again within
+  30 seconds is two tabs racing (409, retry); later it means the token was copied, and the
+  session ends. "Remember me" sessions last 30 days, others 12 hours.
+- **Added** `POST /api/auth/logout`, which ends the session on the server. A password change
+  ends every other session (the one making the change stays); a password reset ends all.
+  Account deletion removes the sessions; ended sessions are deleted daily after 7 days.
+- **Changed** access tokens are stricter (SEC-07-09): HS256 with the app key only (so
+  `alg: none` is refused), issuer `vision-mapping`, and an expiry, subject and session are
+  required.
+- **Changed** the frontend keeps the access token in memory only (SEC-07-05); browser storage
+  holds just the refresh token and the user's name. Each page load renews the session first
+  (protected pages wait for it); the token is renewed a minute before it runs out; a 401 is
+  answered by renewing once and retrying, including for downloads and the Dream Coach stream.
+  Tabs take turns renewing (Web Locks) and read the newest token, so they never spend the same
+  one. Signing out in one tab signs out the others. Being offline never signs anyone out.
+- **Note:** sessions saved by earlier versions hold a 24-hour access token the server no longer
+  accepts, so everyone signs in once after this deploy.
+- **Why not an HttpOnly cookie:** the frontend and API are on separate `onrender.com`
+  subdomains. That domain is on the Public Suffix List, so browsers treat them as different
+  sites and would block the cookie as third-party. Revisit with a custom domain.
+- **Added** `SessionFlowTests` (15), new cases in the password tests, and rewritten frontend
+  auth tests (`AuthContext.test.tsx`, `AuthContext.expiry.test.tsx`, `ProtectedRoute.test.tsx`).
+  Backend: 393 tests pass; frontend: 443. Checked in headless Chrome against a local build with
+  2-minute tokens: sign-in, reload, two tabs at once, background renewal, logout in one tab
+  ending both, refresh token refused after logout, no CSP violations.
+
+### Phase 4: injection and data integrity
+
+- **Added** formula-injection protection on Excel export (SEC-05-04). Values were already
+  written as text; one that starts with `=`, `+`, `-`, `@`, tab or carriage return now also
+  gets Excel's quote-prefix style, so it stays text even after someone edits the cell. Nothing
+  visible changes, and an import reads the same value back.
+- **Changed** Excel import refuses, before the backup snapshot and before anything is saved
+  (SEC-05-05, SEC-08-02): files not named `.xlsx`; macro-enabled workbooks, even when renamed
+  to `.xlsx`; files that are not workbooks (a clear message instead of a 500); more than 30
+  sheets or 5,000 rows in a sheet. POI's zip-bomb checks are set explicitly (a part may not
+  inflate more than 100 times or past 50 MB). Error messages no longer include internal
+  exception text.
+- **Changed** a formula cell is imported as the value it last showed, never as its text and
+  never evaluated (SEC-05-05).
+- **Changed** each imported row is checked with the same rules as the form before it is saved
+  (SEC-08-01). A row that fails, such as a 161-character vision area name, is skipped with the
+  reason ("name: size must be between ...") and the other rows still import, instead of the
+  database refusing it later.
+- **Changed** every text, list and map field in a request body now has a maximum size
+  (SEC-05-09). 13 had none: passwords, the sign-in email, the reset token, status and language
+  fields, the AI model, the reorder lists and module field labels. A new guard in
+  `AccessControlSweepTests` fails the build for any new field without one.
+- **Changed** records sent to Claude go through one helper, `AiContextBuilder.asParticipantData`,
+  which wraps them in the data block and neutralises every angle bracket inside it
+  (SEC-05-07). Before, each field was neutralised by `clip()`, but a value that skipped it could
+  have closed the block. Claude's output still never saves or sends anything by itself.
+- **Added** `ExcelSecurityFlowTests` (8), `ParticipantDataBlockTest` (2), and
+  `security-sinks.test.ts`, which fails if the frontend ever uses `dangerouslySetInnerHTML`,
+  `innerHTML`, `eval` or similar (SEC-05-02, SEC-05-03; none is used). Backend: 404 tests
+  pass; frontend: 444.
+- **Checked, no change needed:** SQL is parameterised everywhere; the only SQL built from strings
+  uses table names from a fixed list in code (SEC-05-01). Emails are plain text with fixed
+  subjects and recipients from the database (SEC-05-06). JSON never accepts type names from a
+  request (SEC-08-05).
+- **Not done:** SEC-05-08 (checking Claude's replies for leaked instructions or other users'
+  data) is a Should and is left for later. Claude is only ever given the caller's own records,
+  so another user's data cannot appear in a reply.
 
 ## [9.0.0] — All 9 phases built; awaiting UAT
 

@@ -15,6 +15,26 @@ export function login(request: LoginRequest) {
   });
 }
 
+/**
+ * V10 (SEC-07-04): trades the refresh token for a new access token and a new
+ * refresh token. 401 means the session has ended; 409 means another tab
+ * renewed it a moment ago and its newer token should be used.
+ */
+export function refreshSession(refreshToken: string) {
+  return apiClient<AuthResponse>('/auth/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  });
+}
+
+/** V10 (SEC-07-03): ends the session on the server. Always answers 204. */
+export function logoutSession(refreshToken: string) {
+  return apiClient<void>('/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  });
+}
+
 export function register(request: RegisterRequest) {
   return apiClient<AuthResponse>('/auth/register', {
     method: 'POST',

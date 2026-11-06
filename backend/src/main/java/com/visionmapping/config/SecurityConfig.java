@@ -97,6 +97,10 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/api/auth/register",
                                 "/api/auth/login",
+                                // V10 (SEC-07-04): called when the access token has
+                                // run out; the refresh token in the body is the key.
+                                "/api/auth/refresh",
+                                "/api/auth/logout",
                                 // Recovery is for users who cannot sign in, so it
                                 // cannot sit behind authentication. Both are
                                 // rate-limited only by the token being unguessable

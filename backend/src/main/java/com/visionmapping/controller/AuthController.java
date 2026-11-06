@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.ChangePasswordRequest;
 import com.visionmapping.dto.request.ForgotPasswordRequest;
 import com.visionmapping.dto.request.LoginRequest;
+import com.visionmapping.dto.request.RefreshTokenRequest;
 import com.visionmapping.dto.request.RegisterRequest;
 import com.visionmapping.dto.request.ResetPasswordRequest;
 import com.visionmapping.dto.response.AuthResponse;
@@ -36,6 +37,28 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         return authService.login(request, ClientIp.of(http));
+    }
+
+    /**
+     * V10 (SEC-07-04): a new access token, and a new refresh token in place of
+     * the one sent. Public, because it is called when the access token has run
+     * out. 401 when the session has ended; 409 when another tab renewed it a
+     * moment ago (retry with the token that tab saved).
+     */
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refresh(request.refreshToken());
+    }
+
+    /**
+     * V10 (SEC-07-03): ends the session on the server, so its refresh token and
+     * access tokens stop working at once. Public and always 204, so signing out
+     * works even after the access token has run out.
+     */
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
     }
 
     /**

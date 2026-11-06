@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
  * in the service.
  */
 public record IssueReportStatusUpdateRequest(
-        @NotBlank String status,
+        @NotBlank @Size(max = 40) String status,
         @Size(max = 3000) String resolutionNote
 ) {
 }

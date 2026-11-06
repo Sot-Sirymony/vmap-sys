@@ -1,5 +1,9 @@
 package com.visionmapping.excel;
 
+import org.apache.poi.openxml4j.util.ZipSecureFile;
+import lombok.extern.slf4j.Slf4j;
+import java.util.Locale;
+import jakarta.validation.Validator;
 import static com.visionmapping.excel.WorkbookSchema.CODE;
 import static com.visionmapping.excel.WorkbookSchema.DREAMS;
 import static com.visionmapping.excel.WorkbookSchema.GOALS;
@@ -63,9 +67,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExcelService {
+
+    /** V10 (SEC-08-02): limits on what an import may contain. */
+    static final int MAX_SHEETS = 30;
+    static final int MAX_ROWS_PER_SHEET = 5_000;
+    /** Largest single part of the .xlsx once unzipped; a zip bomb is refused before it fills the heap. */
+    static final long MAX_UNZIPPED_ENTRY_BYTES = 50L * 1024 * 1024;
+    /** Characters that make a spreadsheet treat a typed value as a formula (SEC-05-04). */
+    private static final String FORMULA_TRIGGERS = "=+-@\t\r";
+
+    static {
+        // POI checks every zip entry as it is read: one that inflates more than
+        // 100 times (ratio 0.01) or past the size limit stops the read.
+        ZipSecureFile.setMinInflateRatio(0.01);
+        ZipSecureFile.setMaxEntrySize(MAX_UNZIPPED_ENTRY_BYTES);
+    }
 
     private static final List<String> REQUIRED_SHEETS = List.of(
             "Dashboard",
@@ -98,6 +118,7 @@ public class ExcelService {
     private final GoalService goalService;
     private final DreamService dreamService;
     private final VisionAreaService visionAreaService;
+    private final Validator validator;
 
     public byte[] exportWorkbook() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
@@ -197,6 +218,25 @@ public class ExcelService {
     public ExcelImportSummaryResponse importWorkbook(MultipartFile file) {
         List<String> errors = new ArrayList<>();
 
+        // V10 (SEC-05-05, SEC-08-02): refuse files that are not plain .xlsx
+        // workbooks, or are too big, before anything else happens.
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        if (!name.endsWith(".xlsx")) {
+            errors.add("Only .xlsx workbooks can be imported.");
+            return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);
+        }
+        try (Workbook check = open(file)) {
+            String problem = refusalReason(check);
+            if (problem != null) {
+                errors.add(problem);
+                return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);
+            }
+        } catch (IOException | RuntimeException exception) {
+            log.info("Refused an unreadable workbook upload: {}", exception.toString());
+            errors.add("This file is not a readable .xlsx workbook.");
+            return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);
+        }
+
         // BRD C-7: snapshot the current data before anything is imported, so a
         // bad import can always be recovered from. A failed snapshot aborts the
         // import — proceeding without the safety copy would defeat its purpose.
@@ -204,19 +244,41 @@ public class ExcelService {
         try {
             backupFile = saveBackupSnapshot();
         } catch (IOException exception) {
-            errors.add("Import aborted: unable to save the automatic backup snapshot: " + exception.getMessage());
+            log.error("Could not save the pre-import backup snapshot", exception);
+            errors.add("Import aborted: unable to save the automatic backup snapshot.");
             return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors);
         }
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+        try (Workbook workbook = open(file)) {
             validateStructure(workbook, errors);
-            return new HierarchyImport(visionAreaService, dreamService, goalService, visionStepService, taskItemService)
+            return new HierarchyImport(visionAreaService, dreamService, goalService, visionStepService, taskItemService, validator)
                     .run(workbook, errors)
                     .withBackupFile(backupFile);
         } catch (IOException exception) {
-            errors.add("Unable to read workbook: " + exception.getMessage());
+            log.info("Could not read an uploaded workbook: {}", exception.toString());
+            errors.add("This file is not a readable .xlsx workbook.");
             return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors, backupFile);
         }
+    }
+
+    private static XSSFWorkbook open(MultipartFile file) throws IOException {
+        return new XSSFWorkbook(file.getInputStream());
+    }
+
+    /** Null when the workbook may be imported. */
+    static String refusalReason(Workbook workbook) {
+        if (workbook instanceof XSSFWorkbook xssf && xssf.isMacroEnabled()) {
+            return "Workbooks with macros cannot be imported. Save it as a plain .xlsx workbook and try again.";
+        }
+        if (workbook.getNumberOfSheets() > MAX_SHEETS) {
+            return "This workbook has more than " + MAX_SHEETS + " sheets.";
+        }
+        for (Sheet sheet : workbook) {
+            if (sheet.getLastRowNum() > MAX_ROWS_PER_SHEET) {
+                return "The sheet \"" + sheet.getSheetName() + "\" has more than " + MAX_ROWS_PER_SHEET + " rows.";
+            }
+        }
+        return null;
     }
 
     private String saveBackupSnapshot() throws IOException {
@@ -250,11 +312,22 @@ public class ExcelService {
             cell.setCellStyle(headerStyle);
         }
 
+        // V10 (SEC-05-04): every value is written as text. A value that starts
+        // like a formula also gets the "quote prefix" style, so the spreadsheet
+        // keeps it as text even after someone edits the cell. Nothing visible
+        // changes, and an import reads the same value back.
+        CellStyle textOnly = workbook.createCellStyle();
+        textOnly.setQuotePrefixed(true);
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             Row row = sheet.createRow(rowIndex + 1);
             List<?> values = rows.get(rowIndex);
             for (int cellIndex = 0; cellIndex < values.size(); cellIndex++) {
-                row.createCell(cellIndex).setCellValue(String.valueOf(value(values.get(cellIndex))));
+                String text = String.valueOf(value(values.get(cellIndex)));
+                Cell cell = row.createCell(cellIndex);
+                cell.setCellValue(text);
+                if (looksLikeFormula(text)) {
+                    cell.setCellStyle(textOnly);
+                }
             }
         }
 
@@ -282,6 +355,10 @@ public class ExcelService {
         XSSFDataValidationHelper helper = new XSSFDataValidationHelper((org.apache.poi.xssf.usermodel.XSSFSheet) sheet);
         CellRangeAddressList range = new CellRangeAddressList(1, 500, columnIndex, columnIndex);
         sheet.addValidationData(helper.createValidation(helper.createExplicitListConstraint(csvValues.split(",")), range));
+    }
+
+    static boolean looksLikeFormula(String text) {
+        return !text.isEmpty() && FORMULA_TRIGGERS.indexOf(text.charAt(0)) >= 0;
     }
 
     private Object value(Object value) {

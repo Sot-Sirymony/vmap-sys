@@ -170,6 +170,24 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), request);
     }
 
+    /** V10 (SEC-07-03): the refresh token no longer opens a session. */
+    @ExceptionHandler(SessionEndedException.class)
+    public ResponseEntity<ErrorResponse> handleSessionEnded(
+            SessionEndedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
+    }
+
+    /** V10 (SEC-07-04): another tab renewed the session first; retry with its token. */
+    @ExceptionHandler(SessionSupersededException.class)
+    public ResponseEntity<ErrorResponse> handleSessionSuperseded(
+            SessionSupersededException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(
             AccessDeniedException exception,

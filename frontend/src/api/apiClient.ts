@@ -9,6 +9,70 @@ type ApiErrorResponse = {
   error?: string;
 };
 
+/** A request the server refused. `status` lets callers tell 401, 409 and the rest apart. */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+/**
+ * V10 (SEC-07-04): renews the access token after a 401. Given the token that
+ * was refused, it resolves to a new one, or to null when the session has
+ * ended. It throws when the server cannot be reached, so being offline never
+ * signs anyone out. AuthProvider registers it.
+ */
+type TokenRefresher = (refusedToken: string) => Promise<string | null>;
+
+let tokenRefresher: TokenRefresher | null = null;
+
+/** Returns a function that removes the refresher again. */
+export function setTokenRefresher(refresher: TokenRefresher) {
+  tokenRefresher = refresher;
+  return () => {
+    if (tokenRefresher === refresher) {
+      tokenRefresher = null;
+    }
+  };
+}
+
+/**
+ * After a 401 on a signed-in request: a fresh token to retry with, or null
+ * when there is none (no refresher, the session ended, or the server could
+ * not be reached).
+ */
+async function renewedToken(response: Response, token: string | null | undefined): Promise<string | null> {
+  if (response.status !== 401 || !token || !tokenRefresher) {
+    return null;
+  }
+  try {
+    return await tokenRefresher(token);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * fetch with the bearer token, renewing it once on a 401, for the few calls
+ * that need the raw Response (downloads, the Dream Coach stream). The caller
+ * still checks `response.ok` and calls reportSessionEnded with the token it
+ * passed, which signs the user out if the retry was refused too.
+ */
+export async function authorizedFetch(path: string, init: RequestInit, token: string): Promise<Response> {
+  const send = (bearer: string) => {
+    const headers = new Headers(init.headers);
+    headers.set('Authorization', `Bearer ${bearer}`);
+    return fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  };
+  const response = await send(token);
+  const retryToken = await renewedToken(response, token);
+  return retryToken ? send(retryToken) : response;
+}
+
 /**
  * How long a GET stays reusable. The hierarchy pages each need several of the
  * same lists (areas, dreams, goals, steps, tasks) to label and filter their
@@ -110,23 +174,29 @@ export function reportSessionEnded(response: Response, token: string | null | un
 }
 
 async function sendRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers = new Headers(options.headers);
-  if (!(options.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
+  const send = (token: string | null | undefined) => {
+    const headers = new Headers(options.headers);
+    if (!(options.body instanceof FormData)) {
+      headers.set('Content-Type', 'application/json');
+    }
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+    return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  };
 
-  if (options.token) {
-    headers.set('Authorization', `Bearer ${options.token}`);
+  let response = await send(options.token);
+  // V10 (SEC-07-04): the access token is short-lived. A 401 on a signed-in
+  // request is first answered by renewing it and trying once more; only if
+  // that fails too is the session over.
+  const retryToken = await renewedToken(response, options.token);
+  if (retryToken) {
+    response = await send(retryToken);
   }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
 
   if (!response.ok) {
-    reportSessionEnded(response, options.token);
-    throw new Error(await readErrorMessage(response));
+    reportSessionEnded(response, retryToken ?? options.token);
+    throw new ApiError(await readErrorMessage(response), response.status);
   }
 
   if (response.status === 204) {

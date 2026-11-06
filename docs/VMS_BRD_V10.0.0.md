@@ -75,7 +75,7 @@ Review of the code at commit `bbcc1cc`. "Gap" means a requirement in this BRD ad
 | Encryption at rest | Claude key: AES-256-GCM, key from SHA-256 of `SETTINGS_ENCRYPTION_KEY` or falls back to `JWT_SECRET` | Fallback ties two secrets together; no key-rotation path |
 | Password reset | Single-use, 30-minute token, per-email and per-IP rate limits | OK |
 | Share links | 256-bit `SecureRandom` token, read-only, expiring | OK; add access logging |
-| Excel import | `.xlsx` upload, backup before import, POI | No explicit size or row limit; formula-injection risk on export to be checked |
+| Excel import | `.xlsx` upload, backup before import, POI | No explicit size or row limit. Export wrote text cells (not formulas), but nothing kept formula-like text as text once edited |
 | Native SQL | `AccountService` builds `UPDATE`/`DELETE` with a table name from code | Table names must stay a fixed allow-list |
 | Error handling | Global handler; generic message for unexpected errors | Some handlers return `exception.getMessage()` as-is; must never carry internal detail |
 | Logging | Application logs only | **Gap** – no security event log, no alerts |
@@ -255,7 +255,9 @@ Each phase ends with build, tests and a summary, then waits for confirmation (as
 | --- | --- |
 | 1 | Built and tested locally, 6 Nov 2026: disabled accounts refused at sign-in and on every request (SEC-01-05, SAC-01); sign-in limits with lock, `Retry-After`, the same answer for unknown emails, and the lock lifted by a password reset (SEC-07-01, SAC-02); API and frontend security headers, frontend CSP checked in headless Chrome with 0 violations (SEC-02-01, SEC-02-02); 10 MB upload limit with 413 (SEC-02-07); `SETTINGS_ENCRYPTION_KEY` required in production, with old values still readable (SEC-04-03, SEC-02-03, SAC-16 for this key). SEC-07-02 is partly done: sign-in does not reveal registered emails, but registration still does (see *Open questions*). Not yet checked on Render |
 | 2 | Built and tested locally, 6 Nov 2026: path-based role rules for `/api/admin/**` and `/api/coach/**` plus one shared `Roles` check in services (SEC-01-03); ownership checked before AI availability (SEC-01-02); automatic sweep of every route for no token (401), wrong role (403) and another user's record in the path or body (404), with the owner's data unchanged (SEC-01-01, SEC-01-08, SAC-04); guards on coach write routes and on request-body fields (SEC-01-04, SEC-01-06, SAC-05); http/https-only links on server and frontend (SEC-01-10). No ownership hole was found; the role answers and the AI endpoints were inconsistent and are fixed |
-| 3 to 7 | Not started |
+| 3 | Built and tested locally, 6 Nov 2026: server-side sessions checked on every request; logout, password change (other sessions) and reset (all sessions) end them at once (SEC-07-03, SAC-03); 30-minute access tokens renewed with rotating refresh tokens and reuse detection, 30-day "remember me" (SEC-07-04); access token in memory only, refresh token in browser storage (SEC-07-05, decided below); strict token checks (SEC-07-09). SEC-06-05: change password and delete account already need the current password; there is no email change; a role is only ever granted by an admin naming a coach, and roles are read from the database on every request. A role change does not end sessions: it applies on the next request anyway |
+| 4 | Built and tested locally, 6 Nov 2026: formula-safe Excel export (SEC-05-04, SAC-07); import refuses non-.xlsx, macro, unreadable and oversized files, reads formulas as their last value, and checks each row like the form (SEC-05-05, SEC-08-01, SEC-08-02, SAC-08); a maximum size on every request text field, with a guard test (SEC-05-09); one escaping helper for all data sent to Claude (SEC-05-07, SAC-10); a guard against HTML-injection sinks in the frontend (SEC-05-02, SEC-05-03, SAC-09). SEC-05-01, SEC-05-06 and SEC-08-05 checked, no change needed. SEC-05-08 (Should) not done |
+| 5 to 7 | Not started |
 
 
 | Phase | Scope | Requirements |
@@ -321,7 +323,7 @@ Each phase ends with build, tests and a summary, then waits for confirmation (as
 
 - [ ] Who is the security lead, and where should alerts go?
 - [ ] Registration answers "Email is already registered.", which reveals who has an account (SEC-07-02). Fix with email verification (registration always says "check your email"), or accept the risk with a registration rate limit only?
-- [ ] Should tokens move to `HttpOnly` cookies (needs same-site API) or stay as bearer tokens in memory with refresh? (SEC-07-05)
+- [x] Token storage (SEC-07-05): access token in memory, rotating refresh token in browser storage. `HttpOnly` cookies are not possible while the frontend and API are on separate `onrender.com` subdomains (a public suffix, so different sites); revisit with a custom domain.
 - [ ] Is two-factor sign-in required for coaches, or only for admins? (SEC-07-07)
 - [ ] Should fear, criticism and attitude journals be encrypted at field level? This blocks database search on them. (SEC-04-07)
 - [ ] Which lockout numbers fit participants best (attempts, window, lock time)?

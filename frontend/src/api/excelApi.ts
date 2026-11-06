@@ -1,13 +1,8 @@
-import { API_BASE_URL, apiClient, reportSessionEnded } from './apiClient';
+import { apiClient, authorizedFetch, reportSessionEnded } from './apiClient';
 import type { ExcelImportSummary } from '../types/vision';
 
 export async function exportExcelWorkbook(token: string) {
-  const response = await fetch(`${API_BASE_URL}/excel/export`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const response = await authorizedFetch('/excel/export', { method: 'POST' }, token);
 
   if (!response.ok) {
     reportSessionEnded(response, token);

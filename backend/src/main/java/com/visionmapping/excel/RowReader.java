@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 
@@ -34,7 +35,28 @@ class RowReader {
 
     String text(int column) {
         Cell cell = row.getCell(column);
-        return cell == null ? "" : FORMATTER.formatCellValue(cell).trim();
+        if (cell == null) {
+            return "";
+        }
+        if (cell.getCellType() == CellType.FORMULA) {
+            return cachedValue(cell).trim();
+        }
+        return FORMATTER.formatCellValue(cell).trim();
+    }
+
+    /**
+     * V10 (SEC-05-05): a formula is never evaluated (it could point at other
+     * files or sites). The value the spreadsheet last showed is used instead,
+     * as plain data.
+     */
+    private static String cachedValue(Cell cell) {
+        return switch (cell.getCachedFormulaResultType()) {
+            case STRING -> cell.getRichStringCellValue().getString();
+            case NUMERIC -> FORMATTER.formatRawCellContents(cell.getNumericCellValue(),
+                    cell.getCellStyle().getDataFormat(), cell.getCellStyle().getDataFormatString());
+            case BOOLEAN -> cell.getBooleanCellValue() ? "TRUE" : "FALSE";
+            default -> "";
+        };
     }
 
     String textOrNull(int column) {

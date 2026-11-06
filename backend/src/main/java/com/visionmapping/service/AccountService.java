@@ -66,6 +66,7 @@ public class AccountService {
             "coach_comments",
             "plan_shares",
             "password_reset_tokens",
+            "auth_sessions",
             "issue_reports",
             "module_completions",
             "chain_assessments",

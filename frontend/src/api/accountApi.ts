@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiClient, reportSessionEnded } from './apiClient';
+import { apiClient, authorizedFetch, reportSessionEnded } from './apiClient';
 import type { ProgressMetrics, ReminderSettings } from '../types/vision';
 
 export function getProgressMetrics(token: string, date: string) {
@@ -23,9 +23,7 @@ export function sendTestReminder(token: string) {
 }
 
 export async function exportAccountData(token: string) {
-  const response = await fetch(`${API_BASE_URL}/account/export`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await authorizedFetch('/account/export', {}, token);
   if (!response.ok) {
     reportSessionEnded(response, token);
     throw new Error(`Export failed with status ${response.status}`);
@@ -34,9 +32,7 @@ export async function exportAccountData(token: string) {
 }
 
 export async function downloadPlanPdf(token: string, dreamId: number) {
-  const response = await fetch(`${API_BASE_URL}/dreams/${dreamId}/plan.pdf`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await authorizedFetch(`/dreams/${dreamId}/plan.pdf`, {}, token);
   if (!response.ok) {
     reportSessionEnded(response, token);
     throw new Error(`Download failed with status ${response.status}`);

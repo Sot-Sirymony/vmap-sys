@@ -7,6 +7,10 @@ package com.visionmapping.dto.response;
  * separate request after sign-in would paint the default theme first and swap it
  * a moment later — the most visible possible bug in a theming feature. Returning
  * it with the session makes the first paint correct.
+ *
+ * <p>V10 (SEC-07-04): {@code token} is the short-lived access token, kept in
+ * memory by the client; {@code refreshToken} renews it and is kept in browser
+ * storage; {@code expiresIn} is the access token's lifetime in seconds.
  */
 public record AuthResponse(
         String token,
@@ -15,6 +19,8 @@ public record AuthResponse(
         String fullName,
         String email,
         String role,
-        AppearancePreferencesResponse appearance
+        AppearancePreferencesResponse appearance,
+        String refreshToken,
+        long expiresIn
 ) {
 }

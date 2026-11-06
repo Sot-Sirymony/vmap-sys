@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 /** V9 (AI-FR-24): the AI settings other than the key. A field left out keeps its value. */
 public record AiSettingsRequest(
         boolean enabled,
-        @NotBlank String model,
+        @NotBlank @Size(max = 100) String model,
         @NotNull @DecimalMin("0.00") @DecimalMax("1000.00") BigDecimal monthlyBudgetUsd,
         @Min(1) @Max(500) Integer dailyMessageLimit,
         @Size(max = 2000) String helpLines,

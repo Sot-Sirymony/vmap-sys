@@ -18,7 +18,7 @@ import jakarta.validation.constraints.Size;
  * created before any such rule existed.
  */
 public record ChangePasswordRequest(
-        @NotBlank String currentPassword,
+        @NotBlank @Size(max = 100) String currentPassword,
         @NotBlank @Size(min = 8, max = 100) String newPassword
 ) {
 }

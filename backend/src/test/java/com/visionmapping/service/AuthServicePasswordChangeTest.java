@@ -14,7 +14,6 @@ import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
-import com.visionmapping.security.JwtService;
 import com.visionmapping.util.UserScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +42,7 @@ class AuthServicePasswordChangeTest {
     @Mock
     private AuthenticationManager authenticationManager;
     @Mock
-    private JwtService jwtService;
+    private AuthSessionService authSessionService;
     @Mock
     private UserScope userScope;
     @Mock
@@ -58,7 +57,7 @@ class AuthServicePasswordChangeTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, jwtService, userScope, cohortService, loginAttemptLimiter);
+        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, userScope, cohortService, loginAttemptLimiter, authSessionService);
         user = AppUser.builder()
                 .id(7L)
                 .fullName("Pat Owner")
@@ -82,6 +81,8 @@ class AuthServicePasswordChangeTest {
         // The old password must stop working, which is the entire point.
         assertThat(passwordEncoder.matches(CURRENT_PASSWORD, user.getPasswordHash())).isFalse();
         verify(appUserRepository).save(user);
+        // SEC-07-03: other sessions end (no session in this unit test, so none is kept).
+        verify(authSessionService).endOtherSessions(user.getId(), null);
     }
 
     /**

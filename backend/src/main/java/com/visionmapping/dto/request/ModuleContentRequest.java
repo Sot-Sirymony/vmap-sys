@@ -10,6 +10,6 @@ public record ModuleContentRequest(
         @NotBlank @Size(max = 600) String summary,
         @NotBlank @Size(max = 3000) String guidance,
         @NotBlank @Size(max = 1000) String exerciseInstructions,
-        Map<String, String> fieldLabels
+        @Size(max = 50) Map<@Size(max = 60) String, @Size(max = 200) String> fieldLabels
 ) {
 }

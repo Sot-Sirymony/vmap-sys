@@ -1,12 +1,15 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { AuthProvider } from '../../context/AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 
+const USER = { id: 1, fullName: 'Test User', email: 'test@example.com', role: 'USER' };
+
 describe('ProtectedRoute', () => {
   afterEach(() => {
     localStorage.clear();
+    vi.restoreAllMocks();
   });
 
   it('redirects anonymous users to login', () => {
@@ -15,15 +18,18 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Login Page')).toBeInTheDocument();
   });
 
-  it('renders child route for authenticated users', () => {
-    localStorage.setItem('visionMappingAuth', JSON.stringify({
-      token: 'test-token',
-      user: { id: 1, fullName: 'Test User', email: 'test@example.com', role: 'USER' },
-    }));
+  it('waits for a stored session to be renewed, then renders the child route', async () => {
+    localStorage.setItem('visionMappingAuth', JSON.stringify({ refreshToken: 'refresh-1', user: USER }));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      token: 'access-token', tokenType: 'Bearer', userId: 1, fullName: 'Test User', email: 'test@example.com',
+      role: 'USER', refreshToken: 'refresh-2', expiresIn: 1800,
+    }), { status: 200 }));
 
     renderRoute();
 
-    expect(screen.getByText('Protected Page')).toBeInTheDocument();
+    // Not sent to the login page while the session is being renewed.
+    expect(screen.queryByText('Login Page')).not.toBeInTheDocument();
+    expect(await screen.findByText('Protected Page')).toBeInTheDocument();
   });
 });
 

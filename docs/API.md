@@ -162,8 +162,9 @@ A wrong current password is deliberately **not** a `401`: that status means "sig
 in again", and the frontend acts on it by ending the session. Mistyping the old
 password is an ordinary form error, not an expired session.
 
-Note: existing tokens stay valid after a password change. Sessions are stateless
-JWTs, so nothing is revoked server-side until they expire.
+Since V10, a password change ends every other session of the account at once;
+the session that made the change stays signed in. A password reset ends all of
+them.
 
 ### Login
 
@@ -176,9 +177,15 @@ Body:
 ```json
 {
   "email": "demo@example.com",
-  "password": "Password123"
+  "password": "Password123",
+  "rememberMe": true
 }
 ```
+
+`rememberMe` (optional, default `true`) keeps the session for 30 days; `false`
+keeps it for 12 hours and the client stores it only for the browser tab. After 5
+wrong passwords in 15 minutes the email is locked for 15 minutes (429 with
+`Retry-After`).
 
 Auth response:
 
@@ -201,9 +208,34 @@ Auth response:
     "interfaceStyle": "CLASSIC",
     "highContrast": false,
     "reduceMotion": false
-  }
+  },
+  "refreshToken": "...",
+  "expiresIn": 1800
 }
 ```
+
+`token` is a short-lived access token (30 minutes; `expiresIn` is in seconds).
+Send it as `Authorization: Bearer <token>`. Keep it in memory only.
+
+### Sessions (V10)
+
+```text
+POST /auth/refresh   { "refreshToken": "..." }
+POST /auth/logout    { "refreshToken": "..." }
+```
+
+Both are public. `refresh` returns a new auth response with a new access token
+**and a new refresh token**; the one sent stops working. Answers:
+
+| Status | Meaning |
+| --- | --- |
+| 200 | New tokens. Store the new refresh token in place of the old one. |
+| 409 | The token was replaced a moment ago (two tabs refreshed together). Read the newer token and retry. |
+| 401 | The session has ended (logged out, password changed or reset, expired, or a replaced token was used again later, which ends the session as stolen). Sign in again. |
+
+`logout` ends the session on the server and always answers 204. Every request
+checks that the access token's session is still open, so ending a session stops
+its access tokens at once.
 
 `appearance` (FR-39.6) is included on both register and login so the client can
 apply the user's saved theme on first paint, instead of rendering the default and
