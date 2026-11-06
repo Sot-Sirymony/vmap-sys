@@ -61,12 +61,72 @@ public final class AiDrafts {
             @JsonPropertyDescription("Due date as YYYY-MM-DD") String targetDate,
             @JsonPropertyDescription("Money, tools, skills or information the step needs") String resources,
             @JsonPropertyDescription("Kinds of people who could help, as roles, never names") String people,
-            @JsonPropertyDescription("One short sentence on why this step is needed") String reason) {
+            @JsonPropertyDescription("One short sentence on why this step is needed") String reason,
+            // V11 Phase 4 (PB-FR-12).
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String priority,
+            @JsonPropertyDescription("True when the step needs several separate tasks; false when it is one action") boolean complex,
+            @JsonPropertyDescription("Estimated effort in hours, a number such as 2 or 0.5") Double estimatedHours,
+            @JsonPropertyDescription("The number (1 = first) of an earlier step in this list that must finish before this one starts; 0 when none") int startsAfter) {
+
+        /** The V9 shape, before effort and order were asked for. */
+        public StepDraft(String title, String description, String owner, String targetDate, String resources, String people,
+                         String reason) {
+            this(title, description, owner, targetDate, resources, people, reason, null, false, null, 0);
+        }
     }
 
     public record StepDrafts(
             List<StepDraft> steps,
             @JsonPropertyDescription("One question to ask first when the goal is too vague to plan; empty otherwise") String clarifyingQuestion) {
+    }
+
+    // V11 Phase 4: the task builder (PB-FR-14).
+
+    public record TaskDraft(
+            @JsonPropertyDescription("One small action in under 120 characters, starting with a verb, doable in one sitting") String title,
+            @JsonPropertyDescription("Who does it: Me, or a role such as Accountant. Never a made-up person's name") String owner,
+            @JsonPropertyDescription("Due date as YYYY-MM-DD") String dueDate,
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String priority,
+            @JsonPropertyDescription("Estimated effort in hours, a number such as 1 or 0.5") Double estimatedHours,
+            @JsonPropertyDescription("One short sentence on why this task is needed") String reason) {
+    }
+
+    public record TaskDrafts(
+            List<TaskDraft> tasks,
+            @JsonPropertyDescription("One question to ask first when the step is too vague to break down; empty otherwise") String clarifyingQuestion) {
+    }
+
+    // V11 Phase 5: helpers, risks and resources (PB-FR-23 to PB-FR-26, PB-FR-40).
+
+    public record HelperDraft(
+            @JsonPropertyDescription("The kind of person needed, as a role such as Mortgage adviser. Never a name") String role,
+            @JsonPropertyDescription("MENTOR, EXPERT, ADVISOR, COLLEAGUE, FINANCIAL, TECHNICAL, EMOTIONAL or OTHER") String supportType,
+            @JsonPropertyDescription("The key in brackets of the goal or step this helper is for; empty for the whole dream") String forKey,
+            @JsonPropertyDescription("One short sentence on what they would help with") String reason) {
+    }
+
+    public record RiskDraft(
+            @JsonPropertyDescription("The obstacle in under 120 characters") String title,
+            @JsonPropertyDescription("One or two sentences on how it could block the plan") String description,
+            @JsonPropertyDescription("KNOWLEDGE, SKILL, TIME, MONEY, MOTIVATION, PARTNER, SYSTEM, DECISION or OTHER") String obstacleType,
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String severity,
+            @JsonPropertyDescription("A practical first way to handle it, in one or two sentences") String solution,
+            @JsonPropertyDescription("The key in brackets of the goal or step it threatens; empty for the whole dream") String forKey,
+            @JsonPropertyDescription("True only when it comes from the participant's fear journal") boolean fromFears) {
+    }
+
+    public record HelpersRisksDraft(
+            @JsonPropertyDescription("Up to five kinds of helpers the plan needs") List<HelperDraft> helpers,
+            @JsonPropertyDescription("Up to five likely obstacles") List<RiskDraft> risks,
+            @JsonPropertyDescription("Up to six resources") List<ResourceDraft> resources) {
+    }
+
+    // V11 Phase 3: the clarify conversation.
+
+    public record ClarifyDraft(
+            @JsonPropertyDescription("True when the dream is clear enough to plan; then question is empty") boolean done,
+            @JsonPropertyDescription("One short, kind question about what matters most to plan well; empty when done") String question,
+            @JsonPropertyDescription("WHY_IMPORTANT, SUCCESS_DEFINITION or TARGET_DATE when the answer belongs in that dream field; empty otherwise") String field) {
     }
 
     public record IssueDraft(

@@ -14,7 +14,9 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.AiUsageLogRepository;
 import com.visionmapping.security.Roles;
+import com.visionmapping.entity.TaskItem;
 import com.visionmapping.service.GoalService;
+import com.visionmapping.service.TaskItemService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.support.EntityLookup;
 import java.math.BigDecimal;
@@ -45,7 +47,8 @@ public class AiPlanFeedbackService {
 
     /** The features whose answers are plan builder suggestions. */
     static final Set<String> PLAN_FEATURES = Set.of(
-            "AREA_BUILDER", "DREAM_BUILDER", "STRETCH_DREAM", "GOAL_BUILDER", "STRETCH_GOAL", "PLAN_BUILDER", "PLAN_CHECK");
+            "AREA_BUILDER", "DREAM_BUILDER", "STRETCH_DREAM", "GOAL_BUILDER", "STRETCH_GOAL", "PLAN_BUILDER", "PLAN_CHECK",
+            "CLARIFY", "TASK_BUILDER", "HELPERS_RISKS");
     private static final Set<String> GOAL_FEATURES = Set.of("GOAL_BUILDER", "STRETCH_GOAL");
     private static final Set<String> STEP_FEATURES = Set.of("PLAN_BUILDER");
     static final int MAX_METRIC_DAYS = 365;
@@ -54,6 +57,9 @@ public class AiPlanFeedbackService {
     private final EntityLookup lookup;
     private final GoalService goalService;
     private final VisionStepService stepService;
+    private final TaskItemService taskService;
+    private final com.visionmapping.service.PartnerService partnerService;
+    private final com.visionmapping.service.ObstacleService obstacleService;
     private final Clock clock;
 
     /** Records how many items an answer suggested and returns its id for the client. */
@@ -123,10 +129,31 @@ public class AiPlanFeedbackService {
     public void undo(AiPlanUndoRequest request) {
         List<Long> goalIds = Optional.ofNullable(request.goalIds()).orElse(List.of());
         List<Long> stepIds = Optional.ofNullable(request.stepIds()).orElse(List.of());
+        List<Long> taskIds = Optional.ofNullable(request.taskIds()).orElse(List.of());
+        List<Long> partnerIds = Optional.ofNullable(request.partnerIds()).orElse(List.of());
+        List<Long> obstacleIds = Optional.ofNullable(request.obstacleIds()).orElse(List.of());
         AiUsageLog usage = request.requestId() == null ? null : ownPlanRequest(request.requestId());
         // Look every id up first, so one wrong id changes nothing.
+        List<TaskItem> tasksToArchive = taskIds.stream().map(lookup::task).toList();
+        List<com.visionmapping.entity.Partner> partnersToArchive = partnerIds.stream().map(lookup::partner).toList();
+        List<com.visionmapping.entity.Obstacle> obstaclesToArchive = obstacleIds.stream().map(lookup::obstacle).toList();
+        for (com.visionmapping.entity.Obstacle obstacle : obstaclesToArchive) {
+            if (!obstacle.isArchived()) {
+                obstacleService.archiveObstacle(obstacle.getId());
+            }
+        }
+        for (com.visionmapping.entity.Partner partner : partnersToArchive) {
+            if (!partner.isArchived()) {
+                partnerService.archivePartner(partner.getId());
+            }
+        }
         List<VisionStep> stepsToArchive = stepIds.stream().map(lookup::step).toList();
         List<Goal> goalsToArchive = goalIds.stream().map(lookup::goal).toList();
+        for (TaskItem task : tasksToArchive) {
+            if (!task.isArchived()) {
+                taskService.archiveTask(task.getId());
+            }
+        }
         for (VisionStep step : stepsToArchive) {
             if (!step.isArchived()) {
                 stepService.archiveStep(step.getId());
@@ -141,6 +168,22 @@ public class AiPlanFeedbackService {
             usage.setAddedItems(0);
             usage.setEditedItems(0);
         }
+    }
+
+    /**
+     * PB-FR-35 for a Build my plan draft: new items per AI answer, as
+     * {added unchanged, added after editing}. Each answer must be the caller's
+     * own plan builder answer; an answer whose kind does not match is still
+     * counted, since a draft mixes goals and steps.
+     */
+    @Transactional
+    public void recordDraftOutcomes(java.util.Map<Long, int[]> counts) {
+        counts.forEach((requestId, count) -> {
+            AiUsageLog usage = ownPlanRequest(requestId);
+            if (usage.getSuggestedItems() != null) {
+                addOutcome(usage, count[0], count[1]);
+            }
+        });
     }
 
     /** PB-FR-36: per plan builder feature over the last days, for admins only. */

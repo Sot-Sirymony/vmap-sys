@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [11.0.0] — In progress (phase 1 of 6 built)
+## [11.0.0] — In progress (phases 1 to 5 of 6 built)
 
 Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improvements.
 
@@ -87,6 +87,88 @@ Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improveme
   *Undo* archives what was just added.
 - Vision areas and dreams from the start assistant are still added one at a
   time through the normal endpoints; only their counts are reported.
+
+### Phase 2 — Build my plan guide and drafts (2026-11-06)
+
+- **Build my plan (PB-FR-01, PB-FR-02, PB-FR-04).** A button on each dream opens
+  `/dreams/:id/build`: six stages (Clarify, Goals, Steps, Tasks, Helpers and
+  risks, Check and add) on one screen. Any stage can be skipped or revisited;
+  the stepper shows new items per stage, and Check and add lists what blocks
+  adding and what is worth a look.
+- **Starts from the existing plan (PB-FR-03).** Existing goals and steps are
+  shown and never changed; new steps can go under existing goals and new tasks
+  under existing complex steps.
+- **Works without AI (PB-FR-05).** Each stage has the program's own questions
+  and manual add buttons; AI suggestion buttons appear only when AI is available.
+  Steps can be suggested for a goal that is still only in the draft.
+- **Drafts on the server (PB-FR-30, PB-FR-33, PB-NFR-09).** Saved as you work,
+  resumed on any device, private to the owner, never plan data, removed after
+  14 days (daily job), on add, on discard, with the dream and with the account
+  (migration V64).
+- **All-or-nothing add (PB-FR-31).** Goals, steps and tasks from the draft are
+  saved in one transaction with the normal create rules; a problem names the
+  item and nothing is saved. Undo now covers tasks.
+- The existing plan assistant card stays on the dream page (PB-FR-07).
+- Not yet: answering clarifying questions in place (Phase 3), AI task and
+  helper/risk suggestions (Phases 4 and 5); the Helpers and risks stage shows
+  the program's questions and links to Partners and Obstacles for now.
+
+### Phase 3 — clarify and refine (2026-11-06)
+
+- **Clarify the dream (PB-FR-08, PB-FR-10).** In the Clarify stage the plan
+  builder asks up to three questions, one at a time, answered in place. A
+  ticked answer is saved into the dream (why it matters, success, target date);
+  nothing is saved otherwise.
+- **Answers are used (PB-FR-09).** Answers are kept in the draft and sent with
+  every later goal and step suggestion. A question asked while suggesting goals
+  or steps is answered in place; **Suggest anyway** skips it (PB-FR-11).
+- **Refine (PB-FR-19 to PB-FR-21).** Fewer, More, Smaller, Bolder, Earlier or
+  Later, with an optional note, replace the suggestions the participant has not
+  edited or locked, in place. **Another option** swaps one suggestion.
+- The participant's answers, notes and kept items go to Claude inside the data
+  block only, never in the instructions (AI-NFR-13); a test checks this.
+- AI answers now update the draft from its latest state, so edits made while
+  waiting are not lost.
+
+### Phase 4 — richer steps and the task builder (2026-11-06)
+
+- **Steps have effort and order (PB-FR-12).** Steps store estimated hours and
+  the step of the same goal they start after (migration V65), through the normal
+  step API too. Step suggestions now carry priority, complexity, effort and
+  order; a suggested date before the step it waits for is left for the
+  participant to pick (PB-FR-15).
+- **Steps for all goals (PB-FR-13).** One button suggests steps for every goal
+  in the guide that has none yet.
+- **Task builder (PB-FR-14).** Suggest 2 to 8 tasks for a complex step, saved or
+  only in the draft, each with owner, due date (within the step's date),
+  priority and hours. Tasks can be refined, locked and swapped, and are counted
+  in the plan builder metrics.
+- The one-off plan assistant card keeps the suggested priority, complexity and
+  effort when adding steps.
+- Not yet: the regular step form and the Excel workbook do not show effort or
+  order.
+
+### Phase 5 — helpers and risks (2026-11-06)
+
+- **Helpers (PB-FR-23).** The plan builder names the kinds of helpers a plan
+  needs. The participant's own partners are matched on the server by support
+  type and role, so partner names and contact details never go to Claude. A
+  helper links a matching partner (only where that partner has no goal or step
+  link yet, so nothing is overwritten) or becomes a new "To contact" partner.
+- **Risks (PB-FR-24, PB-FR-25).** Up to five likely obstacles, each with type,
+  severity, a first way to handle it, and the kind of helper that fits it from
+  the CLAUDE.md guide. Added as Open obstacles, with the helper as the required
+  partner.
+- **Fears only when asked (PB-FR-26).** The fear journal is read only when the
+  participant ticks it for that request, and only fears of this dream or of no
+  dream; such risks are labelled.
+- **Outreach (PB-FR-27).** After adding, a message draft for each new contact to
+  copy and send.
+- **Resources (PB-FR-40).** Approved resources first, others marked "check
+  before use". The approved-resource rules now live in one place
+  (`AiResourceIdeas`), shared with resource ideas.
+- Undo also archives the partners and obstacles the add created; links given to
+  existing partners stay.
 
 ## [10.0.0] — In progress (phases 1 to 6 of 7 built)
 

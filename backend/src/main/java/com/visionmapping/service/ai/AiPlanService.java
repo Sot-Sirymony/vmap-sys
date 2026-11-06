@@ -2,6 +2,14 @@ package com.visionmapping.service.ai;
 
 import static com.visionmapping.service.ai.AiContextBuilder.clip;
 
+import com.visionmapping.dto.request.DraftGoalStepsRequest;
+import com.visionmapping.dto.request.DraftStepTasksRequest;
+import com.visionmapping.dto.request.PlanAskRequest;
+import com.visionmapping.dto.response.AiPlanResponses.TaskSuggestion;
+import com.visionmapping.dto.response.AiPlanResponses.TaskSuggestions;
+import com.visionmapping.dto.request.PlanClarification;
+import com.visionmapping.dto.request.PlanClarifyRequest;
+import com.visionmapping.dto.response.AiPlanResponses.ClarifyQuestion;
 import com.visionmapping.dto.response.AiPlanResponses.DreamSuggestion;
 import com.visionmapping.dto.response.AiPlanResponses.DreamSuggestions;
 import com.visionmapping.dto.response.AiPlanResponses.GoalSuggestion;
@@ -58,6 +66,7 @@ public class AiPlanService {
     static final int MAX_DREAMS = 5;
     static final int MAX_GOALS = 5;
     static final int MAX_STEPS = 10;
+    static final int MAX_TASKS = 8;
     static final int MAX_AI_ISSUES = 8;
     private static final Set<String> AI_ISSUE_KINDS = Set.of("VAGUE_STEP", "UNREALISTIC_TIMING", "GAP");
 
@@ -67,6 +76,7 @@ public class AiPlanService {
     private final DreamRepository dreamRepository;
     private final GoalRepository goalRepository;
     private final VisionStepRepository visionStepRepository;
+    private final com.visionmapping.repository.TaskItemRepository taskItemRepository;
     private final AiStructuredRequests requests;
     private final TransactionTemplate transactions;
     private final Clock clock;
@@ -136,39 +146,55 @@ public class AiPlanService {
 
     /** AI-FR-07, or with stretch one bold goal (AI-FR-10). */
     public GoalSuggestions suggestGoals(Long dreamId, boolean stretch, String language) {
+        return suggestGoals(dreamId, stretch, language, null);
+    }
+
+    /**
+     * AI-FR-07 and AI-FR-10, with V11 Phase 3: clarifying answers (PB-FR-09),
+     * suggest anyway (PB-FR-11) and refining the last set (PB-FR-19 to PB-FR-21).
+     */
+    public GoalSuggestions suggestGoals(Long dreamId, boolean stretch, String language, PlanAskRequest ask) {
         AppUser user = lookup.currentUser();
         // V10 (SEC-01-02): ownership first, so another user's record answers 404
         // whether or not AI is available.
         // V11 (PB-FR-15): a goal may not be due after its dream.
         LocalDate latest = lookup.dream(dreamId).getTargetDate();
         String apiKey = accessService.requireAvailable(user);
-        String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)));
+        String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId))) + askRecords(ask);
         LocalDate today = LocalDate.now(clock);
-        String task = stretch
+        int max = refining(ask) ? refineMax(ask, MAX_GOALS) : stretch ? 1 : MAX_GOALS;
+        String task = refining(ask)
+                ? refineTask(ask, "goals", max) + " Goals stay SMART (specific, measurable, achievable, relevant, time-bound)."
+                : stretch
                 ? "Suggest exactly one stretch goal for this dream: bold enough to excite, still possible with effort, "
                 + "and different from the goals the participant already has."
                 : "Turn this dream into between 1 and " + MAX_GOALS + " SMART goals (specific, measurable, achievable, "
                 + "relevant, time-bound) that together would make it happen. Do not repeat goals the participant already has.";
         String prompt = task + " Every target date must be after " + today + " and, when the dream has a target date, "
-                + "not after it. If the dream is too vague to plan well, return no goals and ask one clarifying question.";
+                + "not after it. " + questionRule(ask, "the dream", "goals");
         AiStructuredRequests.Tracked<AiDrafts.GoalDrafts> answer = requests.askTracked(user, apiKey,
                 stretch ? "STRETCH_GOAL" : "GOAL_BUILDER", language, plan, prompt, AiDrafts.GoalDrafts.class);
         AiDrafts.GoalDrafts drafts = answer.value();
         List<GoalSuggestion> goals = new ArrayList<>();
         for (AiDrafts.GoalDraft draft : Optional.ofNullable(drafts.goals()).orElse(List.of())) {
-            if (blank(draft.title()) || goals.size() >= (stretch ? 1 : MAX_GOALS)) {
+            if (blank(draft.title()) || goals.size() >= max) {
                 continue;
             }
             goals.add(new GoalSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
                     limit(draft.successCriteria(), 3000), futureDate(draft.targetDate(), today, latest), priority(draft.priority()),
                     stretch, limit(draft.reason(), 300)));
         }
-        return new GoalSuggestions(goals, goals.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null,
+        return new GoalSuggestions(goals, goals.isEmpty() && !forced(ask) ? limit(drafts.clarifyingQuestion(), 500) : null,
                 feedback.suggested(answer.usage(), goals.size()));
     }
 
     /** AI-FR-08: steps for one goal, with owner, date, resources and people. */
     public StepSuggestions suggestSteps(Long goalId, String language) {
+        return suggestSteps(goalId, language, null);
+    }
+
+    /** AI-FR-08 with V11 Phase 3 answers and refinement. */
+    public StepSuggestions suggestSteps(Long goalId, String language, PlanAskRequest ask) {
         AppUser user = lookup.currentUser();
         // V10 (SEC-01-02): ownership first, so another user's record answers 404
         // whether or not AI is available.
@@ -183,24 +209,252 @@ public class AiPlanService {
             return describeDream(user, goal.getDream()) + "\nThe goal to plan: [" + goal.getId() + "] " + clip(goal.getTitle())
                     + (goal.getTargetDate() == null ? "" : ", target " + goal.getTargetDate()) + "\n";
         });
-        String prompt = "Break the goal to plan into between 3 and " + MAX_STEPS + " steps, in the order they should happen. "
-                + "Do not repeat steps the goal already has. Owner is Me unless a role clearly fits better; never invent a "
+        return stepsFor(user, apiKey, plan + askRecords(ask), today, latest[0], language, ask);
+    }
+
+    /**
+     * V11 Phase 2: steps for a goal that so far exists only in the participant's
+     * Build my plan draft, so it has no id yet. The dream is checked as the
+     * caller's own first.
+     */
+    public StepSuggestions suggestDraftGoalSteps(Long dreamId, DraftGoalStepsRequest goal, String language) {
+        AppUser user = lookup.currentUser();
+        LocalDate dreamDate = lookup.dream(dreamId).getTargetDate();
+        String apiKey = accessService.requireAvailable(user);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate latest = goal.targetDate() != null ? goal.targetDate() : dreamDate;
+        String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId))
+                + "\nThe goal to plan (new, not saved yet): " + clip(goal.title())
+                + (goal.targetDate() == null ? "" : ", target " + goal.targetDate()) + "\n"
+                + (blank(goal.successCriteria()) ? "" : "Goal success criteria: " + clip(goal.successCriteria()) + "\n"));
+        return stepsFor(user, apiKey, plan + askRecords(goal.ask()), today, latest, language, goal.ask());
+    }
+
+    private StepSuggestions stepsFor(AppUser user, String apiKey, String plan, LocalDate today, LocalDate latest, String language,
+                                     PlanAskRequest ask) {
+        int max = refining(ask) ? refineMax(ask, MAX_STEPS) : MAX_STEPS;
+        String task = refining(ask)
+                ? refineTask(ask, "steps", max) + " Steps stay in the order they should happen."
+                : "Break the goal to plan into between 3 and " + MAX_STEPS + " steps, in the order they should happen. "
+                + "Do not repeat steps the goal already has.";
+        String prompt = task + " Owner is Me unless a role clearly fits better; never invent a "
                 + "person's name. Dates must be after " + today + " and, when the goal has a target date, not after it. "
-                + "If the goal is too vague to plan well, return no steps and ask one clarifying question.";
+                + "For each step give a priority, a realistic effort in hours, whether it is complex (needs several "
+                + "separate tasks), and the earlier step it must wait for, if any; a step is not due before that one. "
+                + questionRule(ask, "the goal", "steps");
         AiStructuredRequests.Tracked<AiDrafts.StepDrafts> answer = requests.askTracked(user, apiKey, "PLAN_BUILDER", language,
                 plan, prompt, AiDrafts.StepDrafts.class);
         AiDrafts.StepDrafts drafts = answer.value();
         List<StepSuggestion> steps = new ArrayList<>();
-        for (AiDrafts.StepDraft draft : Optional.ofNullable(drafts.steps()).orElse(List.of())) {
-            if (blank(draft.title()) || steps.size() >= MAX_STEPS) {
+        // V11 (PB-FR-12): "starts after" names a position in Claude's list; blank items are dropped,
+        // so positions are renumbered, and only an earlier kept step counts.
+        Map<Integer, Integer> kept = new HashMap<>();
+        List<AiDrafts.StepDraft> given = Optional.ofNullable(drafts.steps()).orElse(List.of());
+        for (int index = 0; index < given.size(); index++) {
+            AiDrafts.StepDraft draft = given.get(index);
+            if (blank(draft.title()) || steps.size() >= max) {
                 continue;
             }
+            Integer after = kept.get(draft.startsAfter());
+            LocalDate date = futureDate(draft.targetDate(), today, latest);
+            LocalDate earlierDate = after == null ? null : steps.get(after - 1).targetDate();
+            if (date != null && earlierDate != null && date.isBefore(earlierDate)) {
+                date = null; // PB-FR-15: not due before the step it waits for.
+            }
             steps.add(new StepSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
-                    blank(draft.owner()) ? "Me" : limit(draft.owner(), 160), futureDate(draft.targetDate(), today, latest[0]),
-                    limit(draft.resources(), 1000), limit(draft.people(), 500), limit(draft.reason(), 300)));
+                    blank(draft.owner()) ? "Me" : limit(draft.owner(), 160), date,
+                    limit(draft.resources(), 1000), limit(draft.people(), 500), limit(draft.reason(), 300),
+                    priority(draft.priority()), draft.complex(), hours(draft.estimatedHours()), after));
+            kept.put(index + 1, steps.size());
         }
-        return new StepSuggestions(steps, steps.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null,
+        return new StepSuggestions(steps, steps.isEmpty() && !forced(ask) ? limit(drafts.clarifyingQuestion(), 500) : null,
                 feedback.suggested(answer.usage(), steps.size()));
+    }
+
+    /**
+     * V11 (PB-FR-14): 2 to 8 small tasks for a complex step already in the
+     * plan, with owner, due date, priority and effort. Due dates stay within
+     * the step's date (or its goal's, or its dream's).
+     */
+    public TaskSuggestions suggestTasks(Long stepId, String language, PlanAskRequest ask) {
+        AppUser user = lookup.currentUser();
+        lookup.step(stepId);
+        String apiKey = accessService.requireAvailable(user);
+        LocalDate[] latest = new LocalDate[1];
+        String plan = transactions.execute(status -> {
+            VisionStep step = lookup.step(stepId);
+            Goal goal = step.getGoal();
+            latest[0] = firstDate(step.getTargetDate(), goal.getTargetDate(), goal.getDream().getTargetDate());
+            StringBuilder out = new StringBuilder(describeDream(user, goal.getDream()));
+            out.append("\nThe step to break into tasks: [").append(step.getId()).append("] ").append(clip(step.getTitle()))
+                    .append(step.getTargetDate() == null ? "" : ", due " + step.getTargetDate())
+                    .append(" | goal: ").append(clip(goal.getTitle())).append('\n');
+            appendLine(out, "Step description", step.getDescription());
+            taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId())
+                    .forEach(task -> out.append("  Task already there: ").append(clip(task.getTitle())).append('\n'));
+            return out.toString();
+        });
+        return tasksFor(user, apiKey, plan + askRecords(ask), latest[0], language, ask);
+    }
+
+    /** V11 (PB-FR-14): tasks for a complex step that so far exists only in the Build my plan draft. */
+    public TaskSuggestions suggestDraftStepTasks(Long dreamId, DraftStepTasksRequest step, String language) {
+        AppUser user = lookup.currentUser();
+        LocalDate dreamDate = lookup.dream(dreamId).getTargetDate();
+        String apiKey = accessService.requireAvailable(user);
+        LocalDate latest = firstDate(step.stepTargetDate(), step.goalTargetDate(), dreamDate);
+        String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)))
+                + "\nThe step to break into tasks (new, not saved yet): " + clip(step.stepTitle())
+                + (step.stepTargetDate() == null ? "" : ", due " + step.stepTargetDate())
+                + (blank(step.goalTitle()) ? "" : " | goal: " + clip(step.goalTitle())) + "\n"
+                + (blank(step.stepDescription()) ? "" : "Step description: " + clip(step.stepDescription()) + "\n");
+        return tasksFor(user, apiKey, plan + askRecords(step.ask()), latest, language, step.ask());
+    }
+
+    private TaskSuggestions tasksFor(AppUser user, String apiKey, String plan, LocalDate latest, String language, PlanAskRequest ask) {
+        LocalDate today = LocalDate.now(clock);
+        int max = refining(ask) ? refineMax(ask, MAX_TASKS) : MAX_TASKS;
+        String task = refining(ask)
+                ? refineTask(ask, "tasks", max)
+                : "Break the step to break into tasks into between 2 and " + MAX_TASKS + " small tasks, in order, each "
+                + "doable in one sitting. Do not repeat tasks already there.";
+        String prompt = task + " Owner is Me unless a role clearly fits better; never invent a person's name. Due dates must "
+                + "be after " + today + " and, when the step has a date, not after it. Give each a priority and a realistic "
+                + "effort in hours. " + questionRule(ask, "the step", "tasks");
+        AiStructuredRequests.Tracked<AiDrafts.TaskDrafts> answer = requests.askTracked(user, apiKey, "TASK_BUILDER", language,
+                plan, prompt, AiDrafts.TaskDrafts.class);
+        AiDrafts.TaskDrafts drafts = answer.value();
+        List<TaskSuggestion> tasks = new ArrayList<>();
+        for (AiDrafts.TaskDraft draft : Optional.ofNullable(drafts.tasks()).orElse(List.of())) {
+            if (blank(draft.title()) || tasks.size() >= max) {
+                continue;
+            }
+            tasks.add(new TaskSuggestion(limit(draft.title(), 220), blank(draft.owner()) ? "Me" : limit(draft.owner(), 160),
+                    futureDate(draft.dueDate(), today, latest), priority(draft.priority()), hours(draft.estimatedHours()),
+                    limit(draft.reason(), 300)));
+        }
+        return new TaskSuggestions(tasks, tasks.isEmpty() && !forced(ask) ? limit(drafts.clarifyingQuestion(), 500) : null,
+                feedback.suggested(answer.usage(), tasks.size()));
+    }
+
+    /** Effort Claude suggested, kept when it is a sensible number of hours (more than 0, at most 999.99). */
+    static java.math.BigDecimal hours(Double value) {
+        if (value == null || value.isNaN() || value <= 0 || value > 999.99) {
+            return null;
+        }
+        return java.math.BigDecimal.valueOf(value).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    private static LocalDate firstDate(LocalDate... dates) {
+        for (LocalDate date : dates) {
+            if (date != null) {
+                return date;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * V11 (PB-FR-08): the next clarifying question about the dream, one at a
+     * time and at most three; after the third answer the dream counts as
+     * clear enough without asking Claude again.
+     */
+    public ClarifyQuestion clarifyDream(Long dreamId, PlanClarifyRequest request, String language) {
+        AppUser user = lookup.currentUser();
+        lookup.dream(dreamId);
+        List<PlanClarification> answers = Optional.ofNullable(request.answers()).orElse(List.of());
+        if (answers.size() >= PlanAskRequest.MAX_QUESTIONS) {
+            return new ClarifyQuestion(null, null, true, null);
+        }
+        String apiKey = accessService.requireAvailable(user);
+        String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)))
+                + askRecords(new PlanAskRequest(answers, false, null, null, null, null));
+        String prompt = "Decide whether this dream is clear enough to turn into goals: what exactly the participant wants, "
+                + "why it matters, what success looks like and by when. If it is, set done. If not, ask the one question "
+                + "that would help most, short and kind, and not one already answered. " + (PlanAskRequest.MAX_QUESTIONS
+                - answers.size()) + " question(s) left at most.";
+        AiStructuredRequests.Tracked<AiDrafts.ClarifyDraft> answer = requests.askTracked(user, apiKey, "CLARIFY", language, plan,
+                prompt, AiDrafts.ClarifyDraft.class);
+        AiDrafts.ClarifyDraft draft = answer.value();
+        boolean done = draft.done() || blank(draft.question());
+        String field = draft.field() == null ? "" : draft.field().trim().toUpperCase();
+        return new ClarifyQuestion(done ? null : limit(draft.question(), 500),
+                done || !CLARIFY_FIELDS.contains(field) ? null : field, done, answer.usage().getId());
+    }
+
+    // ---------- V11 Phase 3: answers and refinement ----------
+
+    private static final Set<String> CLARIFY_FIELDS = Set.of("WHY_IMPORTANT", "SUCCESS_DEFINITION", "TARGET_DATE");
+
+    private static boolean refining(PlanAskRequest ask) {
+        return ask != null && !blank(ask.refine());
+    }
+
+    /** PB-FR-11: no more questions after "suggest anyway" or the third answer. */
+    static boolean forced(PlanAskRequest ask) {
+        return ask != null && (ask.suggestAnyway() || refining(ask)
+                || Optional.ofNullable(ask.answers()).map(List::size).orElse(0) >= PlanAskRequest.MAX_QUESTIONS);
+    }
+
+    private static String questionRule(PlanAskRequest ask, String subject, String items) {
+        return forced(ask)
+                ? "Do not ask a question: make sensible assumptions and suggest " + items + "."
+                : "If " + subject + " is too vague to plan well, return no " + items + " and ask one clarifying question, "
+                + "not one already answered.";
+    }
+
+    static int refineMax(PlanAskRequest ask, int max) {
+        int replacing = Optional.ofNullable(ask.replace()).map(List::size).orElse(0);
+        return switch (ask.refine()) {
+            case "ANOTHER" -> 1;
+            case "FEWER" -> Math.max(1, Math.min(max, replacing - 1));
+            case "MORE" -> max;
+            default -> Math.max(1, Math.min(max, replacing == 0 ? max : replacing));
+        };
+    }
+
+    /** The instruction only: the participant's own words (note, kept and replaced items) travel as data in askRecords. */
+    private static String refineTask(PlanAskRequest ask, String items, int max) {
+        String change = switch (ask.refine()) {
+            case "FEWER" -> "fewer " + items + ", keeping only the most important";
+            case "MORE" -> "more " + items + ", covering what is still missing";
+            case "SMALLER" -> items + " that are each smaller and quicker to finish";
+            case "BOLDER" -> "bolder, more ambitious " + items + " that are still possible";
+            case "EARLIER" -> items + " with earlier dates where that is realistic";
+            case "LATER" -> items + " with more time, moving dates later within the limits";
+            default -> "exactly one different " + items.substring(0, items.length() - 1) + " to use instead of the one to replace";
+        };
+        return "The participant wants to change your last suggestions. Suggest at most " + max + " " + change + ". Do not repeat "
+                + "or change the items they kept, and do not repeat the items to replace. Follow their note when there is one.";
+    }
+
+    /** PB-FR-09, PB-FR-20: the participant's answers, note and kept items, appended to the records sent as data. */
+    static String askRecords(PlanAskRequest ask) {
+        if (ask == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        List<PlanClarification> answers = Optional.ofNullable(ask.answers()).orElse(List.of());
+        if (!answers.isEmpty()) {
+            out.append("\nThe participant's answers to clarifying questions:\n");
+            answers.forEach(item -> out.append("Q: ").append(clip(item.question())).append("\nA: ").append(clip(item.answer())).append('\n'));
+        }
+        if (refining(ask)) {
+            List<String> keep = Optional.ofNullable(ask.keep()).orElse(List.of());
+            List<String> replace = Optional.ofNullable(ask.replace()).orElse(List.of());
+            if (!keep.isEmpty()) {
+                out.append("\nItems the participant kept (leave as they are):\n");
+                keep.forEach(item -> out.append("- ").append(clip(item)).append('\n'));
+            }
+            if (!replace.isEmpty()) {
+                out.append("\nEarlier suggestions to replace:\n");
+                replace.forEach(item -> out.append("- ").append(clip(item)).append('\n'));
+            }
+            if (!blank(ask.note())) {
+                out.append("\nThe participant's note on what to change: ").append(clip(ask.note())).append('\n');
+            }
+        }
+        return out.toString();
     }
 
     /**
@@ -315,7 +569,7 @@ public class AiPlanService {
     }
 
     /** The dream and its plan, with ids so Claude can point at items. Never partner names or contacts (AI-NFR-04). */
-    private String describeDream(AppUser user, Dream dream) {
+    String describeDream(AppUser user, Dream dream) {
         StringBuilder out = new StringBuilder();
         out.append("Today is ").append(LocalDate.now(clock)).append(".\n");
         out.append("Dream: ").append(clip(dream.getTitle()));

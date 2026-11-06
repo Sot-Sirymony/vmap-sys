@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import type {
-  DreamSuggestions, GoalRequest, GoalSuggestions, PlanAddResult, PlanCheck, PlanMetrics, SlippingStep, StepRescue,
-  StepSuggestions, VisionAreaSuggestions, VisionStepRequest,
+  ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics,
+  PlanStage, SlippingStep, StepRescue, HelpersAndRisks, StepSuggestions, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
 
 // V9 Phase 5: the AI vision area, dream, goal and plan builders. They only suggest; adding goes through the normal APIs.
@@ -17,15 +17,20 @@ export function suggestDreams(token: string, visionAreaId: number, language: str
   );
 }
 
-export function suggestGoals(token: string, dreamId: number, language: string, stretch = false) {
+export function suggestGoals(token: string, dreamId: number, language: string, stretch = false, ask?: PlanAsk) {
   return apiClient<GoalSuggestions>(`/ai/plan/dreams/${dreamId}/goal-suggestions?stretch=${stretch}&language=${language}`, {
     method: 'POST',
     token,
+    body: ask ? JSON.stringify(ask) : undefined,
   });
 }
 
-export function suggestSteps(token: string, goalId: number, language: string) {
-  return apiClient<StepSuggestions>(`/ai/plan/goals/${goalId}/step-suggestions?language=${language}`, { method: 'POST', token });
+export function suggestSteps(token: string, goalId: number, language: string, ask?: PlanAsk) {
+  return apiClient<StepSuggestions>(`/ai/plan/goals/${goalId}/step-suggestions?language=${language}`, {
+    method: 'POST',
+    token,
+    body: ask ? JSON.stringify(ask) : undefined,
+  });
 }
 
 export function checkPlan(token: string, dreamId: number, language: string) {
@@ -62,11 +67,97 @@ export function addPlan(token: string, body: {
 }
 
 /** PB-FR-32: archives what one add saved. */
-export function undoPlan(token: string, body: { requestId?: number | null; goalIds?: number[]; stepIds?: number[] }) {
+export function undoPlan(token: string, body: { requestId?: number | null; goalIds?: number[]; stepIds?: number[]; taskIds?: number[] }) {
   return apiClient<void>('/ai/plan/undo', { method: 'POST', token, body: JSON.stringify(body) });
 }
 
 /** PB-FR-36: admins only. */
 export function getPlanMetrics(token: string, days = 30) {
   return apiClient<PlanMetrics>(`/admin/ai/plan-metrics?days=${days}`, { token });
+}
+
+// V11 Phase 2: the Build my plan draft for one dream.
+
+/** PB-FR-30: null when there is no unfinished draft (the server answers 204). */
+export async function getPlanDraft(token: string, dreamId: number) {
+  return (await apiClient<PlanDraft | undefined>(`/ai/plan/drafts/${dreamId}`, { token })) ?? null;
+}
+
+export function savePlanDraft(token: string, dreamId: number, stage: PlanStage, content: PlanDraftContent) {
+  // Matched partners are shown for this session only; they are not part of the saved draft.
+  const stored = { ...content, helpers: content.helpers?.map(({ matches: _matches, ...helper }) => helper) };
+  return apiClient<PlanDraft>(`/ai/plan/drafts/${dreamId}`, { method: 'PUT', token, body: JSON.stringify({ stage, content: stored }) });
+}
+
+export function discardPlanDraft(token: string, dreamId: number) {
+  return apiClient<void>(`/ai/plan/drafts/${dreamId}`, { method: 'DELETE', token });
+}
+
+/** PB-FR-31: every new item in the draft, saved together or not at all. The draft is then removed. */
+export function addPlanDraft(token: string, dreamId: number) {
+  return apiClient<PlanAddResult>(`/ai/plan/drafts/${dreamId}/add`, { method: 'POST', token });
+}
+
+/** Steps for a goal that exists only in the draft. */
+export function suggestDraftGoalSteps(token: string, dreamId: number, language: string,
+  goal: { title: string; successCriteria?: string | null; targetDate?: string | null }, ask?: PlanAsk) {
+  return apiClient<StepSuggestions>(`/ai/plan/dreams/${dreamId}/draft-step-suggestions?language=${language}`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      title: goal.title, successCriteria: goal.successCriteria || undefined, targetDate: goal.targetDate || undefined, ask,
+    }),
+  });
+}
+
+// V11 Phase 3: clarifying the dream.
+
+/** PB-FR-08: the next question about the dream, one at a time; done when it is clear enough or after three answers. */
+export function clarifyDream(token: string, dreamId: number, language: string, answers: PlanClarification[]) {
+  return apiClient<ClarifyQuestion>(`/ai/plan/dreams/${dreamId}/clarify?language=${language}`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ answers: answers.slice(0, 3) }),
+  });
+}
+
+/** PB-FR-10: saves one answer into the dream, only when the participant chooses to. */
+export function saveClarifiedField(token: string, dreamId: number, field: ClarifyField, value: string) {
+  return apiClient<Dream>(`/ai/plan/dreams/${dreamId}/clarified-field`, { method: 'PUT', token, body: JSON.stringify({ field, value }) });
+}
+
+// V11 Phase 4: the task builder (PB-FR-14).
+
+export function suggestTasks(token: string, stepId: number, language: string, ask?: PlanAsk) {
+  return apiClient<TaskSuggestions>(`/ai/plan/steps/${stepId}/task-suggestions?language=${language}`, {
+    method: 'POST',
+    token,
+    body: ask ? JSON.stringify(ask) : undefined,
+  });
+}
+
+export function suggestDraftStepTasks(token: string, dreamId: number, language: string, step: {
+  goalTitle?: string; goalTargetDate?: string | null; stepTitle: string; stepDescription?: string | null; stepTargetDate?: string | null;
+}, ask?: PlanAsk) {
+  return apiClient<TaskSuggestions>(`/ai/plan/dreams/${dreamId}/draft-task-suggestions?language=${language}`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      goalTitle: step.goalTitle || undefined, goalTargetDate: step.goalTargetDate || undefined, stepTitle: step.stepTitle,
+      stepDescription: step.stepDescription || undefined, stepTargetDate: step.stepTargetDate || undefined, ask,
+    }),
+  });
+}
+
+// V11 Phase 5: helpers, risks and resources (PB-FR-23 to PB-FR-26, PB-FR-40).
+
+export type PlanItemRef = { key: string; kind: 'GOAL' | 'STEP'; title: string; resources?: string | null; goalKey?: string };
+
+export function suggestHelpersAndRisks(token: string, dreamId: number, language: string,
+  body: { items: PlanItemRef[]; useFears: boolean; ask?: PlanAsk }) {
+  return apiClient<HelpersAndRisks>(`/ai/plan/dreams/${dreamId}/helpers-and-risks?language=${language}`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(body),
+  });
 }

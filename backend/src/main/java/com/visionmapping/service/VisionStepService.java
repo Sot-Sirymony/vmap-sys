@@ -81,9 +81,11 @@ public class VisionStepService {
                 .targetDate(request.targetDate())
                 .status(request.status())
                 .resources(blankToNull(request.resources()))
+                .estimatedHours(request.estimatedHours())
                 .progressPercent(ZERO)
                 .manualProgressOverride(false)
                 .build();
+        entity.setStartsAfter(startsAfter(request.startsAfterStepId(), goal, null));
         VisionStep saved = visionStepRepository.save(entity);
         progress.recalculateGoal(goal);
         return mapper.toResponse(saved);
@@ -116,6 +118,16 @@ public class VisionStepService {
         entity.setStatus(request.status());
         if (request.resources() != null) {
             entity.setResources(blankToNull(request.resources()));
+        }
+        if (request.estimatedHours() != null) {
+            entity.setEstimatedHours(request.estimatedHours());
+        }
+        if (request.startsAfterStepId() != null) {
+            entity.setStartsAfter(request.startsAfterStepId() == 0 ? null
+                    : startsAfter(request.startsAfterStepId(), entity.getGoal(), entity.getId()));
+        } else if (entity.getStartsAfter() != null && !entity.getStartsAfter().getGoal().getId().equals(entity.getGoal().getId())) {
+            // Moved to another goal: the old order no longer applies.
+            entity.setStartsAfter(null);
         }
         validateComplexStep(entity);
         validateScheduleCascade(entity);
@@ -177,6 +189,21 @@ public class VisionStepService {
         VisionStep step = lookup.step(id);
         requireArchived(step.isArchived(), "Step");
         permanentDeleteCascade.deleteStep(step);
+    }
+
+    /**
+     * V11 (PB-FR-12): the step this one starts after must be the caller's own
+     * (another user's answers 404), under the same goal, and not the step itself.
+     */
+    private VisionStep startsAfter(Long stepId, Goal goal, Long ownId) {
+        if (stepId == null || stepId == 0) {
+            return null;
+        }
+        VisionStep earlier = lookup.step(stepId);
+        if (!earlier.getGoal().getId().equals(goal.getId()) || earlier.getId().equals(ownId)) {
+            throw new BusinessRuleException("A step can only start after another step of the same goal.");
+        }
+        return earlier;
     }
 
     private void validateComplexStep(VisionStep step) {

@@ -25,6 +25,9 @@ public record VisionStepResponse(
         Instant updatedAt,
         String resources,
         // AI-FR-11: times this step was given a new date while overdue.
-        int overdueReschedules
+        int overdueReschedules,
+        // V11 (PB-FR-12).
+        BigDecimal estimatedHours,
+        Long startsAfterStepId
 ) {
 }

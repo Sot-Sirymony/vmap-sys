@@ -581,6 +581,59 @@ Every suggestion answer above now also returns `requestId` (the plan check retur
 | POST | `/api/ai/plan/undo` | `{ "requestId", "goalIds", "stepIds" }` archives those records (soft delete) and resets that answer's outcome counts. Every id is checked first; one that is not the caller's answers 404 and nothing changes. 204 |
 | GET | `/api/admin/ai/plan-metrics?days=30` | Admins only. Per plan builder feature: `requests`, `suggestedItems`, `addedItems`, `editedItems`, `acceptanceRate`, `editRate`, `ratings`, `thumbsUpRate`, `costUsd`, `averageCostUsd`. `days` is 1 to 365 |
 
+### V11: Build my plan drafts (Phase 2)
+
+One draft per user per dream. Only its owner can read it; another user's dream answers 404. A draft is not plan data and does not appear in lists, dashboards, exports, coach views or share links. It is removed 14 days after its last change, when the plan is added, when discarded, with its dream and with the account.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/ai/plan/drafts/{dreamId}` | `dreamId`, `stage`, `content`, `updatedAt`, `expiresAt`; 204 when there is none |
+| PUT | `/api/ai/plan/drafts/{dreamId}` | `{ "stage": "CLARIFY\|GOALS\|STEPS\|TASKS\|HELPERS\|REVIEW", "content": { "goals": [...] } }`. A goal or step with `existingId` stands for one already in the plan and only carries new children. Up to 15 goals, 25 steps per goal, 15 tasks per step. Fields may be blank while drafting. Refused for an archived dream |
+| DELETE | `/api/ai/plan/drafts/{dreamId}` | Discards the draft. 204 |
+| POST | `/api/ai/plan/drafts/{dreamId}/add` | Saves every new goal, step and task in one transaction with the normal create rules (a step needs title, owner and date; a task title, owner and due date) → 201 `goalIds`, `stepIds`, `taskIds`. A problem answers 400 naming the item (for example `Step "Visit banks" needs an owner.`) and nothing is saved; the draft stays. An `existingId` that is not this dream's live goal (or that goal's live step) is refused. On success the draft is removed and outcome counts are recorded for items carrying a `requestId` |
+| POST | `/api/ai/plan/dreams/{dreamId}/draft-step-suggestions` | `{ "title", "successCriteria", "targetDate" }` for a goal that exists only in the draft → the same answer as step suggestions, with dates kept within the goal's date (or the dream's) |
+
+`POST /api/ai/plan/undo` also takes `taskIds` (up to 500).
+
+### V11: clarify and refine (Phase 3)
+
+`POST /api/ai/plan/dreams/{dreamId}/goal-suggestions` and `POST /api/ai/plan/goals/{goalId}/step-suggestions` now take an optional body, and `draft-step-suggestions` takes the same object as `ask`:
+
+```json
+{ "answers": [{ "question": "...", "answer": "..." }], "suggestAnyway": false,
+  "refine": "FEWER|MORE|SMALLER|BOLDER|EARLIER|LATER|ANOTHER", "note": "...", "keep": ["..."], "replace": ["..."] }
+```
+
+`answers` (up to 6) are used in the suggestion. After `suggestAnyway`, a refinement, or three answers, no clarifying question comes back. `refine` replaces the items in `replace` and leaves those in `keep`; `FEWER` returns fewer than were replaced, `ANOTHER` exactly one. All text in the body is sent to Claude as the participant's data, never as instructions.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/plan/dreams/{dreamId}/clarify` | `{ "answers": [...] }` (up to 3) → `question`, `field` (`WHY_IMPORTANT`, `SUCCESS_DEFINITION`, `TARGET_DATE` or null), `done`, `requestId`. With three answers it answers `done` without asking Claude |
+| PUT | `/api/ai/plan/dreams/{dreamId}/clarified-field` | `{ "field", "value" }` saves one answer into the dream → the dream. `TARGET_DATE` takes YYYY-MM-DD and follows the dream form's date rule |
+
+Drafts also keep `clarifications` (up to 6) and a `locked` flag on goals and steps.
+
+### V11: richer steps and the task builder (Phase 4)
+
+Steps take and return `estimatedHours` (0 to 999.99) and `startsAfterStepId` (a step of the same goal; another user's step answers 404, another goal's 400). On update, leaving either out keeps the saved value; `startsAfterStepId: 0` clears it.
+
+Step suggestions now also return `priority`, `complex`, `estimatedHours` and `startsAfter` (the 1-based position of an earlier step in the same answer, or null). A suggested date before the step it waits for comes back empty.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/plan/steps/{stepId}/task-suggestions` | Optional `PlanAsk` body → `tasks[]` (`title`, `owner`, `dueDate`, `priority`, `estimatedHours`, `reason`), up to 8, or a `clarifyingQuestion`, and `requestId`. Due dates are kept within the step's date (or its goal's, or its dream's) |
+| POST | `/api/ai/plan/dreams/{dreamId}/draft-task-suggestions` | `{ "goalTitle", "goalTargetDate", "stepTitle", "stepDescription", "stepTargetDate", "ask" }` for a step that exists only in the draft; same answer |
+
+### V11: helpers and risks (Phase 5)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/plan/dreams/{dreamId}/helpers-and-risks` | `{ "items": [{ "key", "kind": "GOAL\|STEP", "title", "resources", "goalKey" }], "useFears": false, "ask": PlanAsk }` → `helpers[]` (`role`, `supportType`, `forKey`, `reason`, `matches[]` of the caller's own partners: `partnerId`, `name`, `role`, `supportType`, `status`), `risks[]` (`title`, `description`, `obstacleType`, `severity`, `solution`, `forKey`, `helperType`, `helperLabel`, `fromFears`), `resources[]` (approved ones first, others `checkBeforeUse`), `requestId`. Partners are matched on the server; their names and contact details are never sent to Claude. The fear journal (fears of this dream or of none) is read only with `useFears: true` |
+
+Drafts take `helpers` (up to 10: `key`, `role`, `supportType`, `name`, `partnerId`, `partnerName`, `linkKey`, `requestId`, `edited`) and `risks` (up to 10: `key`, `title`, `description`, `obstacleType`, `severity`, `solution`, `linkKey`, `helperKey`, `fromFears`, `requestId`, `edited`). On add, a helper with `partnerId` links that partner to its goal or step only where the partner has no link yet; one without becomes a new partner with status To Contact. Each risk becomes an Open obstacle on its goal or step, with `helperKey`'s partner as the required partner. The add result also returns `partnerIds`, `obstacleIds` (archived by Undo, which takes them too) and `linkedPartnerIds`.
+
+Draft steps take `estimatedHours` and `startsAfterKey` (the key of an earlier step of the same goal in the draft); draft tasks take `requestId`, `edited` and `locked`. On add, `startsAfterKey` becomes the saved step's `startsAfterStepId`.
+
 ### V9: daily use (Phase 6)
 
 All need AI consent and count toward the daily limit. Suggestions only.

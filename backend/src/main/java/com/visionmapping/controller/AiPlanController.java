@@ -1,6 +1,23 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.AiPlanAddRequest;
+import com.visionmapping.dto.request.DraftGoalStepsRequest;
+import com.visionmapping.dto.request.DraftStepTasksRequest;
+import com.visionmapping.dto.request.PlanHelpersRequest;
+import com.visionmapping.dto.response.AiPlanResponses.HelpersAndRisks;
+import com.visionmapping.service.ai.AiHelpersService;
+import com.visionmapping.dto.response.AiPlanResponses.TaskSuggestions;
+import com.visionmapping.dto.request.PlanAskRequest;
+import com.visionmapping.dto.request.PlanClarifiedFieldRequest;
+import com.visionmapping.dto.request.PlanClarifyRequest;
+import com.visionmapping.dto.response.AiPlanResponses.ClarifyQuestion;
+import com.visionmapping.dto.response.DreamResponse;
+import com.visionmapping.service.DreamService;
+import com.visionmapping.dto.request.PlanDraftRequest;
+import com.visionmapping.dto.response.PlanDraftResponse;
+import com.visionmapping.service.ai.PlanBuilderDraftService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import com.visionmapping.dto.request.AiPlanOutcomeRequest;
 import com.visionmapping.dto.request.AiPlanUndoRequest;
 import com.visionmapping.dto.request.AiRatingRequest;
@@ -42,6 +59,9 @@ public class AiPlanController {
 
     private final AiPlanService service;
     private final AiPlanFeedbackService feedback;
+    private final PlanBuilderDraftService drafts;
+    private final DreamService dreamService;
+    private final AiHelpersService helpers;
 
     @PostMapping("/vision-area-suggestions")
     public VisionAreaSuggestions visionAreas(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
@@ -58,14 +78,51 @@ public class AiPlanController {
     @PostMapping("/dreams/{dreamId}/goal-suggestions")
     public GoalSuggestions goals(@PathVariable Long dreamId,
                                  @RequestParam(defaultValue = "false") boolean stretch,
-                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestGoals(dreamId, stretch, language);
+                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
+                                 @Valid @RequestBody(required = false) PlanAskRequest ask) {
+        return service.suggestGoals(dreamId, stretch, language, ask);
     }
 
     @PostMapping("/goals/{goalId}/step-suggestions")
     public StepSuggestions steps(@PathVariable Long goalId,
-                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestSteps(goalId, language);
+                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
+                                 @Valid @RequestBody(required = false) PlanAskRequest ask) {
+        return service.suggestSteps(goalId, language, ask);
+    }
+
+    /** V11 (PB-FR-14): tasks for a complex step already in the plan. */
+    @PostMapping("/steps/{stepId}/task-suggestions")
+    public TaskSuggestions tasks(@PathVariable Long stepId,
+                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
+                                 @Valid @RequestBody(required = false) PlanAskRequest ask) {
+        return service.suggestTasks(stepId, language, ask);
+    }
+
+    /** V11 (PB-FR-14): tasks for a complex step that exists only in the Build my plan draft. */
+    @PostMapping("/dreams/{dreamId}/draft-task-suggestions")
+    public TaskSuggestions draftStepTasks(@PathVariable Long dreamId, @Valid @RequestBody DraftStepTasksRequest request,
+                                          @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return service.suggestDraftStepTasks(dreamId, request, language);
+    }
+
+    /** V11 (PB-FR-23 to PB-FR-26, PB-FR-40): helpers, risks and resources for the plan being built. */
+    @PostMapping("/dreams/{dreamId}/helpers-and-risks")
+    public HelpersAndRisks helpersAndRisks(@PathVariable Long dreamId, @Valid @RequestBody PlanHelpersRequest request,
+                                           @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return helpers.suggest(dreamId, request, language);
+    }
+
+    /** V11 (PB-FR-08): the next clarifying question about the dream, one at a time, at most three. */
+    @PostMapping("/dreams/{dreamId}/clarify")
+    public ClarifyQuestion clarify(@PathVariable Long dreamId, @Valid @RequestBody PlanClarifyRequest request,
+                                   @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return service.clarifyDream(dreamId, request, language);
+    }
+
+    /** V11 (PB-FR-10): save one clarifying answer into the dream, when the participant chooses to. */
+    @PutMapping("/dreams/{dreamId}/clarified-field")
+    public DreamResponse saveClarifiedField(@PathVariable Long dreamId, @Valid @RequestBody PlanClarifiedFieldRequest request) {
+        return dreamService.saveClarifiedField(dreamId, request.field(), request.value());
     }
 
     @PostMapping("/dreams/{dreamId}/check")
@@ -83,6 +140,37 @@ public class AiPlanController {
     public StepRescue rescue(@PathVariable Long stepId,
                              @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
         return service.rescueStep(stepId, language);
+    }
+
+    /** V11 Phase 2: steps for a goal that exists only in the Build my plan draft. */
+    @PostMapping("/dreams/{dreamId}/draft-step-suggestions")
+    public StepSuggestions draftGoalSteps(@PathVariable Long dreamId, @Valid @RequestBody DraftGoalStepsRequest request,
+                                          @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return service.suggestDraftGoalSteps(dreamId, request, language);
+    }
+
+    /** V11 (PB-FR-30): the participant's unfinished Build my plan draft; 204 when there is none. */
+    @GetMapping("/drafts/{dreamId}")
+    public ResponseEntity<PlanDraftResponse> draft(@PathVariable Long dreamId) {
+        return drafts.get(dreamId).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/drafts/{dreamId}")
+    public PlanDraftResponse saveDraft(@PathVariable Long dreamId, @Valid @RequestBody PlanDraftRequest request) {
+        return drafts.save(dreamId, request);
+    }
+
+    @DeleteMapping("/drafts/{dreamId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void discardDraft(@PathVariable Long dreamId) {
+        drafts.discard(dreamId);
+    }
+
+    /** V11 (PB-FR-31): every new item in the draft, saved all together or not at all; the draft is then removed. */
+    @PostMapping("/drafts/{dreamId}/add")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PlanAddResult addDraft(@PathVariable Long dreamId) {
+        return drafts.add(dreamId);
     }
 
     /** V11 (PB-FR-34): thumbs up or down on one plan builder answer. */

@@ -311,6 +311,12 @@ https://claude.ai/code/artifact/199cd8cd-8af3-4bd9-b68f-9c2d414def2f?via=auto_pr
 V11 (migration V63) adds `suggestedItems` (how many items a plan builder answer offered; null for
 other features), `addedItems` and `editedItems` (kept as suggested, or kept after editing); the rest
 were discarded. Counts only, no suggestion text.
+**VisionStep** (V11, migration V65) adds `estimatedHours` and `startsAfter` (a step of the same goal; cleared if
+that step is deleted). Both optional.
+**PlanBuilderDraft** (`plan_builder_drafts`, V11, migration V64): `user`, `dream` (deleted with it), `stage`,
+`content` (the draft as JSON: new goals, steps and tasks, and containers for existing goals and steps),
+`expiresAt` (14 days after the last change; a daily job removes expired rows). Unique per user and dream.
+Never read as plan data and never shown to anyone but its owner; deleted with the account.
 **AiSafetyAlert** (`ai_safety_alerts`): `user`, `coach` (null means administrators see it),
 `alertType`, `acknowledgedAt`, `acknowledgedBy`. **AiSettings** adds `dailyMessageLimit`
 (default 20) and `helpLines`.

@@ -4,9 +4,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-/** V11 (PB-FR-32): the goals and steps one Add saved, to archive again. */
+/** V11 (PB-FR-32): the goals, steps and tasks one Add saved, to archive again. */
 public record AiPlanUndoRequest(
         Long requestId,
-        @Size(max = 10) List<@NotNull Long> goalIds,
-        @Size(max = 20) List<@NotNull Long> stepIds) {
+        @Size(max = 15) List<@NotNull Long> goalIds,
+        @Size(max = 200) List<@NotNull Long> stepIds,
+        @Size(max = 500) List<@NotNull Long> taskIds,
+        // V11 Phase 5: partners and obstacles the add created.
+        @Size(max = 10) List<@NotNull Long> partnerIds,
+        @Size(max = 10) List<@NotNull Long> obstacleIds) {
 }

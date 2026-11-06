@@ -8,7 +8,6 @@ import com.visionmapping.dto.response.AiDailyResponses.NextStep;
 import com.visionmapping.dto.response.AiDailyResponses.OutreachDraft;
 import com.visionmapping.dto.response.AiDailyResponses.Pick;
 import com.visionmapping.dto.response.AiDailyResponses.PitchFeedback;
-import com.visionmapping.dto.response.AiDailyResponses.ResourceIdea;
 import com.visionmapping.dto.response.AiDailyResponses.ResourceIdeas;
 import com.visionmapping.dto.response.AiDailyResponses.WeeklyReviewDraft;
 import com.visionmapping.entity.AiApprovedResource;
@@ -20,7 +19,6 @@ import com.visionmapping.entity.Partner;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.WorkStatus;
-import com.visionmapping.repository.AiApprovedResourceRepository;
 import com.visionmapping.repository.AttitudeCheckInRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
@@ -32,11 +30,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -54,8 +50,6 @@ public class AiDailyService {
     static final int MAX_CANDIDATES = 20;
     static final int MAX_PICKS = 3;
     static final int MAX_RESOURCES = 8;
-    static final int MAX_APPROVED = 60;
-    private static final Set<String> RESOURCE_KINDS = Set.of("COURSE", "BOOK", "TOOL", "ORGANISATION", "FUNDING", "PERSON", "OTHER");
     private static final Map<String, String> AUDIENCES = Map.of(
             "PARTNER", "a possible partner who would share the work and the results",
             "BUYER", "a possible buyer or customer deciding whether to pay",
@@ -67,7 +61,7 @@ public class AiDailyService {
     private final TaskItemRepository taskItemRepository;
     private final VisionStepRepository visionStepRepository;
     private final AttitudeCheckInRepository attitudeCheckInRepository;
-    private final AiApprovedResourceRepository approvedResourceRepository;
+    private final AiResourceIdeas resourceIdeas;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
@@ -205,9 +199,7 @@ public class AiDailyService {
         // whether or not AI is available.
         lookup.goal(goalId);
         String apiKey = accessService.requireAvailable(user);
-        Map<Long, AiApprovedResource> approved = new LinkedHashMap<>();
-        approvedResourceRepository.findByActiveTrueOrderByNameAsc().stream().limit(MAX_APPROVED)
-                .forEach(resource -> approved.put(resource.getId(), resource));
+        Map<Long, AiApprovedResource> approved = resourceIdeas.approved();
         String records = transactions.execute(status -> {
             Goal goal = lookup.goal(goalId);
             StringBuilder out = new StringBuilder("Dream: ").append(clip(goal.getDream().getTitle())).append('\n');
@@ -215,38 +207,12 @@ public class AiDailyService {
             visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), user.getId())
                     .forEach(step -> out.append("Step: ").append(clip(step.getTitle()))
                             .append(step.getResources() == null ? "" : " | needs: " + clip(step.getResources())).append('\n'));
-            if (!approved.isEmpty()) {
-                out.append("\nResources the program has approved:\n");
-                approved.values().forEach(resource -> out.append("- [").append(resource.getId()).append("] ")
-                        .append(resource.getKind()).append(": ").append(clip(resource.getName()))
-                        .append(resource.getDescription() == null ? "" : " | " + clip(resource.getDescription())).append('\n'));
-            }
+            out.append(AiResourceIdeas.describe(approved));
             return out.toString();
         });
-        String task = "Suggest up to " + MAX_RESOURCES + " learning resources, tools, organisations, funding sources and kinds "
-                + "of people that could help with this goal. Use any of the program's approved resources that fit first, with "
-                + "their id in approvedId; for anything else put 0 in approvedId. Only name other things that are widely known "
-                + "and that you are confident exist; otherwise describe the kind of resource. Never give web links, prices, "
-                + "phone numbers or named private individuals. For people, describe the role.";
+        String task = AiResourceIdeas.instruction(MAX_RESOURCES) + " They are for this goal.";
         AiDrafts.ResourceDrafts drafts = requests.ask(user, apiKey, "RESOURCE_IDEAS", language, records, task, AiDrafts.ResourceDrafts.class);
-        List<ResourceIdea> ideas = new ArrayList<>();
-        for (AiDrafts.ResourceDraft draft : Optional.ofNullable(drafts.resources()).orElse(List.of())) {
-            String kind = draft.kind() == null ? "OTHER" : draft.kind().trim().toUpperCase();
-            if (draft.name() == null || draft.name().isBlank() || ideas.size() >= MAX_RESOURCES) {
-                continue;
-            }
-            AiApprovedResource match = approved.get(draft.approvedId());
-            if (match != null) {
-                // Admin-checked (AI-FR-26): its own name, kind and link, not Claude's.
-                if (ideas.stream().noneMatch(idea -> match.getName().equals(idea.name()))) {
-                    ideas.add(new ResourceIdea(match.getKind(), match.getName(), limit(stripLinks(draft.why()), 300), false, match.getUrl()));
-                }
-                continue;
-            }
-            ideas.add(new ResourceIdea(RESOURCE_KINDS.contains(kind) ? kind : "OTHER", limit(stripLinks(draft.name()), 200),
-                    limit(stripLinks(draft.why()), 300), true, null));
-        }
-        return new ResourceIdeas(ideas);
+        return new ResourceIdeas(AiResourceIdeas.toIdeas(drafts.resources(), approved, MAX_RESOURCES));
     }
 
     private List<Candidate> openWork(Long userId, LocalDate today) {
@@ -283,11 +249,6 @@ public class AiDailyService {
 
     private static int score(int value) {
         return Math.max(1, Math.min(5, value));
-    }
-
-    /** AI-FR-13: links are never passed on until admins keep an approved list. */
-    private static String stripLinks(String value) {
-        return value == null ? null : value.replaceAll("(?i)\\b(https?://|www\\.)\\S+", "").trim();
     }
 
     private static String limit(String value, int max) {

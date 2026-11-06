@@ -142,6 +142,25 @@ public class PartnerService {
         return mapper.toResponse(entity);
     }
 
+    /**
+     * V11 (PB-FR-23): link one of the caller's partners to a new step (or goal)
+     * from Build my plan, only where the partner has no link at that level yet,
+     * so an existing link is never overwritten. Returns whether anything changed.
+     */
+    public boolean linkToPlanIfFree(Long partnerId, Long goalId, Long stepId) {
+        Partner partner = lookup.partner(partnerId);
+        boolean changed = false;
+        if (stepId != null && partner.getRelatedStep() == null) {
+            partner.setRelatedStep(lookup.step(stepId));
+            changed = true;
+        }
+        if (goalId != null && partner.getRelatedGoal() == null) {
+            partner.setRelatedGoal(lookup.goal(goalId));
+            changed = true;
+        }
+        return changed;
+    }
+
     public void archivePartner(Long id) {
         lookup.partner(id).setArchived(true);
     }

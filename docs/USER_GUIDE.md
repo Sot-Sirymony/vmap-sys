@@ -26,6 +26,33 @@ Password123
 9. Open `Tasks`.
 10. Create executable tasks under steps.
 
+### Build my plan (guided)
+
+Instead of the pages above, you can build the plan for one dream in a single guide:
+
+1. Open the dream and choose **Build my plan**.
+2. Work through the six stages: Clarify, Goals, Steps, Tasks, Helpers and risks, Check and add.
+   Skip any stage, or go back with **Back** or by choosing a stage at the top.
+3. Goals and steps already in your plan are shown and kept. You only add what is missing.
+4. With AI consent, **Suggest goals** and **Suggest steps** add AI suggestions you can edit or remove.
+   Without AI, use **Add a goal**, **Add a step** and **Add a task** with the questions shown at each stage.
+   If a question appears, answer it in place, or choose **Suggest anyway**. In Clarify, **Ask me questions first**
+   lets the plan builder ask up to three questions about your dream; tick the box to also save an answer into the dream.
+   Not happy with the suggestions? Pick **Fewer**, **More**, **Smaller**, **Bolder**, **Earlier** or **Later** and choose
+   **Refine**. Suggestions you edited or locked (lock icon) stay as they are. **Another option** swaps one suggestion.
+5. Each step can have an estimate in hours and the earlier step it **Starts after**. **Suggest steps for all goals**
+   fills in steps for every goal that has none yet.
+   Mark a step **Needs several tasks (complex)** to break it into tasks in the Tasks stage, where **Suggest tasks**
+   proposes small tasks with owner, due date, priority and hours. They can be refined, locked or swapped like steps.
+6. In **Helpers and risks**, **Suggest helpers and risks** proposes the kinds of people the plan needs, matched to
+   your own partners, and what could get in the way, with the kind of helper that fits each. Tick
+   **Also use my fear journal for this** to let your fears suggest risks. Choose a partner to link, or add a new
+   contact to reach. After adding the plan, **Draft a message** writes a note for each new contact to copy and send.
+7. Your draft saves as you work. Leave and come back on any device within 14 days and it is still there.
+   **Discard draft** removes it without touching your saved plan.
+8. In **Check and add**, fix anything listed as needing attention, then choose **Add plan**.
+   Everything is added together, or nothing is. **Undo** right after archives what was just added.
+
 ## Manage Tasks
 
 The Tasks page shows a board with these columns:

@@ -526,6 +526,18 @@ class AccessControlSweepTests {
         if (pattern.endsWith("/synergy-links")) {
             return json(Map.of("relatedGoalId", ownerIds.get("goals")));
         }
+        if (pattern.equals("/api/ai/plan/drafts/{dreamId}") && route.method() == HttpMethod.PUT) {
+            return json(Map.of("stage", "GOALS", "content", Map.of("goals", List.of())));
+        }
+        if (pattern.endsWith("/clarified-field")) {
+            return json(Map.of("field", "WHY_IMPORTANT", "value", "Someone else's answer"));
+        }
+        if (pattern.endsWith("/draft-task-suggestions")) {
+            return json(Map.of("stepTitle", "A new step"));
+        }
+        if (pattern.endsWith("/draft-step-suggestions")) {
+            return json(Map.of("title", "A new goal"));
+        }
         if (pattern.endsWith("/outcome")) {
             return json(Map.of("added", 1, "edited", 0));
         }

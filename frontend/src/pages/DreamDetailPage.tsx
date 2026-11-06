@@ -286,6 +286,15 @@ export function DreamDetailPage() {
             <PlanShareCard key={selectedDream.id} dream={selectedDream} token={token} />
           </Box>
         )}
+        {!selectedDream.archived && (
+          // V11 (PB-FR-01): the guided path from this dream to a full plan.
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            <Button onClick={() => navigate(`/dreams/${selectedDream.id}/build`)}>{tr('Build my plan')}</Button>
+            <Typography variant="body2" color="text.secondary">
+              {tr('A step-by-step guide from this dream to goals, steps and tasks.')}
+            </Typography>
+          </Box>
+        )}
         {!selectedDream.archived && token && (
           <Box sx={{ mb: 2 }}>
             <AiPlanAssistant key={selectedDream.id} dream={selectedDream} goals={goals} steps={steps} token={token} onDataChange={load} />

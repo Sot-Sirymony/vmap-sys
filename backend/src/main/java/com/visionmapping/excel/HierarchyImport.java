@@ -154,7 +154,7 @@ class HierarchyImport {
                     reader.enumValue(Priority.class, 6, PRIORITY),
                     reader.dateOrNull(7),
                     reader.enumValue(WorkStatus.class, 8, STATUS),
-                    null);
+                    null, null, null);
             long newId = stepService.createStep(valid(request)).id();
             mapWorkbookId(reader, newStepIds, newId);
         });

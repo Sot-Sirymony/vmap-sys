@@ -157,6 +157,30 @@ public class DreamService {
         return toResponse(entity);
     }
 
+    /**
+     * V11 (PB-FR-10): one clarifying answer saved into the dream, only when the
+     * participant chooses it. A new target date follows the same rule as the
+     * dream form (not before a goal's date for a bottom-up dream).
+     */
+    public DreamResponse saveClarifiedField(Long id, String field, String value) {
+        Dream entity = lookup.dream(id);
+        String text = value.trim();
+        switch (field) {
+            case "WHY_IMPORTANT" -> entity.setWhyImportant(text);
+            case "SUCCESS_DEFINITION" -> entity.setSuccessDefinition(text);
+            case "TARGET_DATE" -> {
+                try {
+                    entity.setTargetDate(LocalDate.parse(text));
+                } catch (java.time.format.DateTimeParseException exception) {
+                    throw new BusinessRuleException("Pick a target date.");
+                }
+                validateScheduleCascade(entity);
+            }
+            default -> throw new BusinessRuleException("This answer cannot be saved to the dream.");
+        }
+        return toResponse(entity);
+    }
+
     public DreamResponse updateDreamStatus(Long id, String status) {
         Dream entity = lookup.dream(id);
         entity.setStatus(parseEnum(DreamStatus.class, status));

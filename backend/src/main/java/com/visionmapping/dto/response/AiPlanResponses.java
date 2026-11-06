@@ -37,11 +37,46 @@ public final class AiPlanResponses {
     public record GoalSuggestions(List<GoalSuggestion> goals, String clarifyingQuestion, Long requestId) {
     }
 
+    /**
+     * V11 (PB-FR-12) adds priority, complex, estimatedHours and startsAfter:
+     * the 1-based position in this list of an earlier step this one starts
+     * after, or null.
+     */
     public record StepSuggestion(String title, String description, String owner, LocalDate targetDate,
-                                 String resources, String people, String reason) {
+                                 String resources, String people, String reason, Priority priority, boolean complex,
+                                 java.math.BigDecimal estimatedHours, Integer startsAfter) {
     }
 
     public record StepSuggestions(List<StepSuggestion> steps, String clarifyingQuestion, Long requestId) {
+    }
+
+    /** V11 (PB-FR-14): one suggested task for a complex step. */
+    public record TaskSuggestion(String title, String owner, LocalDate dueDate, Priority priority,
+                                 java.math.BigDecimal estimatedHours, String reason) {
+    }
+
+    public record TaskSuggestions(List<TaskSuggestion> tasks, String clarifyingQuestion, Long requestId) {
+    }
+
+    /** V11 (PB-FR-23): one of the participant's own partners who may fit a helper. */
+    public record PartnerMatch(Long partnerId, String name, String role, String supportType, String status) {
+    }
+
+    /** V11 (PB-FR-23): a kind of helper the plan needs, and the participant's partners who match by role or support type. */
+    public record HelperSuggestion(String role, String supportType, String forKey, String reason, List<PartnerMatch> matches) {
+    }
+
+    /**
+     * V11 (PB-FR-24 to PB-FR-26): a likely obstacle. helperType and helperLabel
+     * are the kind of partner that fits it (CLAUDE.md); fromFears says it came
+     * from the participant's fear journal.
+     */
+    public record RiskSuggestion(String title, String description, String obstacleType, String severity, String solution,
+                                 String forKey, String helperType, String helperLabel, boolean fromFears) {
+    }
+
+    public record HelpersAndRisks(List<HelperSuggestion> helpers, List<RiskSuggestion> risks,
+                                  List<com.visionmapping.dto.response.AiDailyResponses.ResourceIdea> resources, Long requestId) {
     }
 
     /** kind: MISSING_OWNER, MISSING_DATE, MISSING_RESOURCE, NO_STEPS, AFTER_GOAL_DATE, OVERDUE, VAGUE_STEP, UNREALISTIC_TIMING, GAP. */
@@ -58,8 +93,26 @@ public final class AiPlanResponses {
     public record StepRescue(Long stepId, String smallerStep, LocalDate newDate, String helper, String reason) {
     }
 
+    /**
+     * V11 (PB-FR-08): the next clarifying question about the dream, or done.
+     * field says which dream field the answer belongs in (WHY_IMPORTANT,
+     * SUCCESS_DEFINITION, TARGET_DATE), or null, so it can be saved there (PB-FR-10).
+     */
+    public record ClarifyQuestion(String question, String field, boolean done, Long requestId) {
+    }
+
     /** V11 (PB-FR-31): the ids of everything one Add saved, kept by the client for Undo. */
-    public record PlanAddResult(List<Long> goalIds, List<Long> stepIds) {
+    /**
+     * V11 (PB-FR-31): partnerIds and obstacleIds were created and are archived
+     * by Undo; linkedPartnerIds are existing partners given a link to a goal or
+     * step that had none, which Undo leaves as they are.
+     */
+    public record PlanAddResult(List<Long> goalIds, List<Long> stepIds, List<Long> taskIds, List<Long> partnerIds,
+                                List<Long> obstacleIds, List<Long> linkedPartnerIds) {
+
+        public PlanAddResult(List<Long> goalIds, List<Long> stepIds) {
+            this(goalIds, stepIds, List.of(), List.of(), List.of(), List.of());
+        }
     }
 
     /** V11 (PB-FR-36): one plan builder feature over the chosen period. Rates are 0 to 1, null when there is nothing to divide by. */

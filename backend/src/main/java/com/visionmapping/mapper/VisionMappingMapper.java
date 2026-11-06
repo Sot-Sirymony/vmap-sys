@@ -81,7 +81,7 @@ public class VisionMappingMapper {
                 entity.getDescription(), entity.getOwner(), entity.getSequenceNumber(), entity.isComplex(), entity.getPriority(),
                 entity.getTargetDate(), entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getResources(),
-                entity.getOverdueReschedules());
+                entity.getOverdueReschedules(), entity.getEstimatedHours(), id(entity.getStartsAfter()));
     }
 
     public TaskItemResponse toResponse(TaskItem entity) {

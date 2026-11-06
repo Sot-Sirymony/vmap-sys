@@ -216,6 +216,9 @@ export type VisionStep = {
   resources?: string | null;
   // AI-FR-11: times it was given a new date while overdue.
   overdueReschedules?: number;
+  // V11 Phase 4 (PB-FR-12).
+  estimatedHours?: number | null;
+  startsAfterStepId?: number | null;
 };
 
 export type VisionStepRequest = {
@@ -230,6 +233,9 @@ export type VisionStepRequest = {
   status: WorkStatus;
   // Left out keeps what is saved; an empty string clears it.
   resources?: string | null;
+  // V11 Phase 4: left out keeps what is saved; startsAfterStepId 0 clears it.
+  estimatedHours?: number | null;
+  startsAfterStepId?: number | null;
 };
 
 export type TaskItem = {
@@ -1085,7 +1091,24 @@ export type StepSuggestion = {
   resources?: string | null;
   people?: string | null;
   reason?: string | null;
+  // V11 Phase 4 (PB-FR-12): startsAfter is the 1-based position of an earlier step in the same answer.
+  priority?: Priority;
+  complex?: boolean;
+  estimatedHours?: number | null;
+  startsAfter?: number | null;
 };
+
+// V11 Phase 4 (PB-FR-14): the task builder.
+export type TaskSuggestion = {
+  title: string;
+  owner: string;
+  dueDate?: string | null;
+  priority: Priority;
+  estimatedHours?: number | null;
+  reason?: string | null;
+};
+
+export type TaskSuggestions = { tasks: TaskSuggestion[]; clarifyingQuestion?: string | null; requestId?: number | null };
 
 export type StepSuggestions = { steps: StepSuggestion[]; clarifyingQuestion?: string | null; requestId?: number | null };
 
@@ -1102,7 +1125,148 @@ export type PlanIssue = {
 export type PlanCheck = { issues: PlanIssue[]; aiChecked: boolean; requestId?: number | null };
 
 // V11 Phase 1 (PB-FR-31, PB-FR-32, PB-FR-36).
-export type PlanAddResult = { goalIds: number[]; stepIds: number[] };
+export type PlanAddResult = {
+  goalIds: number[];
+  stepIds: number[];
+  taskIds?: number[];
+  // V11 Phase 5: partners and obstacles created (Undo archives them) and existing partners given a link (Undo leaves them).
+  partnerIds?: number[];
+  obstacleIds?: number[];
+  linkedPartnerIds?: number[];
+};
+
+// V11 Phase 5 (PB-FR-23 to PB-FR-26, PB-FR-40): helpers, risks and resources for the plan being built.
+export type PartnerMatch = { partnerId: number; name: string; role?: string | null; supportType?: string | null; status: string };
+
+export type HelperSuggestion = { role: string; supportType: string; forKey?: string | null; reason?: string | null; matches: PartnerMatch[] };
+
+export type RiskSuggestion = {
+  title: string;
+  description?: string | null;
+  obstacleType: string;
+  severity: string;
+  solution?: string | null;
+  forKey?: string | null;
+  helperType: string;
+  helperLabel?: string | null;
+  fromFears: boolean;
+};
+
+export type HelpersAndRisks = {
+  helpers: HelperSuggestion[];
+  risks: RiskSuggestion[];
+  resources: ResourceIdea[];
+  requestId?: number | null;
+};
+
+/** A helper in the draft: partnerId links one of the participant's partners; without it a new To Contact partner is added. */
+export type DraftHelper = {
+  key: string;
+  role: string;
+  supportType: string;
+  name?: string | null;
+  partnerId?: number | null;
+  // Shown in the guide only.
+  partnerName?: string | null;
+  linkKey?: string | null;
+  requestId?: number | null;
+  edited?: boolean;
+  // The partners that matched, kept in the browser for this session only (the server ignores it).
+  matches?: PartnerMatch[];
+};
+
+export type DraftRisk = {
+  key: string;
+  title: string;
+  description?: string | null;
+  obstacleType: string;
+  severity: string;
+  solution?: string | null;
+  linkKey?: string | null;
+  helperKey?: string | null;
+  fromFears?: boolean;
+  requestId?: number | null;
+  edited?: boolean;
+};
+
+// V11 Phase 2 (PB-FR-30): a Build my plan draft. An item with existingId stands for a goal or step already in the
+// plan; it is never changed, only given new children. Everything else is new and is saved when the plan is added.
+export type PlanStage = 'CLARIFY' | 'GOALS' | 'STEPS' | 'TASKS' | 'HELPERS' | 'REVIEW';
+
+export type DraftTask = {
+  key: string;
+  title: string;
+  owner: string;
+  dueDate?: string | null;
+  priority: Priority;
+  estimatedHours?: number | null;
+  // V11 Phase 4 (PB-FR-14).
+  requestId?: number | null;
+  edited?: boolean;
+  locked?: boolean;
+};
+
+export type DraftStep = {
+  key: string;
+  existingId?: number | null;
+  title: string;
+  description?: string | null;
+  owner: string;
+  targetDate?: string | null;
+  priority: Priority;
+  complex: boolean;
+  resources?: string | null;
+  requestId?: number | null;
+  edited: boolean;
+  locked?: boolean;
+  tasks: DraftTask[];
+  // V11 Phase 4 (PB-FR-12): effort, and the key of the earlier step in this goal it starts after.
+  estimatedHours?: number | null;
+  startsAfterKey?: string | null;
+};
+
+export type DraftGoal = {
+  key: string;
+  existingId?: number | null;
+  title: string;
+  description?: string | null;
+  successCriteria?: string | null;
+  targetDate?: string | null;
+  priority: Priority;
+  moonshot: boolean;
+  requestId?: number | null;
+  edited: boolean;
+  locked?: boolean;
+  steps: DraftStep[];
+};
+
+// V11 Phase 3 (PB-FR-08, PB-FR-09): clarifying answers given in this session; sent with later suggestions.
+export type PlanClarification = { question: string; answer: string };
+
+export type PlanDraftContent = {
+  goals: DraftGoal[];
+  clarifications?: PlanClarification[];
+  helpers?: DraftHelper[];
+  risks?: DraftRisk[];
+};
+
+export type RefineAction = 'FEWER' | 'MORE' | 'SMALLER' | 'BOLDER' | 'EARLIER' | 'LATER' | 'ANOTHER';
+
+/** V11 Phase 3: answers, suggest anyway, and refining the last set (PB-FR-19 to PB-FR-21). */
+export type PlanAsk = {
+  answers?: PlanClarification[];
+  suggestAnyway?: boolean;
+  refine?: RefineAction;
+  note?: string;
+  keep?: string[];
+  replace?: string[];
+};
+
+export type ClarifyField = 'WHY_IMPORTANT' | 'SUCCESS_DEFINITION' | 'TARGET_DATE';
+
+export type ClarifyQuestion = { question?: string | null; field?: ClarifyField | null; done: boolean; requestId?: number | null };
+
+export type PlanDraft = { dreamId: number; stage: PlanStage; content: PlanDraftContent; updatedAt: string; expiresAt: string };
 
 export type PlanFeatureMetrics = {
   feature: string;

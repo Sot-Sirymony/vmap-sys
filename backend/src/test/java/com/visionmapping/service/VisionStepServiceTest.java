@@ -122,7 +122,7 @@ class VisionStepServiceTest {
     private com.visionmapping.dto.request.VisionStepRequest requestFrom(VisionStep step) {
         return new com.visionmapping.dto.request.VisionStepRequest(step.getGoal().getId(), step.getTitle(),
                 step.getDescription(), "Me", step.getSequenceNumber(), step.isComplex(), step.getPriority(),
-                step.getTargetDate(), step.getStatus(), step.getResources());
+                step.getTargetDate(), step.getStatus(), step.getResources(), null, null);
     }
 
     @Test

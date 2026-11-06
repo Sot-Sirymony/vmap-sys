@@ -85,6 +85,15 @@ public class VisionStep extends BaseAuditableEntity {
     @Column(length = 1000)
     private String resources;
 
+    /** V11 (PB-FR-12): estimated effort in hours; optional. */
+    @Column(name = "estimated_hours", precision = 6, scale = 2)
+    private BigDecimal estimatedHours;
+
+    /** V11 (PB-FR-12): the step of the same goal this one starts after, when order matters; optional. */
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "starts_after_step_id")
+    private VisionStep startsAfter;
+
     /** AI-FR-11: how often this step was given a new date while overdue. */
     @Builder.Default
     @Column(name = "overdue_reschedules", nullable = false)
