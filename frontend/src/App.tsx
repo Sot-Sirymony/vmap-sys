@@ -23,6 +23,7 @@ const ModuleContentPage = lazy(() => import('./pages/ModuleContentPage').then((m
 const CoachPage = lazy(() => import('./pages/CoachPage').then((m) => ({ default: m.CoachPage })));
 const CoachParticipantPage = lazy(() => import('./pages/CoachParticipantPage').then((m) => ({ default: m.CoachParticipantPage })));
 const CohortsPage = lazy(() => import('./pages/CohortsPage').then((m) => ({ default: m.CohortsPage })));
+const SecurityLogPage = lazy(() => import('./pages/SecurityLogPage').then((m) => ({ default: m.SecurityLogPage })));
 const InterfaceTextPage = lazy(() => import('./pages/InterfaceTextPage').then((m) => ({ default: m.InterfaceTextPage })));
 const UndatedStepsPage = lazy(() => import('./pages/UndatedStepsPage').then((m) => ({ default: m.UndatedStepsPage })));
 const VisionAreasPage = lazy(() => import('./pages/VisionAreasPage').then((m) => ({ default: m.VisionAreasPage })));
@@ -98,6 +99,7 @@ export function App() {
             <Route path="/settings/interface-text" element={<InterfaceTextPage />} />
             {/* V9: coaches and cohorts */}
             <Route path="/settings/cohorts" element={<CohortsPage />} />
+            <Route path="/settings/security-log" element={<SecurityLogPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/dream-coach" element={<DreamCoachPage />} />
             <Route path="/coach" element={<CoachPage />} />

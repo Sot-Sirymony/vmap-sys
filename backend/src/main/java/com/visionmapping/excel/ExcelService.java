@@ -1,5 +1,7 @@
 package com.visionmapping.excel;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import org.apache.poi.openxml4j.util.ZipSecureFile;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Locale;
@@ -120,6 +122,7 @@ public class ExcelService {
     private final VisionAreaService visionAreaService;
     private final Validator validator;
 
+    @SecurityAudit(value = SecurityEventType.EXCEL_EXPORTED)
     public byte[] exportWorkbook() {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             CellStyle headerStyle = headerStyle(workbook);
@@ -215,6 +218,7 @@ public class ExcelService {
      * The other sheets (Partners, Reviews, and so on) are not imported yet.
      */
     @Transactional
+    @SecurityAudit(value = SecurityEventType.EXCEL_IMPORTED)
     public ExcelImportSummaryResponse importWorkbook(MultipartFile file) {
         List<String> errors = new ArrayList<>();
 

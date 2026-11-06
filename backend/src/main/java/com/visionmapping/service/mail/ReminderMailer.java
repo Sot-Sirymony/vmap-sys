@@ -1,5 +1,6 @@
 package com.visionmapping.service.mail;
 
+import com.visionmapping.util.LogMasks;
 import com.visionmapping.config.AsyncConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,7 @@ public class ReminderMailer {
     public void send(String email, String body) {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (!isConfigured() || sender == null) {
-            log.warn("No SMTP server configured (spring.mail.host is unset), so no reminder was emailed to {}.", email);
+            log.warn("No SMTP server configured (spring.mail.host is unset), so no reminder was emailed to {}.", LogMasks.email(email));
             return;
         }
         SimpleMailMessage message = new SimpleMailMessage();
@@ -48,7 +49,7 @@ public class ReminderMailer {
         try {
             sender.send(message);
         } catch (MailException exception) {
-            log.error("Could not send the reminder email to {}", email, exception);
+            log.error("Could not send the reminder email to {}", LogMasks.email(email), exception);
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.visionmapping.service.ai;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -62,6 +64,7 @@ public class AiAdminService {
     }
 
     @Transactional
+    @SecurityAudit(value = SecurityEventType.APPROVED_RESOURCE_CHANGED, target = "approved_resource")
     public AiApprovedResourceResponse createResource(AiApprovedResourceRequest request) {
         requireAdmin();
         AiApprovedResource resource = new AiApprovedResource();
@@ -70,6 +73,7 @@ public class AiAdminService {
     }
 
     @Transactional
+    @SecurityAudit(value = SecurityEventType.APPROVED_RESOURCE_CHANGED, target = "approved_resource")
     public AiApprovedResourceResponse updateResource(Long id, AiApprovedResourceRequest request) {
         requireAdmin();
         AiApprovedResource resource = resourceRepository.findById(id)
@@ -79,6 +83,7 @@ public class AiAdminService {
     }
 
     @Transactional
+    @SecurityAudit(value = SecurityEventType.APPROVED_RESOURCE_CHANGED, target = "approved_resource")
     public void deleteResource(Long id) {
         requireAdmin();
         resourceRepository.delete(resourceRepository.findById(id)

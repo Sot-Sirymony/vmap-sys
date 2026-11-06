@@ -1,5 +1,8 @@
 package com.visionmapping.security;
 
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityEventService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionmapping.exception.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +33,7 @@ import org.springframework.stereotype.Component;
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
+    private final SecurityEventService securityEvents;
 
     @Override
     public void handle(
@@ -37,6 +41,8 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletResponse response,
             AccessDeniedException accessDeniedException
     ) throws IOException {
+        securityEvents.record(SecurityEventType.ACCESS_DENIED, SecurityOutcome.DENIED, null, null,
+                request.getMethod() + " " + request.getRequestURI());
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), new ErrorResponse(

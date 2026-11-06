@@ -1,0 +1,40 @@
+package com.visionmapping.security.audit;
+
+/** V10 (SEC-09-01): every kind of event the security log records. */
+public enum SecurityEventType {
+    // sign-in and sessions
+    REGISTERED,
+    LOGIN_SUCCEEDED,
+    LOGIN_FAILED,
+    LOGIN_LOCKED,
+    LOGGED_OUT,
+    PASSWORD_CHANGED,
+    PASSWORD_RESET_REQUESTED,
+    PASSWORD_RESET_COMPLETED,
+    REFRESH_TOKEN_REUSED,
+    INVALID_TOKEN,
+    // refused requests
+    ACCESS_DENIED,
+    NOT_OWNER,
+    RATE_LIMITED,
+    // people and data
+    ROLE_CHANGED,
+    COACH_VIEWED_PARTICIPANT,
+    SHARE_LINK_CREATED,
+    SHARE_LINK_OPENED,
+    SHARE_LINK_REVOKED,
+    EXCEL_IMPORTED,
+    EXCEL_EXPORTED,
+    ACCOUNT_EXPORTED,
+    ACCOUNT_DELETED,
+    // admin changes (SEC-08-06)
+    AI_SETTINGS_CHANGED,
+    AI_KEY_CHANGED,
+    AI_KEY_REMOVED,
+    APPROVED_RESOURCE_CHANGED,
+    MODULE_CONTENT_CHANGED,
+    INTERFACE_TEXT_CHANGED,
+    COHORT_CHANGED,
+    COHORT_MEMBER_CHANGED,
+    ISSUE_REPORT_TRIAGED
+}

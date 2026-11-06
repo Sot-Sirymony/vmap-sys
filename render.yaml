@@ -39,6 +39,10 @@ services:
       # with this one the next time an admin saves it.
       - key: SETTINGS_ENCRYPTION_KEY
         generateValue: true
+      # V10 (SEC-09-04): where security alerts are emailed. Set it in the
+      # dashboard; until then alerts go only to the log ("SECURITY ALERT").
+      - key: SECURITY_ALERT_EMAIL
+        sync: false
       # V10 (SEC-07-04): access tokens last 30 minutes and are renewed in the
       # background with a refresh token; sessions last 30 days with "remember me".
       - key: JWT_EXPIRATION_MINUTES

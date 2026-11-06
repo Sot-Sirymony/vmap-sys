@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -56,6 +58,7 @@ public class LearningModuleAdminService {
                 .toList();
     }
 
+    @SecurityAudit(value = SecurityEventType.MODULE_CONTENT_CHANGED, target = "module")
     public ModuleContentResponse updateContent(Integer number, String language, ModuleContentRequest request) {
         requireAdmin();
         requireLanguage(language);
@@ -82,6 +85,7 @@ public class LearningModuleAdminService {
      * one at a time would collide partway through. Progress is unaffected, since
      * completions are stored against the module number.
      */
+    @SecurityAudit(value = SecurityEventType.MODULE_CONTENT_CHANGED)
     public void reorder(List<Integer> orderedNumbers) {
         requireAdmin();
         Set<Integer> known = new HashSet<>(moduleRepository.findAll().stream().map(LearningModule::getNumber).toList());

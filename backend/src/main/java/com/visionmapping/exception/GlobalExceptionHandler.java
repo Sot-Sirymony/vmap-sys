@@ -1,5 +1,9 @@
 package com.visionmapping.exception;
 
+import lombok.RequiredArgsConstructor;
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityEventService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
@@ -23,7 +27,10 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final SecurityEventService securityEvents;
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
@@ -137,6 +144,8 @@ public class GlobalExceptionHandler {
             TooManyRequestsException exception,
             HttpServletRequest request
     ) {
+        securityEvents.record(SecurityEventType.RATE_LIMITED, SecurityOutcome.DENIED, null, null,
+                request.getMethod() + " " + request.getRequestURI());
         ResponseEntity<ErrorResponse> response =
                 buildResponse(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), request);
         if (exception.getRetryAfterSeconds() == null) {
@@ -193,6 +202,8 @@ public class GlobalExceptionHandler {
             AccessDeniedException exception,
             HttpServletRequest request
     ) {
+        securityEvents.record(SecurityEventType.ACCESS_DENIED, SecurityOutcome.DENIED, null, null,
+                request.getMethod() + " " + request.getRequestURI());
         return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
     }
 

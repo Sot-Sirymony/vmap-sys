@@ -1,5 +1,8 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.dto.request.ForgotPasswordRequest;
 import com.visionmapping.dto.request.ResetPasswordRequest;
 import com.visionmapping.entity.AppUser;
@@ -61,6 +64,7 @@ public class PasswordResetService {
     private final PasswordResetRateLimiter rateLimiter;
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final AuthSessionService authSessionService;
+    private final SecurityEventService securityEvents;
     private final SecureRandom secureRandom = new SecureRandom();
 
     /** Long enough to find the mail, short enough that a leaked inbox ages out. */
@@ -87,6 +91,8 @@ public class PasswordResetService {
         rateLimiter.check(email, clientIp);
 
         Optional<AppUser> found = appUserRepository.findByEmail(email);
+        securityEvents.recordForEmail(email, found.map(AppUser::getId).orElse(null),
+                SecurityEventType.PASSWORD_RESET_REQUESTED, SecurityOutcome.SUCCESS, found.isEmpty() ? "no account" : null);
 
         if (found.isEmpty()) {
             // Logged, not answered: an operator can see the attempt, the caller
@@ -127,13 +133,18 @@ public class PasswordResetService {
      * an attacker nothing they could act on.
      */
     public void resetPassword(ResetPasswordRequest request) {
-        PasswordResetToken token = tokenRepository.findByTokenHash(hash(request.token()))
-                .orElseThrow(() -> new BusinessRuleException("This reset link is not valid. Request a new one."));
+        PasswordResetToken token = tokenRepository.findByTokenHash(hash(request.token())).orElse(null);
+        if (token == null) {
+            securityEvents.recordFor(null, SecurityEventType.PASSWORD_RESET_COMPLETED, SecurityOutcome.DENIED, "unknown link");
+            throw new BusinessRuleException("This reset link is not valid. Request a new one.");
+        }
 
         if (token.getUsedAt() != null) {
+            securityEvents.recordFor(token.getUser().getId(), SecurityEventType.PASSWORD_RESET_COMPLETED, SecurityOutcome.DENIED, "link already used");
             throw new BusinessRuleException("This reset link has already been used. Request a new one.");
         }
         if (!token.getExpiresAt().isAfter(Instant.now())) {
+            securityEvents.recordFor(token.getUser().getId(), SecurityEventType.PASSWORD_RESET_COMPLETED, SecurityOutcome.DENIED, "link expired");
             throw new BusinessRuleException("This reset link has expired. Request a new one.");
         }
 
@@ -153,6 +164,7 @@ public class PasswordResetService {
         // V10 (SEC-07-03): whoever had the old password may be signed in
         // somewhere; every session ends and the owner signs in afresh.
         authSessionService.endAllSessions(user.getId());
+        securityEvents.recordFor(user.getId(), SecurityEventType.PASSWORD_RESET_COMPLETED, SecurityOutcome.SUCCESS, "all sessions ended");
     }
 
     private String buildLink(String token) {

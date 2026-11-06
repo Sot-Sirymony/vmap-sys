@@ -1,5 +1,9 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventService;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.dto.request.PlanShareRequest;
 import com.visionmapping.dto.response.PlanShareResponse;
 import com.visionmapping.dto.response.SharedPlanResponse;
@@ -50,6 +54,7 @@ public class PlanShareService {
     private static final String LINK_GONE = "This link has ended or was stopped.";
 
     private final EntityLookup lookup;
+    private final SecurityEventService securityEvents;
     private final PlanShareRepository planShareRepository;
     private final GoalRepository goalRepository;
     private final VisionStepRepository visionStepRepository;
@@ -65,6 +70,7 @@ public class PlanShareService {
         return shares.stream().map(share -> toResponse(share, null)).toList();
     }
 
+    @SecurityAudit(value = SecurityEventType.SHARE_LINK_CREATED, target = "plan_share")
     public PlanShareResponse create(PlanShareRequest request) {
         Dream dream = lookup.dream(request.dreamId());
         if (dream.isArchived()) {
@@ -85,6 +91,7 @@ public class PlanShareService {
         return toResponse(share, token);
     }
 
+    @SecurityAudit(value = SecurityEventType.SHARE_LINK_REVOKED, target = "plan_share")
     public PlanShareResponse revoke(Long id) {
         PlanShare share = planShareRepository.findById(id)
                 .filter(found -> found.getUser().getId().equals(lookup.userId()))
@@ -100,7 +107,15 @@ public class PlanShareService {
         Instant now = Instant.now(clock);
         PlanShare share = planShareRepository.findByTokenHash(hash(token))
                 .filter(found -> found.isOpenAt(now) && !found.getDream().isArchived())
-                .orElseThrow(() -> new ResourceNotFoundException(LINK_GONE));
+                .orElse(null);
+        // V10 (SEC-01-07): every opening is logged, and so is every refused one.
+        if (share == null) {
+            securityEvents.recordFor(null, SecurityEventType.SHARE_LINK_OPENED, SecurityOutcome.DENIED,
+                    "unknown, expired or stopped link");
+            throw new ResourceNotFoundException(LINK_GONE);
+        }
+        securityEvents.recordFor(null, SecurityEventType.SHARE_LINK_OPENED, SecurityOutcome.SUCCESS,
+                "plan_share", share.getId(), null);
         share.setViewCount(share.getViewCount() + 1);
         share.setLastViewedAt(now);
 

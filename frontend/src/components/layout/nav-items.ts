@@ -20,6 +20,7 @@ import {
   Network,
   Palette,
   Send,
+  ShieldAlert,
   Sparkles,
   Target,
   TrafficCone,
@@ -103,6 +104,8 @@ export const navGroups: NavGroup[] = [
       { to: '/coach', label: tr('Coaching'), icon: Users, roles: ['COACH', 'ADMIN'] },
       { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, roles: ['ADMIN'] },
       { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, roles: ['ADMIN'] },
+      // V10 (SEC-09-05): the read-only security log.
+      { to: '/settings/security-log', label: tr('Security log'), icon: ShieldAlert, roles: ['ADMIN'] },
     ],
   },
 ];

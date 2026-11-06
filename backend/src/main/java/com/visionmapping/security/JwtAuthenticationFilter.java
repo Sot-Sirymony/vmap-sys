@@ -1,5 +1,10 @@
 package com.visionmapping.security;
 
+import java.util.Optional;
+import io.jsonwebtoken.ExpiredJwtException;
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.AuthSession;
 import com.visionmapping.service.AuthSessionService;
@@ -37,6 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final AuthSessionService authSessionService;
+    private final SecurityEventService securityEvents;
 
     @Override
     protected void doFilterInternal(
@@ -53,18 +59,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             JwtService.AccessToken token = jwtService.parse(authHeader.substring(7));
-            authSessionService.activeSession(token.sessionId())
+            Optional<AppUserPrincipal> principal = authSessionService.activeSession(token.sessionId())
                     .filter(session -> belongsTo(session, token.email()))
                     .map(session -> new AppUserPrincipal(session.getUser(), session.getId()))
-                    .filter(AppUserPrincipal::isEnabled)
-                    .ifPresent(principal -> {
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                principal, null, principal.getAuthorities());
-                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                    });
+                    .filter(AppUserPrincipal::isEnabled);
+            if (principal.isPresent()) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        principal.get(), null, principal.get().getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                // A well-signed token for a session that has ended (logged out,
+                // password changed, reused refresh token) or a disabled user.
+                securityEvents.record(SecurityEventType.INVALID_TOKEN, SecurityOutcome.DENIED, "session",
+                        token.sessionId(), "session ended or account disabled");
+            }
+        } catch (ExpiredJwtException expired) {
+            // Routine: the client renews it. Not worth a log entry.
+            log.debug("Rejecting request with an expired access token");
         } catch (JwtException | IllegalArgumentException exception) {
             log.debug("Rejecting request with invalid JWT: {}", exception.getMessage());
+            securityEvents.record(SecurityEventType.INVALID_TOKEN, SecurityOutcome.DENIED, null, null,
+                    exception.getClass().getSimpleName());
         }
 
         filterChain.doFilter(request, response);

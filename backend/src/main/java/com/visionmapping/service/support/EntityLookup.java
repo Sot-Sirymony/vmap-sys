@@ -1,5 +1,9 @@
 package com.visionmapping.service.support;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.Dream;
@@ -38,6 +42,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class EntityLookup {
+
+    private SecurityEventService securityEvents;
 
     private final UserScope userScope;
     private final VisionAreaRepository visionAreaRepository;
@@ -126,6 +132,25 @@ public class EntityLookup {
     private <T> T owned(Optional<T> found, Function<T, Long> ownerId, String label, Long id) {
         Supplier<ResourceNotFoundException> notFound =
                 () -> new ResourceNotFoundException(label + " not found: " + id);
-        return found.filter(entity -> ownerId.apply(entity).equals(userId())).orElseThrow(notFound);
+        T entity = found.orElseThrow(notFound);
+        if (!ownerId.apply(entity).equals(userId())) {
+            // V10 (SEC-09-01): the caller still gets the same 404 as for a
+            // record that does not exist, but the log notes the attempt, and
+            // many in a row raise an alert.
+            if (securityEvents != null) {
+                securityEvents.record(SecurityEventType.NOT_OWNER, SecurityOutcome.DENIED, label, id, null);
+            }
+            throw notFound.get();
+        }
+        return entity;
+    }
+
+    /**
+     * Optional so unit tests can build this class by hand without the log.
+     * In the running app Spring always sets it.
+     */
+    @Autowired(required = false)
+    public void setSecurityEvents(SecurityEventService securityEvents) {
+        this.securityEvents = securityEvents;
     }
 }

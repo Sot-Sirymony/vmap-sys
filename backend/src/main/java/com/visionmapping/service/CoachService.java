@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -80,6 +82,7 @@ public class CoachService {
                 .toList();
     }
 
+    @SecurityAudit(value = SecurityEventType.COACH_VIEWED_PARTICIPANT, target = "user")
     public CoachParticipantDetailResponse participant(Long participantId) {
         AppUser participant = visibleParticipant(participantId);
         Long id = participant.getId();

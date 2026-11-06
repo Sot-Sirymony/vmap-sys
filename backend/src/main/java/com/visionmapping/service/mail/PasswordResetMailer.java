@@ -1,5 +1,8 @@
 package com.visionmapping.service.mail;
 
+import org.springframework.core.env.Environment;
+import java.util.Arrays;
+import com.visionmapping.util.LogMasks;
 import com.visionmapping.config.AsyncConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +36,7 @@ import org.springframework.stereotype.Component;
 public class PasswordResetMailer {
 
     private final ObjectProvider<JavaMailSender> mailSender;
+    private final Environment environment;
 
     @Value("${spring.mail.host:}")
     private String mailHost;
@@ -56,10 +60,18 @@ public class PasswordResetMailer {
             // WARN, and explicit that nothing was sent: an instance that landed
             // here by accident would otherwise look healthy while every user's
             // reset link went only to the server log.
-            log.warn("""
-                    No SMTP server configured (spring.mail.host is unset) — no email was sent.
-                    Password reset link for {}, valid for {} minutes:
-                    {}""", email, ttlMinutes, resetLink);
+            // V10 (SEC-09-07): the link is a working credential for the account.
+            // It is printed only on a local or test run, where that is how the
+            // flow is tried out. Anywhere else it is never written to the log.
+            if (linkMayBeLogged()) {
+                log.warn("""
+                        No SMTP server configured (spring.mail.host is unset) — no email was sent.
+                        Password reset link for {}, valid for {} minutes:
+                        {}""", LogMasks.email(email), ttlMinutes, resetLink);
+            } else {
+                log.warn("No SMTP server configured (spring.mail.host is unset): the password reset email for {} "
+                        + "was not sent. The link is not logged outside local/test.", LogMasks.email(email));
+            }
             return;
         }
 
@@ -88,7 +100,11 @@ public class PasswordResetMailer {
             // not the address belongs to an account, so letting a send failure
             // become a 500 would turn "this address is registered" into
             // something readable off the status code.
-            log.error("Could not send the password reset email to {}", email, exception);
+            log.error("Could not send the password reset email to {}", LogMasks.email(email), exception);
         }
+    }
+
+    private boolean linkMayBeLogged() {
+        return Arrays.stream(environment.getActiveProfiles()).anyMatch(profile -> profile.equals("local") || profile.equals("test"));
     }
 }

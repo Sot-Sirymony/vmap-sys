@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.dto.request.DeleteAccountRequest;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.exception.BusinessRuleException;
@@ -121,6 +123,7 @@ public class AccountService {
 
     /** The password hash is deliberately never part of this. Archived records are. */
     @Transactional(readOnly = true)
+    @SecurityAudit(value = SecurityEventType.ACCOUNT_EXPORTED)
     public Map<String, Object> exportData() {
         AppUser user = userScope.currentUser();
         Long userId = user.getId();
@@ -223,6 +226,7 @@ public class AccountService {
         return data;
     }
 
+    @SecurityAudit(value = SecurityEventType.ACCOUNT_DELETED)
     public void deleteAccount(DeleteAccountRequest request) {
         AppUser user = userScope.currentUser();
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {

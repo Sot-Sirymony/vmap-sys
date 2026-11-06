@@ -1,5 +1,9 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventService;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import com.visionmapping.dto.request.CohortMemberRequest;
 import com.visionmapping.dto.request.CohortRequest;
@@ -34,6 +38,7 @@ public class CohortAdminService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final EntityLookup lookup;
+    private final SecurityEventService securityEvents;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
 
@@ -43,6 +48,7 @@ public class CohortAdminService {
         return cohortRepository.findAllByOrderByArchivedAscNameAsc().stream().map(this::toResponse).toList();
     }
 
+    @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
     public CohortResponse create(CohortRequest request) {
         requireAdmin();
         Cohort cohort = Cohort.builder().joinCode(newCode()).build();
@@ -50,6 +56,7 @@ public class CohortAdminService {
         return toResponse(cohortRepository.save(cohort));
     }
 
+    @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
     public CohortResponse update(Long id, CohortRequest request) {
         requireAdmin();
         Cohort cohort = cohort(id);
@@ -58,6 +65,7 @@ public class CohortAdminService {
     }
 
     /** A new code stops the old one working, for example after it was shared too widely. */
+    @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
     public CohortResponse newJoinCode(Long id) {
         requireAdmin();
         Cohort cohort = cohort(id);
@@ -65,6 +73,7 @@ public class CohortAdminService {
         return toResponse(cohortRepository.save(cohort));
     }
 
+    @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
     public CohortResponse setArchived(Long id, boolean archived) {
         requireAdmin();
         Cohort cohort = cohort(id);
@@ -82,6 +91,7 @@ public class CohortAdminService {
     }
 
     /** Puts a registered person in this cohort, moving them out of any other. */
+    @SecurityAudit(value = SecurityEventType.COHORT_MEMBER_CHANGED, target = "cohort")
     public CohortMemberResponse addMember(Long id, CohortMemberRequest request) {
         requireAdmin();
         Cohort cohort = cohort(id);
@@ -91,6 +101,7 @@ public class CohortAdminService {
         return new CohortMemberResponse(user.getId(), user.getFullName(), user.getEmail());
     }
 
+    @SecurityAudit(value = SecurityEventType.COHORT_MEMBER_CHANGED, target = "cohort")
     public void removeMember(Long id, Long userId) {
         requireAdmin();
         AppUser user = appUserRepository.findById(userId)
@@ -115,6 +126,7 @@ public class CohortAdminService {
         if (coach.getRole() == UserRole.USER) {
             coach.setRole(UserRole.COACH);
             appUserRepository.save(coach);
+            securityEvents.record(SecurityEventType.ROLE_CHANGED, SecurityOutcome.SUCCESS, "user", coach.getId(), "USER -> COACH");
         }
         cohort.setCoach(coach);
     }

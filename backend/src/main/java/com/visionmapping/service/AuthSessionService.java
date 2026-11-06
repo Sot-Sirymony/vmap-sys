@@ -1,5 +1,8 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.AuthSession;
 import com.visionmapping.entity.enums.UserStatus;
@@ -58,6 +61,7 @@ public class AuthSessionService {
 
     private final AuthSessionRepository repository;
     private final JwtService jwtService;
+    private final SecurityEventService securityEvents;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
     private final Duration rememberedLifetime;
@@ -67,12 +71,14 @@ public class AuthSessionService {
     public AuthSessionService(
             AuthSessionRepository repository,
             JwtService jwtService,
+            SecurityEventService securityEvents,
             Clock clock,
             @Value("${app.security.session.remember-me-days:30}") long rememberMeDays,
             @Value("${app.security.session.session-hours:12}") long sessionHours,
             @Value("${app.security.session.refresh-grace-seconds:30}") long refreshGraceSeconds) {
         this.repository = repository;
         this.jwtService = jwtService;
+        this.securityEvents = securityEvents;
         this.clock = clock;
         this.rememberedLifetime = Duration.ofDays(rememberMeDays);
         this.sessionLifetime = Duration.ofHours(sessionHours);
@@ -133,6 +139,8 @@ public class AuthSessionService {
         replaced.setRevokedAt(now);
         replaced.setRevokedReason(REASON_REUSED);
         log.warn("Refresh token reuse detected; session {} of user {} ended", replaced.getId(), replaced.getUser().getId());
+        securityEvents.recordFor(replaced.getUser().getId(), SecurityEventType.REFRESH_TOKEN_REUSED, SecurityOutcome.DENIED,
+                "session", replaced.getId(), "session ended");
         throw new SessionEndedException();
     }
 
@@ -148,6 +156,8 @@ public class AuthSessionService {
                 .ifPresent(session -> {
                     session.setRevokedAt(now);
                     session.setRevokedReason(REASON_LOGOUT);
+                    securityEvents.recordFor(session.getUser().getId(), SecurityEventType.LOGGED_OUT, SecurityOutcome.SUCCESS,
+                            "session", session.getId(), null);
                 });
     }
 

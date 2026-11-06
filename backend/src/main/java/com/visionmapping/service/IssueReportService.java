@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
@@ -100,6 +102,7 @@ public class IssueReportService {
     }
 
     /** FR-38.4: admin-only status change, with the resolution rule (BR-32). */
+    @SecurityAudit(value = SecurityEventType.ISSUE_REPORT_TRIAGED, target = "issue_report")
     public IssueReportResponse updateStatus(Long id, String status, String resolutionNote) {
         requireAdmin();
         IssueReport report = issueReportRepository.findById(id)

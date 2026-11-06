@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [10.0.0] — In progress (phases 1 to 4 of 7 built)
+## [10.0.0] — In progress (phases 1 to 5 of 7 built)
 
 Implements [VMS_BRD_V10.0.0](VMS_BRD_V10.0.0.md): security hardening to the OWASP Top 10:2025.
 No new user features.
@@ -215,6 +215,42 @@ which tells a caller an email has an account. Fixing it properly needs email ver
 - **Not done:** SEC-05-08 (checking Claude's replies for leaked instructions or other users'
   data) is a Should and is left for later. Claude is only ever given the caller's own records,
   so another user's data cannot appear in a reply.
+
+### Phase 5: logging and alerting
+
+- **Added** a security event log (SEC-09-01 to SEC-09-03, migration `V62__security_events.sql`):
+  sign-ins (success, failure, lock), registration, logout, password change and reset, refresh
+  token reuse, invalid tokens, refused requests (403, another user's record, rate limits), role
+  changes, coach views of a participant, share links created, opened (and refused) and stopped,
+  Excel import and export, account export and deletion. Each row has the time, account number,
+  network, target and outcome; never a password, token, key, email address or user text (a failed
+  sign-in keeps a SHA-256 of the email). Events are saved in their own transaction, so a refused
+  sign-in is recorded even though its request rolls back.
+- **Added** an audit trail of admin changes (SEC-08-06) through one annotation, `@SecurityAudit`:
+  AI settings, the Claude key, approved resources, module content and order, interface text,
+  cohorts and members, and issue triage record who did what to which record, and whether it
+  worked.
+- **Added** the log is append-only: its repository has no update or delete except the daily job
+  that removes rows older than 365 days. Rows stay when an account is deleted (they hold only the
+  account number).
+- **Added** alerts (SEC-09-04): 10 failed sign-ins for one email or 50 from one network within 15
+  minutes, 20 refused requests by one user, a reused refresh token, the admin role granted, and
+  the Claude key changed or removed. Each goes to the log as a `SECURITY ALERT` line, at most once
+  an hour, and is emailed to `SECURITY_ALERT_EMAIL` when that is set (new in `render.yaml` as a
+  dashboard value).
+- **Added** Settings → Security log for admins (SEC-09-05): filter by event, outcome and account,
+  with the recent alerts on top. Read-only; there is no endpoint that changes the log.
+- **Fixed** with no mail server configured, the password reset email wrote the live reset link to
+  the log in every environment, so anyone reading production logs could take over that account
+  (SEC-09-07). The link is now printed only on a local or test run. Reminder and reset mail logs
+  mask email addresses (`mo***@gmail.com`).
+- **Added** `docs/SECURITY.md`: how to report a vulnerability, the controls in place, the log and
+  alerts, and the incident response plan with exact steps to disable an account, end all sessions
+  and rotate each secret (SEC-09-06).
+- **Added** `SecurityLogFlowTests` (11) and `SecurityLogPage.test.tsx` (2). Backend: 415 tests pass;
+  frontend: 446.
+- **Not done:** an AI budget-spike alert (SEC-09-04 lists it); the V9 80% budget warning still
+  applies.
 
 ## [9.0.0] — All 9 phases built; awaiting UAT
 

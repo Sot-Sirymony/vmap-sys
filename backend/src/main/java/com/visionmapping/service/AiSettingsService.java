@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import com.visionmapping.dto.request.AiApiKeyRequest;
 import com.visionmapping.dto.request.AiSettingsRequest;
@@ -53,6 +55,7 @@ public class AiSettingsService {
         return toResponse(settings());
     }
 
+    @SecurityAudit(value = SecurityEventType.AI_SETTINGS_CHANGED)
     public AiSettingsResponse update(AiSettingsRequest request) {
         requireAdmin();
         if (MODELS.stream().noneMatch(option -> option.id().equals(request.model()))) {
@@ -86,6 +89,7 @@ public class AiSettingsService {
         return toResponse(settings);
     }
 
+    @SecurityAudit(value = SecurityEventType.AI_KEY_CHANGED)
     public AiSettingsResponse saveApiKey(AiApiKeyRequest request) {
         requireAdmin();
         String key = request.apiKey().trim();
@@ -102,6 +106,7 @@ public class AiSettingsService {
     }
 
     /** Removes the saved key; AI turns off unless the server setting supplies one. */
+    @SecurityAudit(value = SecurityEventType.AI_KEY_REMOVED)
     public AiSettingsResponse removeApiKey() {
         requireAdmin();
         AiSettings settings = settings();

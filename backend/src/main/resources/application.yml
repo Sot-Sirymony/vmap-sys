@@ -69,6 +69,18 @@ app:
     # passwords within window-minutes, that email is refused for lock-minutes.
     # A caller with max-failures-per-ip failures is refused for the rest of the
     # window. A completed password reset lifts the email's lock.
+    # V10 (SEC-09-03): how long the security log keeps events.
+    events:
+      retention-days: ${SECURITY_EVENTS_RETENTION_DAYS:365}
+    # V10 (SEC-09-04): alerts go to the application log as "SECURITY ALERT"
+    # lines, and are also emailed to SECURITY_ALERT_EMAIL when that and a mail
+    # server are set. Counts are over window-minutes.
+    alerts:
+      email: ${SECURITY_ALERT_EMAIL:}
+      window-minutes: ${SECURITY_ALERT_WINDOW_MINUTES:15}
+      failed-logins-per-account: ${SECURITY_ALERT_FAILED_LOGINS_PER_ACCOUNT:10}
+      failed-logins-per-ip: ${SECURITY_ALERT_FAILED_LOGINS_PER_IP:50}
+      refusals-per-user: ${SECURITY_ALERT_REFUSALS_PER_USER:20}
     login:
       max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
       max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}

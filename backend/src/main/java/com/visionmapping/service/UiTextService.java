@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.security.Roles;
 import com.visionmapping.dto.request.UiTextOverrideRequest;
 import com.visionmapping.dto.response.UiTextOverrideResponse;
@@ -53,6 +55,7 @@ public class UiTextService {
         return repository.findByLanguageOrderBySourceTextAsc(language).stream().map(UiTextService::toResponse).toList();
     }
 
+    @SecurityAudit(value = SecurityEventType.INTERFACE_TEXT_CHANGED, target = "ui_text")
     public UiTextOverrideResponse save(UiTextOverrideRequest request) {
         requireAdmin();
         requireLanguage(request.language());
@@ -69,6 +72,7 @@ public class UiTextService {
     }
 
     /** Removing an override restores the app's own text, so it is deleted rather than archived. */
+    @SecurityAudit(value = SecurityEventType.INTERFACE_TEXT_CHANGED, target = "ui_text")
     public void reset(Long id) {
         requireAdmin();
         UiTextOverride override = repository.findById(id)

@@ -1,5 +1,10 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityOutcome;
+import com.visionmapping.security.audit.SecurityEventService;
+import com.visionmapping.exception.TooManyRequestsException;
+import com.visionmapping.security.audit.SecurityEventType;
+import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.dto.request.ChangePasswordRequest;
 import com.visionmapping.dto.request.LoginRequest;
 import com.visionmapping.dto.request.RegisterRequest;
@@ -36,6 +41,7 @@ public class AuthService {
     private final CohortService cohortService;
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final AuthSessionService authSessionService;
+    private final SecurityEventService securityEvents;
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
@@ -54,6 +60,8 @@ public class AuthService {
                 .cohort(cohort)
                 .build();
         AppUser saved = appUserRepository.save(user);
+        securityEvents.recordFor(saved.getId(), SecurityEventType.REGISTERED, SecurityOutcome.SUCCESS,
+                cohort == null ? null : "joined a cohort");
         return response(authSessionService.open(saved, request.remember()));
     }
 
@@ -65,16 +73,26 @@ public class AuthService {
      */
     public AuthResponse login(LoginRequest request, String clientIp) {
         String email = request.email().trim().toLowerCase();
-        loginAttemptLimiter.checkAllowed(email, clientIp);
+        try {
+            loginAttemptLimiter.checkAllowed(email, clientIp);
+        } catch (TooManyRequestsException locked) {
+            securityEvents.recordForEmail(email, null, SecurityEventType.LOGIN_LOCKED, SecurityOutcome.DENIED, null);
+            throw locked;
+        }
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
         } catch (AuthenticationException exception) {
             loginAttemptLimiter.recordFailure(email, clientIp);
+            // V10 (SEC-09-01): the reason stays in the log, never in the answer.
+            securityEvents.recordForEmail(email, appUserRepository.findByEmail(email).map(AppUser::getId).orElse(null),
+                    SecurityEventType.LOGIN_FAILED, SecurityOutcome.DENIED, exception.getClass().getSimpleName());
             throw exception;
         }
         loginAttemptLimiter.recordSuccess(email);
         AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessRuleException("Invalid email or password."));
+        securityEvents.recordFor(user.getId(), SecurityEventType.LOGIN_SUCCEEDED, SecurityOutcome.SUCCESS,
+                request.remember() ? "remember me" : "this tab only");
         return response(authSessionService.open(user, request.remember()));
     }
 
@@ -108,6 +126,7 @@ public class AuthService {
      * treats as an expired session. On this endpoint that would sign the user out
      * mid-change for the ordinary mistake of mistyping their old password.
      */
+    @SecurityAudit(value = SecurityEventType.PASSWORD_CHANGED, target = "user")
     public void changePassword(ChangePasswordRequest request) {
         AppUser user = userScope.currentUser();
 

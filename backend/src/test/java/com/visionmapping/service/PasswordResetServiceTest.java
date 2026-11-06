@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.service.support.LoginAttemptLimiter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -63,6 +64,8 @@ class PasswordResetServiceTest {
     private LoginAttemptLimiter loginAttemptLimiter;
     @Mock
     private AuthSessionService authSessionService;
+    @Mock
+    private SecurityEventService securityEvents;
 
     private PasswordEncoder passwordEncoder;
     private PasswordResetService service;
@@ -71,7 +74,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService);
+        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents);
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
