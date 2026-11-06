@@ -8,6 +8,7 @@ import com.visionmapping.dto.request.ResetPasswordRequest;
 import com.visionmapping.dto.response.AuthResponse;
 import com.visionmapping.service.AuthService;
 import com.visionmapping.service.PasswordResetService;
+import com.visionmapping.util.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,8 +34,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        return authService.login(request, ClientIp.of(http));
     }
 
     /**
@@ -64,25 +65,7 @@ public class AuthController {
     @PostMapping("/forgot-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest http) {
-        passwordResetService.requestReset(request, clientIp(http));
-    }
-
-    /**
-     * Render terminates TLS in front of the app, so the socket address is the
-     * proxy for every caller and would rate-limit the whole internet as one
-     * client. The first entry of X-Forwarded-For is the original caller.
-     *
-     * A client can forge that header, so this is not an identity — it is a
-     * throttling key that makes casual abuse cost something. The per-address
-     * limit is the one that actually protects a victim's inbox, and it cannot be
-     * sidestepped this way.
-     */
-    private String clientIp(HttpServletRequest http) {
-        String forwarded = http.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return http.getRemoteAddr();
+        passwordResetService.requestReset(request, ClientIp.of(http));
     }
 
     /**

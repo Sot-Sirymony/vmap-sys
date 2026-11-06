@@ -65,7 +65,11 @@ public class JwtService {
 
     public boolean isValid(String token, UserDetails userDetails) {
         String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && claims(token).getExpiration().after(new Date());
+        // SEC-01-05: a token issued before the account was disabled stops working
+        // on its next request, not when it expires.
+        return userDetails.isEnabled()
+                && username.equals(userDetails.getUsername())
+                && claims(token).getExpiration().after(new Date());
     }
 
     private Claims claims(String token) {

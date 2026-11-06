@@ -1,7 +1,9 @@
 package com.visionmapping.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -113,6 +115,29 @@ class CoachingFlowTests {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/coach/participants/" + participantId).header("Authorization", "Bearer " + mine.coachToken))
                 .andExpect(status().isNotFound());
+    }
+
+    /**
+     * V10 (SEC-01-04): a coach reads a participant only through the coach
+     * workspace. The participant's own endpoints treat the coach as any other
+     * user, so the coach can neither read nor change the records there.
+     */
+    @Test
+    void aCoachCannotReadOrChangeAParticipantsRecordsThroughTheirEndpoints() throws Exception {
+        Cohort cohort = cohortWithCoach();
+        String participant = register(email("guarded"), cohort.code);
+        long dreamId = dream(participant);
+        String coach = "Bearer " + cohort.coachToken;
+
+        mockMvc.perform(get("/api/dreams/" + dreamId).header("Authorization", coach)).andExpect(status().isNotFound());
+        send(patch("/api/dreams/" + dreamId + "/status"), cohort.coachToken, Map.of("status", "PAUSED"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/dreams/" + dreamId).header("Authorization", coach)).andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/dreams/" + dreamId).header("Authorization", "Bearer " + participant))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.archived").value(false));
     }
 
     @Test

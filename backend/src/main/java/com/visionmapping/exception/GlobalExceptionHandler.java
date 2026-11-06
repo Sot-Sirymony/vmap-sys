@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -18,6 +19,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -135,7 +137,28 @@ public class GlobalExceptionHandler {
             TooManyRequestsException exception,
             HttpServletRequest request
     ) {
-        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), request);
+        ResponseEntity<ErrorResponse> response =
+                buildResponse(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), request);
+        if (exception.getRetryAfterSeconds() == null) {
+            return response;
+        }
+        return ResponseEntity.status(response.getStatusCode())
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.getRetryAfterSeconds()))
+                .body(response.getBody());
+    }
+
+    /**
+     * V10 (SEC-02-07): an upload over spring.servlet.multipart.max-file-size.
+     * Without this it fell through to the catch-all and looked like a server
+     * fault; 413 tells the user the file itself is the problem.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUploadTooLarge(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.PAYLOAD_TOO_LARGE,
+                "The file is too large. The largest file you can upload is 10 MB.", request);
     }
 
     /** AI-NFR-02: AI is off or unreachable; the rest of the app still works. */

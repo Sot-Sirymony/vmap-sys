@@ -22,6 +22,7 @@ import { tr } from '../../i18n/translate';
 import type { AiStatus, Dream, Goal, GoalSuggestion, PlanCheck, ResourceIdea, StepSuggestion, VisionStep } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
+import { safeHttpUrl } from '../../utils/safeUrl';
 
 type Props = {
   dream: Dream;
@@ -372,8 +373,8 @@ function ResourceList({ ideas }: { ideas: ResourceIdea[] }) {
         <Box key={index} sx={{ borderLeft: 3, borderColor: 'divider', pl: 1.5 }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             <Chip size="small" label={tr(RESOURCE_KIND_LABELS[idea.kind] ?? 'Other')} />
-            {idea.url
-              ? <Link href={idea.url} target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 600 }}>{idea.name}</Link>
+            {safeHttpUrl(idea.url)
+              ? <Link href={safeHttpUrl(idea.url)} target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 600 }}>{idea.name}</Link>
               : <Typography variant="body2" sx={{ fontWeight: 600 }}>{idea.name}</Typography>}
             {idea.checkBeforeUse
               ? <Chip size="small" variant="outlined" color="warning" label={tr('Check before use')} />

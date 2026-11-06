@@ -8,6 +8,12 @@ spring:
   mvc:
     async:
       request-timeout: 120s
+  # V10 (SEC-02-07): an explicit upload limit instead of the framework default.
+  # Only the Excel import accepts files. A larger upload is refused with 413.
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:10MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:11MB}
   # Recovery email. With no host set, Spring builds no JavaMailSender and
   # PasswordResetMailer logs the link at WARN instead of sending — so the flow is
   # exercisable locally, and an unconfigured deployment issues valid tokens
@@ -41,9 +47,21 @@ app:
     jwt-secret: ${JWT_SECRET:vision-mapping-development-secret-key-change-before-production}
     jwt-expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
     # Encrypts secrets stored in the database, such as the Claude API key an
-    # admin enters on the AI settings page. Blank falls back to JWT_SECRET.
-    # Changing it makes saved secrets unreadable until they are entered again.
+    # admin enters on the AI settings page. Locally, blank falls back to
+    # JWT_SECRET. Changing it later makes saved secrets unreadable until they
+    # are entered again. V10 (SEC-04-03): required outside local/test, at least 32 characters and
+    # different from JWT_SECRET. Values saved earlier with the JWT-derived key
+    # still decrypt, and are re-sealed with this key when next saved.
     settings-encryption-key: ${SETTINGS_ENCRYPTION_KEY:}
+    # V10 (SEC-07-01): failed sign-ins. After max-failures-per-account wrong
+    # passwords within window-minutes, that email is refused for lock-minutes.
+    # A caller with max-failures-per-ip failures is refused for the rest of the
+    # window. A completed password reset lifts the email's lock.
+    login:
+      max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
+      max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}
+      window-minutes: ${LOGIN_WINDOW_MINUTES:15}
+      lock-minutes: ${LOGIN_LOCK_MINUTES:15}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
   password-reset:

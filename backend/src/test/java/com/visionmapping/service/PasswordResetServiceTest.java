@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.service.support.LoginAttemptLimiter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,6 +59,8 @@ class PasswordResetServiceTest {
     private PasswordResetMailer mailer;
     @Mock
     private PasswordResetRateLimiter rateLimiter;
+    @Mock
+    private LoginAttemptLimiter loginAttemptLimiter;
 
     private PasswordEncoder passwordEncoder;
     private PasswordResetService service;
@@ -66,7 +69,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter);
+        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter);
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
@@ -179,6 +182,8 @@ class PasswordResetServiceTest {
         assertThat(passwordEncoder.matches(OLD_PASSWORD, user.getPasswordHash())).isFalse();
         assertThat(token.getUsedAt()).isNotNull();
         verify(appUserRepository).save(user);
+        // V10 (SEC-07-01): a reset lifts any sign-in lock on the email.
+        verify(loginAttemptLimiter).recordSuccess(EMAIL);
     }
 
     @Test
@@ -190,6 +195,7 @@ class PasswordResetServiceTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("not valid");
         verify(appUserRepository, never()).save(any());
+        verifyNoInteractions(loginAttemptLimiter);
     }
 
     /** Replay: the link is in a mailbox forever, so spending it must be final. */

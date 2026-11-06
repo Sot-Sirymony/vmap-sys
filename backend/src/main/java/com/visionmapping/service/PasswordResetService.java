@@ -8,6 +8,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.PasswordResetTokenRepository;
 import com.visionmapping.service.mail.PasswordResetMailer;
+import com.visionmapping.service.support.LoginAttemptLimiter;
 import com.visionmapping.service.support.PasswordResetRateLimiter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -58,6 +59,7 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetMailer mailer;
     private final PasswordResetRateLimiter rateLimiter;
+    private final LoginAttemptLimiter loginAttemptLimiter;
     private final SecureRandom secureRandom = new SecureRandom();
 
     /** Long enough to find the mail, short enough that a leaked inbox ages out. */
@@ -142,6 +144,11 @@ public class PasswordResetService {
         // by anyone who later reads it out of the mailbox.
         token.setUsedAt(Instant.now());
         tokenRepository.save(token);
+
+        // V10 (SEC-07-01): the reset proved the person owns the mailbox, so a
+        // sign-in lock on this email (perhaps caused by someone else guessing)
+        // is lifted and they can sign in with the new password straight away.
+        loginAttemptLimiter.recordSuccess(user.getEmail());
     }
 
     private String buildLink(String token) {

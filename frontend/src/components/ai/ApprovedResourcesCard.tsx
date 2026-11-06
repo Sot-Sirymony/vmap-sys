@@ -23,6 +23,7 @@ import {
 import { tr } from '../../i18n/translate';
 import type { ApprovedResource } from '../../types/vision';
 import { Button } from '../common/Button';
+import { safeHttpUrl } from '../../utils/safeUrl';
 
 const KINDS = ['COURSE', 'BOOK', 'TOOL', 'ORGANISATION', 'FUNDING', 'PERSON', 'OTHER'];
 const KIND_LABELS: Record<string, string> = {
@@ -81,8 +82,8 @@ export function ApprovedResourcesCard({ token }: { token: string }) {
           {resources.map((resource) => (
             <Box key={resource.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', opacity: resource.active ? 1 : 0.6 }}>
               <Chip size="small" label={tr(KIND_LABELS[resource.kind] ?? 'Other')} />
-              {resource.url
-                ? <Link href={resource.url} target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 600 }}>{resource.name}</Link>
+              {safeHttpUrl(resource.url)
+                ? <Link href={safeHttpUrl(resource.url)} target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 600 }}>{resource.name}</Link>
                 : <Typography variant="body2" sx={{ fontWeight: 600 }}>{resource.name}</Typography>}
               {resource.description && <Typography variant="caption" color="text.secondary">{resource.description}</Typography>}
               <FormControlLabel

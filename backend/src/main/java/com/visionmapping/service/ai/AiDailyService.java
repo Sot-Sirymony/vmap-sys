@@ -201,6 +201,9 @@ public class AiDailyService {
     /** AI-FR-13: kinds of resources and people for a goal; every named one must be checked before use. */
     public ResourceIdeas resources(Long goalId, String language) {
         AppUser user = lookup.currentUser();
+        // V10 (SEC-01-02): ownership first, so another user's record answers 404
+        // whether or not AI is available.
+        lookup.goal(goalId);
         String apiKey = accessService.requireAvailable(user);
         Map<Long, AiApprovedResource> approved = new LinkedHashMap<>();
         approvedResourceRepository.findByActiveTrueOrderByNameAsc().stream().limit(MAX_APPROVED)

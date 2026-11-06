@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.service.support.LoginAttemptLimiter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,6 +48,8 @@ class AuthServicePasswordChangeTest {
     private UserScope userScope;
     @Mock
     private CohortService cohortService;
+    @Mock
+    private LoginAttemptLimiter loginAttemptLimiter;
 
     private PasswordEncoder passwordEncoder;
     private AuthService authService;
@@ -55,7 +58,7 @@ class AuthServicePasswordChangeTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, jwtService, userScope, cohortService);
+        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, jwtService, userScope, cohortService, loginAttemptLimiter);
         user = AppUser.builder()
                 .id(7L)
                 .fullName("Pat Owner")

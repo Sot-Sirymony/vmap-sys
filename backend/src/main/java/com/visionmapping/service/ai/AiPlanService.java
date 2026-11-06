@@ -94,6 +94,9 @@ public class AiPlanService {
     /** Dreams for one vision area, or with stretch one bold moonshot dream. */
     public DreamSuggestions suggestDreams(Long visionAreaId, boolean stretch, String language) {
         AppUser user = lookup.currentUser();
+        // V10 (SEC-01-02): ownership first, so another user's record answers 404
+        // whether or not AI is available.
+        lookup.visionArea(visionAreaId);
         String apiKey = accessService.requireAvailable(user);
         String plan = transactions.execute(status -> {
             VisionArea area = lookup.visionArea(visionAreaId);
@@ -129,6 +132,9 @@ public class AiPlanService {
     /** AI-FR-07, or with stretch one bold goal (AI-FR-10). */
     public GoalSuggestions suggestGoals(Long dreamId, boolean stretch, String language) {
         AppUser user = lookup.currentUser();
+        // V10 (SEC-01-02): ownership first, so another user's record answers 404
+        // whether or not AI is available.
+        lookup.dream(dreamId);
         String apiKey = accessService.requireAvailable(user);
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)));
         LocalDate today = LocalDate.now(clock);
@@ -156,6 +162,9 @@ public class AiPlanService {
     /** AI-FR-08: steps for one goal, with owner, date, resources and people. */
     public StepSuggestions suggestSteps(Long goalId, String language) {
         AppUser user = lookup.currentUser();
+        // V10 (SEC-01-02): ownership first, so another user's record answers 404
+        // whether or not AI is available.
+        lookup.goal(goalId);
         String apiKey = accessService.requireAvailable(user);
         LocalDate today = LocalDate.now(clock);
         String plan = transactions.execute(status -> {
@@ -253,6 +262,9 @@ public class AiPlanService {
     /** AI-FR-11: a smaller step, a new date or a helper for one slipping step. */
     public StepRescue rescueStep(Long stepId, String language) {
         AppUser user = lookup.currentUser();
+        // V10 (SEC-01-02): ownership first, so another user's record answers 404
+        // whether or not AI is available.
+        lookup.step(stepId);
         String apiKey = accessService.requireAvailable(user);
         LocalDate today = LocalDate.now(clock);
         String plan = transactions.execute(status -> {

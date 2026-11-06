@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.Roles;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +9,6 @@ import com.visionmapping.dto.response.LearningModuleDetailResponse.Field;
 import com.visionmapping.dto.response.ModuleContentResponse;
 import com.visionmapping.entity.LearningModule;
 import com.visionmapping.entity.LearningModuleContent;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.LearningModuleContentRepository;
@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -139,8 +138,6 @@ public class LearningModuleAdminService {
     }
 
     private void requireAdmin() {
-        if (lookup.currentUser().getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only an administrator can edit module content.");
-        }
+        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can edit module content.");
     }
 }

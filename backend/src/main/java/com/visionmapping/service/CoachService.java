@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.Roles;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +13,6 @@ import com.visionmapping.dto.response.PitchReviewResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Cohort;
 import com.visionmapping.entity.ModuleCompletion;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
@@ -33,7 +33,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -168,10 +167,6 @@ public class CoachService {
     }
 
     private AppUser requireCoach() {
-        AppUser user = lookup.currentUser();
-        if (user.getRole() != UserRole.COACH && user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only a coach can open the coach workspace.");
-        }
-        return user;
+        return Roles.requireCoach(lookup.currentUser(), "Only a coach can open the coach workspace.");
     }
 }

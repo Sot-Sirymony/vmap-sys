@@ -66,6 +66,84 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [10.0.0] — In progress (phases 1 and 2 of 7 built)
+
+Implements [VMS_BRD_V10.0.0](VMS_BRD_V10.0.0.md): security hardening to the OWASP Top 10:2025.
+No new user features.
+
+### Phase 1: urgent fixes
+
+- **Fixed** a disabled account could still sign in and use the API: `UserStatus.DISABLED`
+  was stored but never checked (SEC-01-05). `AppUserPrincipal.isEnabled()` now reflects
+  the status, so sign-in fails with the usual "Invalid email or password.", and
+  `JwtService.isValid` refuses a token issued before the account was disabled.
+- **Added** sign-in attempt limits (SEC-07-01, SEC-07-02, `LoginAttemptLimiter`): 5 wrong
+  passwords for one email within 15 minutes lock that email for 15 minutes; 50 failures
+  from one network lock that network for the window. Unknown emails are counted the same
+  way, so the lock does not reveal who is registered. The answer is 429 with a
+  `Retry-After` header. A successful sign-in clears the count; a completed password reset
+  lifts the lock. All four numbers are environment variables.
+- **Added** security headers on every API response (SEC-02-01, SEC-02-02): a CSP that
+  allows nothing to load (`default-src 'none'; frame-ancestors 'none'`), HSTS on every
+  response (Render ends TLS at its proxy, so Spring's HTTPS-only default never sent it),
+  `Referrer-Policy` and `Permissions-Policy`. `X-Frame-Options` and `nosniff` were already
+  sent by Spring's defaults.
+- **Added** security headers for the frontend in `render.yaml`: CSP (scripts, fonts and
+  styles only from the site; images from any https URL for dream pictures; API calls only
+  to the backend), HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`. Checked in headless Chrome against a local build: 0 CSP violations
+  across the sign-in pages and 21 signed-in pages.
+- **Added** an explicit upload limit of 10 MB (SEC-02-07). A larger file now gets 413 with
+  a clear message instead of a 500.
+- **Changed** `SETTINGS_ENCRYPTION_KEY` is required outside local/test (SEC-04-03, SEC-02-03):
+  at least 32 characters and different from `JWT_SECRET`, or the backend refuses to start.
+  `render.yaml` generates it. Values sealed before V10 with the JWT-derived key still
+  decrypt, so the saved Claude key keeps working; it is re-sealed with the new key the next
+  time an admin saves it.
+- **Changed** the client-IP helper moved from `AuthController` to `util/ClientIp` so sign-in
+  and password reset share it.
+- **Added** `SecurityHardeningFlowTests` (9), `LoginAttemptLimiterTest` (9), and new cases in
+  `SecretCipherTest` and `PasswordResetServiceTest`. Backend suite: 361 tests, all passing.
+
+**Deploy note:** pushing this with the Render Blueprint creates `SETTINGS_ENCRYPTION_KEY`
+automatically. A backend deployed without the Blueprint must have it set first, or it will
+not start.
+
+**Not yet done from SEC-07-02:** registration still answers "Email is already registered.",
+which tells a caller an email has an account. Fixing it properly needs email verification
+(see the BRD's open questions).
+
+### Phase 2: access control
+
+- **Added** role rules by path in `SecurityConfig` (SEC-01-03): `/api/admin/**` is for ADMIN only
+  and `/api/coach/**` for COACH or ADMIN, checked before any controller or body validation. A
+  plain user now gets 403 on all 38 in every case; before, 16 of them answered 400
+  because the body was validated before the service's role check (none was ever open).
+- **Changed** the nine copies of `requireAdmin()`/`requireCoach()` in services now call one
+  rule, `security/Roles`, kept as a second layer behind the path rules.
+- **Changed** the five AI plan and resource endpoints check that the dream, goal, step or
+  vision area is the caller's before checking whether AI is available (SEC-01-02), so
+  another user's record answers 404 whatever the AI state. Before, they answered 503 first
+  (ownership was still checked when AI was on).
+- **Added** `AccessControlSweepTests` (SEC-01-08, SAC-04), which reads every route from
+  Spring's own route table: all 233 must answer 401 without a token (except the 7 public
+  ones); all 38 admin and coach routes must answer 403 to a plain user; and the 106 routes that
+  take a record ID must answer 404 when user B uses user A's record, with A's records unchanged
+  afterwards. IDs inside request bodies (parent dream, goal, step, task, partner) are checked
+  the same way. A new endpoint is covered automatically; one with an unknown kind of ID fails
+  the test until it is added. Planting an ownership bug on goals made the sweep fail on the goal endpoints and on the
+  body check, as it should.
+- **Added** two guards in the same test: every write route under `/api/coach` must be on a
+  short list of coach actions that change no participant data (SEC-01-04), and no request
+  body may carry a field such as `userId`, `role`, `archived` or `createdAt` (SEC-01-06).
+  All 57 request bodies passed.
+- **Added** `CoachingFlowTests` case: a coach cannot read or change a participant's records
+  through the participant's own endpoints (404), only through the coach workspace.
+- **Added** `utils/safeUrl.ts` in the frontend (SEC-01-10): resource links and dream images
+  are shown only when they are http or https addresses; anything else, such as
+  `javascript:`, shows as plain text. The server already limited both fields;
+  `LinkFieldValidationTest` now proves it.
+
 ## [9.0.0] — All 9 phases built; awaiting UAT
 
 Implements [VMS_BRD_V9.0.0](VMS_BRD_V9.0.0.md): Claude AI integration, which first brings

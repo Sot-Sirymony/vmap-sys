@@ -1,11 +1,11 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.Roles;
 import com.visionmapping.dto.request.AiApiKeyRequest;
 import com.visionmapping.dto.request.AiSettingsRequest;
 import com.visionmapping.dto.response.AiSettingsResponse;
 import com.visionmapping.dto.response.AiSettingsResponse.ModelOption;
 import com.visionmapping.entity.AiSettings;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AiSettingsRepository;
 import com.visionmapping.repository.AiUsageLogRepository;
@@ -18,7 +18,6 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -181,8 +180,6 @@ public class AiSettingsService {
     }
 
     private void requireAdmin() {
-        if (lookup.currentUser().getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only an administrator can change AI settings.");
-        }
+        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can change AI settings.");
     }
 }

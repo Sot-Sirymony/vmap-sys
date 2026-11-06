@@ -12,10 +12,12 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.security.AppUserPrincipal;
 import com.visionmapping.security.JwtService;
+import com.visionmapping.service.support.LoginAttemptLimiter;
 import com.visionmapping.util.UserScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserScope userScope;
     private final CohortService cohortService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
@@ -52,9 +55,22 @@ public class AuthService {
         return response(saved);
     }
 
-    public AuthResponse login(LoginRequest request) {
+    /**
+     * V10 (SEC-07-01): the attempt limit is checked before the password, and
+     * for any email typed, so a locked email answers the same way whether or not
+     * it has an account. A disabled account fails here too (SEC-01-05), with the
+     * same "Invalid email or password." answer as a wrong password.
+     */
+    public AuthResponse login(LoginRequest request, String clientIp) {
         String email = request.email().trim().toLowerCase();
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+        loginAttemptLimiter.checkAllowed(email, clientIp);
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+        } catch (AuthenticationException exception) {
+            loginAttemptLimiter.recordFailure(email, clientIp);
+            throw exception;
+        }
+        loginAttemptLimiter.recordSuccess(email);
         AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessRuleException("Invalid email or password."));
         return response(user);

@@ -1,6 +1,7 @@
 package com.visionmapping.security;
 
 import com.visionmapping.entity.AppUser;
+import com.visionmapping.entity.enums.UserStatus;
 import java.util.Collection;
 import java.util.List;
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class AppUserPrincipal implements UserDetails {
     private final String email;
     private final String password;
     private final String role;
+    private final boolean enabled;
 
     public AppUserPrincipal(AppUser user) {
         this.id = user.getId();
@@ -23,6 +25,10 @@ public class AppUserPrincipal implements UserDetails {
         this.email = user.getEmail();
         this.password = user.getPasswordHash();
         this.role = user.getRole().name();
+        // V10 (SEC-01-05): only an Active account may sign in or use a token.
+        // Spring checks this at sign-in; JwtService.isValid checks it on every
+        // request, so disabling an account also ends sessions already open.
+        this.enabled = user.getStatus() == UserStatus.ACTIVE;
     }
 
     @Override
@@ -38,5 +44,10 @@ public class AppUserPrincipal implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return enabled;
     }
 }

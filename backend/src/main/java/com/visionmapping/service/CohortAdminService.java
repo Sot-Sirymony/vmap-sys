@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.Roles;
 import com.visionmapping.dto.request.CohortMemberRequest;
 import com.visionmapping.dto.request.CohortRequest;
 import com.visionmapping.dto.response.CohortMemberResponse;
@@ -15,7 +16,6 @@ import com.visionmapping.service.support.EntityLookup;
 import java.security.SecureRandom;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,8 +148,6 @@ public class CohortAdminService {
     }
 
     private void requireAdmin() {
-        if (lookup.currentUser().getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only an administrator can manage cohorts.");
-        }
+        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can manage cohorts.");
     }
 }

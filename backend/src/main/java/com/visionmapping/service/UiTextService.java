@@ -1,9 +1,9 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.Roles;
 import com.visionmapping.dto.request.UiTextOverrideRequest;
 import com.visionmapping.dto.response.UiTextOverrideResponse;
 import com.visionmapping.entity.UiTextOverride;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.UiTextOverrideRepository;
@@ -18,7 +18,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,8 +93,6 @@ public class UiTextService {
     }
 
     private void requireAdmin() {
-        if (lookup.currentUser().getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only an administrator can edit interface text.");
-        }
+        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can edit interface text.");
     }
 }

@@ -1,5 +1,6 @@
 package com.visionmapping.service.ai;
 
+import com.visionmapping.security.Roles;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,7 +14,6 @@ import com.visionmapping.dto.response.AiApprovedResourceResponse;
 import com.visionmapping.entity.AiApprovedResource;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.LearningModuleContent;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.AiApprovedResourceRepository;
@@ -26,7 +26,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -179,11 +178,7 @@ public class AiAdminService {
     }
 
     private AppUser requireAdmin() {
-        AppUser user = lookup.currentUser();
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only an administrator can change AI settings.");
-        }
-        return user;
+        return Roles.requireAdmin(lookup.currentUser(), "Only an administrator can change AI settings.");
     }
 
     private static String limit(String value, int max) {

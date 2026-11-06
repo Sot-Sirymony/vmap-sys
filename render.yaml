@@ -33,6 +33,12 @@ services:
         value: prod
       - key: JWT_SECRET
         generateValue: true
+      # V10 (SEC-04-03): encrypts secrets saved in the database (the Claude
+      # API key). The prod profile refuses to start without it. The Claude key
+      # saved before V10 still opens with the old JWT-derived key; it is sealed
+      # with this one the next time an admin saves it.
+      - key: SETTINGS_ENCRYPTION_KEY
+        generateValue: true
       - key: JWT_EXPIRATION_MINUTES
         value: "1440"
       - key: DB_HOST
@@ -115,3 +121,27 @@ services:
       - path: /index.html
         name: Cache-Control
         value: no-cache
+      # V10 (SEC-02-01, SEC-02-02): security headers on every page.
+      # CSP: scripts, fonts and styles come only from this site (fonts are
+      # self-hosted through @fontsource). 'unsafe-inline' for styles is needed
+      # by MUI/Emotion, which inject <style> tags at runtime; scripts stay
+      # strict. Images may be any https URL because a dream's picture is a link
+      # the user pastes. connect-src must match VITE_API_BASE_URL above.
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://vision-mapping-backend.onrender.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()

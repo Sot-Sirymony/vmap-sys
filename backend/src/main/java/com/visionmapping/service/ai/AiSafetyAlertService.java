@@ -1,10 +1,10 @@
 package com.visionmapping.service.ai;
 
+import com.visionmapping.security.Roles;
 import com.visionmapping.dto.response.AiSafetyAlertResponse;
 import com.visionmapping.entity.AiSafetyAlert;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Cohort;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.AiSafetyAlertRepository;
 import com.visionmapping.repository.AppUserRepository;
@@ -16,7 +16,6 @@ import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +53,7 @@ public class AiSafetyAlertService {
     public List<AiSafetyAlertResponse> mine() {
         AppUser user = requireCoach();
         List<AiSafetyAlert> alerts = new ArrayList<>(repository.findByCoach_IdOrderByCreatedAtDesc(user.getId()));
-        if (user.getRole() == UserRole.ADMIN) {
+        if (Roles.isAdmin(user)) {
             alerts.addAll(repository.findByCoachIsNullOrderByCreatedAtDesc());
         }
         return alerts.stream()
@@ -67,7 +66,7 @@ public class AiSafetyAlertService {
         AppUser user = requireCoach();
         AiSafetyAlert alert = repository.findById(id)
                 .filter(found -> found.getCoach() == null
-                        ? user.getRole() == UserRole.ADMIN
+                        ? Roles.isAdmin(user)
                         : found.getCoach().getId().equals(user.getId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Alert not found: " + id));
         if (alert.getAcknowledgedAt() == null) {
@@ -85,10 +84,6 @@ public class AiSafetyAlertService {
     }
 
     private AppUser requireCoach() {
-        AppUser user = lookup.currentUser();
-        if (user.getRole() != UserRole.COACH && user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only a coach can see safety alerts.");
-        }
-        return user;
+        return Roles.requireCoach(lookup.currentUser(), "Only a coach can see safety alerts.");
     }
 }

@@ -55,6 +55,7 @@ import { matchesSearch } from '../utils/search';
 import { priorityRank } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
+import { safeHttpUrl } from '../utils/safeUrl';
 
 export function DreamsPage() {
   const { token } = useAuth();
@@ -429,10 +430,10 @@ export function DreamsPage() {
       render: (dream) => (
         <>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-            {dream.imageUrl && (
+            {safeHttpUrl(dream.imageUrl) && (
               <Box
                 component="img"
-                src={dream.imageUrl}
+                src={safeHttpUrl(dream.imageUrl)}
                 alt=""
                 loading="lazy"
                 sx={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}

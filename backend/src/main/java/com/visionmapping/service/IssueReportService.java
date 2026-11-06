@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.security.Roles;
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
@@ -14,7 +15,6 @@ import com.visionmapping.entity.IssueReport;
 import com.visionmapping.entity.enums.IssueReportStatus;
 import com.visionmapping.entity.enums.ReportType;
 import com.visionmapping.entity.enums.Severity;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
@@ -23,7 +23,6 @@ import com.visionmapping.service.support.EntityLookup;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -157,12 +156,10 @@ public class IssueReportService {
     }
 
     private void requireAdmin() {
-        if (!isAdmin()) {
-            throw new AccessDeniedException("Only an administrator can triage issue reports.");
-        }
+        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can triage issue reports.");
     }
 
     private boolean isAdmin() {
-        return lookup.currentUser().getRole() == UserRole.ADMIN;
+        return Roles.isAdmin(lookup.currentUser());
     }
 }

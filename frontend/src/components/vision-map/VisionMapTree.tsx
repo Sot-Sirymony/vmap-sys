@@ -46,6 +46,7 @@ import { RowActionsMenu } from '../common/RowActionsMenu';
 import { StatusBadge } from '../common/StatusBadge';
 import { Textarea } from '../common/Textarea';
 import { tr } from '../../i18n/translate';
+import { safeHttpUrl } from '../../utils/safeUrl';
 
 type VisionMapTreeProps = {
   dream: Dream;
@@ -1442,10 +1443,10 @@ export function VisionMapTree({
       <div className="map-node map-node--dream" role="none">
         <div className={`map-row${dream.archived ? ' map-row--archived' : ''}`} {...rowShellProps(dreamRow)}>
           {chevron(dreamRow)}
-          {dream.imageUrl && (
+          {safeHttpUrl(dream.imageUrl) && (
             <Box
               component="img"
-              src={dream.imageUrl}
+              src={safeHttpUrl(dream.imageUrl)}
               alt=""
               loading="lazy"
               sx={{ width: 36, height: 36, borderRadius: 1.5, objectFit: 'cover', flexShrink: 0 }}

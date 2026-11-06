@@ -23,6 +23,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +32,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    static final String API_CONTENT_SECURITY_POLICY =
+            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+    static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()";
+    static final long HSTS_MAX_AGE_SECONDS = 31_536_000L;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
@@ -59,6 +66,24 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // V10 (SEC-02-01, SEC-02-02). The API only ever answers with JSON or
+                // file downloads, so its CSP allows nothing to load or run, and no
+                // page may frame it. Spring already sends nosniff and no-cache.
+                // HSTS is sent on every response: Render ends TLS at its proxy, so
+                // the app sees plain HTTP and Spring's default (HTTPS only) would
+                // never send it. Browsers ignore HSTS received over plain HTTP, so
+                // local development is unaffected.
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(API_CONTENT_SECURITY_POLICY))
+                        .frameOptions(frame -> frame.deny())
+                        .referrerPolicy(referrer -> referrer.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .permissionsPolicyHeader(permissions -> permissions.policy(PERMISSIONS_POLICY))
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .requestMatcher(AnyRequestMatcher.INSTANCE)
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(HSTS_MAX_AGE_SECONDS))
+                )
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         // V9 (AI-NFR-01): a streamed Dream Coach reply finishes on an
@@ -85,6 +110,12 @@ public class SecurityConfig {
                         // V9 (v0.1 FR-10): a partner opens a shared plan without an
                         // account. Read-only; the 256-bit token in the path is the key.
                         .requestMatchers(HttpMethod.GET, "/api/shared-plans/*").permitAll()
+                        // V10 (SEC-01-03): role rules by path, checked before any
+                        // controller or request-body validation runs. Services check
+                        // again through Roles. The role comes from the database on
+                        // every request, so a role change applies at once.
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/coach/**").hasAnyRole("COACH", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 // Without these, Spring's default handling answers an anonymous
