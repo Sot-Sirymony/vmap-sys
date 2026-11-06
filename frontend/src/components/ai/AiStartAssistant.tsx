@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { getAiStatus } from '../../api/aiApi';
-import { suggestDreams, suggestVisionAreas } from '../../api/aiPlanApi';
+import { recordPlanOutcome, suggestDreams, suggestVisionAreas } from '../../api/aiPlanApi';
 import { createDream } from '../../api/dreamApi';
 import { createVisionArea } from '../../api/visionAreaApi';
 import { useI18n } from '../../i18n/I18nContext';
@@ -20,9 +20,19 @@ import { tr } from '../../i18n/translate';
 import type { AiStatus, DreamSuggestion, VisionArea, VisionAreaSuggestion } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
+import { SuggestionRating, wasEdited } from './SuggestionRating';
 
-type AreaRow = VisionAreaSuggestion & { picked: boolean };
-type DreamRow = DreamSuggestion & { picked: boolean };
+type AreaRow = VisionAreaSuggestion & { picked: boolean; original: VisionAreaSuggestion };
+type DreamRow = DreamSuggestion & { picked: boolean; original: DreamSuggestion };
+
+/** V11 (PB-FR-35): counts only. A failure here must not spoil a successful add. */
+function reportOutcome(token: string, requestId: number | null | undefined, edited: boolean[]) {
+  if (!requestId || edited.length === 0) {
+    return;
+  }
+  const changed = edited.filter(Boolean).length;
+  recordPlanOutcome(token, requestId, edited.length - changed, changed).catch(() => undefined);
+}
 
 /**
  * The plan assistant for the start of a plan: vision areas, then dreams under
@@ -33,11 +43,13 @@ export function AiVisionAreaAssistant({ token, onDataChange }: { token: string; 
   const { language } = useI18n();
   const assistant = useAssistant(token);
   const [rows, setRows] = useState<AreaRow[] | null>(null);
+  const [requestId, setRequestId] = useState<number | null>(null);
 
   const ask = () => assistant.run(async () => {
     setRows(null);
     const answer = await suggestVisionAreas(token, language);
-    setRows(answer.areas.map((area) => ({ ...area, picked: true })));
+    setRequestId(answer.requestId ?? null);
+    setRows(answer.areas.map((area) => ({ ...area, picked: true, original: area })));
   });
 
   const add = () => assistant.save('Unable to save vision area.', async () => {
@@ -51,6 +63,7 @@ export function AiVisionAreaAssistant({ token, onDataChange }: { token: string; 
         status: 'ACTIVE',
       });
     }
+    reportOutcome(token, requestId, picked.map((row) => wasEdited(row.original, row, ['name', 'description', 'visionStatement'])));
     setRows(null);
     await onDataChange();
     return tr('{count} vision area(s) added.', { count: picked.length });
@@ -86,6 +99,7 @@ export function AiVisionAreaAssistant({ token, onDataChange }: { token: string; 
           </Button>
         </Box>
       )}
+      {rows && <SuggestionRating key={requestId} token={token} requestId={requestId} />}
     </AssistantCard>
   );
 }
@@ -100,13 +114,20 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
   const assistant = useAssistant(token);
   const activeAreas = visionAreas.filter((area) => !area.archived);
   const [areaId, setAreaId] = useState(initialVisionAreaId ?? '');
-  const [result, setResult] = useState<{ areaId: number; rows: DreamRow[]; question?: string | null } | null>(null);
+  const [result, setResult] = useState<{
+    areaId: number; rows: DreamRow[]; question?: string | null; requestId?: number | null;
+  } | null>(null);
 
   const ask = (stretch: boolean) => assistant.run(async () => {
     setResult(null);
     const id = Number(areaId);
     const answer = await suggestDreams(token, id, language, stretch);
-    setResult({ areaId: id, rows: answer.dreams.map((dream) => ({ ...dream, picked: true })), question: answer.clarifyingQuestion });
+    setResult({
+      areaId: id,
+      rows: answer.dreams.map((dream) => ({ ...dream, picked: true, original: dream })),
+      question: answer.clarifyingQuestion,
+      requestId: answer.requestId,
+    });
   });
 
   const add = (forArea: number, rows: DreamRow[]) => assistant.save('Unable to save dream.', async () => {
@@ -127,6 +148,8 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
         scheduleMode: 'BOTTOM_UP',
       });
     }
+    reportOutcome(token, result?.requestId, rows.map((row) =>
+      wasEdited(row.original, row, ['title', 'whyImportant', 'successDefinition', 'targetDate'])));
     setResult(null);
     await onDataChange();
     return tr('{count} dream(s) added as ideas.', { count: rows.length });
@@ -187,6 +210,7 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
           </Button>
         </Box>
       )}
+      {result && <SuggestionRating key={result.requestId} token={token} requestId={result.requestId} />}
     </AssistantCard>
   );
 }

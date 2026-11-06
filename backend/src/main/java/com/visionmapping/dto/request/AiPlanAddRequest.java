@@ -1,0 +1,25 @@
+package com.visionmapping.dto.request;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.util.List;
+
+/**
+ * V11 (PB-FR-31, PB-FR-35): the plan builder suggestions a participant kept,
+ * saved in one request that succeeds or fails as a whole. Each item is the
+ * same request the normal create endpoint takes, so the same rules apply.
+ * requestId, when given, is the AI answer the items came from; edited says
+ * whether the participant changed the item before adding it.
+ */
+public record AiPlanAddRequest(
+        Long requestId,
+        @Valid @Size(max = 10) List<@NotNull @Valid GoalItem> goals,
+        @Valid @Size(max = 20) List<@NotNull @Valid StepItem> steps) {
+
+    public record GoalItem(@NotNull @Valid GoalRequest goal, boolean edited) {
+    }
+
+    public record StepItem(@NotNull @Valid VisionStepRequest step, boolean edited) {
+    }
+}

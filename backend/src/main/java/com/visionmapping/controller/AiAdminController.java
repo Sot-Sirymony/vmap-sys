@@ -6,7 +6,9 @@ import com.visionmapping.dto.request.AiTranslateRequest;
 import com.visionmapping.dto.response.AiAdminResponses.ModuleContentDraft;
 import com.visionmapping.dto.response.AiAdminResponses.Translations;
 import com.visionmapping.dto.response.AiApprovedResourceResponse;
+import com.visionmapping.dto.response.AiPlanResponses.PlanMetrics;
 import com.visionmapping.service.ai.AiAdminService;
+import com.visionmapping.service.ai.AiPlanFeedbackService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,6 +31,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiAdminController {
 
     private final AiAdminService service;
+    private final AiPlanFeedbackService planFeedback;
+
+    /** V11 (PB-FR-36): plan builder acceptance, edits, ratings and cost per feature. */
+    @GetMapping("/plan-metrics")
+    public PlanMetrics planMetrics(@RequestParam(defaultValue = "30") int days) {
+        return planFeedback.metrics(days);
+    }
 
     @GetMapping("/resources")
     public List<AiApprovedResourceResponse> resources() {

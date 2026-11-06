@@ -66,6 +66,28 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [11.0.0] — In progress (phase 1 of 6 built)
+
+Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improvements.
+
+### Phase 1 — measure and fix the base (2026-11-06)
+
+- **Ratings on plan suggestions (PB-FR-34).** Vision area, dream, goal, step and
+  plan check answers carry a `requestId` and show thumbs up or down.
+- **Outcome counts (PB-FR-35).** Each answer records how many items it
+  suggested, how many were added as they were, and how many after editing.
+  Counts only (migration V63).
+- **Admin metrics (PB-FR-36).** *Plan builder quality* card on AI settings:
+  acceptance, edits, ratings and cost per feature for the last 7, 30 or 90 days.
+- **Dates checked on the server (PB-FR-15).** A suggested goal after its
+  dream's date, or step after its goal's date, comes back without a date
+  instead of being shown as if it fit.
+- **All-or-nothing add with undo (PB-FR-31, PB-FR-32).** Goals and steps from
+  the plan assistant are saved in one request; if one fails, none is saved.
+  *Undo* archives what was just added.
+- Vision areas and dreams from the start assistant are still added one at a
+  time through the normal endpoints; only their counts are reported.
+
 ## [10.0.0] — In progress (phases 1 to 6 of 7 built)
 
 Implements [VMS_BRD_V10.0.0](VMS_BRD_V10.0.0.md): security hardening to the OWASP Top 10:2025.

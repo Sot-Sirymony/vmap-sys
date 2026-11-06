@@ -8,12 +8,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionmapping.entity.AiConversation;
 import com.visionmapping.entity.AiMessage;
+import com.visionmapping.entity.AiUsageLog;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.CoachComment;
 import com.visionmapping.entity.enums.AiMessageRole;
+import com.visionmapping.entity.enums.AiOutcome;
 import com.visionmapping.entity.enums.CoachCommentTarget;
 import com.visionmapping.repository.AiConversationRepository;
 import com.visionmapping.repository.AiMessageRepository;
+import com.visionmapping.repository.AiUsageLogRepository;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.CoachCommentRepository;
 import java.time.LocalDate;
@@ -123,6 +126,9 @@ class AccessControlSweepTests {
     @Autowired
     private CoachCommentRepository coachCommentRepository;
 
+    @Autowired
+    private AiUsageLogRepository aiUsageLogRepository;
+
     private String ownerToken;
     private String otherToken;
     /** User A's records, by the path segment that names them. */
@@ -186,6 +192,10 @@ class AccessControlSweepTests {
         ownerIds.put("ai/conversations", conversation.getId());
         ownerIds.put("ai/messages", message.getId());
         ownerIds.put("coach-comments", comment.getId());
+        // V11: a plan builder answer to rate and report outcomes on.
+        AiUsageLog planAnswer = aiUsageLogRepository.save(AiUsageLog.builder().user(owner).feature("GOAL_BUILDER")
+                .model("claude-opus-5-5").costUsd(java.math.BigDecimal.ZERO).outcome(AiOutcome.OK).suggestedItems(3).build());
+        ownerIds.put("ai/plan/requests", planAnswer.getId());
     }
 
     // ---------- 1. no token ----------
@@ -316,6 +326,10 @@ class AccessControlSweepTests {
         attempts.put("/api/milestones", with(createBodies.get("milestones"), "dreamId", ownerIds.get("dreams")));
         attempts.put("/api/plan-shares", with(createBodies.get("plan-shares"), "dreamId", ownerIds.get("dreams")));
         attempts.put("/api/reviews", with(createBodies.get("reviews"), "relatedDreamId", ownerIds.get("dreams")));
+        // V11: the all-at-once add and its undo check every id they carry.
+        attempts.put("/api/ai/plan/add", Map.of("goals", List.of(Map.of("goal",
+                with(createBodies.get("goals"), "dreamId", ownerIds.get("dreams")), "edited", false))));
+        attempts.put("/api/ai/plan/undo", Map.of("goalIds", List.of(ownerIds.get("goals"))));
 
         List<String> problems = new ArrayList<>();
         for (Map.Entry<String, Map<String, Object>> attempt : attempts.entrySet()) {
@@ -511,6 +525,9 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/synergy-links")) {
             return json(Map.of("relatedGoalId", ownerIds.get("goals")));
+        }
+        if (pattern.endsWith("/outcome")) {
+            return json(Map.of("added", 1, "edited", 0));
         }
         if (pattern.endsWith("/rating")) {
             return json(Map.of("rating", 1));

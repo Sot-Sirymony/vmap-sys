@@ -21,6 +21,7 @@ import { formatDate } from '../i18n/formatDate';
 import { tr } from '../i18n/translate';
 import type { AiSettings } from '../types/vision';
 import { ApprovedResourcesCard } from '../components/ai/ApprovedResourcesCard';
+import { PlanMetricsCard } from '../components/ai/PlanMetricsCard';
 import { PageSection } from './PageSection';
 
 /**
@@ -65,6 +66,7 @@ export function AiSettingsPage() {
         <Stack spacing={2}>
           <ApiKeyCard settings={settings} token={token} onChanged={setSettings} />
           <ApprovedResourcesCard token={token} />
+          <PlanMetricsCard token={token} />
           <OptionsCard key={`${settings.model}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}

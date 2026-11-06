@@ -70,6 +70,7 @@ public class AiPlanService {
     private final AiStructuredRequests requests;
     private final TransactionTemplate transactions;
     private final Clock clock;
+    private final AiPlanFeedbackService feedback;
 
     /** Vision areas the participant does not have yet, to start a plan from. */
     public VisionAreaSuggestions suggestVisionAreas(String language) {
@@ -79,7 +80,9 @@ public class AiPlanService {
         String prompt = "Suggest between 1 and " + MAX_AREAS + " vision areas (major parts of life or work) this participant "
                 + "could plan in. Do not repeat or rename areas they already have. Fit them to what their current areas and "
                 + "dreams show; when they have none yet, suggest common, balanced ones.";
-        AiDrafts.AreaDrafts drafts = requests.ask(user, apiKey, "AREA_BUILDER", language, plan, prompt, AiDrafts.AreaDrafts.class);
+        AiStructuredRequests.Tracked<AiDrafts.AreaDrafts> answer = requests.askTracked(user, apiKey, "AREA_BUILDER", language, plan,
+                prompt, AiDrafts.AreaDrafts.class);
+        AiDrafts.AreaDrafts drafts = answer.value();
         List<VisionAreaSuggestion> areas = new ArrayList<>();
         for (AiDrafts.AreaDraft draft : Optional.ofNullable(drafts.areas()).orElse(List.of())) {
             if (blank(draft.name()) || areas.size() >= MAX_AREAS) {
@@ -88,7 +91,7 @@ public class AiPlanService {
             areas.add(new VisionAreaSuggestion(limit(draft.name(), 160), limit(draft.description(), 2000),
                     limit(draft.visionStatement(), 3000), priority(draft.priority()), limit(draft.reason(), 300)));
         }
-        return new VisionAreaSuggestions(areas);
+        return new VisionAreaSuggestions(areas, feedback.suggested(answer.usage(), areas.size()));
     }
 
     /** Dreams for one vision area, or with stretch one bold moonshot dream. */
@@ -115,8 +118,9 @@ public class AiPlanService {
                 + "participant already has.";
         String prompt = task + " Every target date must be after " + today + ". If too little is known about what the "
                 + "participant wants in this area, return no dreams and ask one clarifying question.";
-        AiDrafts.DreamDrafts drafts = requests.ask(user, apiKey, stretch ? "STRETCH_DREAM" : "DREAM_BUILDER",
-                language, plan, prompt, AiDrafts.DreamDrafts.class);
+        AiStructuredRequests.Tracked<AiDrafts.DreamDrafts> answer = requests.askTracked(user, apiKey,
+                stretch ? "STRETCH_DREAM" : "DREAM_BUILDER", language, plan, prompt, AiDrafts.DreamDrafts.class);
+        AiDrafts.DreamDrafts drafts = answer.value();
         List<DreamSuggestion> dreams = new ArrayList<>();
         for (AiDrafts.DreamDraft draft : Optional.ofNullable(drafts.dreams()).orElse(List.of())) {
             if (blank(draft.title()) || dreams.size() >= (stretch ? 1 : MAX_DREAMS)) {
@@ -126,7 +130,8 @@ public class AiPlanService {
                     limit(draft.whyImportant(), 3000), limit(draft.successDefinition(), 3000), dreamType(draft.dreamType()),
                     priority(draft.priority()), futureDate(draft.targetDate(), today), stretch, limit(draft.reason(), 300)));
         }
-        return new DreamSuggestions(dreams, dreams.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null);
+        return new DreamSuggestions(dreams, dreams.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null,
+                feedback.suggested(answer.usage(), dreams.size()));
     }
 
     /** AI-FR-07, or with stretch one bold goal (AI-FR-10). */
@@ -134,7 +139,8 @@ public class AiPlanService {
         AppUser user = lookup.currentUser();
         // V10 (SEC-01-02): ownership first, so another user's record answers 404
         // whether or not AI is available.
-        lookup.dream(dreamId);
+        // V11 (PB-FR-15): a goal may not be due after its dream.
+        LocalDate latest = lookup.dream(dreamId).getTargetDate();
         String apiKey = accessService.requireAvailable(user);
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)));
         LocalDate today = LocalDate.now(clock);
@@ -145,18 +151,20 @@ public class AiPlanService {
                 + "relevant, time-bound) that together would make it happen. Do not repeat goals the participant already has.";
         String prompt = task + " Every target date must be after " + today + " and, when the dream has a target date, "
                 + "not after it. If the dream is too vague to plan well, return no goals and ask one clarifying question.";
-        AiDrafts.GoalDrafts drafts = requests.ask(user, apiKey, stretch ? "STRETCH_GOAL" : "GOAL_BUILDER",
-                language, plan, prompt, AiDrafts.GoalDrafts.class);
+        AiStructuredRequests.Tracked<AiDrafts.GoalDrafts> answer = requests.askTracked(user, apiKey,
+                stretch ? "STRETCH_GOAL" : "GOAL_BUILDER", language, plan, prompt, AiDrafts.GoalDrafts.class);
+        AiDrafts.GoalDrafts drafts = answer.value();
         List<GoalSuggestion> goals = new ArrayList<>();
         for (AiDrafts.GoalDraft draft : Optional.ofNullable(drafts.goals()).orElse(List.of())) {
             if (blank(draft.title()) || goals.size() >= (stretch ? 1 : MAX_GOALS)) {
                 continue;
             }
             goals.add(new GoalSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
-                    limit(draft.successCriteria(), 3000), futureDate(draft.targetDate(), today), priority(draft.priority()),
+                    limit(draft.successCriteria(), 3000), futureDate(draft.targetDate(), today, latest), priority(draft.priority()),
                     stretch, limit(draft.reason(), 300)));
         }
-        return new GoalSuggestions(goals, goals.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null);
+        return new GoalSuggestions(goals, goals.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null,
+                feedback.suggested(answer.usage(), goals.size()));
     }
 
     /** AI-FR-08: steps for one goal, with owner, date, resources and people. */
@@ -167,8 +175,11 @@ public class AiPlanService {
         lookup.goal(goalId);
         String apiKey = accessService.requireAvailable(user);
         LocalDate today = LocalDate.now(clock);
+        // V11 (PB-FR-15): a step may not be due after its goal, or its dream when the goal has no date.
+        LocalDate[] latest = new LocalDate[1];
         String plan = transactions.execute(status -> {
             Goal goal = lookup.goal(goalId);
+            latest[0] = goal.getTargetDate() != null ? goal.getTargetDate() : goal.getDream().getTargetDate();
             return describeDream(user, goal.getDream()) + "\nThe goal to plan: [" + goal.getId() + "] " + clip(goal.getTitle())
                     + (goal.getTargetDate() == null ? "" : ", target " + goal.getTargetDate()) + "\n";
         });
@@ -176,18 +187,20 @@ public class AiPlanService {
                 + "Do not repeat steps the goal already has. Owner is Me unless a role clearly fits better; never invent a "
                 + "person's name. Dates must be after " + today + " and, when the goal has a target date, not after it. "
                 + "If the goal is too vague to plan well, return no steps and ask one clarifying question.";
-        AiDrafts.StepDrafts drafts = requests.ask(user, apiKey, "PLAN_BUILDER", language, plan, prompt,
-                AiDrafts.StepDrafts.class);
+        AiStructuredRequests.Tracked<AiDrafts.StepDrafts> answer = requests.askTracked(user, apiKey, "PLAN_BUILDER", language,
+                plan, prompt, AiDrafts.StepDrafts.class);
+        AiDrafts.StepDrafts drafts = answer.value();
         List<StepSuggestion> steps = new ArrayList<>();
         for (AiDrafts.StepDraft draft : Optional.ofNullable(drafts.steps()).orElse(List.of())) {
             if (blank(draft.title()) || steps.size() >= MAX_STEPS) {
                 continue;
             }
             steps.add(new StepSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
-                    blank(draft.owner()) ? "Me" : limit(draft.owner(), 160), futureDate(draft.targetDate(), today),
+                    blank(draft.owner()) ? "Me" : limit(draft.owner(), 160), futureDate(draft.targetDate(), today, latest[0]),
                     limit(draft.resources(), 1000), limit(draft.people(), 500), limit(draft.reason(), 300)));
         }
-        return new StepSuggestions(steps, steps.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null);
+        return new StepSuggestions(steps, steps.isEmpty() ? limit(drafts.clarifyingQuestion(), 500) : null,
+                feedback.suggested(answer.usage(), steps.size()));
     }
 
     /**
@@ -219,18 +232,19 @@ public class AiPlanService {
         });
         Optional<String> apiKey = accessService.availableKey(user);
         if (apiKey.isEmpty()) {
-            return new PlanCheck(issues, false);
+            return new PlanCheck(issues, false, null);
         }
         String prompt = "Review this plan like a careful coach. Report up to " + MAX_AI_ISSUES + " real problems of three "
                 + "kinds only: VAGUE_STEP (a step too vague to act on), UNREALISTIC_TIMING (dates that do not fit the work), "
                 + "GAP (something the goal clearly needs that no step covers). Missing owners, dates and resources are already "
                 + "checked, so leave those out. Use the ids in brackets. Return no issues when the plan is sound.";
-        AiDrafts.PlanReview review;
+        AiStructuredRequests.Tracked<AiDrafts.PlanReview> answer;
         try {
-            review = requests.ask(user, apiKey.get(), "PLAN_CHECK", language, plan, prompt, AiDrafts.PlanReview.class);
+            answer = requests.askTracked(user, apiKey.get(), "PLAN_CHECK", language, plan, prompt, AiDrafts.PlanReview.class);
         } catch (AiUnavailableException exception) {
-            return new PlanCheck(issues, false);
+            return new PlanCheck(issues, false, null);
         }
+        AiDrafts.PlanReview review = answer.value();
         int added = 0;
         for (AiDrafts.IssueDraft draft : Optional.ofNullable(review.issues()).orElse(List.of())) {
             String kind = draft.kind() == null ? "" : draft.kind().trim().toUpperCase();
@@ -243,7 +257,7 @@ public class AiPlanService {
                     limit(draft.fix(), 300), true));
             added++;
         }
-        return new PlanCheck(issues, true);
+        return new PlanCheck(issues, true, answer.usage().getId());
     }
 
     /** AI-FR-11: unfinished steps that are overdue again after being given a new date. No AI needed to list them. */
@@ -368,6 +382,17 @@ public class AiPlanService {
         if (!blank(value)) {
             out.append(label).append(": ").append(clip(value)).append('\n');
         }
+    }
+
+    /**
+     * V11 (PB-FR-15): a date Claude suggested, kept only when it is real, in the
+     * future and not after the parent's date (latest, when there is one).
+     * Otherwise the participant picks one. The prompt asks for the same; this
+     * makes sure of it.
+     */
+    static LocalDate futureDate(String value, LocalDate today, LocalDate latest) {
+        LocalDate date = futureDate(value, today);
+        return date != null && latest != null && date.isAfter(latest) ? null : date;
     }
 
     /** A date Claude suggested, kept only when it is real and in the future; otherwise the participant picks one. */

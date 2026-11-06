@@ -308,6 +308,9 @@ https://claude.ai/code/artifact/199cd8cd-8af3-4bd9-b68f-9c2d414def2f?via=auto_pr
 **AiUsageLog** (`ai_usage_logs`): `user` (cleared, not deleted, with the account), `feature`,
 `model`, `inputTokens`, `outputTokens`, `costUsd`, `outcome` (`OK`, `CUT_SHORT`, `REFUSED`,
 `CRISIS_HANDLED`, `ERROR`), `rating` (1 or -1), `ratingComment`; never conversation text.
+V11 (migration V63) adds `suggestedItems` (how many items a plan builder answer offered; null for
+other features), `addedItems` and `editedItems` (kept as suggested, or kept after editing); the rest
+were discarded. Counts only, no suggestion text.
 **AiSafetyAlert** (`ai_safety_alerts`): `user`, `coach` (null means administrators see it),
 `alertType`, `acknowledgedAt`, `acknowledgedBy`. **AiSettings** adds `dailyMessageLimit`
 (default 20) and `helpLines`.

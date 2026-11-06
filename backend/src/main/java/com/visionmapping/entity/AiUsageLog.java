@@ -66,4 +66,18 @@ public class AiUsageLog extends BaseAuditableEntity {
 
     @Column(name = "rating_comment", length = 1000)
     private String ratingComment;
+
+    /** V11 (PB-FR-35): items a plan builder answer suggested; null for other features. */
+    @Column(name = "suggested_items")
+    private Integer suggestedItems;
+
+    /** V11 (PB-FR-35): suggested items the participant added unchanged. */
+    @Builder.Default
+    @Column(name = "added_items", nullable = false)
+    private int addedItems = 0;
+
+    /** V11 (PB-FR-35): suggested items the participant added after editing. */
+    @Builder.Default
+    @Column(name = "edited_items", nullable = false)
+    private int editedItems = 0;
 }

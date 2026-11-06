@@ -56,10 +56,13 @@ class AiPlanFlowTests {
     @MockitoBean
     private ClaudeClient claudeClient;
 
+    private String adminToken;
+
     @BeforeEach
     void aiOnWithAKey() throws Exception {
         reset(claudeClient);
         String admin = register(email("plan-admin"));
+        adminToken = admin;
         jdbcTemplate.update("update app_users set role = 'ADMIN' where full_name = 'Plan Tester' and role = 'USER' and email like 'plan-admin-%'");
         jdbcTemplate.update("update ai_settings set model = 'claude-opus-5-5', monthly_budget_usd = 20.00, daily_message_limit = 20");
         send(put("/api/admin/ai-settings/api-key"), admin, Map.of("apiKey", KEY)).andExpect(status().isOk());
@@ -285,6 +288,171 @@ class AiPlanFlowTests {
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/ai/plan/dreams/" + ownDream + "/goal-suggestions").header("Authorization", "Bearer " + user))
                 .andExpect(status().isTooManyRequests());
+    }
+
+    // ---------- V11 Phase 1 ----------
+
+    @Test
+    void suggestedDatesAfterTheParentsDateAreCleared() throws Exception {
+        String user = consented(email("bounds"));
+        long dreamId = dream(user);
+        jdbcTemplate.update("update dreams set target_date = ? where id = ?", TODAY.plusMonths(6), dreamId);
+        AiDrafts.GoalDraft inside = new AiDrafts.GoalDraft("Inside", "d", "s", TODAY.plusMonths(3).toString(), "HIGH", "r");
+        AiDrafts.GoalDraft after = new AiDrafts.GoalDraft("After the dream", "d", "s", TODAY.plusYears(1).toString(), "HIGH", "r");
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.GoalDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.GoalDrafts(List.of(inside, after), ""), "claude-opus-5-5", 10, 10, false));
+        mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/goal-suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(jsonPath("$.goals[0].targetDate").value(TODAY.plusMonths(3).toString()))
+                .andExpect(jsonPath("$.goals[1].targetDate").isEmpty())
+                .andExpect(jsonPath("$.requestId").isNumber());
+
+        long goalId = goal(user, dreamId); // target in 4 months
+        AiDrafts.StepDraft soon = new AiDrafts.StepDraft("Soon", "d", "Me", TODAY.plusWeeks(2).toString(), "r", "p", "r");
+        AiDrafts.StepDraft late = new AiDrafts.StepDraft("After the goal", "d", "Me", TODAY.plusMonths(5).toString(), "r", "p", "r");
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.StepDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.StepDrafts(List.of(soon, late), ""), "claude-opus-5-5", 10, 10, false));
+        mockMvc.perform(post("/api/ai/plan/goals/" + goalId + "/step-suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(jsonPath("$.steps[0].targetDate").value(TODAY.plusWeeks(2).toString()))
+                .andExpect(jsonPath("$.steps[1].targetDate").isEmpty());
+    }
+
+    @Test
+    void addSavesEverythingOrNothingCountsOutcomesAndCanBeUndone() throws Exception {
+        String user = consented(email("add"));
+        long dreamId = dream(user);
+        long requestId = goalSuggestions(user, dreamId, 3);
+        assertThat(usageCounts(requestId)).containsExactly(3, 0, 0);
+
+        // One bad item (another user's dream) and nothing is saved.
+        String other = consented(email("add-other"));
+        long otherDream = dream(other);
+        send(post("/api/ai/plan/add"), user, Map.of("requestId", requestId, "goals", List.of(
+                goalItem(dreamId, "Kept", false), goalItem(otherDream, "Not mine", false))))
+                .andExpect(status().isNotFound());
+        assertThat(goalsUnder(dreamId)).isZero();
+        assertThat(usageCounts(requestId)).containsExactly(3, 0, 0);
+
+        // A blank title is refused by the same rules as the normal create.
+        send(post("/api/ai/plan/add"), user, Map.of("goals", List.of(goalItem(dreamId, " ", false))))
+                .andExpect(status().isBadRequest());
+
+        JsonNode added = read(send(post("/api/ai/plan/add"), user, Map.of("requestId", requestId, "goals", List.of(
+                goalItem(dreamId, "As suggested", false), goalItem(dreamId, "Edited", true))))
+                .andExpect(status().isCreated()));
+        assertThat(added.get("goalIds")).hasSize(2);
+        assertThat(goalsUnder(dreamId)).isEqualTo(2);
+        assertThat(usageCounts(requestId)).containsExactly(3, 1, 1);
+
+        // Steps cannot be reported against goal suggestions.
+        long goalId = added.get("goalIds").get(0).asLong();
+        send(post("/api/ai/plan/add"), user, Map.of("requestId", requestId,
+                "steps", List.of(Map.of("step", stepBody(goalId, "Step", TODAY.plusWeeks(1), "r"), "edited", false))))
+                .andExpect(status().isBadRequest());
+
+        // Another user cannot undo it; the owner can.
+        send(post("/api/ai/plan/undo"), other, Map.of("goalIds", List.of(goalId))).andExpect(status().isNotFound());
+        List<Long> goalIds = List.of(added.get("goalIds").get(0).asLong(), added.get("goalIds").get(1).asLong());
+        send(post("/api/ai/plan/undo"), user, Map.of("requestId", requestId, "goalIds", goalIds)).andExpect(status().isNoContent());
+        assertThat(goalsUnder(dreamId)).isZero();
+        assertThat(usageCounts(requestId)).containsExactly(3, 0, 0);
+    }
+
+    @Test
+    void stepsAreAddedTogetherWithTheirOutcome() throws Exception {
+        String user = consented(email("add-steps"));
+        long goalId = goal(user, dream(user));
+        AiDrafts.StepDraft draft = new AiDrafts.StepDraft("Visit banks", "d", "Me", TODAY.plusWeeks(2).toString(), "r", "p", "r");
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.StepDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.StepDrafts(List.of(draft, draft), ""), "claude-opus-5-5", 10, 10, false));
+        long requestId = read(mockMvc.perform(post("/api/ai/plan/goals/" + goalId + "/step-suggestions")
+                .header("Authorization", "Bearer " + user))).get("requestId").asLong();
+
+        JsonNode added = read(send(post("/api/ai/plan/add"), user, Map.of("requestId", requestId, "steps", List.of(
+                Map.of("step", stepBody(goalId, "Visit banks", TODAY.plusWeeks(2), "r"), "edited", false))))
+                .andExpect(status().isCreated()));
+        assertThat(added.get("stepIds")).hasSize(1);
+        assertThat(usageCounts(requestId)).containsExactly(2, 1, 0);
+    }
+
+    @Test
+    void planAnswersCanBeRatedOnlyByTheirOwner() throws Exception {
+        String user = consented(email("rate"));
+        long requestId = goalSuggestions(user, dream(user), 1);
+        send(put("/api/ai/plan/requests/" + requestId + "/rating"), user, Map.of("rating", 1, "comment", " Useful "))
+                .andExpect(status().isNoContent());
+        assertThat(jdbcTemplate.queryForObject("select rating from ai_usage_logs where id = ?", Integer.class, requestId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("select rating_comment from ai_usage_logs where id = ?", String.class, requestId))
+                .isEqualTo("Useful");
+
+        String other = consented(email("rate-other"));
+        send(put("/api/ai/plan/requests/" + requestId + "/rating"), other, Map.of("rating", -1)).andExpect(status().isNotFound());
+        send(post("/api/ai/plan/requests/" + requestId + "/outcome"), other, Map.of("added", 1, "edited", 0))
+                .andExpect(status().isNotFound());
+
+        // A usage row of another feature is not a plan answer.
+        jdbcTemplate.update("insert into ai_usage_logs (user_id, feature, model, input_tokens, output_tokens, "
+                + "cost_usd, outcome, created_at, updated_at) select user_id, 'CHAT', model, 0, 0, 0, 'OK', now(), now() "
+                + "from ai_usage_logs where id = ?", requestId);
+        Long chatRow = jdbcTemplate.queryForObject("select max(id) from ai_usage_logs where feature = 'CHAT'", Long.class);
+        send(put("/api/ai/plan/requests/" + chatRow + "/rating"), user, Map.of("rating", 1)).andExpect(status().isNotFound());
+
+        // Outcomes never pass what was suggested.
+        send(post("/api/ai/plan/requests/" + requestId + "/outcome"), user, Map.of("added", 5, "edited", 0))
+                .andExpect(status().isNoContent());
+        assertThat(usageCounts(requestId)).containsExactly(1, 1, 0);
+    }
+
+    @Test
+    void adminsSeePlanMetricsAndOthersDoNot() throws Exception {
+        String user = consented(email("metrics"));
+        long dreamId = dream(user);
+        long requestId = goalSuggestions(user, dreamId, 4);
+        send(post("/api/ai/plan/add"), user, Map.of("requestId", requestId, "goals", List.of(
+                goalItem(dreamId, "One", false), goalItem(dreamId, "Two", true)))).andExpect(status().isCreated());
+        send(put("/api/ai/plan/requests/" + requestId + "/rating"), user, Map.of("rating", 1)).andExpect(status().isNoContent());
+
+        JsonNode metrics = read(mockMvc.perform(get("/api/admin/ai/plan-metrics?days=7").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk()));
+        assertThat(metrics.get("days").asInt()).isEqualTo(7);
+        JsonNode goals = null;
+        for (JsonNode feature : metrics.get("features")) {
+            if (feature.get("feature").asText().equals("GOAL_BUILDER")) {
+                goals = feature;
+            }
+        }
+        assertThat(goals).isNotNull();
+        assertThat(goals.get("suggestedItems").asLong()).isGreaterThanOrEqualTo(4);
+        assertThat(goals.get("addedItems").asLong()).isGreaterThanOrEqualTo(1);
+        assertThat(goals.get("editedItems").asLong()).isGreaterThanOrEqualTo(1);
+        assertThat(goals.get("acceptanceRate").isNumber()).isTrue();
+
+        mockMvc.perform(get("/api/admin/ai/plan-metrics").header("Authorization", "Bearer " + user)).andExpect(status().isForbidden());
+    }
+
+    private long goalSuggestions(String token, long dreamId, int count) throws Exception {
+        List<AiDrafts.GoalDraft> drafts = new java.util.ArrayList<>();
+        for (int index = 1; index <= count; index++) {
+            drafts.add(new AiDrafts.GoalDraft("Goal " + index, "d", "s", TODAY.plusMonths(index).toString(), "HIGH", "r"));
+        }
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.GoalDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.GoalDrafts(drafts, ""), "claude-opus-5-5", 10, 10, false));
+        return read(mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/goal-suggestions").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())).get("requestId").asLong();
+    }
+
+    private static Map<String, Object> goalItem(long dreamId, String title, boolean edited) {
+        return Map.of("goal", Map.of("dreamId", dreamId, "title", title, "priority", "HIGH", "status", "NOT_STARTED",
+                "scheduleMode", "BOTTOM_UP", "moonshot", false), "edited", edited);
+    }
+
+    private int goalsUnder(long dreamId) {
+        return jdbcTemplate.queryForObject("select count(*) from goals where dream_id = ? and archived = false", Integer.class, dreamId);
+    }
+
+    /** suggested, added, edited. */
+    private List<Integer> usageCounts(long requestId) {
+        return jdbcTemplate.queryForObject("select suggested_items, added_items, edited_items from ai_usage_logs where id = ?",
+                (row, index) -> List.of(row.getInt(1), row.getInt(2), row.getInt(3)), requestId);
     }
 
     private long dream(String token) throws Exception {

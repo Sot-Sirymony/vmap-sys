@@ -2,14 +2,16 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../../api/aiApi';
-import { suggestDreams, suggestVisionAreas } from '../../api/aiPlanApi';
+import { recordPlanOutcome, suggestDreams, suggestVisionAreas } from '../../api/aiPlanApi';
 import { createDream } from '../../api/dreamApi';
 import { createVisionArea } from '../../api/visionAreaApi';
 import type { AiStatus, VisionArea } from '../../types/vision';
 import { AiDreamAssistant, AiVisionAreaAssistant } from './AiStartAssistant';
 
 vi.mock('../../api/aiApi', () => ({ getAiStatus: vi.fn() }));
-vi.mock('../../api/aiPlanApi', () => ({ suggestVisionAreas: vi.fn(), suggestDreams: vi.fn() }));
+vi.mock('../../api/aiPlanApi', () => ({
+  suggestVisionAreas: vi.fn(), suggestDreams: vi.fn(), recordPlanOutcome: vi.fn(), ratePlanAnswer: vi.fn(),
+}));
 vi.mock('../../api/dreamApi', () => ({ createDream: vi.fn() }));
 vi.mock('../../api/visionAreaApi', () => ({ createVisionArea: vi.fn() }));
 
@@ -19,9 +21,10 @@ const area = { id: 3, name: 'Career', archived: false } as VisionArea;
 describe('AiVisionAreaAssistant', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('adds only the areas the participant keeps, with their edits', async () => {
+  it('adds only the areas the participant keeps, with their edits, and counts what was kept', async () => {
     vi.mocked(getAiStatus).mockResolvedValue(ready);
-    vi.mocked(suggestVisionAreas).mockResolvedValue({ areas: [
+    vi.mocked(recordPlanOutcome).mockResolvedValue(undefined);
+    vi.mocked(suggestVisionAreas).mockResolvedValue({ requestId: 8, areas: [
       { name: 'Health', priority: 'HIGH', visionStatement: 'I feel strong.' },
       { name: 'Finance', priority: 'MEDIUM' },
     ] });
@@ -44,6 +47,8 @@ describe('AiVisionAreaAssistant', () => {
     }));
     expect(onDataChange).toHaveBeenCalled();
     expect(await screen.findByText('1 vision area(s) added.')).toBeInTheDocument();
+    // One kept, and it was edited.
+    expect(recordPlanOutcome).toHaveBeenCalledWith('token', 8, 0, 1);
   });
 
   it('shows nothing while AI is off for everyone', async () => {

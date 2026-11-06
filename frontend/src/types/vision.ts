@@ -1048,7 +1048,8 @@ export type VisionAreaSuggestion = {
   reason?: string | null;
 };
 
-export type VisionAreaSuggestions = { areas: VisionAreaSuggestion[] };
+// V11 (PB-FR-34): requestId is the AI answer to rate and report outcomes against.
+export type VisionAreaSuggestions = { areas: VisionAreaSuggestion[]; requestId?: number | null };
 
 export type DreamSuggestion = {
   title: string;
@@ -1062,7 +1063,7 @@ export type DreamSuggestion = {
   reason?: string | null;
 };
 
-export type DreamSuggestions = { dreams: DreamSuggestion[]; clarifyingQuestion?: string | null };
+export type DreamSuggestions = { dreams: DreamSuggestion[]; clarifyingQuestion?: string | null; requestId?: number | null };
 
 export type GoalSuggestion = {
   title: string;
@@ -1074,7 +1075,7 @@ export type GoalSuggestion = {
   reason?: string | null;
 };
 
-export type GoalSuggestions = { goals: GoalSuggestion[]; clarifyingQuestion?: string | null };
+export type GoalSuggestions = { goals: GoalSuggestion[]; clarifyingQuestion?: string | null; requestId?: number | null };
 
 export type StepSuggestion = {
   title: string;
@@ -1086,7 +1087,7 @@ export type StepSuggestion = {
   reason?: string | null;
 };
 
-export type StepSuggestions = { steps: StepSuggestion[]; clarifyingQuestion?: string | null };
+export type StepSuggestions = { steps: StepSuggestion[]; clarifyingQuestion?: string | null; requestId?: number | null };
 
 export type PlanIssue = {
   kind: string;
@@ -1098,7 +1099,26 @@ export type PlanIssue = {
   fromAi: boolean;
 };
 
-export type PlanCheck = { issues: PlanIssue[]; aiChecked: boolean };
+export type PlanCheck = { issues: PlanIssue[]; aiChecked: boolean; requestId?: number | null };
+
+// V11 Phase 1 (PB-FR-31, PB-FR-32, PB-FR-36).
+export type PlanAddResult = { goalIds: number[]; stepIds: number[] };
+
+export type PlanFeatureMetrics = {
+  feature: string;
+  requests: number;
+  suggestedItems: number;
+  addedItems: number;
+  editedItems: number;
+  acceptanceRate?: number | null;
+  editRate?: number | null;
+  ratings: number;
+  thumbsUpRate?: number | null;
+  costUsd: number;
+  averageCostUsd: number;
+};
+
+export type PlanMetrics = { days: number; features: PlanFeatureMetrics[] };
 
 export type SlippingStep = {
   stepId: number;

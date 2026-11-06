@@ -569,6 +569,18 @@ All take `?language=en|km`. They only suggest; adding uses `POST /api/vision-are
 
 Steps now take and return `resources` (left out on update keeps the saved value; blank clears it) and return `overdueReschedules`.
 
+### V11: plan builder feedback and safe adding (Phase 1)
+
+Every suggestion answer above now also returns `requestId` (the plan check returns it only when the AI review ran). Suggested dates are kept only when they are after today and not after the parent's date: a goal not after its dream, a step not after its goal (or its dream when the goal has none). Other dates come back empty for the participant to pick.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| PUT | `/api/ai/plan/requests/{id}/rating` | `{ "rating": 1 \| -1 \| 0, "comment" }`; 0 clears. 204. Another user's answer, or one that is not a plan builder answer, answers 404 |
+| POST | `/api/ai/plan/requests/{id}/outcome` | `{ "added", "edited" }` for vision areas and dreams added through the normal endpoints. Counts never pass what the answer suggested. 204 |
+| POST | `/api/ai/plan/add` | `{ "requestId", "goals": [{ "goal": GoalRequest, "edited" }], "steps": [{ "step": VisionStepRequest, "edited" }] }` (up to 10 goals, 20 steps) → 201 `goalIds[]`, `stepIds[]`. One transaction: if any item fails its checks, nothing is saved. With `requestId`, goals must come from a goal answer and steps from a step answer |
+| POST | `/api/ai/plan/undo` | `{ "requestId", "goalIds", "stepIds" }` archives those records (soft delete) and resets that answer's outcome counts. Every id is checked first; one that is not the caller's answers 404 and nothing changes. 204 |
+| GET | `/api/admin/ai/plan-metrics?days=30` | Admins only. Per plan builder feature: `requests`, `suggestedItems`, `addedItems`, `editedItems`, `acceptanceRate`, `editRate`, `ratings`, `thumbsUpRate`, `costUsd`, `averageCostUsd`. `days` is 1 to 365 |
+
 ### V9: daily use (Phase 6)
 
 All need AI consent and count toward the daily limit. Suggestions only.

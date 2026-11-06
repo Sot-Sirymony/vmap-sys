@@ -14,15 +14,16 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { getAiStatus } from '../../api/aiApi';
 import { getResourceIdeas } from '../../api/aiDailyApi';
-import { checkPlan, suggestGoals, suggestSteps } from '../../api/aiPlanApi';
-import { createGoal } from '../../api/goalApi';
-import { createStep } from '../../api/stepApi';
+import { addPlan, checkPlan, suggestGoals, suggestSteps, undoPlan } from '../../api/aiPlanApi';
 import { useI18n } from '../../i18n/I18nContext';
 import { tr } from '../../i18n/translate';
-import type { AiStatus, Dream, Goal, GoalSuggestion, PlanCheck, ResourceIdea, StepSuggestion, VisionStep } from '../../types/vision';
+import type {
+  AiStatus, Dream, Goal, GoalSuggestion, PlanAddResult, PlanCheck, ResourceIdea, StepSuggestion, VisionStep,
+} from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import { safeHttpUrl } from '../../utils/safeUrl';
+import { SuggestionRating, wasEdited } from './SuggestionRating';
 
 type Props = {
   dream: Dream;
@@ -32,11 +33,11 @@ type Props = {
   onDataChange: () => Promise<void>;
 };
 
-type GoalRow = GoalSuggestion & { picked: boolean };
-type StepRow = StepSuggestion & { picked: boolean };
+type GoalRow = GoalSuggestion & { picked: boolean; original: GoalSuggestion };
+type StepRow = StepSuggestion & { picked: boolean; original: StepSuggestion };
 type Result =
-  | { kind: 'goals'; rows: GoalRow[]; question?: string | null }
-  | { kind: 'steps'; goalId: number; rows: StepRow[]; question?: string | null }
+  | { kind: 'goals'; rows: GoalRow[]; question?: string | null; requestId?: number | null }
+  | { kind: 'steps'; goalId: number; rows: StepRow[]; question?: string | null; requestId?: number | null }
   | { kind: 'check'; check: PlanCheck }
   | { kind: 'resources'; ideas: ResourceIdea[] };
 
@@ -66,6 +67,8 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // V11 (PB-FR-32): what the last add saved, so it can be undone.
+  const [lastAdd, setLastAdd] = useState<(PlanAddResult & { requestId?: number | null }) | null>(null);
 
   const dreamGoals = goals.filter((goal) => goal.dreamId === dream.id && !goal.archived);
 
@@ -77,6 +80,7 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
     setBusy(true);
     setError('');
     setNotice('');
+    setLastAdd(null);
     setResult(null);
     try {
       setResult(await action());
@@ -90,13 +94,24 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
 
   const askGoals = (stretch: boolean) => run(async () => {
     const answer = await suggestGoals(token, dream.id, language, stretch);
-    return { kind: 'goals', rows: answer.goals.map((goal) => ({ ...goal, picked: true })), question: answer.clarifyingQuestion };
+    return {
+      kind: 'goals',
+      rows: answer.goals.map((goal) => ({ ...goal, picked: true, original: goal })),
+      question: answer.clarifyingQuestion,
+      requestId: answer.requestId,
+    };
   });
 
   const askSteps = () => run(async () => {
     const id = Number(goalId);
     const answer = await suggestSteps(token, id, language);
-    return { kind: 'steps', goalId: id, rows: answer.steps.map((step) => ({ ...step, picked: true })), question: answer.clarifyingQuestion };
+    return {
+      kind: 'steps',
+      goalId: id,
+      rows: answer.steps.map((step) => ({ ...step, picked: true, original: step })),
+      question: answer.clarifyingQuestion,
+      requestId: answer.requestId,
+    };
   });
 
   const askCheck = () => run(async () => ({ kind: 'check', check: await checkPlan(token, dream.id, language) }));
@@ -104,12 +119,13 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   // AI-FR-13: ideas only, each to check before use until admins keep an approved list.
   const askResources = () => run(async () => ({ kind: 'resources', ideas: (await getResourceIdeas(token, Number(goalId), language)).resources }));
 
-  async function addGoals(rows: GoalRow[]) {
-    setBusy(true);
-    setError('');
-    try {
-      for (const row of rows.filter((item) => item.picked)) {
-        await createGoal(token, {
+  // V11 (PB-FR-31): everything picked is saved in one request, or nothing is.
+  async function addGoals(rows: GoalRow[], requestId?: number | null) {
+    const picked = rows.filter((item) => item.picked);
+    await save('Unable to save goal.', requestId, {
+      goals: picked.map((row) => ({
+        edited: wasEdited(row.original, row, ['title', 'successCriteria', 'targetDate']),
+        goal: {
           dreamId: dream.id,
           title: row.title,
           description: row.description ?? undefined,
@@ -120,45 +136,62 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
           moonshot: row.moonshot,
           moonshotVision: row.moonshot ? row.reason ?? undefined : undefined,
           scheduleMode: dream.scheduleMode ?? 'BOTTOM_UP',
-        });
-      }
-      const count = rows.filter((item) => item.picked).length;
-      setResult(null);
-      setNotice(tr('{count} goal(s) added to your plan.', { count }));
-      await onDataChange();
-    } catch (addError) {
-      setError(addError instanceof Error ? tr(addError.message) : tr('Unable to save goal.'));
-    } finally {
-      setBusy(false);
-    }
+        },
+      })),
+    }, tr('{count} goal(s) added to your plan.', { count: picked.length }));
   }
 
-  async function addSteps(forGoal: number, rows: StepRow[]) {
-    setBusy(true);
-    setError('');
-    try {
-      let sequence = steps.filter((step) => step.goalId === forGoal && !step.archived).length;
-      for (const row of rows.filter((item) => item.picked)) {
-        sequence += 1;
-        await createStep(token, {
+  async function addSteps(forGoal: number, rows: StepRow[], requestId?: number | null) {
+    const picked = rows.filter((item) => item.picked);
+    const sequence = steps.filter((step) => step.goalId === forGoal && !step.archived).length;
+    await save('Unable to save step.', requestId, {
+      steps: picked.map((row, index) => ({
+        edited: wasEdited(row.original, row, ['title', 'owner', 'targetDate', 'resources', 'people']),
+        step: {
           goalId: forGoal,
           title: row.title,
           description: row.description ?? undefined,
           owner: row.owner,
-          sequenceNumber: sequence,
+          sequenceNumber: sequence + index + 1,
           complex: false,
           priority: 'MEDIUM',
           targetDate: row.targetDate ?? undefined,
           status: 'NOT_STARTED',
           resources: [row.resources, row.people ? `${tr('People')}: ${row.people}` : null].filter(Boolean).join('\n'),
-        });
-      }
-      const count = rows.filter((item) => item.picked).length;
+        },
+      })),
+    }, tr('{count} step(s) added to your plan.', { count: picked.length }));
+  }
+
+  async function save(failure: string, requestId: number | null | undefined, body: Parameters<typeof addPlan>[1], done: string) {
+    setBusy(true);
+    setError('');
+    try {
+      const added = await addPlan(token, { ...body, requestId });
       setResult(null);
-      setNotice(tr('{count} step(s) added to your plan.', { count }));
+      setLastAdd({ ...added, requestId });
+      setNotice(done);
       await onDataChange();
     } catch (addError) {
-      setError(addError instanceof Error ? tr(addError.message) : tr('Unable to save step.'));
+      setError(addError instanceof Error ? tr(addError.message) : tr(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function undo() {
+    if (!lastAdd) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await undoPlan(token, lastAdd);
+      setLastAdd(null);
+      setNotice(tr('Undone. What was just added is archived.'));
+      await onDataChange();
+    } catch (undoError) {
+      setError(undoError instanceof Error ? tr(undoError.message) : tr('Unable to undo.'));
     } finally {
       setBusy(false);
     }
@@ -214,14 +247,28 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
             </Box>
           )}
           {error && <Alert severity="error">{error}</Alert>}
-          {notice && <Alert severity="success">{notice}</Alert>}
+          {notice && (
+            <Alert
+              severity="success"
+              action={lastAdd ? <Button variant="secondary" disabled={busy} onClick={() => void undo()}>{tr('Undo')}</Button> : undefined}
+            >
+              {notice}
+            </Alert>
+          )}
           {result?.kind === 'goals' && (
-            <GoalRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addGoals(rows)} />
+            <GoalRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addGoals(rows, result.requestId)} />
           )}
           {result?.kind === 'steps' && (
-            <StepRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addSteps(result.goalId, rows)} />
+            <StepRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addSteps(result.goalId, rows, result.requestId)} />
           )}
           {result?.kind === 'check' && <CheckResult check={result.check} />}
+          {result && result.kind !== 'resources' && (
+            <SuggestionRating
+              key={result.kind === 'check' ? result.check.requestId : result.requestId}
+              token={token}
+              requestId={result.kind === 'check' ? result.check.requestId : result.requestId}
+            />
+          )}
           {result?.kind === 'resources' && <ResourceList ideas={result.ideas} />}
         </Stack>
       </CardContent>
