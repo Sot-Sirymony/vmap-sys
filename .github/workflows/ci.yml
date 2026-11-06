@@ -1,0 +1,120 @@
+# V10 (SEC-03-01 to SEC-03-05, SEC-08-03): build, test and scan every change.
+#
+# Render deploys only after these checks pass (autoDeployTrigger: checksPass in
+# render.yaml). Protect the main branch in GitHub and mark the three jobs below
+# as required checks (see docs/SECURITY.md).
+#
+# Actions and images are pinned to exact commits and digests; Dependabot keeps
+# them current. The weekly run re-scans with the newest vulnerability data even
+# when nothing changed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Build and test
+        run: mvn -B -ntp -s maven-settings.xml verify
+
+  frontend:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      # npm ci installs exactly what package-lock.json says, and fails if it
+      # does not match package.json (SEC-03-02).
+      - name: Install from the lock file
+        run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Test
+        run: npm test
+
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the backend image
+        run: docker build -t vmap-backend:ci backend
+
+      # Fails on any High or Critical issue that has a fix, in the image's
+      # operating system packages or in the Java libraries inside the app.
+      - name: Scan the backend image
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w /work "$TRIVY_IMAGE"
+          image --timeout 15m --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          --ignorefile .trivyignore.yaml vmap-backend:ci
+
+      # Development packages are included: they run during the build.
+      - name: Scan the frontend dependencies
+        run: >-
+          docker run --rm -v "$PWD:/work" -w /work "$TRIVY_IMAGE"
+          fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          --ignorefile .trivyignore.yaml frontend/package-lock.json
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      # A second opinion from npm's own advisory data, for what ships to users.
+      - name: npm audit (production dependencies)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
+      # SEC-03-04: a software bill of materials for each build of main.
+      - name: Software bill of materials
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p sbom
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/work" -w /work "$TRIVY_IMAGE" \
+            image --timeout 15m --format cyclonedx --output sbom/backend-image.cdx.json vmap-backend:ci
+          docker run --rm -v "$PWD:/work" -w /work "$TRIVY_IMAGE" \
+            fs --format cyclonedx --include-dev-deps --output sbom/frontend.cdx.json frontend/package-lock.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom/
+          retention-days: 90

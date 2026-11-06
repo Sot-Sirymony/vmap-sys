@@ -1,17 +1,27 @@
+# V10 (SEC-03-05): base images are pinned to an exact version and digest, so a
+# build always starts from the same bytes. Dependabot proposes updates weekly,
+# and the CI image scan fails when a fixable High/Critical issue appears.
+
 # Build stage
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9.16-eclipse-temurin-17@sha256:1a352420f7aba21f5ad08df31bab55f74c013fb491f1ae8ab1dd7ff9ed698584 AS build
 WORKDIR /app
-COPY pom.xml .
-RUN mvn -B dependency:go-offline
+# V10 (SEC-03-02): dependencies from Maven Central only (see maven-settings.xml).
+COPY maven-settings.xml pom.xml ./
+RUN mvn -B -ntp -s maven-settings.xml dependency:go-offline
 COPY src ./src
-RUN mvn -B clean package -DskipTests
+RUN mvn -B -ntp -s maven-settings.xml clean package -DskipTests
 
 # Run stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17.0.21_9-jre-alpine@sha256:e2ba4e947bd5e236a9866fbdda03e4936036cb9e9d16ea0d84d103d6634a5c21
 # The plan PDF lays out Khmer text through Java's font engine, which needs these.
 RUN apk add --no-cache fontconfig freetype
+# V10 (SEC-02-06): the app runs as an ordinary user, not root. /app is its own
+# so the Excel import can write its backup snapshot under /app/data/backup.
+RUN addgroup -S app && adduser -S -G app -h /home/app app
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build --chown=app:app /app/target/*.jar app.jar
+RUN chown app:app /app
+USER app
 
 # Render sets $PORT at runtime; application.yml reads it via server.port: ${PORT:8080}
 EXPOSE 8080

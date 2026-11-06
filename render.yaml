@@ -27,6 +27,9 @@ services:
     # the next request pays a 30-60s JVM + Spring cold boot. That request is the
     # user's login, which is why the first login felt broken.
     plan: starter
+    # V10 (SEC-08-03): deploy only after the GitHub Actions checks pass for
+    # the commit (.github/workflows/ci.yml). No checks, no deploy.
+    autoDeployTrigger: checksPass
     healthCheckPath: /api/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
@@ -101,7 +104,9 @@ services:
     name: vision-mapping-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    # V10 (SEC-03-02): npm ci installs exactly what package-lock.json says.
+    buildCommand: npm ci && npm run build
+    autoDeployTrigger: checksPass
     staticPublishPath: ./dist
     envVars:
       # Update this if the backend service ends up on a different

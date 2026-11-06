@@ -35,6 +35,68 @@ them emailed as well.
 | Secrets | `JWT_SECRET` and `SETTINGS_ENCRYPTION_KEY` required and separate in production; the Claude key is stored encrypted (AES-256-GCM) |
 | Logging | Security event log (12 months, append-only) and alerts; see below |
 
+## Supply chain
+
+Every push and pull request to `main` runs [`.github/workflows/ci.yml`](../.github/workflows/ci.yml):
+
+| Job | What it checks |
+| --- | --- |
+| Backend tests | `mvn verify`: compile and every backend test |
+| Frontend tests | `npm ci` (exactly the lock file), type-check, build, every frontend test |
+| Security scan | Builds the backend image and scans it with Trivy (operating system packages and the Java libraries in the app); scans the frontend lock file including build tools; `npm audit` on what ships to browsers; on `main`, saves a CycloneDX software bill of materials as a build artifact for 90 days |
+
+The scan fails the build on any **High or Critical** issue that has a fix. It
+also runs every Monday, so a new advisory against an unchanged dependency is
+caught. Render deploys a commit only after all checks pass
+(`autoDeployTrigger: checksPass` in `render.yaml`).
+
+Other controls:
+
+- **Pinned versions.** GitHub Actions are pinned to commit SHAs, Docker base
+  images to version and digest, Trivy to version and digest, and npm packages
+  through `package-lock.json`. Maven uses exact versions.
+- **Maven Central only.** `backend/maven-settings.xml` sends every Maven request
+  to Maven Central, even when a library's POM lists other repositories.
+- **Non-root container.** The backend runs as the `app` user.
+- **Dependabot** opens grouped update pull requests every Monday for Maven, npm,
+  Docker images and GitHub Actions, plus security updates as they appear.
+
+### Update deadlines (SEC-03-03)
+
+| Severity | Fix within |
+| --- | --- |
+| Critical | 7 days |
+| High | 30 days |
+| Medium and low | next monthly review |
+
+Review Dependabot pull requests at least monthly. If a fix is not possible in
+time, add the finding to [`.trivyignore.yaml`](../.trivyignore.yaml) with a
+reason and an `expired_at` date no more than 30 days away. Current exceptions:
+two `tinypool` advisories in the Vitest test runner (development only), until
+7 Dec 2026.
+
+### Adding a dependency (SEC-03-06)
+
+Before adding a library, check that it:
+
+1. is actively maintained (a release in the last year, issues answered);
+2. is widely used, or comes from an organisation you trust;
+3. has a licence compatible with the project;
+4. is really needed: prefer the standard library or an existing dependency.
+
+### Repository settings (do these once, in GitHub)
+
+These cannot be set from the code; the repository owner sets them:
+
+1. **Protect `main`** (SEC-08-03): Settings → Branches (or Rules → Rulesets) →
+   add a rule for `main`: require a pull request before merging, require status
+   checks to pass (`Backend tests`, `Frontend tests`, `Security scan`), block
+   force pushes and deletion.
+2. **Two-factor authentication** (SEC-03-07): every maintainer turns it on for
+   their GitHub account and their Render account.
+3. **Dependabot alerts and security updates**: Settings → Code security → turn
+   both on.
+
 ## The security log
 
 Every sign-in (success, failure, lock), logout, password change and reset,

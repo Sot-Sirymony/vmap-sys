@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [10.0.0] — In progress (phases 1 to 5 of 7 built)
+## [10.0.0] — In progress (phases 1 to 6 of 7 built)
 
 Implements [VMS_BRD_V10.0.0](VMS_BRD_V10.0.0.md): security hardening to the OWASP Top 10:2025.
 No new user features.
@@ -251,6 +251,35 @@ which tells a caller an email has an account. Fixing it properly needs email ver
   frontend: 446.
 - **Not done:** an AI budget-spike alert (SEC-09-04 lists it); the V9 80% budget warning still
   applies.
+
+### Phase 6: supply chain
+
+- **Added** `.github/workflows/ci.yml`, the repository's first CI (SEC-03-01, SEC-03-04): on every
+  push and pull request to `main`, and weekly, it runs the backend tests, the frontend build and
+  tests (installed with `npm ci`), and a security scan. The scan builds the backend image and
+  checks it with Trivy (OS packages and Java libraries), checks the frontend lock file including
+  build tools, and runs `npm audit` on production packages; any High or Critical issue with a
+  fix fails the build. On `main` it saves CycloneDX software bills of materials for 90 days.
+  Actions are pinned to commit SHAs and Trivy to version and digest; `actionlint` passes.
+- **Added** `.github/dependabot.yml`: weekly, grouped update pull requests for Maven, npm, Docker
+  images and GitHub Actions (SEC-03-03).
+- **Changed** Render deploys only after the CI checks pass (`autoDeployTrigger: checksPass`), and
+  the frontend builds with `npm ci` instead of `npm install` (SEC-08-03, SEC-03-02).
+- **Changed** the backend image pins both base images to version and digest
+  (`maven:3.9.16-eclipse-temurin-17`, `eclipse-temurin:17.0.21_9-jre-alpine`) and runs as a
+  non-root `app` user (SEC-03-05, SEC-02-06).
+- **Added** `backend/maven-settings.xml`, used by the Dockerfile and CI: every Maven request goes
+  to Maven Central. Before, some libraries' POMs made Maven also try a Gradle repository, an
+  Amazon S3 bucket and GitHub Packages.
+- **Fixed** frontend build-tool advisories by updating the lock file within the existing version
+  ranges (`browserslist`, `nanoid`, `source-map-js`, `vite` 7.x, `baseline-browser-mapping`).
+  Production packages had none. Two Critical `tinypool` advisories in the Vitest test runner
+  remain, accepted in `.trivyignore.yaml` until 7 Dec 2026: the fix needs Vitest 4, which npm
+  10.9.2 cannot install here (an npm peer-resolution bug).
+- **Added** the supply-chain section of `docs/SECURITY.md`: update deadlines (Critical 7 days,
+  High 30 days), the checklist for adding a dependency, and the GitHub settings the owner must
+  turn on (branch protection with required checks, two-factor authentication, Dependabot alerts).
+- IMAGE_SCAN_RESULT
 
 ## [9.0.0] — All 9 phases built; awaiting UAT
 
