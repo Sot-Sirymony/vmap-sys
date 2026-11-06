@@ -313,6 +313,8 @@ other features), `addedItems` and `editedItems` (kept as suggested, or kept afte
 were discarded. Counts only, no suggestion text.
 **VisionStep** (V11, migration V65) adds `estimatedHours` and `startsAfter` (a step of the same goal; cleared if
 that step is deleted). Both optional.
+**AiSettings** (V11, migration V66) adds `planModel` (the model for plan building; null uses `model`).
+**AppUser** (V11, migration V66) adds `planHoursPerWeek` (hours a week for plan work, from the last answer; optional).
 **PlanBuilderDraft** (`plan_builder_drafts`, V11, migration V64): `user`, `dream` (deleted with it), `stage`,
 `content` (the draft as JSON: new goals, steps and tasks, and containers for existing goals and steps),
 `expiresAt` (14 days after the last change; a daily job removes expired rows). Unique per user and dream.

@@ -29,7 +29,9 @@ public record AiSettingsResponse(
         BigDecimal spendThisMonthUsd,
         long requestsThisMonth,
         boolean aiReminders,
-        String coachingGuidelines) {
+        String coachingGuidelines,
+        // V11 (PB-FR-39): null when plan building uses the main model.
+        String planModel) {
 
     public record ModelOption(String id, String label) {
     }

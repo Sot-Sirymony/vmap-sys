@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import type {
   ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics,
-  PlanStage, SlippingStep, StepRescue, HelpersAndRisks, StepSuggestions, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
+  PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
 
 // V9 Phase 5: the AI vision area, dream, goal and plan builders. They only suggest; adding goes through the normal APIs.
@@ -160,4 +160,29 @@ export function suggestHelpersAndRisks(token: string, dreamId: number, language:
     token,
     body: JSON.stringify(body),
   });
+}
+
+// V11 Phase 6: the draft check, its fixes and weekly capacity.
+
+/** PB-FR-28: checks the saved draft; rule checks work without AI. Save the draft first. */
+export function checkPlanDraft(token: string, dreamId: number, language: string) {
+  return apiClient<DraftCheck>(`/ai/plan/dreams/${dreamId}/draft-check?language=${language}`, { method: 'POST', token });
+}
+
+/** PB-FR-29: a proposed change for one AI issue; nothing is saved. */
+export function fixPlanDraft(token: string, dreamId: number, language: string, body: { itemKey: string; kind: string; problem?: string }) {
+  return apiClient<DraftFix>(`/ai/plan/dreams/${dreamId}/draft-fix?language=${language}`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(body),
+  });
+}
+
+/** PB-FR-16 */
+export function getPlanCapacity(token: string) {
+  return apiClient<PlanCapacity>('/ai/plan/capacity', { token });
+}
+
+export function savePlanCapacity(token: string, hoursPerWeek: number | null) {
+  return apiClient<PlanCapacity>('/ai/plan/capacity', { method: 'PUT', token, body: JSON.stringify({ hoursPerWeek }) });
 }

@@ -2,7 +2,13 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.AiPlanAddRequest;
 import com.visionmapping.dto.request.DraftGoalStepsRequest;
+import com.visionmapping.dto.request.DraftFixRequest;
 import com.visionmapping.dto.request.DraftStepTasksRequest;
+import com.visionmapping.dto.request.PlanCapacityRequest;
+import com.visionmapping.dto.response.AiPlanResponses.DraftCheck;
+import com.visionmapping.dto.response.AiPlanResponses.DraftFix;
+import com.visionmapping.dto.response.AiPlanResponses.PlanCapacity;
+import com.visionmapping.service.ai.PlanDraftCheckService;
 import com.visionmapping.dto.request.PlanHelpersRequest;
 import com.visionmapping.dto.response.AiPlanResponses.HelpersAndRisks;
 import com.visionmapping.service.ai.AiHelpersService;
@@ -62,6 +68,7 @@ public class AiPlanController {
     private final PlanBuilderDraftService drafts;
     private final DreamService dreamService;
     private final AiHelpersService helpers;
+    private final PlanDraftCheckService draftCheck;
 
     @PostMapping("/vision-area-suggestions")
     public VisionAreaSuggestions visionAreas(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
@@ -110,6 +117,31 @@ public class AiPlanController {
     public HelpersAndRisks helpersAndRisks(@PathVariable Long dreamId, @Valid @RequestBody PlanHelpersRequest request,
                                            @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
         return helpers.suggest(dreamId, request, language);
+    }
+
+    /** V11 (PB-FR-28): the plan check on the saved Build my plan draft; rule checks work without AI. */
+    @PostMapping("/dreams/{dreamId}/draft-check")
+    public DraftCheck draftCheck(@PathVariable Long dreamId,
+                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return draftCheck.check(dreamId, language);
+    }
+
+    /** V11 (PB-FR-29): a proposed change for one AI issue in the draft; nothing is saved. */
+    @PostMapping("/dreams/{dreamId}/draft-fix")
+    public DraftFix draftFix(@PathVariable Long dreamId, @Valid @RequestBody DraftFixRequest request,
+                             @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return draftCheck.fix(dreamId, request, language);
+    }
+
+    /** V11 (PB-FR-16): hours a week for plan work, and the hours the saved plan already asks of each week. */
+    @GetMapping("/capacity")
+    public PlanCapacity capacity() {
+        return draftCheck.capacity();
+    }
+
+    @PutMapping("/capacity")
+    public PlanCapacity saveCapacity(@Valid @RequestBody PlanCapacityRequest request) {
+        return draftCheck.saveCapacity(request);
     }
 
     /** V11 (PB-FR-08): the next clarifying question about the dream, one at a time, at most three. */

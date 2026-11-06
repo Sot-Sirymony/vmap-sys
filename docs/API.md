@@ -632,6 +632,17 @@ Step suggestions now also return `priority`, `complex`, `estimatedHours` and `st
 
 Drafts take `helpers` (up to 10: `key`, `role`, `supportType`, `name`, `partnerId`, `partnerName`, `linkKey`, `requestId`, `edited`) and `risks` (up to 10: `key`, `title`, `description`, `obstacleType`, `severity`, `solution`, `linkKey`, `helperKey`, `fromFears`, `requestId`, `edited`). On add, a helper with `partnerId` links that partner to its goal or step only where the partner has no link yet; one without becomes a new partner with status To Contact. Each risk becomes an Open obstacle on its goal or step, with `helperKey`'s partner as the required partner. The add result also returns `partnerIds`, `obstacleIds` (archived by Undo, which takes them too) and `linkedPartnerIds`.
 
+### V11: draft check, fixes, capacity and the plan model (Phase 6)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/plan/dreams/{dreamId}/draft-check` | Checks the saved draft (save it first) → `issues[]` (`kind`, `itemType`, `itemKey`, `parentKey`, `itemTitle`, `problem`, `fix`, `fixAction`, `fixValue`, `fromAi`), `aiChecked`, `requestId`. Rule kinds: `MISSING_OWNER`, `MISSING_DATE`, `PAST_DATE`, `AFTER_GOAL_DATE`, `BEFORE_WAITED_STEP`, `TASK_AFTER_STEP`, `MISSING_RESOURCE`, `COMPLEX_NO_TASKS`, `NO_STEPS`; with AI also `VAGUE_STEP`, `UNREALISTIC_TIMING`, `GAP`. `fixAction`: `SET_OWNER_ME`, `SET_DATE` (to `fixValue`), `GO_TO_STEPS`, `GO_TO_TASKS`, `FIX_WITH_AI`. Rule checks work without AI. Saves nothing |
+| POST | `/api/ai/plan/dreams/{dreamId}/draft-fix` | `{ "itemKey", "kind": "VAGUE_STEP\|UNREALISTIC_TIMING\|GAP", "problem" }` → `title` (vague), `targetDate` (timing, within the goal's date) or `newStepTitle`, `newStepOwner`, `newStepTargetDate` (gap, `itemKey` is the goal), `note`, `requestId`. Saves nothing |
+| GET | `/api/ai/plan/capacity` | `hoursPerWeek` (or null) and `planned[]` (`weekStart` Monday, `hours`) for the next 26 weeks: open tasks by due date, and open steps without tasks by date |
+| PUT | `/api/ai/plan/capacity` | `{ "hoursPerWeek": 0.5 to 100 \| null }` |
+
+`/api/admin/ai-settings` takes and returns `planModel`: the model for plan building (goal, step and task suggestions, clarify, helpers and risks, plan checks and fixes). Left out keeps it; blank or null uses the main model.
+
 Draft steps take `estimatedHours` and `startsAfterKey` (the key of an earlier step of the same goal in the draft); draft tasks take `requestId`, `edited` and `locked`. On add, `startsAfterKey` becomes the saved step's `startsAfterStepId`.
 
 ### V9: daily use (Phase 6)

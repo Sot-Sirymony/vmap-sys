@@ -36,6 +36,10 @@ public class AiSettings extends BaseAuditableEntity {
     @Column(nullable = false, length = 60)
     private String model;
 
+    /** V11 (PB-FR-39): the model for plan building; null uses model. */
+    @Column(name = "plan_model", length = 60)
+    private String planModel;
+
     @Column(name = "monthly_budget_usd", nullable = false, precision = 8, scale = 2)
     private BigDecimal monthlyBudgetUsd;
 

@@ -18,5 +18,7 @@ public record AiSettingsRequest(
         @Size(max = 2000) String helpLines,
         Boolean aiReminders,
         // AI-FR-24: left out keeps the current text; blank removes it.
-        @Size(max = 4000) String coachingGuidelines) {
+        @Size(max = 4000) String coachingGuidelines,
+        // V11 (PB-FR-39): the model for plan building. Left out keeps it; blank uses the main model.
+        @Size(max = 100) String planModel) {
 }

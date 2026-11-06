@@ -121,6 +121,27 @@ public final class AiDrafts {
             @JsonPropertyDescription("Up to six resources") List<ResourceDraft> resources) {
     }
 
+    // V11 Phase 6: the draft check and its AI fixes (PB-FR-28, PB-FR-29).
+
+    public record DraftIssueDraft(
+            @JsonPropertyDescription("VAGUE_STEP, UNREALISTIC_TIMING or GAP") String kind,
+            @JsonPropertyDescription("The key in brackets of the goal or step") String itemKey,
+            @JsonPropertyDescription("The problem in one sentence") String problem,
+            @JsonPropertyDescription("A concrete fix in one sentence") String fix) {
+    }
+
+    public record DraftReview(List<DraftIssueDraft> issues) {
+    }
+
+    public record FixDraft(
+            @JsonPropertyDescription("For a vague step: a clearer title starting with a verb; empty otherwise") String title,
+            @JsonPropertyDescription("For timing: a realistic new date as YYYY-MM-DD; empty otherwise") String targetDate,
+            @JsonPropertyDescription("For a gap: the title of the missing step; empty otherwise") String newStepTitle,
+            @JsonPropertyDescription("For a gap: who does the new step, Me or a role, never a name") String newStepOwner,
+            @JsonPropertyDescription("For a gap: the new step's date as YYYY-MM-DD") String newStepTargetDate,
+            @JsonPropertyDescription("One short sentence on the change") String note) {
+    }
+
     // V11 Phase 3: the clarify conversation.
 
     public record ClarifyDraft(

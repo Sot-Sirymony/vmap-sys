@@ -146,6 +146,29 @@ cd frontend
 npm run build
 ```
 
+### Plan builder sample run (V11, PB-NFR-08)
+
+Before changing plan builder prompts or the model, run the 20 sample dreams in
+`backend/src/test/resources/plan-builder-eval/dreams.json` against the real
+Claude API. It costs money, so it only runs with a key:
+
+```bash
+cd backend
+PLAN_EVAL_ANTHROPIC_KEY=sk-ant-... PLAN_EVAL_MODEL=claude-opus-5-5 mvn test -Dtest=PlanBuilderEvalRunTests
+```
+
+It fails on rule breaks (dates outside their limits, Khmer dreams answered in
+English) and writes `backend/target/plan-builder-eval.md` with counts and cost.
+
+### Khmer review (V11, PB-NFR-06)
+
+Export the Khmer drafts for a Khmer speaker to review:
+
+```bash
+cd frontend
+node scripts/export-km-review.mjs > ../docs/km-review-v11.csv
+```
+
 ## API Summary
 
 Public:

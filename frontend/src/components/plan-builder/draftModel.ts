@@ -1,7 +1,7 @@
 import type {
-  DraftGoal, DraftHelper, DraftRisk, DraftStep, DraftTask, Dream, Goal, GoalSuggestion, HelperSuggestion, PlanClarification,
+  DraftFix, DraftGoal, DraftHelper, DraftIssue, DraftRisk, DraftStep, DraftTask, Dream, Goal, GoalSuggestion, HelperSuggestion, PlanClarification,
   RiskSuggestion, PlanDraftContent, PlanStage, StepSuggestion,
-  TaskSuggestion, VisionStep,
+  TaskSuggestion, VisionStep, WeekLoad,
 } from '../../types/vision';
 
 /**
@@ -331,6 +331,158 @@ export function updateRisk(content: PlanDraftContent, key: string, patch: Partia
 
 export function removeRisk(content: PlanDraftContent, key: string): PlanDraftContent {
   return { ...content, risks: (content.risks ?? []).filter((risk) => risk.key !== key) };
+}
+
+// ---------- V11 Phase 6: fixes and capacity ----------
+
+/** Where a draft step or task lives, by key. */
+function locate(content: PlanDraftContent, key: string) {
+  for (const goal of content.goals) {
+    for (const step of goal.steps) {
+      if (step.key === key) {
+        return { goal, step, task: undefined as DraftTask | undefined };
+      }
+      const task = step.tasks.find((item) => item.key === key);
+      if (task) {
+        return { goal, step, task };
+      }
+    }
+  }
+  return null;
+}
+
+/** PB-FR-29: the one-click fix of a rule issue, applied to the draft (nothing is saved). */
+export function applyIssueFix(content: PlanDraftContent, issue: DraftIssue): PlanDraftContent {
+  const found = locate(content, issue.itemKey);
+  if (!found) {
+    return content;
+  }
+  const patch = issue.fixAction === 'SET_OWNER_ME' ? { owner: 'Me' }
+    : issue.fixAction === 'SET_DATE' && issue.fixValue ? (found.task ? { dueDate: issue.fixValue } : { targetDate: issue.fixValue })
+      : null;
+  if (!patch) {
+    return content;
+  }
+  return found.task
+    ? updateTask(content, found.goal.key, found.step.key, found.task.key, patch as Partial<DraftTask>)
+    : updateStep(content, found.goal.key, found.step.key, patch as Partial<DraftStep>);
+}
+
+/** PB-FR-29: Claude's proposed change, applied only when the participant chooses it. */
+export function applyAiFix(content: PlanDraftContent, fix: DraftFix): PlanDraftContent {
+  if (fix.kind === 'GAP' && fix.newStepTitle) {
+    const step: DraftStep = { ...emptyStep(), title: fix.newStepTitle, owner: fix.newStepOwner || 'Me',
+      targetDate: fix.newStepTargetDate ?? null, requestId: fix.requestId ?? null };
+    return addSteps(content, fix.itemKey, [step]);
+  }
+  const found = locate(content, fix.itemKey);
+  if (!found || found.task) {
+    return content;
+  }
+  const patch: Partial<DraftStep> = fix.kind === 'VAGUE_STEP' && fix.title ? { title: fix.title }
+    : fix.kind === 'UNREALISTIC_TIMING' && fix.targetDate ? { targetDate: fix.targetDate } : {};
+  return Object.keys(patch).length ? updateStep(content, found.goal.key, found.step.key, patch) : content;
+}
+
+/** The Monday of a YYYY-MM-DD date's week, as YYYY-MM-DD. */
+export function weekStart(date: string) {
+  const [year, month, day] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day));
+  value.setUTCDate(value.getUTCDate() - ((value.getUTCDay() + 6) % 7));
+  return value.toISOString().slice(0, 10);
+}
+
+function addDays(date: string, days: number) {
+  const [year, month, day] = date.split('-').map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day + days));
+  return value.toISOString().slice(0, 10);
+}
+
+/** New work in the draft with hours and a date: tasks, and new steps that have no tasks. */
+function draftWork(content: PlanDraftContent) {
+  const work: { goalKey: string; stepKey: string; taskKey?: string; date: string; hours: number; latest?: string | null }[] = [];
+  for (const goal of content.goals) {
+    for (const step of goal.steps) {
+      for (const task of step.tasks) {
+        if (task.dueDate && task.estimatedHours) {
+          work.push({ goalKey: goal.key, stepKey: step.key, taskKey: task.key, date: task.dueDate, hours: task.estimatedHours,
+            latest: step.targetDate });
+        }
+      }
+      if (step.existingId == null && step.tasks.length === 0 && step.targetDate && step.estimatedHours) {
+        work.push({ goalKey: goal.key, stepKey: step.key, date: step.targetDate, hours: step.estimatedHours, latest: goal.targetDate });
+      }
+    }
+  }
+  return work;
+}
+
+/** PB-FR-16: hours per week, saved plan plus draft, for weeks over the participant's hours. */
+export function overloadedWeeks(content: PlanDraftContent, planned: WeekLoad[], hoursPerWeek?: number | null) {
+  if (!hoursPerWeek) {
+    return [];
+  }
+  const totals = new Map<string, { saved: number; draft: number }>();
+  for (const week of planned) {
+    totals.set(week.weekStart, { saved: Number(week.hours), draft: 0 });
+  }
+  for (const item of draftWork(content)) {
+    const key = weekStart(item.date);
+    const entry = totals.get(key) ?? { saved: 0, draft: 0 };
+    entry.draft += item.hours;
+    totals.set(key, entry);
+  }
+  return [...totals.entries()]
+    .filter(([, value]) => value.draft > 0 && value.saved + value.draft > hoursPerWeek)
+    .map(([week, value]) => ({ weekStart: week, saved: value.saved, draft: value.draft, total: value.saved + value.draft }))
+    .sort((left, right) => left.weekStart.localeCompare(right.weekStart));
+}
+
+/** Total hours per week, saved plan plus draft. */
+function weekLoads(content: PlanDraftContent, planned: WeekLoad[]) {
+  const load = new Map<string, number>();
+  for (const week of planned) {
+    load.set(week.weekStart, Number(week.hours));
+  }
+  for (const item of draftWork(content)) {
+    const key = weekStart(item.date);
+    load.set(key, (load.get(key) ?? 0) + item.hours);
+  }
+  return load;
+}
+
+/**
+ * PB-FR-16: move new work out of weeks that are over the participant's hours,
+ * a week at a time, latest-due first, never past its step's or goal's date.
+ * Saved work is never moved. Returns the new draft and how many items moved.
+ */
+export function spreadDates(content: PlanDraftContent, planned: WeekLoad[], hoursPerWeek: number) {
+  let next = content;
+  let moved = 0;
+  for (let round = 0; round < 200; round++) {
+    // Only into a week that still has room for it, so nothing is pushed on and on.
+    const load = weekLoads(next, planned);
+    let candidate: (ReturnType<typeof draftWork>[number] & { later: string }) | undefined;
+    for (const week of overloadedWeeks(next, planned, hoursPerWeek)) {
+      candidate = draftWork(next)
+        .filter((item) => weekStart(item.date) === week.weekStart)
+        .map((item) => ({ ...item, later: addDays(item.date, 7) }))
+        .filter((item) => !item.latest || item.later <= item.latest)
+        .filter((item) => (load.get(weekStart(item.later)) ?? 0) + item.hours <= hoursPerWeek)
+        .sort((left, right) => right.date.localeCompare(left.date))[0];
+      if (candidate) {
+        break;
+      }
+    }
+    if (!candidate) {
+      break;
+    }
+    next = candidate.taskKey
+      ? updateTask(next, candidate.goalKey, candidate.stepKey, candidate.taskKey, { dueDate: candidate.later })
+      : updateStep(next, candidate.goalKey, candidate.stepKey, { targetDate: candidate.later });
+    moved++;
+  }
+  return { content: next, moved };
 }
 
 /** Everything Add plan would save. */

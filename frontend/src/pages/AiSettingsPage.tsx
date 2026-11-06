@@ -67,7 +67,7 @@ export function AiSettingsPage() {
           <ApiKeyCard settings={settings} token={token} onChanged={setSettings} />
           <ApprovedResourcesCard token={token} />
           <PlanMetricsCard token={token} />
-          <OptionsCard key={`${settings.model}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
+          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
     </PageSection>
@@ -177,6 +177,7 @@ function ApiKeyCard({ settings, token, onChanged }: CardProps) {
 function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [enabled, setEnabled] = useState(settings.enabled);
   const [model, setModel] = useState(settings.model);
+  const [planModel, setPlanModel] = useState(settings.planModel ?? '');
   const [budget, setBudget] = useState(String(settings.monthlyBudgetUsd));
   const [dailyLimit, setDailyLimit] = useState(String(settings.dailyMessageLimit));
   const [helpLines, setHelpLines] = useState(settings.helpLines);
@@ -200,6 +201,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         helpLines: helpLines.trim(),
         aiReminders,
         coachingGuidelines: guidelines,
+        planModel,
       }));
       setSaved(true);
     } catch (saveError) {
@@ -223,6 +225,17 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
             <Select fullWidth size="small" value={model} onChange={(event) => setModel(event.target.value)} SelectDisplayProps={{ 'aria-label': tr('Model') }}>
               {settings.models.map((option) => <MenuItem key={option.id} value={option.id}>{option.label}</MenuItem>)}
             </Select>
+          </label>
+          <label>
+            {tr('Model for plan building')}
+            <Select fullWidth size="small" displayEmpty value={planModel} onChange={(event) => setPlanModel(event.target.value)}
+              SelectDisplayProps={{ 'aria-label': tr('Model for plan building') }}>
+              <MenuItem value="">{tr('Same as above')}</MenuItem>
+              {settings.models.map((option) => <MenuItem key={option.id} value={option.id}>{option.label}</MenuItem>)}
+            </Select>
+            <Typography variant="caption" color="text.secondary">
+              {tr('Used for goal, step and task suggestions, helpers and risks, and plan checks. A stronger model builds better plans; a cheaper one stretches the budget.')}
+            </Typography>
           </label>
           <TextField
             size="small"

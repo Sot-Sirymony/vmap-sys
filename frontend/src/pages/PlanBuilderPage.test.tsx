@@ -16,6 +16,8 @@ vi.mock('../api/aiApi', () => ({ getAiStatus: vi.fn() }));
 vi.mock('../api/aiPlanApi', () => ({
   getPlanDraft: vi.fn(), savePlanDraft: vi.fn(), discardPlanDraft: vi.fn(), addPlanDraft: vi.fn(), undoPlan: vi.fn(),
   suggestGoals: vi.fn(), suggestSteps: vi.fn(), suggestDraftGoalSteps: vi.fn(), ratePlanAnswer: vi.fn(),
+  getPlanCapacity: vi.fn().mockResolvedValue({ hoursPerWeek: null, planned: [] }), savePlanCapacity: vi.fn(),
+  checkPlanDraft: vi.fn(), fixPlanDraft: vi.fn(),
 }));
 vi.mock('../api/dreamApi', () => ({ listDreams: vi.fn() }));
 vi.mock('../api/goalApi', () => ({ listGoals: vi.fn() }));

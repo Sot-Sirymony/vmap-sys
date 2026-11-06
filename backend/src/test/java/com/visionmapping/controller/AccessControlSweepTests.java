@@ -532,6 +532,9 @@ class AccessControlSweepTests {
         if (pattern.endsWith("/clarified-field")) {
             return json(Map.of("field", "WHY_IMPORTANT", "value", "Someone else's answer"));
         }
+        if (pattern.endsWith("/draft-fix")) {
+            return json(Map.of("itemKey", "g1", "kind", "GAP"));
+        }
         if (pattern.endsWith("/draft-task-suggestions")) {
             return json(Map.of("stepTitle", "A new step"));
         }

@@ -11,7 +11,7 @@ import Stepper from '@mui/material/Stepper';
 import Typography from '@mui/material/Typography';
 import { Link as RouterLink, useParams } from 'react-router';
 import { getAiStatus } from '../api/aiApi';
-import { addPlanDraft, discardPlanDraft, getPlanDraft, savePlanDraft, undoPlan } from '../api/aiPlanApi';
+import { addPlanDraft, discardPlanDraft, getPlanCapacity, getPlanDraft, savePlanDraft, undoPlan } from '../api/aiPlanApi';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
@@ -32,7 +32,7 @@ import { type DraftUpdate, STAGES, countNew, readiness, syncWithPlan } from '../
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import { tr } from '../i18n/translate';
-import type { Dream, Goal, PlanAddResult, PlanDraftContent, PlanStage, TaskItem, VisionStep } from '../types/vision';
+import type { Dream, Goal, PlanAddResult, PlanCapacity, PlanDraftContent, PlanStage, TaskItem, VisionStep } from '../types/vision';
 import { PageSection } from './PageSection';
 
 const SAVE_DELAY_MS = 800;
@@ -70,6 +70,8 @@ export function PlanBuilderPage() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   // PB-FR-27: the new To Contact partners from the last add, for outreach drafts.
   const [newContacts, setNewContacts] = useState<NewContact[]>([]);
+  // PB-FR-16: hours a week and the saved plan's load, for the capacity check.
+  const [capacity, setCapacity] = useState<PlanCapacity | null>(null);
   const dirty = useRef(false);
   const stageTop = useRef<HTMLDivElement>(null);
   const latest = useRef({ content, stage });
@@ -116,6 +118,7 @@ export function PlanBuilderPage() {
       }
     })();
     getAiStatus(token).then((status) => !cancelled && setAiReady(status.available)).catch(() => undefined);
+    getPlanCapacity(token).then((value) => !cancelled && setCapacity(value)).catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -326,7 +329,16 @@ export function PlanBuilderPage() {
               <HelpersStage dream={dream} content={content} onChange={change} token={token ?? ''} language={language} aiReady={aiReady} />
             )}
             {stage === 'REVIEW' && (
-              <ReviewStage content={content} existingSteps={steps} busy={busy} onGoTo={goTo} onAdd={() => void addPlan()} />
+              <ReviewStage content={content} onChange={change} existingSteps={steps} busy={busy} onGoTo={goTo} onAdd={() => void addPlan()}
+                dreamId={dream.id} token={token ?? ''} language={language} aiReady={aiReady}
+                saveDraft={async () => {
+                  if (token) {
+                    await savePlanDraft(token, id, latest.current.stage, latest.current.content);
+                    dirty.current = false;
+                    setSaveState('saved');
+                  }
+                }}
+                capacity={capacity} onCapacityChange={setCapacity} />
             )}
           </CardContent>
         </Card>

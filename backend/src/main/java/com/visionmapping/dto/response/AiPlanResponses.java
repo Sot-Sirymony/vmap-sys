@@ -79,6 +79,36 @@ public final class AiPlanResponses {
                                   List<com.visionmapping.dto.response.AiDailyResponses.ResourceIdea> resources, Long requestId) {
     }
 
+    /**
+     * V11 (PB-FR-28, PB-FR-29): a problem in the Build my plan draft, before it
+     * is saved. itemKey and parentKey are draft keys. fixAction says what one
+     * click does: SET_OWNER_ME, SET_DATE (to fixValue), GO_TO_STEPS, GO_TO_TASKS,
+     * or FIX_WITH_AI for the kinds only Claude finds; null when there is no
+     * clear fix.
+     */
+    public record DraftIssue(String kind, String itemType, String itemKey, String parentKey, String itemTitle, String problem,
+                             String fix, String fixAction, String fixValue, boolean fromAi) {
+    }
+
+    public record DraftCheck(List<DraftIssue> issues, boolean aiChecked, Long requestId) {
+    }
+
+    /**
+     * V11 (PB-FR-29): Claude's proposed change for one AI issue, applied only
+     * when the participant chooses: a clearer title, a new date, or for a gap a
+     * new step under the goal.
+     */
+    public record DraftFix(String itemKey, String kind, String title, LocalDate targetDate, String newStepTitle,
+                           String newStepOwner, LocalDate newStepTargetDate, String note, Long requestId) {
+    }
+
+    /** V11 (PB-FR-16): hours already planned in one week (Monday start) of the saved plan. */
+    public record WeekLoad(LocalDate weekStart, java.math.BigDecimal hours) {
+    }
+
+    public record PlanCapacity(java.math.BigDecimal hoursPerWeek, List<WeekLoad> planned) {
+    }
+
     /** kind: MISSING_OWNER, MISSING_DATE, MISSING_RESOURCE, NO_STEPS, AFTER_GOAL_DATE, OVERDUE, VAGUE_STEP, UNREALISTIC_TIMING, GAP. */
     public record PlanIssue(String kind, String itemType, Long itemId, String itemTitle, String problem, String fix, boolean fromAi) {
     }

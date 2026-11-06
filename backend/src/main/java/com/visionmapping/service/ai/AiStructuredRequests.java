@@ -52,7 +52,10 @@ public class AiStructuredRequests {
 
     private <T> Tracked<T> askWith(String guidelines, AppUser user, String apiKey, String feature, String records, String task, Class<T> type) {
         String system = guidelines + "\n\n" + AiContextBuilder.asParticipantData(records, "the participant's own records.");
-        String model = aiSettingsService.current().getModel();
+        com.visionmapping.entity.AiSettings settings = aiSettingsService.current();
+        // V11 (PB-FR-39): plan building may use its own model; everything else uses the main one.
+        String model = settings.getPlanModel() != null && AiPlanFeedbackService.PLAN_FEATURES.contains(feature)
+                ? settings.getPlanModel() : settings.getModel();
         ClaudeClient.Structured<T> answer;
         try {
             answer = claudeClient.structured(apiKey, model, system, task, type);

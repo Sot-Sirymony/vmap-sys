@@ -50,7 +50,10 @@ Instead of the pages above, you can build the plan for one dream in a single gui
    contact to reach. After adding the plan, **Draft a message** writes a note for each new contact to copy and send.
 7. Your draft saves as you work. Leave and come back on any device within 14 days and it is still there.
    **Discard draft** removes it without touching your saved plan.
-8. In **Check and add**, fix anything listed as needing attention, then choose **Add plan**.
+8. In **Check and add**, fix anything listed as needing attention. **Check my draft** runs the plan check before
+   saving: fix simple problems in one click, or choose **Fix with AI** to see a proposed change you can apply or not.
+   Give the hours a week you have, and the guide flags weeks with too much work; **Spread the dates** moves new work
+   later where its step or goal date allows. Then choose **Add plan**.
    Everything is added together, or nothing is. **Undo** right after archives what was just added.
 
 ## Manage Tasks

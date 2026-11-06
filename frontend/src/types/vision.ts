@@ -993,6 +993,8 @@ export type AiSettings = {
   requestsThisMonth: number;
   aiReminders: boolean;
   coachingGuidelines?: string | null;
+  // V11 (PB-FR-39): null when plan building uses the main model.
+  planModel?: string | null;
 };
 
 // V9 Phase 3: the Dream Coach.
@@ -1134,6 +1136,40 @@ export type PlanAddResult = {
   obstacleIds?: number[];
   linkedPartnerIds?: number[];
 };
+
+// V11 Phase 6 (PB-FR-16, PB-FR-28, PB-FR-29): the draft check, its fixes and weekly capacity.
+export type DraftFixAction = 'SET_OWNER_ME' | 'SET_DATE' | 'GO_TO_STEPS' | 'GO_TO_TASKS' | 'FIX_WITH_AI';
+
+export type DraftIssue = {
+  kind: string;
+  itemType: 'GOAL' | 'STEP' | 'TASK';
+  itemKey: string;
+  parentKey?: string | null;
+  itemTitle?: string | null;
+  problem: string;
+  fix?: string | null;
+  fixAction?: DraftFixAction | null;
+  fixValue?: string | null;
+  fromAi: boolean;
+};
+
+export type DraftCheck = { issues: DraftIssue[]; aiChecked: boolean; requestId?: number | null };
+
+export type DraftFix = {
+  itemKey: string;
+  kind: string;
+  title?: string | null;
+  targetDate?: string | null;
+  newStepTitle?: string | null;
+  newStepOwner?: string | null;
+  newStepTargetDate?: string | null;
+  note?: string | null;
+  requestId?: number | null;
+};
+
+export type WeekLoad = { weekStart: string; hours: number };
+
+export type PlanCapacity = { hoursPerWeek?: number | null; planned: WeekLoad[] };
 
 // V11 Phase 5 (PB-FR-23 to PB-FR-26, PB-FR-40): helpers, risks and resources for the plan being built.
 export type PartnerMatch = { partnerId: number; name: string; role?: string | null; supportType?: string | null; status: string };

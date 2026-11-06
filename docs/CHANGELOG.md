@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [11.0.0] — In progress (phases 1 to 5 of 6 built)
+## [11.0.0] — All 6 phases built; awaiting UAT, the live sample run and the Khmer review
 
 Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improvements.
 
@@ -169,6 +169,30 @@ Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improveme
   (`AiResourceIdeas`), shared with resource ideas.
 - Undo also archives the partners and obstacles the add created; links given to
   existing partners stay.
+
+### Phase 6 — check, fix, capacity and quality (2026-11-06)
+
+- **Check my draft (PB-FR-28).** The plan check runs on the draft before it is
+  saved: built-in checks (owner, date, past dates, after the goal, before the
+  step it waits for, task after its step, resources, complex without tasks,
+  goals without steps) always, and Claude's vague, timing and gap issues when AI
+  is on. Checking saves nothing.
+- **Fixes (PB-FR-29).** One click for clear fixes (make it mine, use the parent's
+  date, go to Steps or Tasks). **Fix with AI** proposes a clearer title, a new
+  date or the missing step, applied only if the participant chooses.
+- **Hours a week (PB-FR-16).** The participant's hours are remembered (migration
+  V66). Weeks where saved and new work pass them are flagged; **Spread the
+  dates** moves new work a week at a time, only into weeks with room and never
+  past its step's or goal's date.
+- **Plan model (PB-FR-39).** Admins can set a separate model for plan building;
+  other AI features keep the main model.
+- **Sample set (PB-NFR-08).** 20 fixed sample dreams (10 English, 5 Khmer, 5
+  vague) with a check that the set stays complete, and an opt-in run against the
+  real API that checks dates and Khmer answers and reports cost
+  (`PlanBuilderEvalRunTests`, see README). Not yet run with a live key.
+- **Khmer review (PB-NFR-06).** `frontend/scripts/export-km-review.mjs` exports
+  the 221 V11 Khmer drafts to `docs/km-review-v11.csv` for the reviewer (D-4).
+  Not yet reviewed.
 
 ## [10.0.0] — In progress (phases 1 to 6 of 7 built)
 

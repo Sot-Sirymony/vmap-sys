@@ -91,6 +91,16 @@ public class PlanBuilderDraftService {
                 .map(this::toResponse);
     }
 
+    /** V11 Phase 6: the caller's saved draft for a dream, for the draft check; 404 when there is none. */
+    @Transactional(readOnly = true)
+    public PlanDraftContent stored(Long dreamId) {
+        Dream dream = lookup.dream(dreamId);
+        return repository.findByUser_IdAndDream_Id(lookup.userId(), dream.getId())
+                .filter(draft -> draft.getExpiresAt().isAfter(clock.instant()))
+                .map(draft -> read(draft.getContent()))
+                .orElseThrow(() -> new ResourceNotFoundException("There is no plan draft for this dream."));
+    }
+
     @Transactional
     public PlanDraftResponse save(Long dreamId, PlanDraftRequest request) {
         Dream dream = openDream(dreamId);

@@ -11,6 +11,8 @@ export type AiSettingsInput = {
   helpLines?: string;
   aiReminders?: boolean;
   coachingGuidelines?: string;
+  // V11 (PB-FR-39): blank uses the main model for plan building too.
+  planModel?: string;
 };
 
 export function getAiSettings(token: string) {

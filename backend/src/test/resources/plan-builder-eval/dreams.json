@@ -1,0 +1,25 @@
+{
+  "about": "V11 PB-NFR-08: the fixed set of 20 sample dreams the plan builder is tried on before a prompt or model change ships. 10 English, 5 Khmer, 5 deliberately vague. Owned by the AI governance lead; change it only on purpose, and note the change in docs/CHANGELOG.md.",
+  "dreams": [
+    {"id": "en-01", "language": "en", "vague": false, "area": "Home", "title": "Own a two-bedroom home in Phnom Penh", "whyImportant": "My children need their own room and stable schooling", "successDefinition": "Keys in hand and a mortgage I can pay from one salary", "months": 36},
+    {"id": "en-02", "language": "en", "vague": false, "area": "Career", "title": "Become a certified public health researcher", "whyImportant": "I want my work to shape health policy", "successDefinition": "A research certificate and one published paper", "months": 24},
+    {"id": "en-03", "language": "en", "vague": false, "area": "Health", "title": "Run a half marathon", "whyImportant": "I want energy to keep up with my kids", "successDefinition": "Finish 21 km without walking", "months": 9},
+    {"id": "en-04", "language": "en", "vague": false, "area": "Business", "title": "Open a small coffee shop near the university", "whyImportant": "I want my own income and a place for students", "successDefinition": "Open six days a week and break even by month six", "months": 18},
+    {"id": "en-05", "language": "en", "vague": false, "area": "Finance", "title": "Save an emergency fund of six months of expenses", "whyImportant": "One illness should not put my family in debt", "successDefinition": "Six months of costs in a separate savings account", "months": 20},
+    {"id": "en-06", "language": "en", "vague": false, "area": "Education", "title": "Reach IELTS band 7", "whyImportant": "I need it to apply for a master's abroad", "successDefinition": "An official IELTS result of 7.0 or more", "months": 10},
+    {"id": "en-07", "language": "en", "vague": false, "area": "Family", "title": "Take my parents on a trip to Angkor Wat", "whyImportant": "They have never had a holiday", "successDefinition": "A three-day trip, fully paid, with everyone well", "months": 8},
+    {"id": "en-08", "language": "en", "vague": false, "area": "Leadership", "title": "Lead a team of five at work", "whyImportant": "I want to grow and help others grow", "successDefinition": "Promoted to team lead with a team that stays", "months": 24},
+    {"id": "en-09", "language": "en", "vague": false, "area": "Community", "title": "Start a weekend reading club for village children", "whyImportant": "Children near my home have no books", "successDefinition": "Twenty children reading every Saturday for a year", "months": 12},
+    {"id": "en-10", "language": "en", "vague": false, "area": "Research", "title": "Publish one paper in a peer-reviewed journal", "whyImportant": "To start my research career", "successDefinition": "An accepted paper with me as first author", "months": 18},
+    {"id": "km-01", "language": "km", "vague": false, "area": "ផ្ទះ", "title": "មានផ្ទះផ្ទាល់ខ្លួនមួយនៅខេត្តសៀមរាប", "whyImportant": "ខ្ញុំចង់ឱ្យគ្រួសារមានកន្លែងស្នាក់នៅស្ថិរភាព", "successDefinition": "ទទួលបានកូនសោផ្ទះ និងបង់ប្រាក់ប្រចាំខែបាន", "months": 36},
+    {"id": "km-02", "language": "km", "vague": false, "area": "អាជីវកម្ម", "title": "បើកហាងលក់សម្លៀកបំពាក់តាមអនឡាញ", "whyImportant": "ខ្ញុំចង់មានប្រាក់ចំណូលបន្ថែម", "successDefinition": "លក់បាន ១០០ ដុំក្នុងមួយខែ", "months": 12},
+    {"id": "km-03", "language": "km", "vague": false, "area": "ការអប់រំ", "title": "បញ្ចប់ថ្នាក់បរិញ្ញាបត្រផ្នែកគណនេយ្យ", "whyImportant": "ខ្ញុំចង់ទទួលបានការងារល្អជាងនេះ", "successDefinition": "ទទួលបានសញ្ញាបត្រជាមួយពិន្ទុល្អ", "months": 30},
+    {"id": "km-04", "language": "km", "vague": false, "area": "សុខភាព", "title": "ស្រកទម្ងន់ ១០ គីឡូក្រាម", "whyImportant": "ខ្ញុំចង់មានសុខភាពល្អសម្រាប់កូនៗ", "successDefinition": "ទម្ងន់ខ្លួនធ្លាក់ ១០ គីឡូ ហើយរក្សាបាន", "months": 8},
+    {"id": "km-05", "language": "km", "vague": false, "area": "ហិរញ្ញវត្ថុ", "title": "សងបំណុលទាំងអស់", "whyImportant": "ខ្ញុំចង់ធូរស្រាលពីការព្រួយបារម្ភ", "successDefinition": "គ្មានបំណុលនៅសល់ទាល់តែសោះ", "months": 24},
+    {"id": "vague-01", "language": "en", "vague": true, "area": "Life", "title": "Be happier", "whyImportant": "", "successDefinition": "", "months": 0},
+    {"id": "vague-02", "language": "en", "vague": true, "area": "Career", "title": "Do something big", "whyImportant": "", "successDefinition": "", "months": 0},
+    {"id": "vague-03", "language": "en", "vague": true, "area": "Money", "title": "Get rich", "whyImportant": "", "successDefinition": "", "months": 0},
+    {"id": "vague-04", "language": "km", "vague": true, "area": "ជីវិត", "title": "ជីវិតល្អជាងនេះ", "whyImportant": "", "successDefinition": "", "months": 0},
+    {"id": "vague-05", "language": "en", "vague": true, "area": "Health", "title": "Be healthy", "whyImportant": "", "successDefinition": "", "months": 0}
+  ]
+}

@@ -79,6 +79,10 @@ public class AppUser extends BaseAuditableEntity {
     @JoinColumn(name = "cohort_id")
     private Cohort cohort;
 
+    /** V11 (PB-FR-16): hours a week for plan work, from the participant's last answer; null until given. */
+    @Column(name = "plan_hours_per_week", precision = 5, scale = 1)
+    private java.math.BigDecimal planHoursPerWeek;
+
     // V9 (D-8): fear and attitude journals stay private from the coach until shared.
     @Builder.Default
     @Column(name = "share_journals_with_coach", nullable = false)
