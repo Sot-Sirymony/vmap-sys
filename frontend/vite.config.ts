@@ -102,11 +102,14 @@ export default defineConfig({
       // 40.5%, functions 36.4%. Phase 2 (7 Nov 2026) measured lines 53.3%,
       // statements 53.0%, branches 49.5%, functions 50.5%. Phase 3 (7 Nov 2026)
       // measured lines 69.7%, statements 68.9%, branches 64.1%, functions 64.3%.
+      // Phase 4 (7 Nov 2026) measured lines 82.0%, statements 80.9%, branches
+      // 75.0%, functions 74.5%. Phase 5 (7 Nov 2026) measured lines 85.4%,
+      // statements 84.2%, branches 78.3%, functions 78.2%.
       thresholds: {
-        lines: 69,
-        statements: 68,
-        branches: 64,
-        functions: 64,
+        lines: 85,
+        statements: 84,
+        branches: 78,
+        functions: 78,
       },
     },
   },

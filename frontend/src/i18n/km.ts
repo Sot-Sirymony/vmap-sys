@@ -1368,6 +1368,8 @@ export const km: Record<string, string> = {
   ' or ': ' ឬ ',
   'Likely blind spot: {text}': 'ចំណុចខ្វាក់ដែលទំនងមាន៖ {text}',
   'Working with them: {text}': 'ការធ្វើការជាមួយពួកគេ៖ {text}',
+  'Dominant: {style}': 'របៀបចម្បង៖ {style}',
+  'Secondary: {style}': 'របៀបបន្ទាប់បន្សំ៖ {style}',
 
   // Dashboard charts
   'Other areas': 'ផ្នែកផ្សេងទៀត',

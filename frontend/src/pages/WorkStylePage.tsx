@@ -87,14 +87,14 @@ export function WorkStylePage() {
           <CardContent>
             <Stack spacing={2}>
               <div>
-                <Typography variant="subtitle1">Dominant: {workStyleArchetypeLabels[profile.dominant]}</Typography>
-                <Typography variant="body2" color="text.secondary">{ARCHETYPE_GUIDANCE[profile.dominant].strengths}</Typography>
-                <Typography variant="body2" color="text.secondary">{tr('Likely blind spot: {text}', { text: ARCHETYPE_GUIDANCE[profile.dominant].blindSpot })}</Typography>
-                <Typography variant="body2" color="text.secondary">{tr('Working with them: {text}', { text: ARCHETYPE_GUIDANCE[profile.dominant].tip })}</Typography>
+                <Typography variant="subtitle1">{tr('Dominant: {style}', { style: tr(workStyleArchetypeLabels[profile.dominant]) })}</Typography>
+                <Typography variant="body2" color="text.secondary">{tr(ARCHETYPE_GUIDANCE[profile.dominant].strengths)}</Typography>
+                <Typography variant="body2" color="text.secondary">{tr('Likely blind spot: {text}', { text: tr(ARCHETYPE_GUIDANCE[profile.dominant].blindSpot) })}</Typography>
+                <Typography variant="body2" color="text.secondary">{tr('Working with them: {text}', { text: tr(ARCHETYPE_GUIDANCE[profile.dominant].tip) })}</Typography>
               </div>
               {profile.secondary && (
                 <div>
-                  <Typography variant="subtitle1">Secondary: {workStyleArchetypeLabels[profile.secondary]}</Typography>
+                  <Typography variant="subtitle1">{tr('Secondary: {style}', { style: tr(workStyleArchetypeLabels[profile.secondary]) })}</Typography>
                   <Typography variant="body2" color="text.secondary">
                     {tr('Your answers were close enough that this style shows up too — most people are a blend.')}
                   </Typography>

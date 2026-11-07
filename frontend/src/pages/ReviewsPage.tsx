@@ -32,6 +32,7 @@ import { PageSection } from './PageSection';
 import { currentLanguage, tr } from '../i18n/translate';
 import { draftWeeklyReview } from '../api/aiDailyApi';
 import { Button } from '../components/common/Button';
+import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { letterRankFilterOptions } from '../utils/sortRank';
 
 // FR-16.3: guided questions per review type, shown alongside the form.
@@ -383,13 +384,16 @@ export function ReviewsPage() {
         </FormControl>
       </label>
       {reviewType === 'WEEKLY' && (
-        <div className="field-full">
-          <Button type="button" variant="secondary" disabled={aiDrafting} onClick={() => void handleAiDraft()}>
-            {aiDrafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
-          </Button>
-          <span className="field-hint">{tr('Fills the form from your last seven days. Check and edit it before you save.')}</span>
-          {aiDraftError && <Alert severity="error" sx={{ mt: 1 }}>{aiDraftError}</Alert>}
-        </div>
+        // AI-NFR-02: no AI controls while AI is off.
+        <WhenAiOn token={token}>
+          <div className="field-full">
+            <Button type="button" variant="secondary" disabled={aiDrafting} onClick={() => void handleAiDraft()}>
+              {aiDrafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
+            </Button>
+            <span className="field-hint">{tr('Fills the form from your last seven days. Check and edit it before you save.')}</span>
+            {aiDraftError && <Alert severity="error" sx={{ mt: 1 }}>{aiDraftError}</Alert>}
+          </div>
+        </WhenAiOn>
       )}
       <label>
         {tr('Date')}

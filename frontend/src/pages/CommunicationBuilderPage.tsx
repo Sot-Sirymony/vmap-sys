@@ -37,6 +37,7 @@ import { PageSection } from './PageSection';
 import { currentLanguage, tr } from '../i18n/translate';
 import { draftOutreach } from '../api/aiDailyApi';
 import { PitchCoachCard } from '../components/ai/PitchCoachCard';
+import { WhenAiOn } from '../components/ai/WhenAiOn';
 
 export function CommunicationBuilderPage() {
   const { token } = useAuth();
@@ -498,9 +499,12 @@ export function CommunicationBuilderPage() {
               </Select>
             </FormControl>
             <Button type="button" variant="secondary" onClick={handleGenerateMessage}>{tr('Generate message')}</Button>
-            <Button type="button" variant="secondary" disabled={aiDrafting} onClick={() => void handleAiDraft()}>
-              {aiDrafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
-            </Button>
+            {/* AI-NFR-02: no AI controls while AI is off. */}
+            <WhenAiOn token={token}>
+              <Button type="button" variant="secondary" disabled={aiDrafting} onClick={() => void handleAiDraft()}>
+                {aiDrafting ? tr('The Dream Coach is thinking…') : tr('Draft with AI')}
+              </Button>
+            </WhenAiOn>
           </>
         }
       >

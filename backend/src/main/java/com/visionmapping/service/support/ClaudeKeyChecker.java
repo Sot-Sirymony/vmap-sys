@@ -22,12 +22,30 @@ public class ClaudeKeyChecker {
     public record Result(boolean ok, String message) {
     }
 
+    private final String baseUrl;
+    private final Duration timeout;
+    private final int maxRetries;
+
+    public ClaudeKeyChecker() {
+        this(null, Duration.ofSeconds(15), 1);
+    }
+
+    /** BRD 12 COV-FR-28: a local stub server for tests; baseUrl null means the real Claude API. */
+    ClaudeKeyChecker(String baseUrl, Duration timeout, int maxRetries) {
+        this.baseUrl = baseUrl;
+        this.timeout = timeout;
+        this.maxRetries = maxRetries;
+    }
+
     public Result check(String apiKey, String model) {
-        AnthropicClient client = AnthropicOkHttpClient.builder()
+        AnthropicOkHttpClient.Builder builder = AnthropicOkHttpClient.builder()
                 .apiKey(apiKey)
-                .timeout(Duration.ofSeconds(15))
-                .maxRetries(1)
-                .build();
+                .timeout(timeout)
+                .maxRetries(maxRetries);
+        if (baseUrl != null) {
+            builder.baseUrl(baseUrl);
+        }
+        AnthropicClient client = builder.build();
         try {
             String name = client.models().retrieve(model).displayName();
             return new Result(true, "Connected. " + name + " is available.");

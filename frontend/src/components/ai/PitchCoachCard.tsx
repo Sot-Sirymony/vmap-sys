@@ -15,6 +15,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import { tr } from '../../i18n/translate';
 import type { PitchAudience, PitchFeedback } from '../../types/vision';
 import { Button } from '../common/Button';
+import { WhenAiOn } from './WhenAiOn';
 
 const AUDIENCES: { value: PitchAudience; label: string }[] = [
   { value: 'PARTNER', label: 'A possible partner' },
@@ -25,7 +26,8 @@ const AUDIENCES: { value: PitchAudience; label: string }[] = [
 /**
  * V9 (AI-FR-16): practise a pitch. The AI plays a partner, buyer or sponsor,
  * reacts in their voice, scores clarity, benefit and the ask from 1 to 5, and
- * offers better wording the participant may copy. Nothing is saved.
+ * offers better wording the participant may copy. Nothing is saved. Hidden
+ * while AI is off (AI-NFR-02).
  */
 export function PitchCoachCard({ token, initialPitch = '' }: { token: string; initialPitch?: string }) {
   const { language } = useI18n();
@@ -60,6 +62,7 @@ export function PitchCoachCard({ token, initialPitch = '' }: { token: string; in
   }
 
   return (
+    <WhenAiOn token={token}>
     <Card>
       <CardHeader title={tr('Pitch coach')} subheader={tr('Practise your ask. The AI plays your listener, then scores it and suggests better wording.')} />
       <CardContent>
@@ -99,5 +102,6 @@ export function PitchCoachCard({ token, initialPitch = '' }: { token: string; in
         </Stack>
       </CardContent>
     </Card>
+    </WhenAiOn>
   );
 }

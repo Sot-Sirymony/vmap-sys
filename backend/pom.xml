@@ -36,9 +36,10 @@
         <jjwt.version>0.12.6</jjwt.version>
         <poi.version>5.3.0</poi.version>
         <jacoco.version>0.8.13</jacoco.version>
-        <!-- BRD 12 COV-FR-03: minimum backend coverage; see the jacoco check below. -->
-        <coverage.line.minimum>0.85</coverage.line.minimum>
-        <coverage.branch.minimum>0.68</coverage.branch.minimum>
+        <!-- BRD 12 COV-FR-03: minimum backend coverage; see the jacoco check below.
+             Phase 1 measured lines 85.6%, branches 68.4%; Phase 5 (7 Nov 2026) measured lines 94.1%, branches 75.3%. -->
+        <coverage.line.minimum>0.94</coverage.line.minimum>
+        <coverage.branch.minimum>0.75</coverage.branch.minimum>
     </properties>
 
     <dependencies>

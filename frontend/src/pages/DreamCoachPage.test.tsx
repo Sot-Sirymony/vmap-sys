@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { deleteAllAiConversations, getAiConversation, getAiStatus, listAiConversations, rateAiMessage, streamAiMessage } from '../api/aiApi';
+import { deleteAiConversation, deleteAllAiConversations, getAiConversation, getAiStatus, listAiConversations, rateAiMessage, streamAiMessage } from '../api/aiApi';
 import type { AiChatTurn, AiStatus } from '../types/vision';
 import { DreamCoachPage } from './DreamCoachPage';
 
@@ -110,5 +110,45 @@ describe('DreamCoachPage (V9 Phases 3 and 4)', () => {
     expect(deleteAllAiConversations).toHaveBeenCalledWith('token');
     expect(await screen.findByText('No conversations yet.')).toBeInTheDocument();
     confirm.mockRestore();
+  });
+  it('deletes one conversation after confirming, and keeps it when the person says no', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    vi.mocked(listAiConversations).mockResolvedValueOnce([
+      { id: 9, title: 'Old chat', updatedAt: '2026-11-03T08:00:00Z' },
+      { id: 10, title: 'Bakery plan', updatedAt: '2026-11-04T08:00:00Z' },
+    ]).mockResolvedValue([{ id: 10, title: 'Bakery plan', updatedAt: '2026-11-04T08:00:00Z' }]);
+    vi.mocked(deleteAiConversation).mockResolvedValue(undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValue(true);
+    render(<DreamCoachPage />);
+
+    const list = await screen.findByRole('list', { name: 'Conversations' });
+    await userEvent.click(within(list).getByRole('button', { name: 'Delete conversation Old chat' }));
+    expect(deleteAiConversation).not.toHaveBeenCalled();
+    await userEvent.click(within(list).getByRole('button', { name: 'Delete conversation Old chat' }));
+    expect(deleteAiConversation).toHaveBeenCalledWith('token', 9);
+    await vi.waitFor(() => expect(within(list).queryByText('Old chat')).not.toBeInTheDocument());
+    expect(within(list).getByText('Bakery plan')).toBeInTheDocument();
+    confirm.mockRestore();
+  });
+
+  it('shows why a conversation could not be deleted', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    vi.mocked(listAiConversations).mockResolvedValue([{ id: 9, title: 'Old chat', updatedAt: '2026-11-03T08:00:00Z' }]);
+    vi.mocked(deleteAiConversation).mockRejectedValue(new Error('Conversation not found'));
+    vi.mocked(deleteAllAiConversations).mockRejectedValue(new Error('Please try again later'));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<DreamCoachPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete conversation Old chat' }));
+    expect(await screen.findByText('Conversation not found')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Delete all conversations' }));
+    expect(await screen.findByText('Please try again later')).toBeInTheDocument();
+    confirm.mockRestore();
+  });
+
+  it('shows why the Dream Coach could not load', async () => {
+    vi.mocked(getAiStatus).mockRejectedValue(new Error('Server unavailable'));
+    render(<DreamCoachPage />);
+    expect(await screen.findByText('Server unavailable')).toBeInTheDocument();
   });
 });

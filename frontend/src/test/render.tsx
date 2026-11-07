@@ -39,6 +39,8 @@ type RenderPageOptions = {
   route?: string;
   /** The route pattern, when the page reads URL parameters such as ":id". */
   path?: string;
+  /** Navigation state the page reads, as a redirect from another page would set it. */
+  state?: unknown;
 };
 
 /** Shows where the app has navigated to, for tests that check links and redirects. */
@@ -51,11 +53,11 @@ export function CurrentLocation() {
  * Renders a page the way the app does: signed in, inside a router and with the
  * real toast messages. Page tests only mock the API modules they use.
  */
-export function renderPage(ui: ReactElement, { role = 'USER', auth = {}, route = '/', path }: RenderPageOptions = {}) {
+export function renderPage(ui: ReactElement, { role = 'USER', auth = {}, route = '/', path, state }: RenderPageOptions = {}) {
   const value = signedIn(role, auth);
   const result = render(
     <AuthContext.Provider value={value}>
-      <MemoryRouter initialEntries={[route]}>
+      <MemoryRouter initialEntries={[state === undefined ? route : { pathname: route, state }]}>
         <ToastProvider>
           <Routes>
             <Route path={path ?? '*'} element={<>{ui}<CurrentLocation /></>} />

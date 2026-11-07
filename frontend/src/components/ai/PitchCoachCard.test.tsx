@@ -2,12 +2,24 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPitchFeedback } from '../../api/aiDailyApi';
+import { getAiStatus } from '../../api/aiApi';
 import { PitchCoachCard } from './PitchCoachCard';
 
 vi.mock('../../api/aiDailyApi', () => ({ getPitchFeedback: vi.fn() }));
+vi.mock('../../api/aiApi', () => ({ getAiStatus: vi.fn() }));
 
 describe('PitchCoachCard (AI-FR-16)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getAiStatus).mockResolvedValue({ reason: 'OK' } as never);
+  });
+
+  it('is not shown while AI is off (AI-NFR-02)', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue({ reason: 'OFF' } as never);
+    render(<PitchCoachCard token="token" />);
+    await vi.waitFor(() => expect(getAiStatus).toHaveBeenCalledWith('token'));
+    expect(screen.queryByText('Pitch coach')).not.toBeInTheDocument();
+  });
 
   it('practises the saved pitch with the chosen listener and offers better wording to use', async () => {
     vi.mocked(getPitchFeedback).mockResolvedValue({
@@ -16,7 +28,7 @@ describe('PitchCoachCard (AI-FR-16)', () => {
     });
     render(<PitchCoachCard token="token" initialPitch="Help my bakery" />);
 
-    await userEvent.click(screen.getByRole('combobox', { name: 'Who is listening?' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Who is listening?' }));
     await userEvent.click(await screen.findByRole('option', { name: 'A possible sponsor' }));
     await userEvent.click(screen.getByRole('button', { name: 'Practise' }));
 

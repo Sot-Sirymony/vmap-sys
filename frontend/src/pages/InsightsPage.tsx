@@ -99,7 +99,7 @@ export function InsightsPage() {
             <Card key={`${insight.source}-${insight.sourceId}-${insight.kind}-${index}`}>
               <CardContent>
                 <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-                  <Chip size="small" label={KIND_LABELS[insight.kind]} sx={{ fontWeight: 700 }} />
+                  <Chip size="small" label={tr(KIND_LABELS[insight.kind])}sx={{ fontWeight: 700 }} />
                   <Typography
                     component={Link}
                     to={sourceLink(insight)}

@@ -48,8 +48,25 @@ public class ClaudeClient {
     public record Reply(String text, String model, long inputTokens, long outputTokens, boolean refused, boolean cutShort) {
     }
 
+    private final String baseUrl;
+    private final Duration timeout;
+    private final int maxRetries;
     private String cachedKey;
     private AnthropicClient cachedClient;
+
+    public ClaudeClient() {
+        this(null, Duration.ofSeconds(60), 2);
+    }
+
+    /**
+     * BRD 12 COV-FR-28: lets tests point the client at a local stub server, with
+     * a short timeout and no retries. baseUrl null means the real Claude API.
+     */
+    ClaudeClient(String baseUrl, Duration timeout, int maxRetries) {
+        this.baseUrl = baseUrl;
+        this.timeout = timeout;
+        this.maxRetries = maxRetries;
+    }
 
     public Reply send(String apiKey, String model, String system, List<Turn> turns) {
         try {
@@ -163,11 +180,14 @@ public class ClaudeClient {
             if (cachedClient != null) {
                 cachedClient.close();
             }
-            cachedClient = AnthropicOkHttpClient.builder()
+            AnthropicOkHttpClient.Builder builder = AnthropicOkHttpClient.builder()
                     .apiKey(apiKey)
-                    .timeout(Duration.ofSeconds(60))
-                    .maxRetries(2)
-                    .build();
+                    .timeout(timeout)
+                    .maxRetries(maxRetries);
+            if (baseUrl != null) {
+                builder.baseUrl(baseUrl);
+            }
+            cachedClient = builder.build();
             cachedKey = apiKey;
         }
         return cachedClient;
