@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Goal, VisionStep } from '../../types/vision';
 import {
-  addClarification, addGoals, addSteps, addTask, countNew, emptyGoal, emptyStep, emptyTask, ensureStepContainer, goalFromSuggestion,
+  addClarification, addGoals, addSteps, addTask, applyAssistantChange, countNew, emptyGoal, emptyStep, emptyTask, ensureStepContainer, goalFromSuggestion,
   isReplaceable, readiness, removeGoal, removeStep, replaceGoals, stepsFromSuggestions, syncWithPlan, taskFromSuggestion, updateGoal,
   updateTask,
 } from './draftModel';
@@ -130,5 +130,39 @@ describe('Build my plan draft (V11 Phase 2)', () => {
     expect(content.goals[0].steps[1].tasks[0]).toMatchObject({ locked: true, edited: false });
     content = updateTask(content, content.goals[0].key, second.key, task.key, { title: 'Call bank A' });
     expect(content.goals[0].steps[1].tasks[0].edited).toBe(true);
+  });
+});
+
+describe('plan assistant cards in the draft (V11 Phase 7, PB-FR-46)', () => {
+  const draft = () => {
+    let content = syncWithPlan({ goals: [] }, 5, [goal(1)]);
+    const fresh = { ...emptyGoal(), key: 'g1', title: 'Fix credit' };
+    content = addGoals(content, [fresh]);
+    content = addSteps(content, 'g1', [{ ...emptyStep(), key: 's1', title: 'Do credit stuff' }]);
+    return content;
+  };
+
+  it('changes only new items in the draft', () => {
+    let content = applyAssistantChange(draft(), { kind: 'EDIT', itemType: 'STEP', itemRef: 's1', field: 'TITLE', value: 'Request a credit report' });
+    content = applyAssistantChange(content, { kind: 'EDIT', itemType: 'GOAL', itemRef: 'g1', field: 'DATE', value: '2027-03-01' });
+    const existingKey = content.goals[0].key;
+    const unchanged = applyAssistantChange(content, { kind: 'EDIT', itemType: 'GOAL', itemRef: existingKey, field: 'TITLE', value: 'Renamed' });
+    expect(content.goals[1].steps[0].title).toBe('Request a credit report');
+    expect(content.goals[1].targetDate).toBe('2027-03-01');
+    expect(unchanged).toBe(content);
+  });
+
+  it('adds steps, tasks and risks the participant chose, with no request id', () => {
+    let content = applyAssistantChange(draft(), { kind: 'ADD_STEP', itemType: 'STEP', parentRef: 'g1', title: 'Pay off the card', owner: '', date: null });
+    content = applyAssistantChange(content, { kind: 'ADD_TASK', itemType: 'TASK', parentRef: 's1', title: 'Call the bureau', owner: 'Me', date: '2027-01-10' });
+    content = applyAssistantChange(content, { kind: 'ADD_RISK', itemType: 'OBSTACLE', parentRef: 's1', title: 'Bureau is slow', obstacleType: 'TIME', severity: 'LOW' });
+    const steps = content.goals[1].steps;
+    expect(steps.map((item) => item.title)).toEqual(['Do credit stuff', 'Pay off the card']);
+    expect(steps[1].owner).toBe('Me');
+    expect(steps[1].requestId ?? null).toBeNull();
+    expect(steps[0].tasks[0]).toMatchObject({ title: 'Call the bureau', dueDate: '2027-01-10' });
+    expect(content.risks?.[0]).toMatchObject({ title: 'Bureau is slow', obstacleType: 'TIME', linkKey: 's1' });
+    // A parent that is not in the draft changes nothing.
+    expect(applyAssistantChange(content, { kind: 'ADD_STEP', itemType: 'STEP', parentRef: 'gone', title: 'x' })).toBe(content);
   });
 });

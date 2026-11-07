@@ -26,6 +26,12 @@ import { localDateIso } from '../utils/localDate';
 import { saveBlob } from '../utils/saveBlob';
 import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
+import { HelpWithSectionButton, PlanAssistantProvider } from '../components/ai/plan-assistant/PlanAssistant';
+import type { AssistantSection } from '../types/vision';
+
+const PLAN_SECTIONS = new Set<string>(['STATEMENT', 'GOALS', 'STEPS', 'DATES', 'RESOURCES', 'PEOPLE']);
+// V11 Phase 7: the page itself is the plan assistant's default topic.
+const WHOLE_PLAN = { section: 'WHOLE' as const };
 
 function stagePath(key: string, dreamId: number) {
   switch (key) {
@@ -57,6 +63,8 @@ export function PlanPage() {
   const [title, setTitle] = useState('');
   const [achievedOn, setAchievedOn] = useState(() => localDateIso());
   const [actionError, setActionError] = useState('');
+  // V11 Phase 7: bumped after each load, so the plan assistant reads the section check again.
+  const [version, setVersion] = useState(0);
 
   const requestedId = Number(searchParams.get('dreamId'));
   const dreamId = dreams?.some((dream) => dream.id === requestedId) ? requestedId : dreams?.[0]?.id;
@@ -79,6 +87,7 @@ export function PlanPage() {
       const [nextStatus, nextMilestones] = await Promise.all([getPlanStatus(token, dreamId), listMilestones(token, dreamId)]);
       setStatus(nextStatus);
       setMilestones(nextMilestones);
+      setVersion((current) => current + 1);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t('Unable to load this plan.'));
     }
@@ -143,7 +152,9 @@ export function PlanPage() {
           {t('A plan starts from a dream.')}
         </EmptyState>
       )}
-      {dreams && dreams.length > 0 && dreamId && (
+      {dreams && dreams.length > 0 && dreamId && token && (
+        <PlanAssistantProvider token={token} surface="PLAN" dreamId={dreamId} current={WHOLE_PLAN} version={version}
+          onPlanChanged={() => void loadDream()}>
         <Stack spacing={2}>
           {actionError && <Alert severity="error">{actionError}</Alert>}
           <label>
@@ -176,9 +187,12 @@ export function PlanPage() {
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>{t(stage.label)}</Typography>
                         <Typography variant="body2" color="text.secondary">{t(stage.detail)}</Typography>
                       </Box>
-                      {stage.key === nextStageKey && (
-                        <Button variant="secondary" onClick={() => navigate(stagePath(stage.key, dreamId))}>{t('Do this next')}</Button>
-                      )}
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {PLAN_SECTIONS.has(stage.key) && <HelpWithSectionButton section={stage.key as AssistantSection} />}
+                        {stage.key === nextStageKey && (
+                          <Button variant="secondary" onClick={() => navigate(stagePath(stage.key, dreamId))}>{t('Do this next')}</Button>
+                        )}
+                      </Box>
                     </Box>
                   ))}
                 </Stack>
@@ -187,7 +201,8 @@ export function PlanPage() {
           )}
 
           <Card>
-            <CardHeader title={t('Milestones')} subheader={t('Results you have reached on the way to this dream')} />
+            <CardHeader title={t('Milestones')} subheader={t('Results you have reached on the way to this dream')}
+              action={<HelpWithSectionButton section="MILESTONES" />} />
             <CardContent>
               <Stack spacing={1.5}>
                 {milestones.length === 0 && <EmptyState>{t('No milestones yet. Your first one goes here when you reach it.')}</EmptyState>}
@@ -212,6 +227,7 @@ export function PlanPage() {
             </CardContent>
           </Card>
         </Stack>
+        </PlanAssistantProvider>
       )}
     </PageSection>
   );

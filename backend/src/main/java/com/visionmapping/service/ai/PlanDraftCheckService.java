@@ -75,60 +75,11 @@ public class PlanDraftCheckService {
         AppUser user = lookup.currentUser();
         PlanDraftContent content = drafts.stored(dreamId);
         LocalDate today = LocalDate.now(clock);
-        Map<String, String> titles = new HashMap<>();
-        Map<String, String> types = new HashMap<>();
-        List<DraftIssue> issues = new ArrayList<>();
-        String records = transactions.execute(status -> {
-            Dream dream = lookup.dream(dreamId);
-            StringBuilder out = new StringBuilder(planService.describeDream(user, dream));
-            out.append("\nThe draft being built, with keys in brackets:\n");
-            for (DraftGoal goal : goals(content)) {
-                LocalDate goalDate = goal.targetDate();
-                int savedSteps = 0;
-                if (goal.existingId() != null) {
-                    Goal saved = lookup.goal(goal.existingId());
-                    goalDate = saved.getTargetDate();
-                    savedSteps = stepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(saved.getId(), user.getId()).size();
-                }
-                String goalTitle = goal.title();
-                titles.put(goal.key(), goalTitle);
-                types.put(goal.key(), "GOAL");
-                out.append("Goal [").append(clip(goal.key())).append("] ").append(clip(goalTitle))
-                        .append(goal.existingId() != null ? " (already in the plan)" : " (new)")
-                        .append(goalDate == null ? "" : ", target " + goalDate).append('\n');
-                List<DraftStep> steps = Optional.ofNullable(goal.steps()).orElse(List.of());
-                if (savedSteps == 0 && steps.stream().noneMatch(step -> step.existingId() == null)) {
-                    issues.add(issue("NO_STEPS", "GOAL", goal.key(), null, goalTitle, "This goal has no steps yet.",
-                            "Add the first step.", "GO_TO_STEPS", null));
-                }
-                Map<String, DraftStep> byKey = steps.stream().filter(step -> step.key() != null)
-                        .collect(Collectors.toMap(DraftStep::key, step -> step, (first, second) -> first));
-                for (DraftStep step : steps) {
-                    titles.put(step.key(), step.title());
-                    types.put(step.key(), "STEP");
-                    LocalDate stepDate = step.targetDate();
-                    if (step.existingId() != null) {
-                        VisionStep saved = lookup.step(step.existingId());
-                        stepDate = saved.getTargetDate();
-                    } else {
-                        out.append("  Step [").append(clip(step.key())).append("] ").append(clip(step.title()))
-                                .append(" | owner: ").append(blank(step.owner()) ? "none" : clip(step.owner()))
-                                .append(" | due: ").append(stepDate == null ? "none" : stepDate)
-                                .append(step.estimatedHours() == null ? "" : " | " + step.estimatedHours() + " h")
-                                .append(step.complex() ? " | complex" : "")
-                                .append(step.startsAfterKey() == null ? "" : " | after [" + clip(step.startsAfterKey()) + "]").append('\n');
-                        stepIssues(issues, goal, goalDate, step, byKey.get(step.startsAfterKey()), today);
-                    }
-                    for (DraftTask task : Optional.ofNullable(step.tasks()).orElse(List.of())) {
-                        out.append("    Task: ").append(clip(task.title())).append(" | due: ")
-                                .append(task.dueDate() == null ? "none" : task.dueDate())
-                                .append(task.estimatedHours() == null ? "" : " | " + task.estimatedHours() + " h").append('\n');
-                        taskIssues(issues, step, stepDate, task, today);
-                    }
-                }
-            }
-            return out.toString();
-        });
+        Rules rules = transactions.execute(status -> rules(user, dreamId, content, today));
+        Map<String, String> titles = rules.titles();
+        Map<String, String> types = rules.types();
+        List<DraftIssue> issues = new ArrayList<>(rules.issues());
+        String records = rules.records();
 
         Optional<String> apiKey = accessService.availableKey(user);
         if (apiKey.isEmpty() || titles.isEmpty()) {
@@ -158,6 +109,75 @@ public class PlanDraftCheckService {
             added++;
         }
         return new DraftCheck(issues, true, answer.usage().getId());
+    }
+
+    /** The draft described for Claude, its titles and types by key, and the rule issues. */
+    record Rules(String records, Map<String, String> titles, Map<String, String> types, List<DraftIssue> issues) {
+    }
+
+    /**
+     * V11 Phase 7 (PB-FR-49): the rule checks alone on a draft, never AI, for
+     * the plan assistant's section help. The caller has checked the dream is
+     * the participant's own.
+     */
+    @Transactional(readOnly = true)
+    public List<DraftIssue> ruleIssues(Long dreamId, PlanDraftContent content) {
+        return rules(lookup.currentUser(), dreamId, content, LocalDate.now(clock)).issues();
+    }
+
+    private Rules rules(AppUser user, Long dreamId, PlanDraftContent content, LocalDate today) {
+        Map<String, String> titles = new HashMap<>();
+        Map<String, String> types = new HashMap<>();
+        List<DraftIssue> issues = new ArrayList<>();
+        Dream dream = lookup.dream(dreamId);
+        StringBuilder out = new StringBuilder(planService.describeDream(user, dream));
+        out.append("\nThe draft being built, with keys in brackets:\n");
+        for (DraftGoal goal : goals(content)) {
+            LocalDate goalDate = goal.targetDate();
+            int savedSteps = 0;
+            if (goal.existingId() != null) {
+                Goal saved = lookup.goal(goal.existingId());
+                goalDate = saved.getTargetDate();
+                savedSteps = stepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(saved.getId(), user.getId()).size();
+            }
+            String goalTitle = goal.title();
+            titles.put(goal.key(), goalTitle);
+            types.put(goal.key(), "GOAL");
+            out.append("Goal [").append(clip(goal.key())).append("] ").append(clip(goalTitle))
+                    .append(goal.existingId() != null ? " (already in the plan)" : " (new)")
+                    .append(goalDate == null ? "" : ", target " + goalDate).append('\n');
+            List<DraftStep> steps = Optional.ofNullable(goal.steps()).orElse(List.of());
+            if (savedSteps == 0 && steps.stream().noneMatch(step -> step.existingId() == null)) {
+                issues.add(issue("NO_STEPS", "GOAL", goal.key(), null, goalTitle, "This goal has no steps yet.",
+                        "Add the first step.", "GO_TO_STEPS", null));
+            }
+            Map<String, DraftStep> byKey = steps.stream().filter(step -> step.key() != null)
+                    .collect(Collectors.toMap(DraftStep::key, step -> step, (first, second) -> first));
+            for (DraftStep step : steps) {
+                titles.put(step.key(), step.title());
+                types.put(step.key(), "STEP");
+                LocalDate stepDate = step.targetDate();
+                if (step.existingId() != null) {
+                    VisionStep saved = lookup.step(step.existingId());
+                    stepDate = saved.getTargetDate();
+                } else {
+                    out.append("  Step [").append(clip(step.key())).append("] ").append(clip(step.title()))
+                            .append(" | owner: ").append(blank(step.owner()) ? "none" : clip(step.owner()))
+                            .append(" | due: ").append(stepDate == null ? "none" : stepDate)
+                            .append(step.estimatedHours() == null ? "" : " | " + step.estimatedHours() + " h")
+                            .append(step.complex() ? " | complex" : "")
+                            .append(step.startsAfterKey() == null ? "" : " | after [" + clip(step.startsAfterKey()) + "]").append('\n');
+                    stepIssues(issues, goal, goalDate, step, byKey.get(step.startsAfterKey()), today);
+                }
+                for (DraftTask task : Optional.ofNullable(step.tasks()).orElse(List.of())) {
+                    out.append("    Task: ").append(clip(task.title())).append(" | due: ")
+                            .append(task.dueDate() == null ? "none" : task.dueDate())
+                            .append(task.estimatedHours() == null ? "" : " | " + task.estimatedHours() + " h").append('\n');
+                    taskIssues(issues, step, stepDate, task, today);
+                }
+            }
+        }
+        return new Rules(out.toString(), titles, types, issues);
     }
 
     /** PB-FR-29: Claude's proposed change for one AI issue; the participant applies it to the draft, or not. */

@@ -1,5 +1,6 @@
 import { apiClient } from './apiClient';
 import type {
+  AssistantApplied, AssistantChange, AssistantProposals, AssistantSection, AssistantSurface, SectionCheck,
   ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics,
   PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
@@ -185,4 +186,36 @@ export function getPlanCapacity(token: string) {
 
 export function savePlanCapacity(token: string, hoursPerWeek: number | null) {
   return apiClient<PlanCapacity>('/ai/plan/capacity', { method: 'PUT', token, body: JSON.stringify({ hoursPerWeek }) });
+}
+
+// V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50). Its chat goes through streamAiMessage with a section.
+
+export type AssistantTopic = { surface: AssistantSurface; section: AssistantSection; itemRef?: string | null };
+
+/** PB-FR-49: the section's rule-based problems; never uses AI. */
+export function checkAssistantSection(token: string, dreamId: number, topic: AssistantTopic) {
+  return apiClient<SectionCheck>(`/ai/plan/dreams/${dreamId}/assistant/section-check`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(topic),
+  });
+}
+
+/** PB-FR-46: change cards for one section; nothing is saved. */
+export function proposeAssistantChanges(token: string, dreamId: number, language: string, topic: AssistantTopic) {
+  return apiClient<AssistantProposals>(`/ai/plan/dreams/${dreamId}/assistant/proposals?language=${language}`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(topic),
+  });
+}
+
+/** PB-FR-46: saves one card on the Plan page through the normal checks. */
+export function applyAssistantChange(token: string, dreamId: number, change: AssistantChange, requestId: number | null | undefined,
+  edited: boolean) {
+  return apiClient<AssistantApplied>(`/ai/plan/dreams/${dreamId}/assistant/apply`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ ...change, requestId: requestId ?? null, edited }),
+  });
 }

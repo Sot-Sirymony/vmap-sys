@@ -28,7 +28,8 @@ import { type NewContact, NewContactsOutreach } from '../components/plan-builder
 import { ReviewStage } from '../components/plan-builder/ReviewStage';
 import { StepsStage } from '../components/plan-builder/StepsStage';
 import { TasksStage } from '../components/plan-builder/TasksStage';
-import { type DraftUpdate, STAGES, countNew, readiness, syncWithPlan } from '../components/plan-builder/draftModel';
+import { type DraftUpdate, STAGES, applyAssistantChange, countNew, readiness, syncWithPlan } from '../components/plan-builder/draftModel';
+import { HelpWithSectionButton, PlanAssistantProvider } from '../components/ai/plan-assistant/PlanAssistant';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import { tr } from '../i18n/translate';
@@ -72,6 +73,8 @@ export function PlanBuilderPage() {
   const [newContacts, setNewContacts] = useState<NewContact[]>([]);
   // PB-FR-16: hours a week and the saved plan's load, for the capacity check.
   const [capacity, setCapacity] = useState<PlanCapacity | null>(null);
+  // V11 Phase 7: bumped after each draft save, so the plan assistant reads the saved draft again.
+  const [savedVersion, setSavedVersion] = useState(0);
   const dirty = useRef(false);
   const stageTop = useRef<HTMLDivElement>(null);
   const latest = useRef({ content, stage });
@@ -133,6 +136,7 @@ export function PlanBuilderPage() {
     try {
       await savePlanDraft(token, id, latest.current.stage, latest.current.content);
       setSaveState(dirty.current ? 'saving' : 'saved');
+      setSavedVersion((current) => current + 1);
     } catch {
       setSaveState('error');
     }
@@ -248,6 +252,8 @@ export function PlanBuilderPage() {
     return 0;
   };
 
+  const currentTopic = { section: stage };
+
   return (
     <PageSection
       title={tr('Build my plan')}
@@ -261,6 +267,9 @@ export function PlanBuilderPage() {
         { label: dream.title, to: `/dreams/${dream.id}` },
         { label: tr('Build my plan') },
       ]} />
+      <PlanAssistantProvider token={token ?? ''} surface="BUILDER" dreamId={dream.id} current={currentTopic} version={savedVersion}
+        onDraftChange={(assistantChange) => change((current) => applyAssistantChange(current, assistantChange))}
+        onDreamSaved={setDream}>
       <Stack spacing={2}>
         {resumed && !notice && <Alert severity="info" onClose={() => setResumed(false)}>{tr('Picked up where you left off.')}</Alert>}
         {!aiReady && (
@@ -309,7 +318,10 @@ export function PlanBuilderPage() {
         )}
         <Card>
           <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>{`${index + 1}. ${tr(STAGES[index].label)}`}</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              <Typography variant="h6">{`${index + 1}. ${tr(STAGES[index].label)}`}</Typography>
+              <HelpWithSectionButton section={stage} />
+            </Box>
             {stage === 'CLARIFY' && (
               <ClarifyStage dream={dream} content={content} onChange={change} onDreamChange={setDream} token={token ?? ''}
                 language={language} aiReady={aiReady} onDone={() => goTo('GOALS')} />
@@ -347,6 +359,7 @@ export function PlanBuilderPage() {
           {index < STAGES.length - 1 && <Button onClick={() => goTo(STAGES[index + 1].id)}>{tr('Next')}</Button>}
         </Box>
       </Stack>
+      </PlanAssistantProvider>
       {confirmDiscard && (
         <ConfirmDialog
           title={tr('Discard this draft?')}

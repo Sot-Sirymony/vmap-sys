@@ -20,6 +20,9 @@ V11 changes one feature area: how a participant turns a dream into a complete, r
 | Version | Change | Author |
 | --- | --- | --- |
 | 11.0.0 | First draft: review of the current plan builder, problems found, requirements PB-FR-01 to PB-FR-40, phased plan and acceptance criteria | BA |
+| 11.0.0 | Requirement status after phases 1 to 6 (6 Nov 2026): what is done, partly done, not done and not yet verified | BA |
+| 11.0.0 | Added plan assistant on the Plan page and on each plan section (7 Nov 2026): PB-FR-41 to PB-FR-50, PB-NFR-11 to PB-NFR-14, PAC-16 to PAC-20, Phase 7 | BA |
+| 11.0.0 | Phase 7 built (7 Nov 2026): requirement status updated; PB-FR-46 says how a card is saved on the Plan page | BA |
 
 ## Executive summary
 
@@ -42,6 +45,8 @@ The main problems are:
 
 V11 turns the builder into a guided, step-by-step plan builder that goes from dream to tasks, lets the participant talk back to Claude, keeps dates realistic, links helpers and risks to the right records, saves a whole plan safely in one action, and measures whether suggestions are useful.
 
+A later addition (7 Nov 2026) adds a **plan assistant**: a side panel on the Plan page and on each stage of Build my plan that knows which section the participant is working on. The participant can ask "what does this section need?", "is this goal clear enough?" or "help me with this step" without leaving the page, and gets help for that section only. Today the general Dream Coach can be opened on these pages, but it does not know which section is open, cannot see the unsaved draft, and cannot propose a change to it.
+
 ## Scope
 
 ### In scope
@@ -56,6 +61,7 @@ V11 turns the builder into a guided, step-by-step plan builder that goes from dr
 - Keeping unfinished builder sessions as drafts.
 - Rating suggestions and counting accepted, edited and discarded items.
 - Use of more of the participant's own context (work style, energy, available time, shared fears) within the V9 consent and minimisation rules.
+- A section-aware plan assistant panel on the Plan page (`/plan`) and on each Build my plan stage (`/dreams/:id/build`).
 
 ### Out of scope
 
@@ -191,6 +197,23 @@ Priority: **M** (Must) ships in V11, **S** (Should) ships unless the sponsor def
 | PB-FR-39 | Admins shall be able to set a separate model for plan building (goals, steps, tasks, check) and for simple tasks (rating explanations, single replacements), within the same budget. | AI-NFR-15 | S |
 | PB-FR-40 | Resource suggestions inside the guide shall come from the admin-approved list first; others are marked "check before use" (unchanged AI-FR-13 and AI-FR-26 rules). | AI-FR-13, AI-FR-26 | M |
 
+### J. Plan assistant on the page and on each section
+
+The plan assistant is a side panel that helps with the section the participant is working on. "Section" means one stage row on the Plan page (for example Goals, Steps, Dates, Resources, People, Milestones) or one stage of Build my plan (Clarify, Goals, Steps, Tasks, Helpers and risks, Check and add).
+
+| ID | Requirement | Traces to | Priority |
+| --- | --- | --- | --- |
+| PB-FR-41 | The system shall offer a **plan assistant** panel on the Plan page and on the Build my plan page. On wide screens it opens beside the content so the section stays visible; on a phone it opens as a full-screen panel with a clear way back. | AI-FR-01, FR-05 | M |
+| PB-FR-42 | Each section shall have a **Help with this section** button. It opens the assistant focused on that section. The participant can also open the assistant for the whole page (the selected dream's plan). | AI-FR-01 | M |
+| PB-FR-43 | The assistant shall always show which section it is helping with (for example "Helping with: Steps for goal G-003") and follow the participant when they move to another stage or section, with a choice to keep the earlier topic. | AI-FR-01, Usability | M |
+| PB-FR-44 | For each section, the assistant shall offer three quick actions that fit it, so the participant need not type (for example Goals: "Is this goal specific enough?", "Make it measurable", "What is missing?"; Steps: "What must happen first?", "Is this step complex?"; Tasks: "Break this into smaller tasks"; Helpers and risks: "Who could help with this?"; Check and add: "Explain this issue"). The participant can also type a free question. | AI-FR-02 | M |
+| PB-FR-45 | The assistant shall be able to explain a section in plain words: what it needs, why it matters in the method, and a short example. It shall be able to explain any plan check issue shown in that section. | AI-FR-03, AI-FR-09 | M |
+| PB-FR-46 | The assistant may propose changes to the open section (a clearer title, a success measure, an owner, a date within the parent's date, an extra step or task, a risk). Each change is shown as an editable card with **Apply** and **Dismiss**. In Build my plan, **Apply** changes only the draft. On the Plan page the card itself is the filled-in form: **Save to my plan** saves it through the normal create and update rules, after the participant has checked or edited it. The assistant never saves anything itself. | AI-FR-04, AC-09, PB-FR-29 | M |
+| PB-FR-47 | Proposed changes shall follow the same server checks as other suggestions: date limits (PB-FR-15), owner "Me" or a role (PB-FR-18), approved resources first (PB-FR-40), and only items from the participant's own plan. | PB-FR-15, PB-NFR-04 | M |
+| PB-FR-48 | Every answer shall carry the "AI suggestion" label and a short "Based on ..." reason naming the section and items used, and can be rated thumbs up or down with a comment (PB-FR-34). Applied, edited and dismissed change cards are counted with no text (PB-FR-35), under the feature name "plan assistant". | AI-FR-05, AI-FR-06, BO-08 | M |
+| PB-FR-49 | When AI is off, unavailable, over the limit or not consented, the panel shall still open and show the program's own help for the section: what it needs, guiding questions (from `CLAUDE.md` coaching behaviour) and the rule-based check results for that section. It says why AI help is not available. | AI-NFR-02, PB-FR-05 | M |
+| PB-FR-50 | On the Plan page and Build my plan, the Dream Coach launcher shall open the plan assistant instead of a second chat, so only one assistant is on screen. The conversation is kept as a Dream Coach conversation tagged with the dream and section, so the history, deletion and export rules of AI-FR-25 apply. | AI-FR-01, AI-FR-25 | S |
+
 ## Non-functional requirements
 
 | ID | Requirement |
@@ -205,6 +228,10 @@ Priority: **M** (Must) ships in V11, **S** (Should) ships unless the sponsor def
 | PB-NFR-08 | Quality test set: the AI governance lead keeps 20 sample dreams (10 English, 5 Khmer, 5 deliberately vague). Each change to builder prompts or models is tried on the set before release (AI-NFR-18). |
 | PB-NFR-09 | Drafts are user-scoped, never readable by coaches or admins, deleted after 14 days, and deleted with the account (NFR-09). |
 | PB-NFR-10 | Tests: backend tests for date limits, all-or-nothing save, undo, draft scoping and cross-user refusal on every new endpoint (SEC-01-08); frontend tests for each stage and the no-AI path. Claude is mocked in tests. |
+| PB-NFR-11 | Plan assistant speed and cost: the first words of an answer appear within 3 seconds and are streamed (AI-NFR-01). An answer should cost no more than $0.01 on average, using the simple-task model where the admin has set one (PB-FR-39). Each answer counts toward the daily limit, the $20 monthly cap and, in Build my plan, the session limit (PB-NFR-03). |
+| PB-NFR-12 | Plan assistant context and privacy: each request sends only the dream, the open section's items (saved or draft), their plan check results and the participant's question, never partner names or contact details (PB-FR-38). Conversations are private to the participant, never shown to coaches or admins, and deleted with the account (NFR-09). Consent, safety, crisis and prompt-injection rules from V9 and V10 apply unchanged; the participant's question and plan text are data, not instructions. |
+| PB-NFR-13 | Plan assistant accessibility and language: the panel and **Help with this section** buttons work by keyboard and screen reader, focus moves into the panel when it opens and back to the section button when it closes, and new answers are announced. All panel text and section help works in English and Khmer (PB-NFR-06, PB-NFR-07). |
+| PB-NFR-14 | Plan assistant tests: backend tests for section context (only that section's items are sent), proposed change checks, cross-user refusal on the new endpoint, and limits; frontend tests for opening per section, following the section, applying and dismissing a change card, and the no-AI help. Claude is mocked in tests. |
 
 ## Data and API changes (for solution design)
 
@@ -218,8 +245,11 @@ These are business-level needs. The solution design decides exact names.
 | Available hours | Participant setting: hours per week for plan work |
 | Plan model | AI settings: plan model alongside the current model |
 | Endpoints | Start or resume a draft; clarify; suggest per stage (goals, steps, tasks, helpers and risks); refine; check draft; fix with AI; add plan (one transaction); undo; rate. All under `/api/ai/plan`, all user-scoped, ownership checked before AI availability (SEC-01-02) |
+| Plan assistant | One streamed endpoint, for example `POST /api/ai/plan/assistant`, taking the dream, the page (Plan or Build my plan), the section key, the item ids in view and, in the builder, the draft id. The server loads the items itself and checks ownership. The answer holds text and optional proposed change cards |
+| Assistant history | Dream Coach conversation: optional dream and section key, so history can be shown per section (PB-FR-50) |
+| Section help without AI | Program help text and guiding questions per section, in English and Khmer, kept with the other interface text |
 
-Migrations continue from the latest Flyway version (V62 at the time of writing).
+Migrations continue from the latest Flyway version (V62 at the time of writing; V66 after Phase 6).
 
 ## Implementation phases
 
@@ -233,6 +263,7 @@ Each phase ends with build, tests and a summary, then waits for confirmation (as
 | 4 | Richer steps and task builder: priority, sequence, complex flag, effort, "starts after", steps for all goals, tasks for complex steps | PB-FR-12 to PB-FR-14, PB-FR-18 |
 | 5 | Helpers and risks: partner matching and "To Contact" partners, obstacle suggestions with partner type, fears with consent, outreach after adding | PB-FR-23 to PB-FR-27, PB-FR-38, PB-FR-40 |
 | 6 | Check and fix on the draft, one-click and AI fixes, capacity check, plan model setting, quality test set run, Khmer review, docs | PB-FR-16, PB-FR-28, PB-FR-29, PB-FR-39, PB-NFR-06 to PB-NFR-08 |
+| 7 | Plan assistant: side panel on the Plan page and Build my plan, Help with this section, section quick actions, explain, proposed change cards, no-AI section help, one assistant on screen | PB-FR-41 to PB-FR-50, PB-NFR-11 to PB-NFR-14 |
 | Later | Work style and energy, reorder, merge and split, coach visibility, continue from dream assistant | PB-FR-06, PB-FR-17, PB-FR-22, PB-FR-37 |
 
 ### Implementation status
@@ -245,8 +276,138 @@ Each phase ends with build, tests and a summary, then waits for confirmation (as
 | 4 | Built and tested locally, 6 Nov 2026 (Claude mocked in tests): steps store effort and "starts after" (migration V65) and step suggestions carry priority, complexity, effort and order (PB-FR-12); steps for all goals without steps in one action (PB-FR-13); task builder for saved and draft complex steps, 2 to 8 tasks with owner, due date, priority and hours (PB-FR-14); task dates kept within the step's date and step dates not before the step they wait for (PB-FR-15); owners "Me" or a role (PB-FR-18). The regular step form and the Excel workbook do not show effort or order yet. Not yet tried against the live API |
 | 5 | Built and tested locally, 6 Nov 2026 (Claude mocked in tests): helpers matched to the participant's own partners on the server, linked where the partner has no link yet or added as To Contact partners (PB-FR-23); up to five risks with type, severity, solution and the fitting kind of helper, added as Open obstacles (PB-FR-24, PB-FR-25); fear journal used only when ticked for the request (PB-FR-26, the cautious answer to the open question below); outreach drafts for new contacts after adding (PB-FR-27); only the dream, the draft items and ticked fears are sent, never partner names or contacts (PB-FR-38); approved resources first (PB-FR-40). Undo archives created partners and obstacles but leaves links given to existing partners. Not yet tried against the live API |
 | 6 | Built and tested locally, 6 Nov 2026 (Claude mocked in tests): plan check on the draft with built-in and AI issues (PB-FR-28); one-click fixes and Fix with AI proposals applied only by choice (PB-FR-29); hours a week remembered, overloaded weeks flagged and Spread the dates (PB-FR-16); separate plan building model (PB-FR-39); Khmer for all V11 text (PB-NFR-06) with a review export, `docs/km-review-v11.csv`; form controls have labels (the tests find them by label) and the layout is one column on narrow screens, but no WCAG 2.1 AA audit has been done (PB-NFR-07); the 20-dream sample set and an opt-in live run (PB-NFR-08). Outstanding: the live sample run (needs an API key and spend; gives PAC-04 and PAC-12 numbers), the Khmer speaker's review (PAC-13), the 4-week pilot measures (PAC-14), an accessibility audit (PB-NFR-07), and UAT in a browser |
+| 7 | Built and tested locally, 7 Nov 2026 (Claude mocked in tests): plan assistant panel on the Plan page and Build my plan, beside the page on wide screens (1200 px and up) and full screen on smaller ones (PB-FR-41); Help with this section on each Plan page stage, on Milestones and on each Build my plan stage (PB-FR-42); Helping with, following the stage unless Keep this topic is ticked (PB-FR-43); three quick actions per section and a free question (PB-FR-44); chat that sees only the section's items and plan check (PB-FR-45, PB-NFR-12); change cards checked on the server against the section's refs, date limits and owner rule, applied to the draft or saved to the plan by choice (PB-FR-46, PB-FR-47); ratings and outcome counts under PLAN_ASSISTANT (PB-FR-48); program help, guiding questions and the rule-based check without AI (PB-FR-49); the Dream Coach button steps aside on these pages, and conversations are tagged with dream and section, migration V67 (PB-FR-50); 125 Khmer drafts added to `docs/km-review-v11.csv`. Not yet tried against the live API or in a browser |
 
 Phase 1 comes first on purpose: it gives the baseline numbers (acceptance rate, cost per plan) the later phases are judged against, and fixes the two defects that can hurt data today (unchecked dates, partial saves).
+
+## Requirement status (7 Nov 2026)
+
+Status of every requirement and acceptance criterion after phases 1 to 7 (phases 1 to 6 at commit `3fb474d`, Phase 7 on 7 Nov 2026). **Done** means built and covered by automated tests with Claude mocked; nothing has yet been tried against the live Claude API or by a participant in a browser. **Partly** says what is missing. **Not done** was not built. **Not verified** needs a live run, a reviewer or the pilot.
+
+### Summary
+
+| | Done | Partly | Not done | Not verified |
+| --- | --- | --- | --- | --- |
+| Functional (PB-FR-01 to 50) | 45 | 1 | 4 | – |
+| Non-functional (PB-NFR-01 to 14) | 6 | 6 | 1 | 1 |
+| Acceptance (PAC-01 to 20) | 14 met in tests | 1 | 2 | 3 |
+
+### Functional requirements
+
+| ID | Priority | Status | Notes |
+| --- | --- | --- | --- |
+| PB-FR-01 | M | Done | Build my plan at `/dreams/:id/build`, six stages on one screen |
+| PB-FR-02 | M | Done | Skip and back by stepper or buttons; leave and return through the server draft |
+| PB-FR-03 | M | Done | Starts from the dream's live goals and steps; they are shown, never changed |
+| PB-FR-04 | M | Done | New items per stage, items needing attention, readiness list |
+| PB-FR-05 | M | Done | Form path with the program's questions when AI is off or not consented |
+| PB-FR-06 | S | **Not done** | Vision area and dream assistants do not offer to continue into the guide |
+| PB-FR-07 | M | Done | Plan assistant card kept on Dream Detail beside the new button |
+| PB-FR-08 | M | Done | Up to three dream questions, one at a time, answered in place |
+| PB-FR-09 | M | Done | Answers kept in the draft (up to six) and sent with every later suggestion |
+| PB-FR-10 | M | Done | A ticked answer is saved into why it matters, success or target date |
+| PB-FR-11 | S | Done | Suggest anyway |
+| PB-FR-12 | M | Done | Priority, order, complex, hours and "starts after" on suggestions and steps (migration V65) |
+| PB-FR-13 | M | Done | Steps for all goals without steps in one action (one request per goal) |
+| PB-FR-14 | M | Done | Task builder, 2 to 8 tasks, for saved and draft complex steps |
+| PB-FR-15 | M | Done | Suggested dates checked on the server against today and the parent's date. Dates typed by the participant are warned about, not blocked |
+| PB-FR-16 | S | Done | Hours a week remembered (V66); overloaded weeks flagged; Spread the dates. Work counts in the week it is due |
+| PB-FR-17 | C | **Not done** | Work style and energy are not used |
+| PB-FR-18 | M | Done | Owner is Me when Claude leaves it blank; "never a name" is a prompt rule, not checked by code. Not verified live |
+| PB-FR-19 | M | Done | Fewer, More, Smaller, Bolder, Earlier, Later and a note, for goals, steps and tasks |
+| PB-FR-20 | M | Done | Edited and locked items are kept when refining |
+| PB-FR-21 | S | Done | Another option for one item |
+| PB-FR-22 | S | **Not done** | No reorder, merge or split of suggestions before adding |
+| PB-FR-23 | M | Done | Partners matched on the server; linked only where free, or added as To Contact |
+| PB-FR-24 | M | Done | Up to five risks with type, severity and solution, added as Open obstacles |
+| PB-FR-25 | M | Done | Each risk shows the fitting kind of helper; can be tied to a helper |
+| PB-FR-26 | S | Done | Fear journal used only when ticked for the request (the cautious answer to the open question) |
+| PB-FR-27 | S | Done | Message draft for each new contact after adding, to copy and send |
+| PB-FR-28 | M | Done | Check my draft: built-in checks always, AI issues when AI is on |
+| PB-FR-29 | M | Done | One-click fixes; Fix with AI proposals applied only by choice |
+| PB-FR-30 | M | Done | Server draft for 14 days after the last change; resumed without new AI requests |
+| PB-FR-31 | M | Done | One transaction for goals, steps, tasks, helpers and risks |
+| PB-FR-32 | M | Done | Undo archives what was just added, available until the next change. Links given to existing partners stay |
+| PB-FR-33 | M | Done | Drafts are a separate table, never read as plan data |
+| PB-FR-34 | M | Done | Thumbs up or down on every plan builder answer |
+| PB-FR-35 | M | Done | Added, edited and discarded counts per answer, no text (V63) |
+| PB-FR-36 | M | **Partly** | Admin card shows acceptance, edit rate, ratings, requests and cost per request per feature. **Requests and cost per finished plan are not shown** |
+| PB-FR-37 | C | **Not done** | Coaches do not see whether a plan was built with the guide |
+| PB-FR-38 | M | Done | Only the dream, draft items, answers and ticked fears are sent; never partner names or contacts (tested) |
+| PB-FR-39 | S | Done | Separate model for plan building in AI settings |
+| PB-FR-40 | M | Done | Approved resources first; others marked "check before use" with links removed |
+| PB-FR-41 | M | Done | Panel beside the page from 1200 px wide; full-screen panel below that |
+| PB-FR-42 | M | Done | Help with this section on the six Plan page stages, Milestones and each Build my plan stage; the round button opens the whole page |
+| PB-FR-43 | M | Done | Helping with shows the section (and item when given); follows the builder stage unless Keep this topic is ticked |
+| PB-FR-44 | M | Done | Three quick actions per section from the program's help, plus a free question |
+| PB-FR-45 | M | Done | Explaining is a prompt rule; the section's plan check is in the context. Not verified live |
+| PB-FR-46 | M | Done | Builder: applied to the draft only (dream fields saved to the dream by choice). Plan page: Save to my plan through the normal services |
+| PB-FR-47 | M | Done | Refs outside the section, saved items in the builder, wrong kinds and dates past the parent are dropped (tested) |
+| PB-FR-48 | M | Done | AI suggestion label and "Based on this section of your plan"; chat answers and card sets rated; applied and edited cards counted, dismissed ones are the rest |
+| PB-FR-49 | M | Done | Program help, guiding questions and the rule-based check; no chat or cards when AI is off |
+| PB-FR-50 | S | Done | Dream Coach button hidden on these pages; conversations tagged with dream and section (V67) and kept in Dream Coach history |
+
+### Non-functional requirements
+
+| ID | Status | Notes |
+| --- | --- | --- |
+| PB-NFR-01 Response time | **Not verified** | Progress is shown on every AI action; times not measured against the live API |
+| PB-NFR-02 Cost ≤ $0.25 per plan | **Partly** | Cost per request is logged and shown; the live sample run that measures it has not been done |
+| PB-NFR-03 15 requests per session | **Not done** | No per-session limit was built. The per-person daily limit and the $20 monthly cap (AI-NFR-15) still apply |
+| PB-NFR-04 Validation | Done | Every field from Claude is checked; keys and ids not in the participant's own plan are dropped |
+| PB-NFR-05 Safety and injection | Done | V9 and V10 rules unchanged; participant text reaches Claude only in the data block (tested) |
+| PB-NFR-06 Khmer | **Partly** | All V11 text has Khmer drafts (221 strings); the Khmer speaker's review is pending (`docs/km-review-v11.csv`) |
+| PB-NFR-07 Accessibility | **Partly** | Controls are labelled and the layout is one column on phones; no WCAG 2.1 AA audit |
+| PB-NFR-08 Quality test set | **Partly** | 20 sample dreams and an opt-in live run exist; the live run has not been done |
+| PB-NFR-09 Draft privacy | Done | Owner only, 14 days, deleted with the dream and the account |
+| PB-NFR-10 Tests | Done | Backend and frontend tests for every phase; the access sweep covers every new endpoint |
+| PB-NFR-11 Assistant speed and cost | **Partly** | Answers stream; cards use the main model, not the plan model; every answer counts toward the daily limit and monthly cap. No session limit exists (PB-NFR-03); speed and cost not measured live |
+| PB-NFR-12 Assistant context and privacy | Done | Only the section's items; no partner names or contacts (tested); other users' dreams and items answer 404, before AI is checked |
+| PB-NFR-13 Assistant accessibility and language | **Partly** | Focus moves into the panel and back; labelled controls; live regions for answers and cards; Khmer drafts pending review; no WCAG audit |
+| PB-NFR-14 Assistant tests | Done | 4 backend flow tests plus the access sweep; 5 panel tests, 2 draft tests, 2 launcher tests and a Khmer coverage test |
+
+### Acceptance criteria
+
+| ID | Status | Notes |
+| --- | --- | --- |
+| PAC-01 Plan in under 30 minutes | **Not verified** | Needs a participant session (UAT) |
+| PAC-02 Works without AI | Met in tests | Form path tested end to end in the page test; UAT pending |
+| PAC-03 Three questions, in place | Met in tests | |
+| PAC-04 Dates within limits on the sample set | **Not verified** | Server checks are tested; the live sample run is pending |
+| PAC-05 Refine keeps edited items | Met in tests | |
+| PAC-06 All or nothing | Met in tests | |
+| PAC-07 Undo archives only what was added | Met in tests | Links given to existing partners are left in place |
+| PAC-08 Drafts resume and stay private | Met in tests | |
+| PAC-09 No partner names or contacts to Claude | Met in tests | |
+| PAC-10 Ratings and admin metrics | **Partly** | Cost per finished plan not shown (PB-FR-36) |
+| PAC-11 Every endpoint refuses other users | Met in tests | Automatic route sweep |
+| PAC-12 Cost ≤ $0.25 per plan | **Not verified** | Needs the live sample run |
+| PAC-13 Khmer rated clear and correct | **Not done** | Needs the Khmer reviewer (D-4) |
+| PAC-14 50% kept and rating ≥ 4.0 after 4 weeks | **Not done** | Needs the pilot |
+| PAC-15 Existing tests still pass | Met | 453 backend (1 opt-in skipped) and 486 frontend tests pass after Phase 7 |
+| PAC-16 Help per section | Met in tests | |
+| PAC-17 Saved only by choice | Met in tests | Builder and Plan page paths |
+| PAC-18 Section-only context, 404 for others | Met in tests | Chat, section check, proposals and apply |
+| PAC-19 Works without AI | Met in tests | |
+| PAC-20 One assistant on screen | Met in tests | |
+
+### Known limitations
+
+- The regular step form, the vision map and the Excel workbook do not show step hours or "starts after".
+- Undo leaves links given to existing partners in place, though their new goal or step is archived.
+- Matching partners shown on a helper are kept for the session only; after a reload the chosen partner is still linked.
+- Capacity counts each item's hours in the week it is due, not spread over the days before.
+- Not deployed and checked on Render; CI runs on push but its result was not checked here.
+- Plan assistant: change cards are not offered for People, Milestones or the whole plan (the assistant explains only); the Plan page has no Tasks section, so tasks are changed in Build my plan.
+- Plan assistant: the panel's plan check in Build my plan reads the saved draft, so it catches up a moment after an edit (the draft saves within a second).
+
+### Open questions answered by the build (for the sponsor to confirm)
+
+- Guide beside the plan assistant card, not replacing it.
+- Fears used only when ticked for each request.
+- Hours a week asked in the guide and remembered for next time.
+- Drafts kept 14 days after the last change.
+- Suggested items start ticked in the plan assistant card; in the guide every suggestion is a draft item the participant can remove.
 
 ## Acceptance criteria
 
@@ -267,6 +428,11 @@ Phase 1 comes first on purpose: it gives the baseline numbers (acceptance rate, 
 | PAC-13 | Khmer reviewers rate at least 80% of sampled Khmer builder answers clear and correct. | PB-NFR-06, AC-15 |
 | PAC-14 | After four weeks of pilot use, at least 50% of suggested items are added (as-is or edited) and the average rating is 4.0 or more. | BO-08, BO-09 |
 | PAC-15 | All existing backend and frontend tests still pass. | — |
+| PAC-16 | On the Plan page and on each Build my plan stage, **Help with this section** opens the assistant showing that section's name and three quick actions that fit it. | PB-FR-41 to PB-FR-44 |
+| PAC-17 | A change proposed by the assistant is saved only after the participant applies it (to the draft in Build my plan, or by saving the filled form on the Plan page); dismissing it changes nothing. | PB-FR-46, AI-FR-04 |
+| PAC-18 | A request from the assistant contains only the open section's items from the participant's own plan and no partner name, email or phone (checked from request logs in tests); another user's dream, section or draft is refused (404). | PB-FR-47, PB-NFR-12 |
+| PAC-19 | With AI turned off, the panel still opens on every section and shows the program's help, guiding questions and rule-based check results. | PB-FR-49 |
+| PAC-20 | Only one assistant panel is open at a time on the Plan page and Build my plan. | PB-FR-50 |
 
 ## Assumptions, dependencies and risks
 
@@ -293,6 +459,8 @@ Phase 1 comes first on purpose: it gives the baseline numbers (acceptance rate, 
 | Partner matching by role links the wrong person | Wrong helper contacted | Matching only suggests; participant confirms each link; no automatic outreach |
 | Fears used for obstacles feel intrusive | Trust loss | Only with consent and only shared fears; reason shown; can be turned off per session |
 | Larger structured answers cut short at the token limit | Missing items | One stage per request; tasks per step; cut-short answers retried once with fewer items |
+| Plan assistant chat adds many small requests | Budget overrun | Quick actions instead of open chat; simple-task model; answers count toward daily, session and monthly limits (PB-NFR-11) |
+| Plan assistant overlaps the builder's own suggestion buttons | Confusion | Assistant explains and proposes small changes to one section; whole sets of goals, steps or tasks still come from the stage buttons |
 
 ## Open questions
 
@@ -304,6 +472,9 @@ Phase 1 comes first on purpose: it gives the baseline numbers (acceptance rate, 
 - [ ] Which model should the admin set for plan building, and does that model fit the budget at pilot scale?
 - [ ] How long should drafts be kept: 14 days as drafted, or until the dream is archived?
 - [ ] Should coaches see that a plan was built with the guide (PB-FR-37), or is that unnecessary?
+- [ ] Should the plan assistant also appear on other plan screens (Dream Detail, Goals, Steps, Tasks board), or only on the Plan page and Build my plan for now?
+- [ ] Should plan assistant conversations be kept in Dream Coach history (PB-FR-50), or only for the session?
+- [ ] Is $0.01 per assistant answer the right cost target (PB-NFR-11)?
 
 ## Sign-off
 

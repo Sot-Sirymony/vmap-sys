@@ -1021,13 +1021,69 @@ export type AiMessage = {
 };
 
 // AI-FR-01: what is on screen, so the Dream Coach picks the right context.
-export type AiFocus = { page: string; dreamId?: number | null; moduleNumber?: number | null };
+export type AiFocus = {
+  page: string;
+  dreamId?: number | null;
+  moduleNumber?: number | null;
+  // V11 Phase 7 (PB-FR-42): set when the message goes to the plan assistant for one section.
+  surface?: AssistantSurface | null;
+  section?: AssistantSection | null;
+  itemRef?: string | null;
+};
+
+// V11 Phase 7 (PB-FR-41 to PB-FR-50): the plan assistant on the Plan page (PLAN) and Build my plan (BUILDER).
+export type AssistantSurface = 'PLAN' | 'BUILDER';
+
+export type AssistantSection =
+  | 'WHOLE' | 'STATEMENT' | 'GOALS' | 'STEPS' | 'DATES' | 'RESOURCES' | 'PEOPLE' | 'MILESTONES'
+  | 'CLARIFY' | 'TASKS' | 'HELPERS' | 'REVIEW';
+
+export type SectionIssue = {
+  kind: string;
+  itemType: string;
+  itemRef: string;
+  itemTitle?: string | null;
+  problem: string;
+  fix?: string | null;
+};
+
+export type SectionCheck = { surface: AssistantSurface; section: AssistantSection; issues: SectionIssue[]; canPropose: boolean };
+
+export type AssistantChangeKind = 'EDIT' | 'ADD_STEP' | 'ADD_TASK' | 'ADD_RISK';
+export type AssistantField = 'TITLE' | 'SUCCESS' | 'WHY' | 'DATE' | 'OWNER';
+
+/** One proposed change card; the participant edits it, then applies or dismisses it. */
+export type AssistantChange = {
+  kind: AssistantChangeKind;
+  itemType: string;
+  itemRef?: string | null;
+  itemTitle?: string | null;
+  field?: AssistantField | null;
+  value?: string | null;
+  parentRef?: string | null;
+  parentType?: string | null;
+  parentTitle?: string | null;
+  title?: string | null;
+  owner?: string | null;
+  date?: string | null;
+  obstacleType?: string | null;
+  severity?: string | null;
+  solution?: string | null;
+  reason?: string | null;
+};
+
+export type AssistantProposals = { changes: AssistantChange[]; note?: string | null; requestId?: number | null };
+
+export type AssistantApplied = { itemType: string; id: number };
 
 export type AiConversation = {
   id: number;
   title: string;
   updatedAt: string;
   messages?: AiMessage[] | null;
+  // V11 (PB-FR-50): set for a plan assistant conversation.
+  dreamId?: number | null;
+  section?: AssistantSection | null;
 };
 
 export type AiChatTurn = {

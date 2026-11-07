@@ -514,6 +514,29 @@ public class AiPlanService {
         return new PlanCheck(issues, true, answer.usage().getId());
     }
 
+    /**
+     * V11 Phase 7 (PB-FR-49): the rule half of the plan check alone, never AI,
+     * for the plan assistant's section help on the Plan page. Runs inside the
+     * caller's transaction, which has checked the dream is the participant's own.
+     */
+    List<PlanIssue> ruleCheck(AppUser user, Dream dream) {
+        LocalDate today = LocalDate.now(clock);
+        List<PlanIssue> issues = new ArrayList<>();
+        for (Goal goal : goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), user.getId())) {
+            List<VisionStep> steps = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), user.getId());
+            if (goal.getStatus() != WorkStatus.COMPLETED && steps.isEmpty()) {
+                issues.add(rule("NO_STEPS", "GOAL", goal.getId(), goal.getTitle(), "This goal has no steps yet.",
+                        "Add the first step, or ask the Dream Coach to suggest steps."));
+            }
+            for (VisionStep step : steps) {
+                if (step.getStatus() != WorkStatus.COMPLETED) {
+                    issues.addAll(ruleIssues(step, goal, today));
+                }
+            }
+        }
+        return issues;
+    }
+
     /** AI-FR-11: unfinished steps that are overdue again after being given a new date. No AI needed to list them. */
     public List<SlippingStep> slippingSteps() {
         Long userId = lookup.userId();

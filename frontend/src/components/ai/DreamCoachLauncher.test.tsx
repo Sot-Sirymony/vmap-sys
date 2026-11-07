@@ -38,3 +38,20 @@ describe('DreamCoachLauncher (AI-FR-01)', () => {
     expect(screen.getByText('5 AI requests left today')).toBeInTheDocument();
   });
 });
+
+describe('DreamCoachLauncher on plan pages (V11, PB-FR-50)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('steps aside on the Plan page and Build my plan, where the plan assistant is', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    at('/plan');
+    await vi.waitFor(() => expect(getAiStatus).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: 'Open the Dream Coach' })).not.toBeInTheDocument();
+  });
+
+  it('is still there on a dream\'s own page', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    at('/dreams/4');
+    expect(await screen.findByRole('button', { name: 'Open the Dream Coach' })).toBeInTheDocument();
+  });
+});

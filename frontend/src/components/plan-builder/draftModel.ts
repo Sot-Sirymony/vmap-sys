@@ -1,5 +1,5 @@
 import type {
-  DraftFix, DraftGoal, DraftHelper, DraftIssue, DraftRisk, DraftStep, DraftTask, Dream, Goal, GoalSuggestion, HelperSuggestion, PlanClarification,
+  AssistantChange, DraftFix, DraftGoal, DraftHelper, DraftIssue, DraftRisk, DraftStep, DraftTask, Dream, Goal, GoalSuggestion, HelperSuggestion, PlanClarification,
   RiskSuggestion, PlanDraftContent, PlanStage, StepSuggestion,
   TaskSuggestion, VisionStep, WeekLoad,
 } from '../../types/vision';
@@ -382,6 +382,61 @@ export function applyAiFix(content: PlanDraftContent, fix: DraftFix): PlanDraftC
   const patch: Partial<DraftStep> = fix.kind === 'VAGUE_STEP' && fix.title ? { title: fix.title }
     : fix.kind === 'UNREALISTIC_TIMING' && fix.targetDate ? { targetDate: fix.targetDate } : {};
   return Object.keys(patch).length ? updateStep(content, found.goal.key, found.step.key, patch) : content;
+}
+
+/**
+ * V11 Phase 7 (PB-FR-46): one plan assistant card the participant chose,
+ * applied to the draft only. Items it adds carry no request id: the card was
+ * already counted when it was applied, and the participant chose it, so a
+ * later refine leaves it alone. Changes to the dream itself are not draft
+ * changes; the page saves those to the dream.
+ */
+export function applyAssistantChange(content: PlanDraftContent, change: AssistantChange): PlanDraftContent {
+  if (change.kind === 'EDIT' && change.itemRef && change.value != null) {
+    const value = change.value;
+    if (change.itemType === 'GOAL') {
+      const goal = content.goals.find((item) => item.key === change.itemRef && item.existingId == null);
+      const patch: Partial<DraftGoal> | null = change.field === 'TITLE' ? { title: value }
+        : change.field === 'SUCCESS' ? { successCriteria: value }
+          : change.field === 'DATE' ? { targetDate: value } : null;
+      return goal && patch ? updateGoal(content, goal.key, patch) : content;
+    }
+    const found = locate(content, change.itemRef);
+    if (!found || (!found.task && found.step.existingId != null)) {
+      return content;
+    }
+    if (found.task) {
+      const patch: Partial<DraftTask> | null = change.field === 'TITLE' ? { title: value }
+        : change.field === 'OWNER' ? { owner: value || 'Me' }
+          : change.field === 'DATE' ? { dueDate: value } : null;
+      return patch ? updateTask(content, found.goal.key, found.step.key, found.task.key, patch) : content;
+    }
+    const patch: Partial<DraftStep> | null = change.field === 'TITLE' ? { title: value }
+      : change.field === 'OWNER' ? { owner: value || 'Me' }
+        : change.field === 'DATE' ? { targetDate: value } : null;
+    return patch ? updateStep(content, found.goal.key, found.step.key, patch) : content;
+  }
+  if (change.kind === 'ADD_STEP' && change.parentRef && change.title) {
+    if (!content.goals.some((goal) => goal.key === change.parentRef)) {
+      return content;
+    }
+    const step: DraftStep = { ...emptyStep(), title: change.title, owner: change.owner || 'Me', targetDate: change.date ?? null, edited: true };
+    return addSteps(content, change.parentRef, [step]);
+  }
+  if (change.kind === 'ADD_TASK' && change.parentRef && change.title) {
+    const found = locate(content, change.parentRef);
+    if (!found || found.task) {
+      return content;
+    }
+    const task: DraftTask = { ...emptyTask(), title: change.title, owner: change.owner || 'Me', dueDate: change.date ?? null, edited: true };
+    return addTask(content, found.goal.key, found.step.key, task);
+  }
+  if (change.kind === 'ADD_RISK' && change.title) {
+    const risk: DraftRisk = { ...emptyRisk(), title: change.title, obstacleType: change.obstacleType || 'OTHER',
+      severity: change.severity || 'MEDIUM', solution: change.solution ?? null, linkKey: change.parentRef ?? null, edited: true };
+    return addHelpersAndRisks(content, [], [risk]);
+  }
+  return content;
 }
 
 /** The Monday of a YYYY-MM-DD date's week, as YYYY-MM-DD. */

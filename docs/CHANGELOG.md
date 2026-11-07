@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [11.0.0] — All 6 phases built; awaiting UAT, the live sample run and the Khmer review
+## [11.0.0] — All 7 phases built; awaiting UAT, the live sample run and the Khmer review
 
 Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improvements.
 
@@ -193,6 +193,25 @@ Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improveme
 - **Khmer review (PB-NFR-06).** `frontend/scripts/export-km-review.mjs` exports
   the 221 V11 Khmer drafts to `docs/km-review-v11.csv` for the reviewer (D-4).
   Not yet reviewed.
+
+### Phase 7 — plan assistant (2026-11-07)
+
+- **Plan assistant panel (PB-FR-41 to PB-FR-44).** On the Plan page and in Build
+  my plan, beside the page on wide screens and full screen on smaller ones.
+  **Help with this section** on each Plan page stage, Milestones and each builder
+  stage. Shows what it is helping with, follows the builder stage unless the
+  topic is kept, and offers three quick questions per section.
+- **Section-only help (PB-FR-45, PB-NFR-12).** Chat answers see only the
+  section's items and its plan check; never partner names or contacts.
+- **Change cards (PB-FR-46 to PB-FR-48).** Small changes checked on the server
+  against the section, the date limits and the owner rule; applied to the draft,
+  or saved to the plan through the normal rules, only by choice. Rated and
+  counted as `PLAN_ASSISTANT`.
+- **Without AI (PB-FR-49).** The program's help, guiding questions and the
+  rule-based check still show.
+- **One assistant on screen (PB-FR-50).** The Dream Coach button steps aside on
+  these pages; conversations are tagged with dream and section (migration V67).
+- 125 more Khmer drafts in `docs/km-review-v11.csv`.
 
 ## [10.0.0] — In progress (phases 1 to 6 of 7 built)
 

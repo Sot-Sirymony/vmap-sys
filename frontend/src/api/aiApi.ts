@@ -1,5 +1,5 @@
 import { apiClient, authorizedFetch, clearApiCache, reportSessionEnded } from './apiClient';
-import type { AiChatTurn, AiConversation, AiFocus, AiMessage, AiSafetyAlert, AiStatus } from '../types/vision';
+import type { AiChatTurn, AiConversation, AiFocus, AiMessage, AiSafetyAlert, AiStatus, AssistantSection } from '../types/vision';
 
 // V9 Phase 3: AI consent, the Dream Coach chat and crisis alerts.
 
@@ -11,8 +11,10 @@ export function setAiConsent(token: string, consent: boolean) {
   return apiClient<AiStatus>('/ai/consent', { method: 'PUT', token, body: JSON.stringify({ consent }) });
 }
 
-export function listAiConversations(token: string) {
-  return apiClient<AiConversation[]>('/ai/conversations', { token });
+/** With a dream and section (V11, PB-FR-50), only the plan assistant's conversations for that section. */
+export function listAiConversations(token: string, filter?: { dreamId: number; section: AssistantSection }) {
+  const query = filter ? `?dreamId=${filter.dreamId}&section=${filter.section}` : '';
+  return apiClient<AiConversation[]>(`/ai/conversations${query}`, { token });
 }
 
 export function getAiConversation(token: string, id: number) {

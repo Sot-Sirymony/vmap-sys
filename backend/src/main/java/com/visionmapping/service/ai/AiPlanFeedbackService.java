@@ -48,7 +48,7 @@ public class AiPlanFeedbackService {
     /** The features whose answers are plan builder suggestions. */
     static final Set<String> PLAN_FEATURES = Set.of(
             "AREA_BUILDER", "DREAM_BUILDER", "STRETCH_DREAM", "GOAL_BUILDER", "STRETCH_GOAL", "PLAN_BUILDER", "PLAN_CHECK",
-            "CLARIFY", "TASK_BUILDER", "HELPERS_RISKS", "DRAFT_CHECK", "PLAN_FIX");
+            "CLARIFY", "TASK_BUILDER", "HELPERS_RISKS", "DRAFT_CHECK", "PLAN_FIX", PlanAssistantService.FEATURE);
     private static final Set<String> GOAL_FEATURES = Set.of("GOAL_BUILDER", "STRETCH_GOAL");
     private static final Set<String> STEP_FEATURES = Set.of("PLAN_BUILDER");
     static final int MAX_METRIC_DAYS = 365;
@@ -82,6 +82,16 @@ public class AiPlanFeedbackService {
     @Transactional
     public void recordOutcome(Long requestId, AiPlanOutcomeRequest request) {
         addOutcome(ownPlanRequest(requestId), request.added(), request.edited());
+    }
+
+    /** V11 Phase 7 (PB-FR-48): the same counts, only for an answer of the given feature. */
+    @Transactional
+    public void recordOutcome(Long requestId, String feature, int added, int edited) {
+        AiUsageLog usage = ownPlanRequest(requestId);
+        if (!feature.equals(usage.getFeature())) {
+            throw new BusinessRuleException("This change does not match the answer it was said to come from.");
+        }
+        addOutcome(usage, added, edited);
     }
 
     /**

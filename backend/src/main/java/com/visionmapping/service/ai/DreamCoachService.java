@@ -58,21 +58,35 @@ public class DreamCoachService {
     private final AiUsageLogRepository usageLogRepository;
     private final ClaudeClient claudeClient;
     private final AiContextBuilder contextBuilder;
+    private final PlanAssistantService planAssistant;
     private final TransactionTemplate transactions;
 
     @Transactional(readOnly = true)
     public List<AiConversationResponse> conversations() {
         return conversationRepository.findByUser_IdOrderByUpdatedAtDesc(lookup.userId()).stream()
-                .map(conversation -> new AiConversationResponse(conversation.getId(), conversation.getTitle(),
-                        conversation.getUpdatedAt(), null))
+                .map(conversation -> toResponse(conversation, null))
+                .toList();
+    }
+
+    /** V11 (PB-FR-50): the plan assistant's conversations for one of the participant's dreams and one section. */
+    @Transactional(readOnly = true)
+    public List<AiConversationResponse> conversations(Long dreamId, String section) {
+        return conversationRepository.findByUser_IdAndDreamIdAndSectionKeyOrderByUpdatedAtDesc(lookup.userId(), dreamId, section)
+                .stream()
+                .map(conversation -> toResponse(conversation, null))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public AiConversationResponse conversation(Long id) {
         AiConversation conversation = owned(id);
-        return new AiConversationResponse(conversation.getId(), conversation.getTitle(), conversation.getUpdatedAt(),
+        return toResponse(conversation,
                 messageRepository.findByConversation_IdOrderByIdAsc(id).stream().map(DreamCoachService::toResponse).toList());
+    }
+
+    private static AiConversationResponse toResponse(AiConversation conversation, List<AiMessageResponse> messages) {
+        return new AiConversationResponse(conversation.getId(), conversation.getTitle(), conversation.getUpdatedAt(), messages,
+                conversation.getDreamId(), conversation.getSectionKey());
     }
 
     /** AI-FR-25: a participant may delete a conversation; the usage log keeps no text, so it stays. */
@@ -109,12 +123,25 @@ public class DreamCoachService {
      */
     public record Prepared(AppUser user, String apiKey, String model, BigDecimal budget, String helpLines,
                            Long conversationId, String text, String language, String system,
-                           List<ClaudeClient.Turn> turns, List<String> sources, boolean crisis) {
+                           List<ClaudeClient.Turn> turns, List<String> sources, boolean crisis,
+                           String feature, Long dreamId, String section) {
     }
 
     @Transactional(readOnly = true)
     public Prepared prepare(AiChatRequest request) {
         AppUser user = lookup.currentUser();
+        // V11 Phase 7: a plan assistant message is about one section of one of the participant's dreams.
+        boolean assistant = request.section() != null;
+        if (assistant) {
+            if (request.surface() == null || request.dreamId() == null) {
+                throw new BusinessRuleException("Open a dream to use the plan assistant.");
+            }
+            // V10 (SEC-01-02): ownership first, so another user's dream answers 404 whether or not AI is available.
+            lookup.dream(request.dreamId());
+        }
+        String feature = assistant ? PlanAssistantService.CHAT_FEATURE : FEATURE;
+        Long dreamId = assistant ? request.dreamId() : null;
+        String section = assistant ? request.section() : null;
         String apiKey = accessService.requireAvailable(user);
         String language = request.language() == null ? "en" : request.language();
         String text = request.message().trim();
@@ -122,16 +149,28 @@ public class DreamCoachService {
         Long conversationId = request.conversationId() == null ? null : owned(request.conversationId()).getId();
         if (AiSafety.looksLikeCrisis(text)) {
             return new Prepared(user, apiKey, settings.getModel(), settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
-                    conversationId, text, language, null, List.of(), List.of(), true);
+                    conversationId, text, language, null, List.of(), List.of(), true, feature, dreamId, section);
         }
-        AiContextBuilder.AiContext context = contextBuilder.build(user,
-                new AiContextBuilder.Focus(request.page(), request.dreamId(), request.moduleNumber()), language);
+        String contextText;
+        List<String> sources;
+        if (assistant) {
+            // PB-NFR-12: only the section's items, never the wider records the Dream Coach reads.
+            PlanAssistantService.ChatContext context = planAssistant.chatContext(user, request.dreamId(), request.surface(),
+                    request.section(), request.itemRef());
+            contextText = context.text();
+            sources = context.sources();
+        } else {
+            AiContextBuilder.AiContext context = contextBuilder.build(user,
+                    new AiContextBuilder.Focus(request.page(), request.dreamId(), request.moduleNumber()), language);
+            contextText = context.text();
+            sources = context.sources();
+        }
         List<ClaudeClient.Turn> turns = new ArrayList<>(conversationId == null ? List.of() : history(conversationId));
         turns.add(new ClaudeClient.Turn(true, text));
         String system = CoachingGuidelines.system(language, firstName(user.getFullName()), settings.getCoachingGuidelines())
-                + "\n\n" + context.text();
+                + "\n\n" + contextText;
         return new Prepared(user, apiKey, settings.getModel(), settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
-                conversationId, text, language, system, List.copyOf(turns), context.sources(), false);
+                conversationId, text, language, system, List.copyOf(turns), sources, false, feature, dreamId, section);
     }
 
     public AiChatTurnResponse send(AiChatRequest request) {
@@ -160,7 +199,7 @@ public class DreamCoachService {
                     ? claudeClient.send(prepared.apiKey(), prepared.model(), prepared.system(), prepared.turns())
                     : claudeClient.stream(prepared.apiKey(), prepared.model(), prepared.system(), prepared.turns(), onText);
         } catch (AiUnavailableException exception) {
-            usageLogRepository.save(log(prepared.user(), prepared.model(), 0, 0, AiOutcome.ERROR));
+            usageLogRepository.save(log(prepared, prepared.model(), 0, 0, AiOutcome.ERROR));
             throw exception;
         }
     }
@@ -168,9 +207,9 @@ public class DreamCoachService {
     private AiChatTurnResponse crisisTurn(Prepared prepared) {
         return transactions.execute(status -> {
             boolean coachAlerted = alertService.raise(prepared.user().getId());
-            AiUsageLog usage = usageLogRepository.save(log(prepared.user(), null, 0, 0, AiOutcome.CRISIS_HANDLED));
-            return saveTurn(prepared.user(), prepared.conversationId(), prepared.text(),
-                    AiSafety.crisisReply(prepared.language(), prepared.helpLines(), coachAlerted), AiSafetyFlag.CRISIS, usage, List.of());
+            AiUsageLog usage = usageLogRepository.save(log(prepared, null, 0, 0, AiOutcome.CRISIS_HANDLED));
+            return saveTurn(prepared, AiSafety.crisisReply(prepared.language(), prepared.helpLines(), coachAlerted),
+                    AiSafetyFlag.CRISIS, usage, List.of());
         });
     }
 
@@ -190,8 +229,8 @@ public class DreamCoachService {
                 boolean coachAlerted = alertService.raise(prepared.user().getId());
                 content = AiSafety.withoutMarker(content) + "\n\n" + AiSafety.crisisReply(language, prepared.helpLines(), coachAlerted);
             }
-            AiUsageLog usage = usageLogRepository.save(log(prepared.user(), reply.model(), reply.inputTokens(), reply.outputTokens(), outcome));
-            return saveTurn(prepared.user(), prepared.conversationId(), prepared.text(), content, flag, usage, prepared.sources());
+            AiUsageLog usage = usageLogRepository.save(log(prepared, reply.model(), reply.inputTokens(), reply.outputTokens(), outcome));
+            return saveTurn(prepared, content, flag, usage, prepared.sources());
         });
         warnNearBudget(spentBefore, prepared.budget());
         return turn;
@@ -233,11 +272,14 @@ public class DreamCoachService {
         }
     }
 
-    private AiChatTurnResponse saveTurn(AppUser user, Long conversationId, String text, String replyText,
-                                        AiSafetyFlag flag, AiUsageLog usage, List<String> sources) {
-        AiConversation conversation = conversationId == null
-                ? conversationRepository.save(AiConversation.builder().user(user).title(title(text)).build())
-                : conversationRepository.findById(conversationId).orElseThrow();
+    private AiChatTurnResponse saveTurn(Prepared prepared, String replyText, AiSafetyFlag flag, AiUsageLog usage, List<String> sources) {
+        AppUser user = prepared.user();
+        String text = prepared.text();
+        // PB-FR-50: a new plan assistant conversation is tagged with its dream and section.
+        AiConversation conversation = prepared.conversationId() == null
+                ? conversationRepository.save(AiConversation.builder().user(user).title(title(text))
+                        .dreamId(prepared.dreamId()).sectionKey(prepared.section()).build())
+                : conversationRepository.findById(prepared.conversationId()).orElseThrow();
         AiMessage asked = messageRepository.save(AiMessage.builder()
                 .user(user).conversation(conversation).role(AiMessageRole.USER).content(text).safetyFlag(flag).build());
         AiMessage answered = messageRepository.save(AiMessage.builder()
@@ -267,8 +309,8 @@ public class DreamCoachService {
         }
     }
 
-    private static AiUsageLog log(AppUser user, String model, long inputTokens, long outputTokens, AiOutcome outcome) {
-        return AiUsage.entry(user, FEATURE, model, inputTokens, outputTokens, outcome);
+    private static AiUsageLog log(Prepared prepared, String model, long inputTokens, long outputTokens, AiOutcome outcome) {
+        return AiUsage.entry(prepared.user(), prepared.feature(), model, inputTokens, outputTokens, outcome);
     }
 
     private AiConversation owned(Long id) {

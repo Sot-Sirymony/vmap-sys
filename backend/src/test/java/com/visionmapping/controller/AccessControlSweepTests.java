@@ -330,6 +330,8 @@ class AccessControlSweepTests {
         attempts.put("/api/ai/plan/add", Map.of("goals", List.of(Map.of("goal",
                 with(createBodies.get("goals"), "dreamId", ownerIds.get("dreams")), "edited", false))));
         attempts.put("/api/ai/plan/undo", Map.of("goalIds", List.of(ownerIds.get("goals"))));
+        // V11 Phase 7: a plan assistant message about another user's dream.
+        attempts.put("/api/ai/chat", Map.of("message", "Hello", "dreamId", ownerIds.get("dreams"), "surface", "PLAN", "section", "GOALS"));
 
         List<String> problems = new ArrayList<>();
         for (Map.Entry<String, Map<String, Object>> attempt : attempts.entrySet()) {
@@ -531,6 +533,13 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/clarified-field")) {
             return json(Map.of("field", "WHY_IMPORTANT", "value", "Someone else's answer"));
+        }
+        // V11 Phase 7: the plan assistant.
+        if (pattern.endsWith("/assistant/section-check") || pattern.endsWith("/assistant/proposals")) {
+            return json(Map.of("surface", "PLAN", "section", "STEPS"));
+        }
+        if (pattern.endsWith("/assistant/apply")) {
+            return json(Map.of("kind", "EDIT", "itemRef", "goal:" + ownerIds.get("goals"), "field", "TITLE", "value", "Someone else's"));
         }
         if (pattern.endsWith("/draft-fix")) {
             return json(Map.of("itemKey", "g1", "kind", "GAP"));

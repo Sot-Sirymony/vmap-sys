@@ -49,7 +49,9 @@ export function DreamCoachLauncher() {
     }
   }
 
-  if (!token || !status || status.reason === 'OFF' || pathname.startsWith('/dream-coach')) {
+  // V11 Phase 7 (PB-FR-50): the Plan page and Build my plan have the plan assistant instead, so only one assistant is on screen.
+  const planAssistantPage = pathname === '/plan' || /^\/dreams\/\d+\/build/.test(pathname);
+  if (!token || !status || status.reason === 'OFF' || pathname.startsWith('/dream-coach') || planAssistantPage) {
     return null;
   }
 

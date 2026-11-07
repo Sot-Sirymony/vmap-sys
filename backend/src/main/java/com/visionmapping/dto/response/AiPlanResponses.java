@@ -153,4 +153,37 @@ public final class AiPlanResponses {
 
     public record PlanMetrics(int days, List<PlanFeatureMetrics> features) {
     }
+    // V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50).
+
+    /**
+     * One rule-based problem in a section. itemRef is "goal:12" or "step:34"
+     * on the Plan page and the draft key in Build my plan. No AI is used.
+     */
+    public record SectionIssue(String kind, String itemType, String itemRef, String itemTitle, String problem, String fix) {
+    }
+
+    /** PB-FR-49: what the panel shows for a section, with or without AI. canPropose says the section takes change cards. */
+    public record SectionCheck(String surface, String section, List<SectionIssue> issues, boolean canPropose) {
+    }
+
+    /**
+     * PB-FR-46: one proposed change. kind EDIT changes field (TITLE, SUCCESS,
+     * WHY, DATE or OWNER) of itemRef to value (a date as YYYY-MM-DD).
+     * ADD_STEP and ADD_TASK add title, owner and date under parentRef; ADD_RISK
+     * adds an obstacle, optionally tied to parentRef. itemTitle and parentTitle
+     * are the current titles, for display. date is null when Claude's date
+     * broke a limit, so the participant picks one.
+     */
+    public record AssistantChange(String kind, String itemType, String itemRef, String itemTitle, String field, String value,
+                                  String parentRef, String parentType, String parentTitle, String title, String owner,
+                                  LocalDate date, String obstacleType, String severity, String solution, String reason) {
+    }
+
+    /** requestId: the answer to rate and count outcomes against (PB-FR-48). */
+    public record AssistantProposals(List<AssistantChange> changes, String note, Long requestId) {
+    }
+
+    /** PB-FR-46: what a saved change card became on the Plan page. */
+    public record AssistantApplied(String itemType, Long id) {
+    }
 }

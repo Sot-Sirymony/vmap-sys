@@ -278,4 +278,25 @@ public final class AiDrafts {
     public record TranslationDraft(
             @JsonPropertyDescription("One translation per input text, in the same order") List<String> translations) {
     }
+    // V11 Phase 7: the plan assistant's proposed changes (PB-FR-46).
+
+    public record AssistantChangeDraft(
+            @JsonPropertyDescription("EDIT, ADD_STEP, ADD_TASK or ADD_RISK") String kind,
+            @JsonPropertyDescription("For EDIT: the ref in brackets of the item to change; empty otherwise") String itemRef,
+            @JsonPropertyDescription("For EDIT: TITLE, SUCCESS, WHY, DATE or OWNER") String field,
+            @JsonPropertyDescription("For EDIT: the new value; a date as YYYY-MM-DD; an owner is Me or a role, never a name") String value,
+            @JsonPropertyDescription("For ADD_STEP: the goal's ref; ADD_TASK: the step's ref; ADD_RISK: the goal or step it threatens, or empty") String parentRef,
+            @JsonPropertyDescription("For ADD_STEP, ADD_TASK and ADD_RISK: a short title starting with a verb (for a risk, the risk itself)") String title,
+            @JsonPropertyDescription("For ADD_STEP and ADD_TASK: Me or a role, never a person's name") String owner,
+            @JsonPropertyDescription("For ADD_STEP and ADD_TASK: a due date as YYYY-MM-DD") String date,
+            @JsonPropertyDescription("For ADD_RISK: KNOWLEDGE, SKILL, TIME, MONEY, MOTIVATION, PARTNER, SYSTEM, DECISION or OTHER") String obstacleType,
+            @JsonPropertyDescription("For ADD_RISK: LOW, MEDIUM, HIGH or CRITICAL") String severity,
+            @JsonPropertyDescription("For ADD_RISK: one sentence on how to handle it") String solution,
+            @JsonPropertyDescription("One short sentence on why this change helps") String reason) {
+    }
+
+    public record AssistantChangeDrafts(
+            List<AssistantChangeDraft> changes,
+            @JsonPropertyDescription("One or two sentences for the participant about these changes, or why none are needed") String note) {
+    }
 }

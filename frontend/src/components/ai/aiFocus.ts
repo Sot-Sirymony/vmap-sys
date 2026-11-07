@@ -49,6 +49,7 @@ const SOURCE_LABELS: Record<string, string> = {
   fears: 'your fear log',
   obstacles: 'your obstacles',
   module: 'your module',
+  section: 'this section of your plan',
 };
 
 /** AI-FR-05: the short reason under a reply. Null when it used none of the participant's records. */

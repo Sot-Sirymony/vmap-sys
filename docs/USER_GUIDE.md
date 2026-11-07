@@ -56,6 +56,19 @@ Instead of the pages above, you can build the plan for one dream in a single gui
    later where its step or goal date allows. Then choose **Add plan**.
    Everything is added together, or nothing is. **Undo** right after archives what was just added.
 
+### Plan assistant
+
+On the **Plan** page and in **Build my plan**, the round button at the bottom right opens the plan assistant
+instead of the Dream Coach. Each section also has a **Help with this section** button.
+
+- The panel says what it is helping with, what the section needs, why it matters, questions to think about, and
+  what the plan check found in that section. This part works even when AI is off.
+- In Build my plan it follows you from stage to stage. Tick **Keep this topic when I move to another section** to stay on one.
+- With AI consent, pick one of three ready questions or type your own. The assistant sees only that section of your plan.
+- **Suggest changes** gives small change cards, such as a clearer title, a missing step or a likely risk. Edit a card
+  if you like, then choose **Apply to draft** (Build my plan) or **Save to my plan** (Plan page), or **Dismiss** it.
+  Nothing changes unless you choose it.
+
 ## Manage Tasks
 
 The Tasks page shows a board with these columns:

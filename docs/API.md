@@ -542,7 +542,7 @@ accept `?language=km`; a language with no text falls back to English.
 | --- | --- | --- |
 | GET | `/api/ai/status` | `available`, `reason` (`OK`, `OFF`, `BUDGET_REACHED`, `NO_CONSENT`, `DAILY_LIMIT`), `consentGiven`, `consentAt`, `dailyLimit`, `messagesLeftToday` |
 | PUT | `/api/ai/consent` | `{ "consent": true \| false }`; each change is recorded |
-| GET | `/api/ai/conversations` | The signed-in person's conversations, newest first |
+| GET | `/api/ai/conversations` | The signed-in person's conversations, newest first, each with `dreamId` and `section` (set for plan assistant conversations). `?dreamId=12&section=GOALS` lists only the plan assistant's conversations for that dream and section |
 | DELETE | `/api/ai/conversations` | Clears all of the signed-in person's Dream Coach conversations (204). The usage log keeps cost and ratings, never text |
 | GET, DELETE | `/api/ai/conversations/{id}` | One conversation with its messages, or delete it (404 for anyone else's) |
 | POST | `/api/ai/chat` | `{ "conversationId": null, "message": "...", "language": "en" \| "km", "page": "/dreams/12", "dreamId": 12, "moduleNumber": null }` (page, dreamId and moduleNumber pick the context). 400 without consent, 429 at the daily limit, 503 "AI help is temporarily unavailable." when off, over budget or unreachable (nothing saved). A crisis message gets the help lines without calling Claude; `safetyFlag` is `CRISIS` |
@@ -644,6 +644,19 @@ Drafts take `helpers` (up to 10: `key`, `role`, `supportType`, `name`, `partnerI
 `/api/admin/ai-settings` takes and returns `planModel`: the model for plan building (goal, step and task suggestions, clarify, helpers and risks, plan checks and fixes). Left out keeps it; blank or null uses the main model.
 
 Draft steps take `estimatedHours` and `startsAfterKey` (the key of an earlier step of the same goal in the draft); draft tasks take `requestId`, `edited` and `locked`. On add, `startsAfterKey` becomes the saved step's `startsAfterStepId`.
+
+### V11: plan assistant (Phase 7)
+
+Helps with one section of the Plan page (`surface` `PLAN`, sections `WHOLE`, `STATEMENT`, `GOALS`, `STEPS`, `DATES`, `RESOURCES`, `PEOPLE`, `MILESTONES`) or of Build my plan (`BUILDER`, sections `WHOLE`, `CLARIFY`, `GOALS`, `STEPS`, `TASKS`, `HELPERS`, `REVIEW`). A section not on that page answers 400. Another user's dream answers 404, before AI is checked. Only the section's items go to Claude, never partner names or contacts. Items have a ref: `dream`, `goal:12` or `step:34` on the Plan page, the draft key in Build my plan.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/chat` and `/api/ai/chat/stream` | Add `"surface"`, `"section"`, optional `"itemRef"` and `"dreamId"` to send the message to the plan assistant. The answer's `contextSources` is `["section"]`; usage is logged as `PLAN_ASSISTANT_CHAT`. A new conversation is tagged with the dream and section |
+| POST | `/api/ai/plan/dreams/{dreamId}/assistant/section-check` | `{ "surface", "section", "itemRef" }` → `issues[]` (`kind`, `itemType`, `itemRef`, `itemTitle`, `problem`, `fix`) from the rule-based plan check for that section, and `canPropose`. Never uses AI |
+| POST | `/api/ai/plan/dreams/{dreamId}/assistant/proposals?language=en` | Same body → `changes[]`, `note`, `requestId` (feature `PLAN_ASSISTANT`, rated and counted like other plan answers). A change has `kind`: `EDIT` (`itemRef`, `itemTitle`, `field` `TITLE\|SUCCESS\|WHY\|DATE\|OWNER`, `value`), `ADD_STEP` or `ADD_TASK` (`parentRef`, `parentTitle`, `title`, `owner`, `date`, null when it broke a date limit) or `ADD_RISK` (`title`, `obstacleType`, `severity`, `solution`, optional `parentRef`); and `reason`. Up to 5. Changes outside the section, to items already in the plan (Build my plan), or with a date past the parent's are dropped. 400 for a section that only explains (`PEOPLE`, `MILESTONES`, `WHOLE`). Saves nothing |
+| POST | `/api/ai/plan/dreams/{dreamId}/assistant/apply` | Plan page only: one change as the participant left it, plus `requestId` and `edited` → 201 `itemType`, `id`. Saved through the normal dream, goal, step and obstacle rules (a new step needs a date). Every ref must be in this dream's plan; others answer 404. `ADD_TASK` answers 400 (tasks are changed in Build my plan) |
+
+In Build my plan, cards are applied to the draft in the browser and counted with `POST /api/ai/plan/requests/{id}/outcome`.
 
 ### V9: daily use (Phase 6)
 

@@ -35,4 +35,11 @@ public class AiConversation extends BaseAuditableEntity {
 
     @Column(nullable = false, length = 120)
     private String title;
+
+    /** V11 (PB-FR-50): the dream and plan section a plan assistant conversation belongs to; empty for the Dream Coach. */
+    @Column(name = "dream_id")
+    private Long dreamId;
+
+    @Column(name = "section_key", length = 40)
+    private String sectionKey;
 }

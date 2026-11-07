@@ -54,7 +54,9 @@ public class AiStructuredRequests {
         String system = guidelines + "\n\n" + AiContextBuilder.asParticipantData(records, "the participant's own records.");
         com.visionmapping.entity.AiSettings settings = aiSettingsService.current();
         // V11 (PB-FR-39): plan building may use its own model; everything else uses the main one.
+        // V11 Phase 7 (PB-NFR-11): the plan assistant's small changes stay on the main model.
         String model = settings.getPlanModel() != null && AiPlanFeedbackService.PLAN_FEATURES.contains(feature)
+                && !PlanAssistantService.FEATURE.equals(feature)
                 ? settings.getPlanModel() : settings.getModel();
         ClaudeClient.Structured<T> answer;
         try {
