@@ -10,6 +10,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # CLAUDE.md fixes the backend on Spring Boot 3.x. Minor and patch updates
+    # still come through; a move to Spring Boot 4 is a decision made by hand.
+    ignore:
+      - dependency-name: org.springframework.boot:spring-boot-starter-parent
+        update-types: ["version-update:semver-major"]
     groups:
       maven-minor-and-patch:
         update-types: [minor, patch]
@@ -20,6 +25,11 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # CLAUDE.md fixes React and React DOM at exactly 19.2.7. Change them by
+    # hand, together, only when that decision changes.
+    ignore:
+      - dependency-name: react
+      - dependency-name: react-dom
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
@@ -29,6 +39,14 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # Both images stay on Java 17 (the build and runtime must match). Patch
+    # updates within 17 still come through; moving to a newer long-term
+    # release (21 or 25) is done by hand, never to a short-term one.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: ["version-update:semver-major"]
+      - dependency-name: maven
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: /
