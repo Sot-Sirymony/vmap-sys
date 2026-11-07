@@ -2,16 +2,6 @@
 # expiry date; after that date the CI scan fails again and someone must decide
 # again (upgrade, or renew with a new reason). Keep this list short.
 vulnerabilities:
-  - id: CVE-2026-104848
-    statement: >-
-      tinypool, used only by the Vitest test runner (a dev dependency). It never
-      ships to users and runs only on developer machines and in CI, where the
-      test code is our own. The fix needs Vitest 4+, blocked by an npm 10.9
-      peer-resolution bug (arborist "edgesOut"); retry the upgrade.
-    expired_at: 2026-12-07
-  - id: CVE-2026-104849
-    statement: Same as CVE-2026-104848 (tinypool via Vitest, dev only).
-    expired_at: 2026-12-07
   - id: CVE-2026-47884
     statement: >-
       Spring MVC XsltView remote code execution. Fixed only in Spring Framework

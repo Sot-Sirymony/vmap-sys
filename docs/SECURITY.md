@@ -93,8 +93,8 @@ writes `coverage/lcov-report/index.html`.
 Review Dependabot pull requests at least monthly. If a fix is not possible in
 time, add the finding to [`.trivyignore.yaml`](../.trivyignore.yaml) with a
 reason and an `expired_at` date no more than 30 days away. Current exceptions:
-two `tinypool` advisories in the Vitest test runner (development only), until
-7 Dec 2026.
+two Spring MVC advisories fixed only in Spring Boot 4 and not reachable here
+(see the file), until 7 Dec 2026.
 
 ### Adding a dependency (SEC-03-06)
 
