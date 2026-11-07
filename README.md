@@ -146,6 +146,25 @@ cd frontend
 npm run build
 ```
 
+### Test coverage (BRD 12)
+
+CI fails when coverage falls below the minimum, on either side:
+
+```bash
+cd backend && mvn verify                 # tests, JaCoCo report and check (target/site/jacoco/index.html)
+cd frontend && npm run test:coverage     # tests with coverage and thresholds (coverage/lcov-report/index.html)
+```
+
+The minimums are in `backend/pom.xml` (`coverage.line.minimum`, `coverage.branch.minimum`) and
+`frontend/vite.config.ts` (`test.coverage.thresholds`). They are raised at the end of each BRD 12 phase
+and never lowered without the product owner's approval.
+
+The whole-project figure from SonarQube Cloud, by area, for the end of each phase:
+
+```bash
+node scripts/coverage-report.mjs            # or --markdown for a table
+```
+
 ### Plan builder sample run (V11, PB-NFR-08)
 
 Before changing plan builder prompts or the model, run the 20 sample dreams in

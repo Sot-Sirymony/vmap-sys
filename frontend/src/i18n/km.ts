@@ -670,6 +670,7 @@ export const km: Record<string, string> = {
   'Look for a partner or connector who can help directly.': 'រកដៃគូ ឬអ្នកភ្ជាប់ទំនាក់ទំនងដែលអាចជួយដោយផ្ទាល់។',
   'Energy': 'ថាមពល',
   'Unable to add step.': 'មិនអាចបន្ថែមជំហានបានទេ។',
+  'Unable to add task.': 'មិនអាចបន្ថែមកិច្ចការបានទេ។',
   'Add task': 'បន្ថែមកិច្ចការ',
   'This is a high-priority moonshot dream. Answer all eight questions honestly, or instead link at least two Advisor or Mentor partners to it (directly or through one of its goals) on the Partners page. Either one clears this check.': 'នេះជាក្តីស្រមៃ Moonshot អាទិភាពខ្ពស់។ ឆ្លើយសំណួរទាំងប្រាំបីដោយស្មោះ ឬភ្ជាប់ដៃគូជាទីប្រឹក្សា ឬអ្នកណែនាំយ៉ាងហោចណាស់ពីរនាក់ទៅវា (ដោយផ្ទាល់ ឬតាមគោលដៅមួយរបស់វា) នៅទំព័រដៃគូ។ មួយណាក៏ឆ្លងការត្រួតពិនិត្យនេះបាន។',
   'Optional. A, B, C… — assigned after listing everything, to mark which goals under this dream come first. Ties are fine; nothing enforces a unique order.': 'មិនចាំបាច់។ A, B, C… — ដាក់ក្រោយពីរាយអ្វីៗទាំងអស់ ដើម្បីសម្គាល់ថាគោលដៅណាក្រោមក្តីស្រមៃនេះមកមុន។ ស្មើគ្នាក៏បាន គ្មានអ្វីបង្ខំឱ្យលំដាប់ខុសគ្នាទេ។',
@@ -1376,6 +1377,7 @@ export const km: Record<string, string> = {
 
   // Filters and search
   'Search {items}...': 'ស្វែងរក{items}...',
+  'Search {items}': 'ស្វែងរក{items}',
   'All': 'ទាំងអស់',
   'All areas': 'ផ្នែកទាំងអស់',
 

@@ -23,6 +23,8 @@ export function EmptyState({ children, headline, icon: Icon = Inbox, action }: E
       <Stack className="empty-state" direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
         <Icon size={16} />
         <span>{children}</span>
+        {/* An action passed to the compact form is shown too, never dropped. */}
+        {action}
       </Stack>
     );
   }

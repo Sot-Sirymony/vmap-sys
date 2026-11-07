@@ -1,7 +1,6 @@
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType } from 'react';
-import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as aiDailyApi from '../api/aiDailyApi';
 import * as dreamApi from '../api/dreamApi';
@@ -13,6 +12,9 @@ import * as reviewApi from '../api/reviewApi';
 import * as stepApi from '../api/stepApi';
 import * as taskApi from '../api/taskApi';
 import * as visionAreaApi from '../api/visionAreaApi';
+import { answerEmptyLists } from '../test/apiMocks';
+import { aDream, aGoal, anObstacle, aReview, aTask, aVisionArea } from '../test/builders';
+import { renderPage } from '../test/render';
 import { DreamsPage } from './DreamsPage';
 import { GoalsPage } from './GoalsPage';
 import { ObstaclesPage } from './ObstaclesPage';
@@ -20,8 +22,6 @@ import { ReviewsPage } from './ReviewsPage';
 import { TasksBoardPage } from './TasksBoardPage';
 import { VisionAreasPage } from './VisionAreasPage';
 
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ token: 'token', user: { fullName: 'Tester', role: 'USER' } }) }));
-vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: vi.fn(), show: vi.fn() }) }));
 vi.mock('../api/aiDailyApi');
 vi.mock('../api/dreamApi');
 vi.mock('../api/goalApi');
@@ -36,43 +36,29 @@ vi.mock('../api/visionAreaApi');
 const modules: Record<string, unknown>[] = [aiDailyApi, dreamApi, goalApi, idealPartnerProfileApi, obstacleApi, partnerApi,
   reviewApi, stepApi, taskApi, visionAreaApi];
 
-/** Every list call answers an empty list, unless a test gives it items. */
-function emptyLists() {
-  for (const module of modules) {
-    for (const [name, value] of Object.entries(module)) {
-      if (name.startsWith('list') && vi.isMockFunction(value)) {
-        value.mockResolvedValue([]);
-      }
-    }
-  }
-  // Partners come back a page at a time.
-  vi.mocked(partnerApi.listPartners).mockResolvedValue({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 500 } as never);
-}
-
-/** Three items ranked C, A and C, plus one without a rank. */
-function ranked<T>(base: T) {
-  return ['C', 'A', null, 'C', 'B'].map((letterRank, index) => ({ ...base, id: index + 1, letterRank, title: `Item ${index + 1}`,
-    name: `Item ${index + 1}` }));
+/** Items ranked C, A, none, C and B. */
+function ranked<T>(build: (overrides: { id: number; letterRank: string | null }) => T): T[] {
+  return ['C', 'A', null, 'C', 'B'].map((letterRank, index) => build({ id: index + 1, letterRank }));
 }
 
 const cases: [string, ComponentType, () => void][] = [
-  ['Vision Areas', VisionAreasPage, () => vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue(ranked({ status: 'ACTIVE', priority: 'HIGH' }) as never)],
-  ['Dreams', DreamsPage, () => vi.mocked(dreamApi.listDreams).mockResolvedValue(ranked({ status: 'ACTIVE', priority: 'HIGH', visionAreaId: 1 }) as never)],
-  ['Goals', GoalsPage, () => vi.mocked(goalApi.listGoals).mockResolvedValue(ranked({ status: 'IN_PROGRESS', priority: 'HIGH', dreamId: 1 }) as never)],
-  ['Tasks', TasksBoardPage, () => vi.mocked(taskApi.listTasks).mockResolvedValue(ranked({ status: 'NOT_STARTED', priority: 'HIGH', stepId: 1, owner: 'Me' }) as never)],
-  ['Obstacles', ObstaclesPage, () => vi.mocked(obstacleApi.listObstacles).mockResolvedValue(ranked({ status: 'OPEN', severity: 'HIGH', obstacleType: 'TIME' }) as never)],
-  ['Reviews', ReviewsPage, () => vi.mocked(reviewApi.listReviews).mockResolvedValue(ranked({ reviewType: 'WEEKLY', reviewDate: '2026-11-01' }) as never)],
+  ['Vision Areas', VisionAreasPage, () => vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue(ranked((o) => aVisionArea({ ...o, name: `Area ${o.id}` })))],
+  ['Dreams', DreamsPage, () => vi.mocked(dreamApi.listDreams).mockResolvedValue(ranked((o) => aDream({ ...o, title: `Dream ${o.id}` })))],
+  ['Goals', GoalsPage, () => vi.mocked(goalApi.listGoals).mockResolvedValue(ranked((o) => aGoal({ ...o, title: `Goal ${o.id}` })))],
+  ['Tasks', TasksBoardPage, () => vi.mocked(taskApi.listTasks).mockResolvedValue(ranked((o) => aTask({ ...o, title: `Task ${o.id}` })))],
+  ['Obstacles', ObstaclesPage, () => vi.mocked(obstacleApi.listObstacles).mockResolvedValue(ranked((o) => anObstacle({ ...o, title: `Obstacle ${o.id}` })))],
+  ['Reviews', ReviewsPage, () => vi.mocked(reviewApi.listReviews).mockResolvedValue(ranked((o) => aReview(o)))],
 ];
 
 describe('letter rank filters', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    emptyLists();
+    answerEmptyLists(modules, ['listPartners']);
   });
 
   it.each(cases)('%s page offers each rank in use once, in order', async (_name, Page, withItems) => {
     withItems();
-    render(<MemoryRouter><Page /></MemoryRouter>);
+    renderPage(<Page />);
 
     const filter = (await screen.findByText('Rank', { selector: 'label' })) as HTMLElement;
     await userEvent.click(within(filter).getByRole('combobox'));

@@ -1692,6 +1692,7 @@ function TitleAddRow({ placeholder, level, onAdd, inputRef }: {
 }) {
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -1699,9 +1700,13 @@ function TitleAddRow({ placeholder, level, onAdd, inputRef }: {
       return;
     }
     setBusy(true);
+    setError('');
     try {
       await onAdd(title.trim());
       setTitle('');
+    } catch (saveError) {
+      // As in StepAddRow: a failed add says why, instead of failing silently.
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to add goal.'));
     } finally {
       setBusy(false);
     }
@@ -1715,6 +1720,7 @@ function TitleAddRow({ placeholder, level, onAdd, inputRef }: {
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={placeholder} aria-label={placeholder} inputRef={inputRef} />
         <Button type="submit" variant="secondary" disabled={busy || !title.trim()}>{busy ? tr('Adding...') : tr('Add')}</Button>
       </form>
+      {error && <p className="map-meta" role="alert">{error}</p>}
     </div>
   );
 }
@@ -1787,6 +1793,7 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
   const [owner, setOwner] = useState(defaultOwner);
   const [dueDate, setDueDate] = useState('');
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   // BR-16: a task needs title + owner + due date — owner defaults to the
   // signed-in user, the due date is asked inline (FR-22.2).
@@ -1796,6 +1803,7 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
       return;
     }
     setBusy(true);
+    setError('');
     try {
       await createTask(token, {
         stepId,
@@ -1809,6 +1817,9 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
       setTitle('');
       setDueDate('');
       await onDataChange();
+    } catch (saveError) {
+      // As in StepAddRow: a failed add says why, instead of failing silently.
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to add task.'));
     } finally {
       setBusy(false);
     }
@@ -1824,6 +1835,7 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
           {busy ? tr('Adding...') : tr('Add task')}
         </Button>
       </form>
+      {error && <p className="map-meta" role="alert">{error}</p>}
     </div>
   );
 }

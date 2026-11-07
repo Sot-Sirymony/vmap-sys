@@ -36,6 +36,9 @@
         <jjwt.version>0.12.6</jjwt.version>
         <poi.version>5.3.0</poi.version>
         <jacoco.version>0.8.13</jacoco.version>
+        <!-- BRD 12 COV-FR-03: minimum backend coverage; see the jacoco check below. -->
+        <coverage.line.minimum>0.85</coverage.line.minimum>
+        <coverage.branch.minimum>0.68</coverage.branch.minimum>
     </properties>
 
     <dependencies>
@@ -210,6 +213,38 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                    </execution>
+                    <!--
+                      BRD 12 COV-FR-03, COV-FR-05: `mvn verify` fails below these.
+                      Phase 1 (7 Nov 2026) measured lines 85.6%, branches 68.4%.
+                      Raised at the end of each phase, never lowered without the
+                      product owner's approval.
+                    -->
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${coverage.line.minimum}</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${coverage.branch.minimum}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

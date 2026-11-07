@@ -22,8 +22,10 @@ export function SearchBar({ value, onChange, entityLabel }: SearchBarProps) {
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={tr('Search {items}...', { items: tr(entityLabel) })}
-      aria-label={`Search ${entityLabel}`}
       slotProps={{
+        // On the search box itself: on TextField it would land on the outer
+        // wrapper and leave the box unnamed for screen readers.
+        htmlInput: { 'aria-label': tr('Search {items}', { items: tr(entityLabel) }) },
         input: {
           startAdornment: (
             <InputAdornment position="start">

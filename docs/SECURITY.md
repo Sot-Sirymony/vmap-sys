@@ -41,8 +41,8 @@ Every push and pull request to `main` runs [`.github/workflows/ci.yml`](../.gith
 
 | Job | What it checks |
 | --- | --- |
-| Backend tests | `mvn verify`: compile, every backend test, and JaCoCo coverage |
-| Frontend tests | `npm ci` (exactly the lock file), type-check, build, every frontend test with coverage |
+| Backend tests | `mvn verify`: compile, every backend test, JaCoCo coverage, and a minimum coverage check (BRD 12) |
+| Frontend tests | `npm ci` (exactly the lock file), type-check, build, every frontend test with coverage, and minimum coverage thresholds (BRD 12) |
 | SonarQube | Code quality on SonarQube Cloud: bugs, code smells, security hotspots, duplication and coverage, against the quality gate. Uses the two jobs' coverage reports and [`sonar-project.properties`](../sonar-project.properties). Skipped when the `SONAR_TOKEN` secret is not available (Dependabot and fork pull requests) |
 | Security scan | Builds the backend image and scans it with Trivy (operating system packages and the Java libraries in the app); scans the frontend lock file including build tools; `npm audit` on what ships to browsers; on `main`, saves a CycloneDX software bill of materials as a build artifact for 90 days |
 

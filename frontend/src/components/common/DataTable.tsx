@@ -92,13 +92,18 @@ type DataTableProps<T> = {
   reorder?: DataTableReorder;
 };
 
-function compare(left: SortValue, right: SortValue) {
+function compare(left: SortValue, right: SortValue, direction: 1 | -1) {
   const leftEmpty = left === null || left === undefined || left === '';
   const rightEmpty = right === null || right === undefined || right === '';
   if (leftEmpty || rightEmpty) {
-    // Empty values always sort last, in both directions.
+    // Empty values always sort last, in both directions, so they are not
+    // flipped by the direction like the other values below.
     return leftEmpty && rightEmpty ? 0 : leftEmpty ? 1 : -1;
   }
+  return compareValues(left, right) * direction;
+}
+
+function compareValues(left: SortValue, right: SortValue) {
   if (typeof left === 'number' && typeof right === 'number') {
     return left - right;
   }
@@ -148,7 +153,7 @@ export function DataTable<T extends { id: number }>({
     }
     const sortValue = column.sortValue;
     const direction = sortDirection === 'asc' ? 1 : -1;
-    return [...rows].sort((left, right) => compare(sortValue(left), sortValue(right)) * direction);
+    return [...rows].sort((left, right) => compare(sortValue(left), sortValue(right), direction));
   }, [rows, columns, sortKey, sortDirection, serverPaging]);
 
   const currentPage = serverPaging ? serverPaging.page : page;

@@ -239,16 +239,21 @@ export function TasksBoardPage() {
     if (!token || !quickParentId || !dueDate) {
       return;
     }
-    await createTask(token, {
-      stepId: Number(quickParentId),
-      title,
-      owner: user?.fullName ?? 'Me',
-      priority: 'MEDIUM',
-      dueDate,
-      status: 'NOT_STARTED',
-      progressPercent: 0,
-    });
-    await crud.reload();
+    // As on Goals and Steps: a failed add says why, instead of failing silently.
+    try {
+      await createTask(token, {
+        stepId: Number(quickParentId),
+        title,
+        owner: user?.fullName ?? 'Me',
+        priority: 'MEDIUM',
+        dueDate,
+        status: 'NOT_STARTED',
+        progressPercent: 0,
+      });
+      await crud.reload();
+    } catch (addError) {
+      crud.setError(addError instanceof Error ? addError.message : tr('Unable to add task.'));
+    }
   }
 
   async function handleSubmit(event: FormEvent) {

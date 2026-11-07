@@ -5,7 +5,7 @@ import { logoutSession, refreshSession } from '../api/authApi';
 import type { AuthResponse, AuthState, AuthUser } from '../types/auth';
 import type { AppearancePreferences } from '../types/preferences';
 
-type AuthContextValue = AuthState & {
+export type AuthContextValue = AuthState & {
   isAuthenticated: boolean;
   /**
    * V10: true while a stored session is being renewed as the app opens. The
@@ -44,7 +44,8 @@ const REFRESH_LOCK = 'vision-mapping-refresh';
 /** Renew this long before the access token runs out. */
 const REFRESH_AHEAD_MS = 60_000;
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+// Exported so tests can supply a signed-in user (src/test/render.tsx); the app uses AuthProvider.
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 const EMPTY_AUTH: AuthState = { token: null, user: null };
 

@@ -9,9 +9,17 @@ type TextareaProps = {
   disabled?: boolean;
   name?: string;
   autoFocus?: boolean;
+  /** Names the text box for screen readers when no visible label wraps it. */
+  'aria-label'?: string;
 };
 
-export function Textarea(props: TextareaProps) {
+export function Textarea({ 'aria-label': ariaLabel, ...props }: TextareaProps) {
+  // The label goes on the <textarea> itself, as in Input. Spread onto
+  // TextField it would land on the outer wrapper and leave the box unnamed.
+  const htmlInput = {
+    ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+    ...(props.autoFocus ? { 'data-autofocus': true } : {}),
+  };
   return (
     <TextField
       variant="outlined"
@@ -19,7 +27,7 @@ export function Textarea(props: TextareaProps) {
       fullWidth
       multiline
       minRows={3}
-      slotProps={props.autoFocus ? { htmlInput: { 'data-autofocus': true } } : undefined}
+      slotProps={Object.keys(htmlInput).length > 0 ? { htmlInput } : undefined}
       {...props}
     />
   );

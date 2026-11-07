@@ -86,7 +86,28 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text-summary', 'lcov'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/**/*.d.ts'],
+      // BRD 12 COV-FR-04: only these are left out, each for the reason given.
+      // Anything else needs the engineering lead's approval, recorded in the BRD.
+      exclude: [
+        'src/**/*.test.{ts,tsx}', // the tests themselves
+        'src/test/**', // test set-up and shared test helpers
+        'src/**/*.d.ts', // type declarations: no code runs
+        'src/types/**', // type-only files: no code runs
+        'src/main.tsx', // entry file: mounts the app into the page, run by the browser only
+      ],
+      // BRD 12 COV-FR-02, COV-FR-05: CI fails below these. They start just under
+      // the measured level and are raised at the end of each phase, never lowered
+      // without the product owner's approval.
+      // Phase 1 (7 Nov 2026) measured lines 41.5%, statements 41.5%, branches
+      // 40.5%, functions 36.4%. Phase 2 (7 Nov 2026) measured lines 53.3%,
+      // statements 53.0%, branches 49.5%, functions 50.5%. Phase 3 (7 Nov 2026)
+      // measured lines 69.7%, statements 68.9%, branches 64.1%, functions 64.3%.
+      thresholds: {
+        lines: 69,
+        statements: 68,
+        branches: 64,
+        functions: 64,
+      },
     },
   },
 });
