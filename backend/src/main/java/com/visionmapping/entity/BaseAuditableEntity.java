@@ -5,6 +5,7 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -21,13 +22,18 @@ public abstract class BaseAuditableEntity {
 
     @PrePersist
     protected void onCreate() {
-        Instant now = Instant.now();
+        Instant now = now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = Instant.now();
+        updatedAt = now();
+    }
+
+    /** Whole microseconds, the most the database keeps, so a saved time reads back unchanged (see TimeConfig). */
+    private static Instant now() {
+        return Instant.now().truncatedTo(ChronoUnit.MICROS);
     }
 }

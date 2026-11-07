@@ -293,7 +293,7 @@ public class DreamCoachService {
                 .safetyFlag(flag).usageLog(usage)
                 .contextSources(sources.isEmpty() ? null : String.join(",", sources)).build());
         // Moves the conversation to the top of the list.
-        conversation.setUpdatedAt(Instant.now());
+        conversation.setUpdatedAt(Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         conversationRepository.saveAndFlush(conversation);
         return new AiChatTurnResponse(conversation.getId(), conversation.getTitle(), toResponse(asked), toResponse(answered));
     }
