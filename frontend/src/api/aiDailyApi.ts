@@ -35,3 +35,11 @@ export function getResourceIdeas(token: string, goalId: number, language: string
     token,
   });
 }
+
+/** Resource ideas for one step, built from its description, resources and people. */
+export function getStepResourceIdeas(token: string, stepId: number, language: string) {
+  return apiClient<{ resources: ResourceIdea[] }>(`/ai/daily/steps/${stepId}/resource-ideas?language=${language}`, {
+    method: 'POST',
+    token,
+  });
+}

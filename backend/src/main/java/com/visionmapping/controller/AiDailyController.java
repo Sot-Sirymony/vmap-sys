@@ -56,4 +56,10 @@ public class AiDailyController {
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
         return service.resources(goalId, language);
     }
+
+    @PostMapping("/steps/{stepId}/resource-ideas")
+    public ResourceIdeas stepResources(@PathVariable Long stepId,
+                                       @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return service.stepResources(stepId, language);
+    }
 }

@@ -78,6 +78,13 @@ public class AiPlanService {
             + "sentence which part of the success definition it covers. When the dream has no success definition or "
             + "description, work from its title and why it matters.";
 
+    /** Tasks are built from what the step is for and what it already has, so finishing them finishes the step. */
+    static final String TASK_GROUNDING = "Before suggesting, read the step's description, its resources and people, and "
+            + "the goal's success criteria. Together the tasks must finish the step so it moves the goal toward its "
+            + "success criteria. Use the resources and people the step lists: add a task to get or arrange anything it "
+            + "still needs, and for a listed person, a task to contact them, named by role. In each task's reason, say "
+            + "in one short sentence how it moves the step toward its outcome.";
+
     /** Steps are built from the goal's success criteria, so finishing them finishes the goal. */
     static final String STEP_GROUNDING = "Before suggesting, read the goal's description and success criteria, and the "
             + "dream's success definition. Together the steps must meet the goal's success criteria. In each step's "
@@ -312,7 +319,10 @@ public class AiPlanService {
             out.append("\nThe step to break into tasks: [").append(step.getId()).append("] ").append(clip(step.getTitle()))
                     .append(step.getTargetDate() == null ? "" : ", due " + step.getTargetDate())
                     .append(" | goal: ").append(clip(goal.getTitle())).append('\n');
-            appendLine(out, "Step description", step.getDescription());
+            appendLongLine(out, "Step description", step.getDescription());
+            appendLine(out, "Step owner", step.getOwner());
+            appendLongLine(out, "Step resources and people", step.getResources());
+            appendLongLine(out, "Goal success criteria", goal.getSuccessCriteria());
             taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId())
                     .forEach(task -> out.append("  Task already there: ").append(clip(task.getTitle())).append('\n'));
             return out.toString();
@@ -331,7 +341,7 @@ public class AiPlanService {
                 + "\nThe step to break into tasks (new, not saved yet): " + clip(step.stepTitle())
                 + (step.stepTargetDate() == null ? "" : ", due " + step.stepTargetDate())
                 + (blank(step.goalTitle()) ? "" : " | goal: " + clip(step.goalTitle())) + "\n"
-                + (blank(step.stepDescription()) ? "" : "Step description: " + clip(step.stepDescription()) + "\n");
+                + (blank(step.stepDescription()) ? "" : "Step description: " + clipLong(step.stepDescription()) + "\n");
         return tasksFor(user, apiKey, plan + askRecords(step.ask()), latest, language, step.ask());
     }
 
@@ -342,7 +352,7 @@ public class AiPlanService {
                 ? refineTask(ask, "tasks", max)
                 : "Break the step to break into tasks into between 2 and " + MAX_TASKS + " small tasks, in order, each "
                 + "doable in one sitting. Do not repeat tasks already there.";
-        String prompt = task + " Owner is Me unless a role clearly fits better; never invent a person's name. Due dates must "
+        String prompt = task + " " + TASK_GROUNDING + " Owner is Me unless a role clearly fits better; never invent a person's name. Due dates must "
                 + "be after " + today + " and, when the step has a date, not after it. Give each a priority and a realistic "
                 + "effort in hours. " + questionRule(ask, "the step", "tasks");
         AiStructuredRequests.Tracked<AiDrafts.TaskDrafts> answer = requests.askTracked(user, apiKey, "TASK_BUILDER", language,

@@ -15,11 +15,21 @@ import java.util.List;
 public record AiPlanAddRequest(
         Long requestId,
         @Valid @Size(max = 10) List<@NotNull @Valid GoalItem> goals,
-        @Valid @Size(max = 20) List<@NotNull @Valid StepItem> steps) {
+        @Valid @Size(max = 20) List<@NotNull @Valid StepItem> steps,
+        // Suggested tasks for one step, from the Vision Map plan assistant.
+        @Valid @Size(max = 20) List<@NotNull @Valid TaskItem> tasks) {
+
+    /** Goals and steps only, as before tasks could be added here. */
+    public AiPlanAddRequest(Long requestId, List<GoalItem> goals, List<StepItem> steps) {
+        this(requestId, goals, steps, null);
+    }
 
     public record GoalItem(@NotNull @Valid GoalRequest goal, boolean edited) {
     }
 
     public record StepItem(@NotNull @Valid VisionStepRequest step, boolean edited) {
+    }
+
+    public record TaskItem(@NotNull @Valid TaskItemRequest task, boolean edited) {
     }
 }

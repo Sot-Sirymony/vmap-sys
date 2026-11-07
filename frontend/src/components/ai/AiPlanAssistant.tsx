@@ -13,12 +13,12 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { getAiStatus } from '../../api/aiApi';
-import { getResourceIdeas } from '../../api/aiDailyApi';
-import { addPlan, checkPlan, suggestGoals, suggestSteps, undoPlan } from '../../api/aiPlanApi';
+import { getResourceIdeas, getStepResourceIdeas } from '../../api/aiDailyApi';
+import { addPlan, checkPlan, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
 import { useI18n } from '../../i18n/I18nContext';
 import { tr } from '../../i18n/translate';
 import type {
-  AiStatus, Dream, Goal, GoalSuggestion, PlanAddResult, PlanCheck, ResourceIdea, StepSuggestion, VisionStep,
+  AiStatus, Dream, Goal, GoalSuggestion, PlanAddResult, PlanCheck, ResourceIdea, StepSuggestion, TaskSuggestion, VisionStep,
 } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
@@ -35,9 +35,11 @@ type Props = {
 
 type GoalRow = GoalSuggestion & { picked: boolean; original: GoalSuggestion };
 type StepRow = StepSuggestion & { picked: boolean; original: StepSuggestion };
+type TaskRow = TaskSuggestion & { picked: boolean; original: TaskSuggestion };
 type Result =
   | { kind: 'goals'; rows: GoalRow[]; question?: string | null; requestId?: number | null }
   | { kind: 'steps'; goalId: number; rows: StepRow[]; question?: string | null; requestId?: number | null }
+  | { kind: 'tasks'; stepId: number; rows: TaskRow[]; question?: string | null; requestId?: number | null }
   | { kind: 'check'; check: PlanCheck }
   | { kind: 'resources'; ideas: ResourceIdea[] };
 
@@ -63,6 +65,7 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   const { language } = useI18n();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [goalId, setGoalId] = useState('');
+  const [stepId, setStepId] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -71,6 +74,9 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   const [lastAdd, setLastAdd] = useState<(PlanAddResult & { requestId?: number | null }) | null>(null);
 
   const dreamGoals = goals.filter((goal) => goal.dreamId === dream.id && !goal.archived);
+  const goalSteps = steps
+    .filter((step) => goalId !== '' && step.goalId === Number(goalId) && !step.archived)
+    .sort((first, second) => (first.sequenceNumber ?? 0) - (second.sequenceNumber ?? 0));
 
   useEffect(() => {
     getAiStatus(token).then(setStatus).catch(() => setStatus(null));
@@ -119,6 +125,23 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   // AI-FR-13: ideas only, each to check before use until admins keep an approved list.
   const askResources = () => run(async () => ({ kind: 'resources', ideas: (await getResourceIdeas(token, Number(goalId), language)).resources }));
 
+  // Tasks for the chosen step, built from its description, resources and people.
+  const askTasks = () => run(async () => {
+    const id = Number(stepId);
+    const answer = await suggestTasks(token, id, language);
+    return {
+      kind: 'tasks',
+      stepId: id,
+      rows: answer.tasks.map((task) => ({ ...task, picked: true, original: task })),
+      question: answer.clarifyingQuestion,
+      requestId: answer.requestId,
+    };
+  });
+
+  const askStepResources = () => run(async () => ({
+    kind: 'resources', ideas: (await getStepResourceIdeas(token, Number(stepId), language)).resources,
+  }));
+
   // V11 (PB-FR-31): everything picked is saved in one request, or nothing is.
   async function addGoals(rows: GoalRow[], requestId?: number | null) {
     const picked = rows.filter((item) => item.picked);
@@ -162,6 +185,24 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
         },
       })),
     }, tr('{count} step(s) added to your plan.', { count: picked.length }));
+  }
+
+  async function addTasks(forStep: number, rows: TaskRow[], requestId?: number | null) {
+    await save('Unable to save task.', requestId, {
+      tasks: rows.map((row) => ({
+        edited: wasEdited(row.original, row, ['title', 'owner', 'dueDate']),
+        task: {
+          stepId: forStep,
+          title: row.title,
+          owner: row.owner,
+          priority: row.priority ?? 'MEDIUM',
+          dueDate: row.dueDate ?? '',
+          status: 'NOT_STARTED',
+          progressPercent: 0,
+          estimatedHours: row.estimatedHours ?? undefined,
+        },
+      })),
+    }, tr('{count} task(s) added to your plan.', { count: rows.length }));
   }
 
   async function save(failure: string, requestId: number | null | undefined, body: Parameters<typeof addPlan>[1], done: string) {
@@ -226,7 +267,10 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
                 size="small"
                 displayEmpty
                 value={goalId}
-                onChange={(event) => setGoalId(event.target.value)}
+                onChange={(event) => {
+                  setGoalId(event.target.value);
+                  setStepId('');
+                }}
                 sx={{ minWidth: 220, maxWidth: '100%' }}
                 SelectDisplayProps={{ 'aria-label': tr('Goal to plan') }}
               >
@@ -237,6 +281,27 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
                 {tr('Suggest steps')}
               </Button>
               <Button variant="secondary" disabled={busy || !aiReady || !goalId} onClick={() => void askResources()}>
+                {tr('Resource ideas')}
+              </Button>
+            </Box>
+          )}
+          {goalSteps.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Select
+                size="small"
+                displayEmpty
+                value={stepId}
+                onChange={(event) => setStepId(event.target.value)}
+                sx={{ minWidth: 220, maxWidth: '100%' }}
+                SelectDisplayProps={{ 'aria-label': tr('Step to plan') }}
+              >
+                <MenuItem value="">{tr('Choose a step')}</MenuItem>
+                {goalSteps.map((step) => <MenuItem key={step.id} value={String(step.id)}>{step.title}</MenuItem>)}
+              </Select>
+              <Button variant="secondary" disabled={busy || !aiReady || !stepId} onClick={() => void askTasks()}>
+                {tr('Suggest tasks')}
+              </Button>
+              <Button variant="secondary" disabled={busy || !aiReady || !stepId} onClick={() => void askStepResources()}>
                 {tr('Resource ideas')}
               </Button>
             </Box>
@@ -261,6 +326,9 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
           )}
           {result?.kind === 'steps' && (
             <StepRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addSteps(result.goalId, rows, result.requestId)} />
+          )}
+          {result?.kind === 'tasks' && (
+            <TaskRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addTasks(result.stepId, rows, result.requestId)} />
           )}
           {result?.kind === 'check' && <CheckResult check={result.check} />}
           {result && result.kind !== 'resources' && (
@@ -365,6 +433,47 @@ function StepRows({ result, busy, onChange, onAdd }: {
         <Box>
           <Button disabled={busy || ready.length === 0 || missingDate} onClick={() => onAdd(ready)}>
             {tr('Add {count} selected step(s)', { count: ready.length })}
+          </Button>
+        </Box>
+      )}
+    </Stack>
+  );
+}
+
+function TaskRows({ result, busy, onChange, onAdd }: {
+  result: Extract<Result, { kind: 'tasks' }>;
+  busy: boolean;
+  onChange: (next: Result) => void;
+  onAdd: (rows: TaskRow[]) => void;
+}) {
+  const update = (index: number, patch: Partial<TaskRow>) =>
+    onChange({ ...result, rows: result.rows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)) });
+  const ready = result.rows.filter((row) => row.picked && row.title.trim() && row.owner.trim() && row.dueDate);
+  const missingDate = result.rows.some((row) => row.picked && !row.dueDate);
+  return (
+    <Stack spacing={1.5}>
+      <Question question={result.question} />
+      {result.rows.map((row, index) => (
+        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Checkbox checked={row.picked} onChange={(event) => update(index, { picked: event.target.checked })}
+              slotProps={{ input: { 'aria-label': tr('Add {title}', { title: row.title }) } }} />
+            <Chip size="small" label={tr('AI suggestion')} />
+          </Box>
+          <TextField size="small" label={tr('Task')} value={row.title} onChange={(event) => update(index, { title: event.target.value })} />
+          <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
+            <TextField size="small" label={tr('Owner')} value={row.owner} onChange={(event) => update(index, { owner: event.target.value })} />
+            <TextField size="small" type="date" label={tr('Due date')} value={row.dueDate ?? ''}
+              onChange={(event) => update(index, { dueDate: event.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+          </Box>
+          {row.reason && <Typography variant="caption" color="text.secondary">{row.reason}</Typography>}
+        </Box>
+      ))}
+      {missingDate && <Typography variant="caption" color="text.secondary">{tr('Pick a due date for each task you want to add.')}</Typography>}
+      {result.rows.length > 0 && (
+        <Box>
+          <Button disabled={busy || ready.length === 0 || missingDate} onClick={() => onAdd(ready)}>
+            {tr('Add {count} selected task(s)', { count: ready.length })}
           </Button>
         </Box>
       )}

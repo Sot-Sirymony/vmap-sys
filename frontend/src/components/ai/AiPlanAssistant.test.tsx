@@ -2,21 +2,26 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../../api/aiApi';
-import { addPlan, checkPlan, ratePlanAnswer, suggestGoals, suggestSteps, undoPlan } from '../../api/aiPlanApi';
-import type { AiStatus, Dream, Goal } from '../../types/vision';
+import { getStepResourceIdeas } from '../../api/aiDailyApi';
+import { addPlan, checkPlan, ratePlanAnswer, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
+import type { AiStatus, Dream, Goal, VisionStep } from '../../types/vision';
 import { AiPlanAssistant } from './AiPlanAssistant';
 
 vi.mock('../../api/aiApi', () => ({ getAiStatus: vi.fn() }));
 vi.mock('../../api/aiPlanApi', () => ({
-  suggestGoals: vi.fn(), suggestSteps: vi.fn(), checkPlan: vi.fn(), addPlan: vi.fn(), undoPlan: vi.fn(), ratePlanAnswer: vi.fn(),
+  suggestGoals: vi.fn(), suggestSteps: vi.fn(), suggestTasks: vi.fn(), checkPlan: vi.fn(), addPlan: vi.fn(), undoPlan: vi.fn(),
+  ratePlanAnswer: vi.fn(),
 }));
+vi.mock('../../api/aiDailyApi', () => ({ getResourceIdeas: vi.fn(), getStepResourceIdeas: vi.fn() }));
 
 const ready: AiStatus = { available: true, reason: 'OK', consentGiven: true, dailyLimit: 10, messagesLeftToday: 10 };
 const dream = { id: 5, title: 'Own a home', scheduleMode: 'BOTTOM_UP' } as Dream;
 const goal = { id: 9, dreamId: 5, title: 'Save a deposit', archived: false } as Goal;
 
-function renderAssistant(onDataChange = vi.fn().mockResolvedValue(undefined)) {
-  render(<AiPlanAssistant dream={dream} goals={[goal]} steps={[]} token="token" onDataChange={onDataChange} />);
+const step = { id: 31, goalId: 9, title: 'Visit three banks', sequenceNumber: 1, archived: false } as VisionStep;
+
+function renderAssistant(onDataChange = vi.fn().mockResolvedValue(undefined), steps: VisionStep[] = []) {
+  render(<AiPlanAssistant dream={dream} goals={[goal]} steps={steps} token="token" onDataChange={onDataChange} />);
   return onDataChange;
 }
 
@@ -113,5 +118,56 @@ describe('AiPlanAssistant (AI-FR-07 to AI-FR-10)', () => {
     await vi.waitFor(() => expect(second).toBeEnabled());
     await userEvent.click(second);
     expect(await screen.findByText('Which city?')).toBeInTheDocument();
+  });
+
+  it('suggests tasks for a chosen step and adds them only once each has a due date', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    vi.mocked(suggestTasks).mockResolvedValue({ requestId: 55, tasks: [
+      { title: 'Book a meeting with a loan officer', owner: 'Me', priority: 'HIGH', dueDate: null, reason: 'Gets a loan answer' },
+    ] });
+    vi.mocked(addPlan).mockResolvedValue({ goalIds: [], stepIds: [], taskIds: [61] });
+    renderAssistant(undefined, [step]);
+
+    expect(screen.queryByRole('combobox', { name: 'Step to plan' })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Goal to plan' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Save a deposit' }));
+    expect(screen.getByRole('button', { name: 'Suggest tasks' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Step to plan' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Visit three banks' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Suggest tasks' }));
+
+    expect(suggestTasks).toHaveBeenCalledWith('token', 31, 'en');
+    expect(await screen.findByDisplayValue('Book a meeting with a loan officer')).toBeInTheDocument();
+    expect(screen.getByText('Gets a loan answer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add 0 selected task(s)' })).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText('Due date'), '2027-01-10');
+    await userEvent.click(screen.getByRole('button', { name: 'Add 1 selected task(s)' }));
+    expect(addPlan).toHaveBeenCalledWith('token', {
+      requestId: 55,
+      tasks: [{ edited: true, task: expect.objectContaining({
+        stepId: 31, title: 'Book a meeting with a loan officer', owner: 'Me', dueDate: '2027-01-10', status: 'NOT_STARTED', progressPercent: 0,
+      }) }],
+    });
+    expect(await screen.findByText('1 task(s) added to your plan.')).toBeInTheDocument();
+  });
+
+  it('asks for resource ideas for the chosen step', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    vi.mocked(getStepResourceIdeas).mockResolvedValue({ resources: [
+      { kind: 'PERSON', name: 'A mortgage adviser', why: 'Explains which loan fits', checkBeforeUse: true },
+    ] });
+    renderAssistant(undefined, [step]);
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Goal to plan' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Save a deposit' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'Step to plan' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Visit three banks' }));
+    const [, forStep] = screen.getAllByRole('button', { name: 'Resource ideas' });
+    await userEvent.click(forStep);
+
+    expect(getStepResourceIdeas).toHaveBeenCalledWith('token', 31, 'en');
+    expect(await screen.findByText('A mortgage adviser')).toBeInTheDocument();
+    expect(screen.getByText('Explains which loan fits')).toBeInTheDocument();
   });
 });

@@ -54,6 +54,7 @@ public class AiPlanFeedbackService {
             "CLARIFY", "TASK_BUILDER", "HELPERS_RISKS", "DRAFT_CHECK", "PLAN_FIX", PlanAssistantService.FEATURE);
     private static final Set<String> GOAL_FEATURES = Set.of("GOAL_BUILDER", "STRETCH_GOAL");
     private static final Set<String> STEP_FEATURES = Set.of("PLAN_BUILDER");
+    private static final Set<String> TASK_FEATURES = Set.of("TASK_BUILDER");
     static final int MAX_METRIC_DAYS = 365;
 
     private final AiUsageLogRepository usageLogRepository;
@@ -107,14 +108,14 @@ public class AiPlanFeedbackService {
     public PlanAddResult add(AiPlanAddRequest request) {
         List<AiPlanAddRequest.GoalItem> goals = Optional.ofNullable(request.goals()).orElse(List.of());
         List<AiPlanAddRequest.StepItem> steps = Optional.ofNullable(request.steps()).orElse(List.of());
-        if (goals.isEmpty() && steps.isEmpty()) {
-            throw new BusinessRuleException("Choose at least one goal or step to add.");
+        List<AiPlanAddRequest.TaskItem> tasks = Optional.ofNullable(request.tasks()).orElse(List.of());
+        if (goals.isEmpty() && steps.isEmpty() && tasks.isEmpty()) {
+            throw new BusinessRuleException("Choose at least one goal, step or task to add.");
         }
         AiUsageLog usage = null;
         if (request.requestId() != null) {
             usage = ownPlanRequest(request.requestId());
-            Set<String> allowed = steps.isEmpty() ? GOAL_FEATURES : goals.isEmpty() ? STEP_FEATURES : Set.of();
-            if (!allowed.contains(usage.getFeature())) {
+            if (!allowedFeatures(goals, steps, tasks).contains(usage.getFeature())) {
                 throw new BusinessRuleException("These items do not match the suggestions they were said to come from.");
             }
         }
@@ -126,12 +127,29 @@ public class AiPlanFeedbackService {
         for (AiPlanAddRequest.StepItem item : steps) {
             stepIds.add(stepService.createStep(item.step()).id());
         }
+        List<Long> taskIds = new ArrayList<>();
+        for (AiPlanAddRequest.TaskItem item : tasks) {
+            taskIds.add(taskService.createTask(item.task()).id());
+        }
         if (usage != null) {
             int edited = (int) (goals.stream().filter(AiPlanAddRequest.GoalItem::edited).count()
-                    + steps.stream().filter(AiPlanAddRequest.StepItem::edited).count());
-            addOutcome(usage, goals.size() + steps.size() - edited, edited);
+                    + steps.stream().filter(AiPlanAddRequest.StepItem::edited).count()
+                    + tasks.stream().filter(AiPlanAddRequest.TaskItem::edited).count());
+            addOutcome(usage, goals.size() + steps.size() + tasks.size() - edited, edited);
         }
-        return new PlanAddResult(goalIds, stepIds);
+        return new PlanAddResult(goalIds, stepIds, taskIds, List.of(), List.of(), List.of());
+    }
+
+    /** One answer suggests one kind of item, so items said to come from it must all be that kind. */
+    private static Set<String> allowedFeatures(List<?> goals, List<?> steps, List<?> tasks) {
+        int kinds = (goals.isEmpty() ? 0 : 1) + (steps.isEmpty() ? 0 : 1) + (tasks.isEmpty() ? 0 : 1);
+        if (kinds != 1) {
+            return Set.of();
+        }
+        if (!goals.isEmpty()) {
+            return GOAL_FEATURES;
+        }
+        return steps.isEmpty() ? TASK_FEATURES : STEP_FEATURES;
     }
 
     /**

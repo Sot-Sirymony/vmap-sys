@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 import type {
   AssistantApplied, AssistantChange, AssistantProposals, AssistantSection, AssistantSurface, SectionCheck,
   ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics,
-  PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
+  PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskItemRequest, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
 
 // V9 Phase 5: the AI vision area, dream, goal and plan builders. They only suggest; adding goes through the normal APIs.
@@ -63,6 +63,7 @@ export function addPlan(token: string, body: {
   requestId?: number | null;
   goals?: { goal: GoalRequest; edited: boolean }[];
   steps?: { step: VisionStepRequest; edited: boolean }[];
+  tasks?: { task: TaskItemRequest; edited: boolean }[];
 }) {
   return apiClient<PlanAddResult>('/ai/plan/add', { method: 'POST', token, body: JSON.stringify(body) });
 }

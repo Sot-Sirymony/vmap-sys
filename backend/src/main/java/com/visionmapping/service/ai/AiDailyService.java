@@ -232,6 +232,46 @@ public class AiDailyService {
         return new ResourceIdeas(AiResourceIdeas.toIdeas(drafts.resources(), approved, MAX_RESOURCES));
     }
 
+    /** Resource ideas for one step, chosen for what the step is for and what it does not have yet. */
+    static final String STEP_RESOURCE_GROUNDING = "Before suggesting, read the step's description, its resources and people, "
+            + "the tasks it already has, and the goal's success criteria. Pick only resources that help finish this step "
+            + "toward that outcome. The step's resources and people line is what the participant already has or plans to "
+            + "use: do not repeat it; fill what is still missing. In each idea's why, say in one short sentence how it "
+            + "helps finish the step.";
+
+    /** AI-FR-13 for one step: the same checked ideas as for a goal, built from the step's own details. */
+    public ResourceIdeas stepResources(Long stepId, String language) {
+        AppUser user = lookup.currentUser();
+        // V10 (SEC-01-02): ownership first, so another user's record answers 404
+        // whether or not AI is available.
+        lookup.step(stepId);
+        String apiKey = accessService.requireAvailable(user);
+        Map<Long, AiApprovedResource> approved = resourceIdeas.approved();
+        String records = transactions.execute(status -> {
+            VisionStep step = lookup.step(stepId);
+            Goal goal = step.getGoal();
+            Dream dream = goal.getDream();
+            StringBuilder out = new StringBuilder("Dream: ").append(clip(dream.getTitle())).append('\n');
+            appendLong(out, "Dream success looks like", dream.getSuccessDefinition());
+            out.append("Goal: ").append(clip(goal.getTitle())).append('\n');
+            appendLong(out, "Goal success criteria", goal.getSuccessCriteria());
+            out.append("Step: ").append(clip(step.getTitle()))
+                    .append(step.getTargetDate() == null ? "" : ", due " + step.getTargetDate()).append('\n');
+            appendLong(out, "Step description", step.getDescription());
+            if (step.getOwner() != null && !step.getOwner().isBlank()) {
+                out.append("Step owner: ").append(clip(step.getOwner())).append('\n');
+            }
+            appendLong(out, "Step resources and people", step.getResources());
+            taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId())
+                    .forEach(task -> out.append("Task: ").append(clip(task.getTitle())).append(" | ").append(task.getStatus()).append('\n'));
+            out.append(AiResourceIdeas.describe(approved));
+            return out.toString();
+        });
+        String task = AiResourceIdeas.instruction(MAX_RESOURCES) + " They are for this step. " + STEP_RESOURCE_GROUNDING;
+        AiDrafts.ResourceDrafts drafts = requests.ask(user, apiKey, "RESOURCE_IDEAS", language, records, task, AiDrafts.ResourceDrafts.class);
+        return new ResourceIdeas(AiResourceIdeas.toIdeas(drafts.resources(), approved, MAX_RESOURCES));
+    }
+
     private List<Candidate> openWork(Long userId, LocalDate today) {
         List<Candidate> candidates = new ArrayList<>();
         for (TaskItem task : taskItemRepository.findByUser_IdAndArchivedFalse(userId)) {

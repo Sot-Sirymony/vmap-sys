@@ -182,6 +182,36 @@ class AiDailyFlowTests {
     }
 
     @Test
+    void stepResourceIdeasReadTheStepsDescriptionResourcesAndPeople() throws Exception {
+        String user = consented(email("step-resources"));
+        long goalId = goal(user, dream(user));
+        long stepId = read(send(post("/api/steps"), user, Map.of("owner", "Me", "goalId", goalId, "title", "Visit three banks",
+                "description", "Compare loan offers", "sequenceNumber", 1, "complex", false, "priority", "HIGH",
+                "targetDate", TODAY.plusMonths(2).toString(), "status", "NOT_STARTED", "resources", "Payslips\nPeople: A loan officer"))
+                .andExpect(status().isCreated())).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.ResourceDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.ResourceDrafts(List.of(
+                        new AiDrafts.ResourceDraft(0, "TOOL", "A loan comparison sheet", "Lines offers up side by side"))),
+                        "claude-opus-5-5", 10, 10, false));
+
+        mockMvc.perform(post("/api/ai/daily/steps/" + stepId + "/resource-ideas").header("Authorization", "Bearer " + user))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resources[0].name").value("A loan comparison sheet"))
+                .andExpect(jsonPath("$.resources[0].checkBeforeUse").value(true));
+
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> task = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), task.capture(), eq(AiDrafts.ResourceDrafts.class));
+        assertThat(system.getValue()).contains("Step: Visit three banks").contains("Step description: Compare loan offers")
+                .contains("Step resources and people: Payslips People: A loan officer").contains("Goal success criteria: s");
+        assertThat(task.getValue()).contains("for this step").contains("do not repeat it");
+
+        String other = consented(email("step-resources-other"));
+        mockMvc.perform(post("/api/ai/daily/steps/" + stepId + "/resource-ideas").header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void resourceIdeasReadTheGoalsOutcomeBeforeSuggesting() throws Exception {
         String user = consented(email("resources-grounded"));
         String criteria = "Ten thousand dollars saved. " + "x".repeat(600) + " Kept in a separate account.";

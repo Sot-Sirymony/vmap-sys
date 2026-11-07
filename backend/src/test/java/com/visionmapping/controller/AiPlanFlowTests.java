@@ -209,6 +209,47 @@ class AiPlanFlowTests {
     }
 
     @Test
+    void taskSuggestionsReadTheStepsDescriptionResourcesAndPeopleAndCanBeAdded() throws Exception {
+        String user = consented(email("grounded-tasks"));
+        long dreamId = dream(user);
+        long goalId = goal(user, dreamId);
+        long stepId = step(user, goalId, "Visit three banks", TODAY.plusMonths(2), "Payslips\nPeople: A loan officer");
+        AiDrafts.TaskDraft draft = new AiDrafts.TaskDraft("Book a loan officer meeting", "Me", TODAY.plusWeeks(1).toString(),
+                "HIGH", 1.0, "Gets a loan answer");
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.TaskDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.TaskDrafts(List.of(draft), ""), "claude-opus-5-5", 10, 10, false));
+
+        JsonNode answer = read(mockMvc.perform(post("/api/ai/plan/steps/" + stepId + "/task-suggestions")
+                .header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> task = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), task.capture(), eq(AiDrafts.TaskDrafts.class));
+        assertThat(system.getValue()).contains("Step description: d").contains("Step owner: Me")
+                .contains("Step resources and people: Payslips People: A loan officer")
+                .contains("Goal success criteria: s");
+        assertThat(task.getValue()).contains("resources and people").contains("success criteria");
+
+        long requestId = answer.get("requestId").asLong();
+        Map<String, Object> taskBody = Map.of("stepId", stepId, "title", "Book a loan officer meeting", "owner", "Me",
+                "priority", "HIGH", "dueDate", TODAY.plusWeeks(1).toString(), "status", "NOT_STARTED", "progressPercent", 0);
+        JsonNode added = read(send(post("/api/ai/plan/add"), user, Map.of("requestId", requestId,
+                "tasks", List.of(Map.of("task", taskBody, "edited", false)))).andExpect(status().isCreated()));
+        assertThat(added.get("taskIds")).hasSize(1);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from task_items where step_id = ? and archived = false",
+                Integer.class, stepId)).isEqualTo(1);
+        assertThat(usageCounts(requestId)).containsExactly(1, 1, 0);
+
+        // Tasks cannot be said to come from a goal answer, and another user's step answers 404.
+        long goalAnswer = goalSuggestions(user, dreamId, 1);
+        send(post("/api/ai/plan/add"), user, Map.of("requestId", goalAnswer, "tasks", List.of(Map.of("task", taskBody, "edited", false))))
+                .andExpect(status().isBadRequest());
+        String other = consented(email("grounded-tasks-other"));
+        send(post("/api/ai/plan/add"), other, Map.of("tasks", List.of(Map.of("task", taskBody, "edited", false))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void aVagueDreamGetsOneQuestionAndAStretchGoalIsOneMoonshot() throws Exception {
         String user = consented(email("vague"));
         long dreamId = dream(user);
