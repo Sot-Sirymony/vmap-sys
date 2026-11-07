@@ -14,9 +14,9 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import com.visionmapping.service.ai.AiReminderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,9 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReminderService {
 
     private static final int MAX_LISTED_ITEMS = 10;
-    // Dots split the domain into parts, and no part may contain a dot itself,
-    // so each character can match only one way: no slow backtracking.
-    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+)+$");
 
     private final UserScope userScope;
     private final AppUserRepository appUserRepository;
@@ -68,7 +65,7 @@ public class ReminderService {
         user.setRemindersEnabled(request.enabled());
         user.setReminderTimeZone(request.timeZone());
         String reminderEmail = request.reminderEmail() == null ? "" : request.reminderEmail().trim();
-        if (!reminderEmail.isEmpty() && !EMAIL.matcher(reminderEmail).matches()) {
+        if (!reminderEmail.isEmpty() && !looksLikeEmail(reminderEmail)) {
             throw new BusinessRuleException("That reminder email address does not look right.");
         }
         user.setReminderEmail(reminderEmail.isEmpty() ? null : reminderEmail);
@@ -155,5 +152,20 @@ public class ReminderService {
 
     private boolean isInactive(AppUser user, Instant now) {
         return activityService.lastActivity(user).isBefore(now.minus(inactiveAfterDays, ChronoUnit.DAYS));
+    }
+
+    /**
+     * One @ with something before it, and after it a domain of at least two
+     * parts split by dots, none empty; no spaces anywhere. Checked in plain
+     * code rather than a regular expression, so long input cannot make it slow
+     * or overflow the stack.
+     */
+    static boolean looksLikeEmail(String value) {
+        int at = value.indexOf('@');
+        if (at <= 0 || at != value.lastIndexOf('@') || value.chars().anyMatch(Character::isWhitespace)) {
+            return false;
+        }
+        String[] parts = value.substring(at + 1).split("\\.", -1);
+        return parts.length >= 2 && Arrays.stream(parts).noneMatch(String::isEmpty);
     }
 }
