@@ -35,7 +35,7 @@ import { useStoredState } from '../hooks/useStoredState';
 import type { LifecycleStatus, Priority, VisionArea, VisionAreaRequest } from '../types/vision';
 import { lifecycleStatusLabels, priorityLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
-import { priorityRank } from '../utils/sortRank';
+import { priorityRank, letterRankFilterOptions } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -224,11 +224,7 @@ export function VisionAreasPage() {
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
-  const letterRankOptions = Array.from(
-    new Set(crud.items.map((area) => area.letterRank).filter((letter): letter is string => Boolean(letter))),
-  )
-    .sort()
-    .map((letter) => ({ value: letter, label: letter }));
+  const letterRankOptions = letterRankFilterOptions(crud.items);
 
   // Shared by the table's action column and the list view's cards, so both
   // offer the same row actions.

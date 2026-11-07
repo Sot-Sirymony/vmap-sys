@@ -77,7 +77,7 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
     const notice = await screen.findByText(/Your plan is added: 1 goal\(s\), 1 step\(s\) and 0 task\(s\)/);
     await userEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole('button', { name: 'Undo' }));
     expect(undoPlan).toHaveBeenCalledWith('token', { goalIds: [11], stepIds: [21], taskIds: [] });
-  });
+  }, 30_000); // a long page test; slower when the whole suite runs at once
 
   it('picks up a saved draft where the participant left off (PB-FR-30)', async () => {
     vi.mocked(getAiStatus).mockResolvedValue(ready);

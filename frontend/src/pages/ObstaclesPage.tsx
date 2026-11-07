@@ -46,7 +46,7 @@ import {
   obstacleTypeLabels, priorityLabels, severityLabels, type ConflictChecklistKey,
 } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
-import { severityRank } from '../utils/sortRank';
+import { severityRank, letterRankFilterOptions } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -417,11 +417,7 @@ export function ObstaclesPage() {
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
-  const letterRankOptions = Array.from(
-    new Set(crud.items.map((obstacle) => obstacle.letterRank).filter((letter): letter is string => Boolean(letter))),
-  )
-    .sort()
-    .map((letter) => ({ value: letter, label: letter }));
+  const letterRankOptions = letterRankFilterOptions(crud.items);
 
   const columns: DataTableColumn<Obstacle>[] = [
     { key: 'title', label: tr('Title'), sortValue: (obstacle) => obstacle.title, sx: { fontWeight: 500 }, render: (obstacle) => obstacle.title },

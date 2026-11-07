@@ -50,16 +50,38 @@ const SERVER_PATTERNS: [RegExp, string, string[]][] = [
 const OVERRIDES_STORAGE_PREFIX = 'vms.uiText.';
 let overrides: Record<string, string> = storedOverrides(current);
 
+// The longest admin change the server accepts (UiTextOverrideRequest).
+const MAX_OVERRIDE_LENGTH = 1000;
+
+/**
+ * Only plain text entries: anything else in storage, or from the server, is
+ * dropped, so a tampered or old value cannot change what the interface shows
+ * in unexpected ways.
+ */
+export function cleanOverrides(value: unknown): Record<string, string> {
+  const clean: Record<string, string> = {};
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return clean;
+  }
+  for (const [key, text] of Object.entries(value)) {
+    if (typeof text === 'string' && text.length <= MAX_OVERRIDE_LENGTH && key.length <= MAX_OVERRIDE_LENGTH) {
+      clean[key] = text;
+    }
+  }
+  return clean;
+}
+
 function storedOverrides(language: Language): Record<string, string> {
   try {
-    return JSON.parse(localStorage.getItem(OVERRIDES_STORAGE_PREFIX + language) ?? '{}') as Record<string, string>;
+    return cleanOverrides(JSON.parse(localStorage.getItem(OVERRIDES_STORAGE_PREFIX + language) ?? '{}'));
   } catch {
     return {};
   }
 }
 
 /** Replaces the admin changes in use, and remembers them for the next load. Reports whether anything changed. */
-export function setOverrides(next: Record<string, string>): boolean {
+export function setOverrides(given: Record<string, string>): boolean {
+  const next = cleanOverrides(given);
   const changed = JSON.stringify(next) !== JSON.stringify(overrides);
   overrides = next;
   try {

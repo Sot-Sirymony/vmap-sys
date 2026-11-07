@@ -33,7 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReminderService {
 
     private static final int MAX_LISTED_ITEMS = 10;
-    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    // Dots split the domain into parts, and no part may contain a dot itself,
+    // so each character can match only one way: no slow backtracking.
+    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s.]+(?:\\.[^@\\s.]+)+$");
 
     private final UserScope userScope;
     private final AppUserRepository appUserRepository;

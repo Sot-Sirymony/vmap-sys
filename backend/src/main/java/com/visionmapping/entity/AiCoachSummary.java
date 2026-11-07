@@ -31,8 +31,8 @@ import lombok.Setter;
 @Table(name = "ai_coach_summaries")
 public class AiCoachSummary extends BaseAuditableEntity {
 
-    public static final String PARTICIPANT = "PARTICIPANT";
-    public static final String COHORT = "COHORT";
+    public static final String SCOPE_PARTICIPANT = "PARTICIPANT";
+    public static final String SCOPE_COHORT = "COHORT";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

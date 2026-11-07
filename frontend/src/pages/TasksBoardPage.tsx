@@ -48,7 +48,7 @@ import { taskRequest } from '../utils/entityRequests';
 import { isOverdue } from '../utils/overdue';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { energyDemandLabels, obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
-import { priorityRank, workStatusRank } from '../utils/sortRank';
+import { priorityRank, workStatusRank, letterRankFilterOptions } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -428,11 +428,7 @@ export function TasksBoardPage() {
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
-  const letterRankOptions = Array.from(
-    new Set(crud.items.map((task) => task.letterRank).filter((letter): letter is string => Boolean(letter))),
-  )
-    .sort()
-    .map((letter) => ({ value: letter, label: letter }));
+  const letterRankOptions = letterRankFilterOptions(crud.items);
 
   // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
   // are the dragged task's own step's non-archived tasks, ordered by

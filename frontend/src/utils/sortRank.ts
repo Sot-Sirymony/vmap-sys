@@ -31,3 +31,13 @@ export function workStatusRank(status: WorkStatus) {
 export function severityRank(severity: Severity) {
   return priorityRanks[severity];
 }
+
+/**
+ * The letter ranks (A to Z) in use across some items, once each and in
+ * alphabetical order, as options for a filter.
+ */
+export function letterRankFilterOptions(items: { letterRank?: string | null }[]) {
+  return Array.from(new Set(items.map((item) => item.letterRank).filter((letter): letter is string => Boolean(letter))))
+    .sort((first, second) => first.localeCompare(second))
+    .map((letter) => ({ value: letter, label: letter }));
+}

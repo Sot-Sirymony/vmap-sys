@@ -52,7 +52,7 @@ import {
 } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
-import { priorityRank } from '../utils/sortRank';
+import { priorityRank, letterRankFilterOptions } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 import { safeHttpUrl } from '../utils/safeUrl';
@@ -377,11 +377,7 @@ export function DreamsPage() {
 
   // FR-57.4: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
-  const letterRankOptions = Array.from(
-    new Set(crud.items.map((dream) => dream.letterRank).filter((letter): letter is string => Boolean(letter))),
-  )
-    .sort()
-    .map((letter) => ({ value: letter, label: letter }));
+  const letterRankOptions = letterRankFilterOptions(crud.items);
 
   // FR-23.1-style ancestry: shows which vision area a dream belongs to,
   // navigable, the same pattern the Tasks board uses under each row's title.

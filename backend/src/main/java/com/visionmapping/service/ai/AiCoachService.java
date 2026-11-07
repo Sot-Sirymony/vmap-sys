@@ -116,7 +116,7 @@ public class AiCoachService {
                 AiDrafts.CoachSummaryDraft.class);
         boolean shared = prepared.participant().isShareJournalsWithCoach();
         AiCoachSummary saved = transactions.execute(status -> summaryRepository.save(AiCoachSummary.builder()
-                .scope(AiCoachSummary.PARTICIPANT)
+                .scope(AiCoachSummary.SCOPE_PARTICIPANT)
                 .coach(coach)
                 .participant(prepared.participant())
                 .weekStart(weekStart())
@@ -155,7 +155,7 @@ public class AiCoachService {
     public CohortSummary cohortSummary(Long cohortId) {
         return transactions.execute(status -> {
             Cohort cohort = coachService.requireOwnCohort(cohortId);
-            return summaryRepository.findFirstByCohort_IdAndScopeAndWeekStartOrderByIdDesc(cohort.getId(), AiCoachSummary.COHORT, weekStart())
+            return summaryRepository.findFirstByCohort_IdAndScopeAndWeekStartOrderByIdDesc(cohort.getId(), AiCoachSummary.SCOPE_COHORT, weekStart())
                     .map(AiCoachService::toCohortSummary)
                     .orElse(null);
         });
@@ -185,7 +185,7 @@ public class AiCoachService {
         AiDrafts.CohortSummaryDraft draft = requests.askForCoach(coach, apiKey, COHORT, language, prepared.records(), task,
                 AiDrafts.CohortSummaryDraft.class);
         AiCoachSummary saved = transactions.execute(status -> summaryRepository.save(AiCoachSummary.builder()
-                .scope(AiCoachSummary.COHORT)
+                .scope(AiCoachSummary.SCOPE_COHORT)
                 .coach(coach)
                 .cohort(prepared.cohort())
                 .weekStart(weekStart())
@@ -202,7 +202,7 @@ public class AiCoachService {
         transactions.executeWithoutResult(status -> {
             AiCoachSummary summary = summaryRepository.findById(summaryId)
                     .orElseThrow(() -> new ResourceNotFoundException("Summary not found: " + summaryId));
-            if (AiCoachSummary.PARTICIPANT.equals(summary.getScope())) {
+            if (AiCoachSummary.SCOPE_PARTICIPANT.equals(summary.getScope())) {
                 coachService.requireVisibleParticipant(summary.getParticipant().getId());
             } else {
                 coachService.requireOwnCohort(summary.getCohort().getId());

@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -184,7 +185,8 @@ public class DreamCoachService {
         if (prepared.crisis()) {
             return crisisTurn(prepared);
         }
-        return complete(prepared, call(prepared, null));
+        return complete(prepared, call(prepared,
+                () -> claudeClient.send(prepared.apiKey(), prepared.model(), prepared.system(), prepared.turns())));
     }
 
     /** AI-NFR-01: like send, but passes each piece of the reply to onText as it arrives. */
@@ -194,16 +196,16 @@ public class DreamCoachService {
         }
         // Holds back the start of the reply until it is clear it is not the crisis marker.
         MarkerFilter filter = new MarkerFilter(onText);
-        ClaudeClient.Reply reply = call(prepared, filter);
+        ClaudeClient.Reply reply = call(prepared,
+                () -> claudeClient.stream(prepared.apiKey(), prepared.model(), prepared.system(), prepared.turns(), filter));
         filter.finish();
         return complete(prepared, reply);
     }
 
-    private ClaudeClient.Reply call(Prepared prepared, Consumer<String> onText) {
+    /** Runs one request to Claude, logging it as an error when Claude is unavailable. */
+    private ClaudeClient.Reply call(Prepared prepared, Supplier<ClaudeClient.Reply> request) {
         try {
-            return onText == null
-                    ? claudeClient.send(prepared.apiKey(), prepared.model(), prepared.system(), prepared.turns())
-                    : claudeClient.stream(prepared.apiKey(), prepared.model(), prepared.system(), prepared.turns(), onText);
+            return request.get();
         } catch (AiUnavailableException exception) {
             usageLogRepository.save(log(prepared, prepared.model(), 0, 0, AiOutcome.ERROR));
             throw exception;

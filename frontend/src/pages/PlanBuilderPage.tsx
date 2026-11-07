@@ -102,7 +102,8 @@ export function PlanBuilderPage() {
       return;
     }
     let cancelled = false;
-    (async () => {
+    // Errors are handled inside, so nothing waits on this.
+    void (async () => {
       try {
         const [plan, draft] = await Promise.all([loadPlan(), getPlanDraft(token, id)]);
         if (cancelled || !plan) {

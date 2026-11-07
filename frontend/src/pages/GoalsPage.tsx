@@ -49,7 +49,7 @@ import { goalRequest } from '../utils/entityRequests';
 import { priorityLabels, scheduleModeLabels } from '../utils/enumLabels';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
-import { priorityRank, workStatusRank } from '../utils/sortRank';
+import { priorityRank, workStatusRank, letterRankFilterOptions } from '../utils/sortRank';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -301,11 +301,7 @@ export function GoalsPage() {
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
-  const letterRankOptions = Array.from(
-    new Set(crud.items.map((goal) => goal.letterRank).filter((letter): letter is string => Boolean(letter))),
-  )
-    .sort()
-    .map((letter) => ({ value: letter, label: letter }));
+  const letterRankOptions = letterRankFilterOptions(crud.items);
 
   // Same idea as the quick-add row below: an active dream filter is a strong
   // hint of which dream the next goal belongs under.

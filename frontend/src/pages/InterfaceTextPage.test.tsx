@@ -35,7 +35,10 @@ describe('InterfaceTextPage', () => {
     await userEvent.click(await screen.findByRole('combobox', { name: 'Language' }));
     await userEvent.click(screen.getByRole('option', { name: 'ខ្មែរ (Khmer)' }));
     await waitFor(() => expect(listUiTextOverrides).toHaveBeenLastCalledWith('token', 'km'));
-    await userEvent.type(await screen.findByPlaceholderText('Search text...'), 'Today');
+    // Pasted in one go: typing filters thousands of strings once per letter,
+    // which made this test time out on CI with coverage on.
+    await userEvent.click(await screen.findByPlaceholderText('Search text...'));
+    await userEvent.paste('Today');
     const field = await screen.findByRole('textbox', { name: 'Text for "Today"' });
     expect(field).toHaveValue('ថ្ងៃនេះ');
     await userEvent.clear(field);
@@ -49,5 +52,5 @@ describe('InterfaceTextPage', () => {
     await userEvent.click(row.getByRole('button', { name: 'Reset to default' }));
     await waitFor(() => expect(resetUiTextOverride).toHaveBeenCalledWith('token', 7));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Text for "Today"' })).toHaveValue('ថ្ងៃនេះ'));
-  }, 15_000);
+  }, 30_000);
 });

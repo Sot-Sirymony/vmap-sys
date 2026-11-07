@@ -32,6 +32,7 @@ import { PageSection } from './PageSection';
 import { currentLanguage, tr } from '../i18n/translate';
 import { draftWeeklyReview } from '../api/aiDailyApi';
 import { Button } from '../components/common/Button';
+import { letterRankFilterOptions } from '../utils/sortRank';
 
 // FR-16.3: guided questions per review type, shown alongside the form.
 const REVIEW_GUIDES: Record<ReviewType, string[]> = {
@@ -294,11 +295,7 @@ export function ReviewsPage() {
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
-  const letterRankOptions = Array.from(
-    new Set(crud.items.map((review) => review.letterRank).filter((letter): letter is string => Boolean(letter))),
-  )
-    .sort()
-    .map((letter) => ({ value: letter, label: letter }));
+  const letterRankOptions = letterRankFilterOptions(crud.items);
 
   const columns: DataTableColumn<Review>[] = [
     {

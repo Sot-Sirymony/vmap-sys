@@ -994,7 +994,8 @@ export function VisionMapTree({
       <input
         className="map-title-edit"
         value={editValue}
-        autoFocus
+        // Focus moves here because the participant asked to rename this row.
+        ref={(element) => element?.focus()}
         aria-label={tr('Rename')}
         onChange={(event) => setEditValue(event.target.value)}
         onBlur={() => void saveEdit(row)}
@@ -1439,7 +1440,7 @@ export function VisionMapTree({
         </CrudModalForm>
       )}
 
-    <div className="map-tree" role="tree" aria-label={tr('Vision map for {title}', { title: dream.title })} onKeyDown={handleTreeKeyDown}>
+    <div className="map-tree" role="tree" tabIndex={-1} aria-label={tr('Vision map for {title}', { title: dream.title })} onKeyDown={handleTreeKeyDown}>
       <div className="map-node map-node--dream" role="none">
         <div className={`map-row${dream.archived ? ' map-row--archived' : ''}`} {...rowShellProps(dreamRow)}>
           {chevron(dreamRow)}

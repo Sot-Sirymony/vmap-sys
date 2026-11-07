@@ -107,7 +107,7 @@ export function CommandPalette({ open, onClose, onShowShortcuts }: CommandPalett
       className="palette-dialog"
       slotProps={{ paper: { 'aria-label': tr('Command palette') } }}
     >
-      <div className="palette" onKeyDown={handleKeyDown}>
+      <div className="palette">
         {/* Combobox pattern: focus stays in the search box and the active
             option is announced through aria-activedescendant, so the options
             themselves hold no focusable controls (NFR-02). */}
@@ -123,6 +123,8 @@ export function CommandPalette({ open, onClose, onShowShortcuts }: CommandPalett
           fullWidth
           slotProps={{
             htmlInput: {
+              // Arrow keys and Enter are read where they are typed (NFR-02).
+              onKeyDown: handleKeyDown,
               role: 'combobox',
               'aria-label': tr('Command palette search'),
               'aria-expanded': matches.length > 0,
