@@ -159,6 +159,56 @@ class AiPlanFlowTests {
     }
 
     @Test
+    void goalSuggestionsReadTheDreamsAreaWhyAndFullSuccessDefinition() throws Exception {
+        String user = consented(email("grounded"));
+        long areaId = read(send(post("/api/vision-areas"), user, Map.of("name", "Career Growth", "description", "Work I am proud of",
+                "priority", "HIGH", "status", "ACTIVE"))).get("id").asLong();
+        String success = "Publish two papers. " + "x".repeat(600) + " Lead one funded study by the end.";
+        Map<String, Object> body = new HashMap<>(Map.of("visionAreaId", areaId, "title", "Become a public health researcher",
+                "description", "Use AI tools in research", "whyImportant", "Help my community make better health choices",
+                "successDefinition", success, "letterRank", "A", "dreamType", "LONG_TERM", "priority", "HIGH",
+                "status", "ACTIVE", "moonshot", false));
+        body.put("scheduleMode", "BOTTOM_UP");
+        long dreamId = read(send(post("/api/dreams"), user, body).andExpect(status().isCreated())).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.GoalDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.GoalDrafts(List.of(), "Which field?"), "claude-opus-5-5", 10, 10, false));
+
+        mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/goal-suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> task = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), task.capture(), eq(AiDrafts.GoalDrafts.class));
+        assertThat(system.getValue()).contains("Vision area: Career Growth").contains("Area description: Work I am proud of")
+                .contains("Description: Use AI tools in research")
+                .contains("Why it matters: Help my community make better health choices")
+                // The end of a long success definition is no longer cut off at 300 characters.
+                .contains("Lead one funded study by the end.");
+        assertThat(task.getValue()).contains("success definition").contains("why it matters");
+    }
+
+    @Test
+    void stepSuggestionsReadTheGoalsSuccessCriteria() throws Exception {
+        String user = consented(email("grounded-steps"));
+        long goalId = read(send(post("/api/goals"), user, Map.of("dreamId", dream(user), "title", "Save a deposit",
+                "description", "Put money aside each month", "successCriteria", "Ten thousand dollars saved by June",
+                "priority", "HIGH", "targetDate", TODAY.plusMonths(4).toString(), "status", "IN_PROGRESS",
+                "scheduleMode", "BOTTOM_UP")).andExpect(status().isCreated())).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.StepDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.StepDrafts(List.of(), "How much?"), "claude-opus-5-5", 10, 10, false));
+
+        mockMvc.perform(post("/api/ai/plan/goals/" + goalId + "/step-suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> task = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), task.capture(), eq(AiDrafts.StepDrafts.class));
+        assertThat(system.getValue()).contains("Goal description: Put money aside each month")
+                .contains("Goal success criteria: Ten thousand dollars saved by June");
+        assertThat(task.getValue()).contains("success criteria");
+    }
+
+    @Test
     void aVagueDreamGetsOneQuestionAndAStretchGoalIsOneMoonshot() throws Exception {
         String user = consented(email("vague"));
         long dreamId = dream(user);

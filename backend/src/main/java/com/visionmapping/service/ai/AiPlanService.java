@@ -1,6 +1,7 @@
 package com.visionmapping.service.ai;
 
 import static com.visionmapping.service.ai.AiContextBuilder.clip;
+import static com.visionmapping.service.ai.AiContextBuilder.clipLong;
 
 import com.visionmapping.dto.request.DraftGoalStepsRequest;
 import com.visionmapping.dto.request.DraftStepTasksRequest;
@@ -69,6 +70,18 @@ public class AiPlanService {
     static final int MAX_TASKS = 8;
     static final int MAX_AI_ISSUES = 8;
     private static final Set<String> AI_ISSUE_KINDS = Set.of("VAGUE_STEP", "UNREALISTIC_TIMING", "GAP");
+
+    /** Goals are built from what the participant wrote about the dream, not from its title alone. */
+    static final String GOAL_GROUNDING = "Before suggesting, read the dream's vision area, description, why it matters and "
+            + "success definition. Every goal must move the dream toward its success definition, and together the goals "
+            + "must fully meet it; let why it matters guide what to put first. In each goal's reason, say in one short "
+            + "sentence which part of the success definition it covers. When the dream has no success definition or "
+            + "description, work from its title and why it matters.";
+
+    /** Steps are built from the goal's success criteria, so finishing them finishes the goal. */
+    static final String STEP_GROUNDING = "Before suggesting, read the goal's description and success criteria, and the "
+            + "dream's success definition. Together the steps must meet the goal's success criteria. In each step's "
+            + "reason, say in one short sentence how it moves the goal toward them.";
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
@@ -172,8 +185,8 @@ public class AiPlanService {
                 + "and different from the goals the participant already has."
                 : "Turn this dream into between 1 and " + MAX_GOALS + " SMART goals (specific, measurable, achievable, "
                 + "relevant, time-bound) that together would make it happen. Do not repeat goals the participant already has.";
-        String prompt = task + " Every target date must be after " + today + " and, when the dream has a target date, "
-                + "not after it. " + questionRule(ask, "the dream", "goals");
+        String prompt = task + " " + GOAL_GROUNDING + " Every target date must be after " + today
+                + " and, when the dream has a target date, not after it. " + questionRule(ask, "the dream", "goals");
         AiStructuredRequests.Tracked<AiDrafts.GoalDrafts> answer = requests.askTracked(user, apiKey,
                 stretch ? "STRETCH_GOAL" : "GOAL_BUILDER", language, plan, prompt, AiDrafts.GoalDrafts.class);
         AiDrafts.GoalDrafts drafts = answer.value();
@@ -209,8 +222,12 @@ public class AiPlanService {
         String plan = transactions.execute(status -> {
             Goal goal = lookup.goal(goalId);
             latest[0] = goal.getTargetDate() != null ? goal.getTargetDate() : goal.getDream().getTargetDate();
-            return describeDream(user, goal.getDream()) + "\nThe goal to plan: [" + goal.getId() + "] " + clip(goal.getTitle())
-                    + (goal.getTargetDate() == null ? "" : ", target " + goal.getTargetDate()) + "\n";
+            StringBuilder out = new StringBuilder(describeDream(user, goal.getDream()));
+            out.append("\nThe goal to plan: [").append(goal.getId()).append("] ").append(clip(goal.getTitle()))
+                    .append(goal.getTargetDate() == null ? "" : ", target " + goal.getTargetDate()).append('\n');
+            appendLongLine(out, "Goal description", goal.getDescription());
+            appendLongLine(out, "Goal success criteria", goal.getSuccessCriteria());
+            return out.toString();
         });
         return stepsFor(user, apiKey, plan + askRecords(ask), today, latest[0], language, ask);
     }
@@ -230,7 +247,7 @@ public class AiPlanService {
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId))
                 + "\nThe goal to plan (new, not saved yet): " + clip(goal.title())
                 + (goal.targetDate() == null ? "" : ", target " + goal.targetDate()) + "\n"
-                + (blank(goal.successCriteria()) ? "" : "Goal success criteria: " + clip(goal.successCriteria()) + "\n"));
+                + (blank(goal.successCriteria()) ? "" : "Goal success criteria: " + clipLong(goal.successCriteria()) + "\n"));
         return stepsFor(user, apiKey, plan + askRecords(goal.ask()), today, latest, language, goal.ask());
     }
 
@@ -241,7 +258,7 @@ public class AiPlanService {
                 ? refineTask(ask, "steps", max) + " Steps stay in the order they should happen."
                 : "Break the goal to plan into between 3 and " + MAX_STEPS + " steps, in the order they should happen. "
                 + "Do not repeat steps the goal already has.";
-        String prompt = task + " Owner is Me unless a role clearly fits better; never invent a "
+        String prompt = task + " " + STEP_GROUNDING + " Owner is Me unless a role clearly fits better; never invent a "
                 + "person's name. Dates must be after " + today + " and, when the goal has a target date, not after it. "
                 + "For each step give a priority, a realistic effort in hours, whether it is complex (needs several "
                 + "separate tasks), and the earlier step it must wait for, if any; a step is not due before that one. "
@@ -608,9 +625,15 @@ public class AiPlanService {
             out.append(", target ").append(dream.getTargetDate());
         }
         out.append('\n');
-        appendLine(out, "Description", dream.getDescription());
-        appendLine(out, "Why it matters", dream.getWhyImportant());
-        appendLine(out, "Success looks like", dream.getSuccessDefinition());
+        VisionArea area = dream.getVisionArea();
+        if (area != null) {
+            out.append("Vision area: ").append(clip(area.getName())).append('\n');
+            appendLine(out, "Area description", area.getDescription());
+            appendLine(out, "Area vision", area.getVisionStatement());
+        }
+        appendLongLine(out, "Description", dream.getDescription());
+        appendLongLine(out, "Why it matters", dream.getWhyImportant());
+        appendLongLine(out, "Success looks like", dream.getSuccessDefinition());
         List<Goal> goals = goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dream.getId(), user.getId());
         if (goals.isEmpty()) {
             out.append("No goals yet.\n");
@@ -666,6 +689,13 @@ public class AiPlanService {
     private static void appendLine(StringBuilder out, String label, String value) {
         if (!blank(value)) {
             out.append(label).append(": ").append(clip(value)).append('\n');
+        }
+    }
+
+    /** A field a suggestion is built from, so Claude sees it in full (see AiContextBuilder.clipLong). */
+    private static void appendLongLine(StringBuilder out, String label, String value) {
+        if (!blank(value)) {
+            out.append(label).append(": ").append(clipLong(value)).append('\n');
         }
     }
 

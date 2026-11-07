@@ -54,6 +54,7 @@ public class AiContextBuilder {
     public static final String MODULE = "module";
 
     static final int MAX_FIELD = 300;
+    static final int MAX_LONG_FIELD = 1500;
     static final int MAX_DREAMS = 5;
     static final int MAX_GOALS = 6;
     static final int MAX_STEPS = 10;
@@ -343,11 +344,25 @@ public class AiContextBuilder {
     }
 
     public static String clip(String value) {
+        return clip(value, MAX_FIELD);
+    }
+
+    /**
+     * A longer clip for the fields a suggestion is built from: the dream's
+     * description, why it matters and success definition, and the goal's
+     * description and success criteria. Cut at 300, Claude often missed the
+     * part of the success definition a goal or step had to meet.
+     */
+    public static String clipLong(String value) {
+        return clip(value, MAX_LONG_FIELD);
+    }
+
+    private static String clip(String value, int max) {
         if (value == null) {
             return "";
         }
         // Angle brackets become look-alikes so a record cannot close the data block (AI-NFR-13).
         String flat = value.replaceAll("\\s+", " ").replace('<', '‹').replace('>', '›').trim();
-        return flat.length() <= MAX_FIELD ? flat : flat.substring(0, MAX_FIELD - 3) + "...";
+        return flat.length() <= max ? flat : flat.substring(0, max - 3) + "...";
     }
 }
