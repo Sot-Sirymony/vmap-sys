@@ -66,4 +66,5 @@ production_env.md
 
 # Playwright output
 frontend/test-results/
+frontend/coverage/
 frontend/playwright-report/

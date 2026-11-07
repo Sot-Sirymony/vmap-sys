@@ -41,8 +41,9 @@ Every push and pull request to `main` runs [`.github/workflows/ci.yml`](../.gith
 
 | Job | What it checks |
 | --- | --- |
-| Backend tests | `mvn verify`: compile and every backend test |
-| Frontend tests | `npm ci` (exactly the lock file), type-check, build, every frontend test |
+| Backend tests | `mvn verify`: compile, every backend test, and JaCoCo coverage |
+| Frontend tests | `npm ci` (exactly the lock file), type-check, build, every frontend test with coverage |
+| SonarQube | Code quality on SonarQube Cloud: bugs, code smells, security hotspots, duplication and coverage, against the quality gate. Uses the two jobs' coverage reports and [`sonar-project.properties`](../sonar-project.properties). Skipped when the `SONAR_TOKEN` secret is not available (Dependabot and fork pull requests) |
 | Security scan | Builds the backend image and scans it with Trivy (operating system packages and the Java libraries in the app); scans the frontend lock file including build tools; `npm audit` on what ships to browsers; on `main`, saves a CycloneDX software bill of materials as a build artifact for 90 days |
 
 The scan fails the build on any **High or Critical** issue that has a fix. It
@@ -60,6 +61,26 @@ Other controls:
 - **Non-root container.** The backend runs as the `app` user.
 - **Dependabot** opens grouped update pull requests every Monday for Maven, npm,
   Docker images and GitHub Actions, plus security updates as they appear.
+
+### SonarQube Cloud
+
+One-time setup, by the repository owner:
+
+1. Sign in at [sonarcloud.io](https://sonarcloud.io) with GitHub and import
+   `Sot-Sirymony/vmap-sys`. If the organization or project key it gives differ
+   from `sot-sirymony` and `Sot-Sirymony_vmap-sys`, change them in
+   `sonar-project.properties`.
+2. In the project, open **Administration → Analysis Method** and turn off
+   **Automatic Analysis**. CI runs the analysis instead, with coverage.
+3. Create a token (**My Account → Security**) and add it to the GitHub repo as
+   the Actions secret `SONAR_TOKEN`.
+4. After the first scan, add **SonarQube** as a required check on `main`
+   alongside the other three, so a pull request that fails the quality gate
+   cannot be merged.
+
+To see coverage locally: `mvn verify` in `backend/` writes
+`target/site/jacoco/index.html`, and `npm run test:coverage` in `frontend/`
+writes `coverage/lcov-report/index.html`.
 
 ### Update deadlines (SEC-03-03)
 

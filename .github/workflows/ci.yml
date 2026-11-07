@@ -46,6 +46,15 @@ jobs:
           cache-dependency-path: backend/pom.xml
       - name: Build and test
         run: mvn -B -ntp -s maven-settings.xml verify
+      # Compiled classes and JaCoCo coverage, for the SonarQube job below.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-for-sonar
+          path: |
+            backend/target/classes
+            backend/target/test-classes
+            backend/target/site/jacoco/jacoco.xml
+          retention-days: 1
 
   frontend:
     name: Frontend tests
@@ -67,8 +76,46 @@ jobs:
         run: npm ci
       - name: Type-check and build
         run: npm run build
-      - name: Test
-        run: npm test
+      - name: Test with coverage
+        run: npm run test:coverage
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-for-sonar
+          path: frontend/coverage/lcov.info
+          retention-days: 1
+
+  # Code quality: bugs, code smells, security hotspots, duplication and
+  # coverage, checked against the SonarQube Cloud quality gate. Settings are in
+  # sonar-project.properties. Skipped when SONAR_TOKEN is not available, as on
+  # Dependabot and fork pull requests, which GitHub does not give secrets to.
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [backend, frontend]
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.SONAR_TOKEN != ''
+        with:
+          fetch-depth: 0 # full history, so new code and blame are right
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: env.SONAR_TOKEN != ''
+        with:
+          name: backend-for-sonar
+          path: backend/target
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: env.SONAR_TOKEN != ''
+        with:
+          name: frontend-for-sonar
+          path: frontend/coverage
+      - name: SonarQube Cloud scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+      - name: No token
+        if: env.SONAR_TOKEN == ''
+        run: echo "SONAR_TOKEN is not set for this run, so the SonarQube scan was skipped."
 
   security:
     name: Security scan
