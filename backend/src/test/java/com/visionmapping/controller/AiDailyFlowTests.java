@@ -182,6 +182,30 @@ class AiDailyFlowTests {
     }
 
     @Test
+    void resourceIdeasReadTheGoalsOutcomeBeforeSuggesting() throws Exception {
+        String user = consented(email("resources-grounded"));
+        String criteria = "Ten thousand dollars saved. " + "x".repeat(600) + " Kept in a separate account.";
+        long goalId = read(send(post("/api/goals"), user, Map.of("dreamId", dream(user), "title", "Save a deposit",
+                "description", "Put money aside each month", "successCriteria", criteria, "priority", "HIGH",
+                "targetDate", TODAY.plusMonths(4).toString(), "status", "IN_PROGRESS", "scheduleMode", "BOTTOM_UP"))
+                .andExpect(status().isCreated())).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.ResourceDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.ResourceDrafts(List.of()), "claude-opus-5-5", 10, 10, false));
+
+        mockMvc.perform(post("/api/ai/daily/goals/" + goalId + "/resource-ideas").header("Authorization", "Bearer " + user))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> task = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), task.capture(), eq(AiDrafts.ResourceDrafts.class));
+        assertThat(system.getValue()).contains("Dream success looks like: Keys in hand")
+                .contains("Goal description: Put money aside each month")
+                // The end of a long success criteria is not cut off.
+                .contains("Kept in a separate account.");
+        assertThat(task.getValue()).contains("success criteria");
+    }
+
+    @Test
     void aiReminderLinesQuoteThePassionStatementOnlyWhenSwitchedOnAndConsented() throws Exception {
         String email = email("remind");
         String user = consented(email);

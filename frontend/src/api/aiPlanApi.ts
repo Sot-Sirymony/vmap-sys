@@ -101,12 +101,13 @@ export function addPlanDraft(token: string, dreamId: number) {
 
 /** Steps for a goal that exists only in the draft. */
 export function suggestDraftGoalSteps(token: string, dreamId: number, language: string,
-  goal: { title: string; successCriteria?: string | null; targetDate?: string | null }, ask?: PlanAsk) {
+  goal: { title: string; description?: string | null; successCriteria?: string | null; targetDate?: string | null }, ask?: PlanAsk) {
   return apiClient<StepSuggestions>(`/ai/plan/dreams/${dreamId}/draft-step-suggestions?language=${language}`, {
     method: 'POST',
     token,
     body: JSON.stringify({
-      title: goal.title, successCriteria: goal.successCriteria || undefined, targetDate: goal.targetDate || undefined, ask,
+      title: goal.title, description: goal.description || undefined, successCriteria: goal.successCriteria || undefined,
+      targetDate: goal.targetDate || undefined, ask,
     }),
   });
 }

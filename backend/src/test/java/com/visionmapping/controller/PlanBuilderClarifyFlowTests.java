@@ -181,6 +181,23 @@ class PlanBuilderClarifyFlowTests {
     }
 
     @Test
+    void stepsForADraftGoalReadItsDescriptionAndSuccessCriteria() throws Exception {
+        String user = consented(email("draft-goal-grounded"));
+        long dreamId = dream(user);
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.StepDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.StepDrafts(List.of(), "How much?"), "claude-opus-5-5", 10, 10, false));
+        send(post("/api/ai/plan/dreams/" + dreamId + "/draft-step-suggestions"), user, Map.of("title", "Save a deposit",
+                "description", "Put money aside each month", "successCriteria", "Ten thousand dollars saved"))
+                .andExpect(status().isOk());
+        ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).structured(anyString(), anyString(), system.capture(), prompt.capture(), eq(AiDrafts.StepDrafts.class));
+        assertThat(system.getValue()).contains("Goal description: Put money aside each month")
+                .contains("Goal success criteria: Ten thousand dollars saved");
+        assertThat(prompt.getValue()).contains("success criteria");
+    }
+
+    @Test
     void anAnswerIsSavedIntoTheDreamOnlyWhenAsked() throws Exception {
         String user = consented(email("save-answer"));
         long dreamId = dream(user);

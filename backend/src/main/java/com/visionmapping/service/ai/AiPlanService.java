@@ -247,6 +247,7 @@ public class AiPlanService {
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId))
                 + "\nThe goal to plan (new, not saved yet): " + clip(goal.title())
                 + (goal.targetDate() == null ? "" : ", target " + goal.targetDate()) + "\n"
+                + (blank(goal.description()) ? "" : "Goal description: " + clipLong(goal.description()) + "\n")
                 + (blank(goal.successCriteria()) ? "" : "Goal success criteria: " + clipLong(goal.successCriteria()) + "\n"));
         return stepsFor(user, apiKey, plan + askRecords(goal.ask()), today, latest, language, goal.ask());
     }

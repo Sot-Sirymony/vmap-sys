@@ -11,6 +11,7 @@ import java.time.LocalDate;
  */
 public record DraftGoalStepsRequest(
         @NotBlank @Size(max = 220) String title,
+        @Size(max = 3000) String description,
         @Size(max = 3000) String successCriteria,
         LocalDate targetDate,
         // V11 Phase 3: answers and refinement, as for a saved goal.

@@ -1,6 +1,7 @@
 package com.visionmapping.service.ai;
 
 import static com.visionmapping.service.ai.AiContextBuilder.clip;
+import static com.visionmapping.service.ai.AiContextBuilder.clipLong;
 
 import com.visionmapping.dto.request.AiOutreachRequest;
 import com.visionmapping.dto.request.AiPitchRequest;
@@ -192,6 +193,17 @@ public class AiDailyService {
         return new OutreachDraft(limit(draft.subject(), 220), limit(draft.message(), 6000));
     }
 
+    /** Resource ideas are chosen for the goal's outcome, not its title alone. */
+    static final String RESOURCE_GROUNDING = "Before suggesting, read the goal's description and success criteria, and the "
+            + "dream's success definition. Pick only resources that help reach that outcome, starting with what the steps "
+            + "still need. In each idea's why, say in one short sentence which part of the success criteria it helps meet.";
+
+    private static void appendLong(StringBuilder out, String label, String value) {
+        if (value != null && !value.isBlank()) {
+            out.append(label).append(": ").append(clipLong(value)).append('\n');
+        }
+    }
+
     /** AI-FR-13: kinds of resources and people for a goal; every named one must be checked before use. */
     public ResourceIdeas resources(Long goalId, String language) {
         AppUser user = lookup.currentUser();
@@ -202,15 +214,20 @@ public class AiDailyService {
         Map<Long, AiApprovedResource> approved = resourceIdeas.approved();
         String records = transactions.execute(status -> {
             Goal goal = lookup.goal(goalId);
-            StringBuilder out = new StringBuilder("Dream: ").append(clip(goal.getDream().getTitle())).append('\n');
-            out.append("Goal: ").append(clip(goal.getTitle())).append('\n');
+            Dream dream = goal.getDream();
+            StringBuilder out = new StringBuilder("Dream: ").append(clip(dream.getTitle())).append('\n');
+            appendLong(out, "Dream success looks like", dream.getSuccessDefinition());
+            out.append("Goal: ").append(clip(goal.getTitle()))
+                    .append(goal.getTargetDate() == null ? "" : ", target " + goal.getTargetDate()).append('\n');
+            appendLong(out, "Goal description", goal.getDescription());
+            appendLong(out, "Goal success criteria", goal.getSuccessCriteria());
             visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), user.getId())
                     .forEach(step -> out.append("Step: ").append(clip(step.getTitle()))
                             .append(step.getResources() == null ? "" : " | needs: " + clip(step.getResources())).append('\n'));
             out.append(AiResourceIdeas.describe(approved));
             return out.toString();
         });
-        String task = AiResourceIdeas.instruction(MAX_RESOURCES) + " They are for this goal.";
+        String task = AiResourceIdeas.instruction(MAX_RESOURCES) + " They are for this goal. " + RESOURCE_GROUNDING;
         AiDrafts.ResourceDrafts drafts = requests.ask(user, apiKey, "RESOURCE_IDEAS", language, records, task, AiDrafts.ResourceDrafts.class);
         return new ResourceIdeas(AiResourceIdeas.toIdeas(drafts.resources(), approved, MAX_RESOURCES));
     }
