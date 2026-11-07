@@ -12,6 +12,7 @@ import { SuggestionRating } from '../ai/SuggestionRating';
 import {
   type DraftUpdate, addClarification, addGoals, emptyGoal, goalFromSuggestion, isReplaceable, removeGoal, replaceGoals, updateGoal,
 } from './draftModel';
+import { arrangeFor } from './arrange';
 import { AnswerQuestion, DateField, ItemCard, PrioritySelect, Prompts, RefineBar, twoColumns } from './parts';
 import { useAiAction } from './useAiAction';
 
@@ -92,7 +93,8 @@ export function GoalsStage({ dream, content, onChange, token, language, aiReady 
           <ItemCard key={goal.key} title={goal.title} fromAi={fromAi} edited={goal.edited} locked={goal.locked} busy={ai.busy !== null}
             onToggleLock={fromAi ? () => onChange((current) => updateGoal(current, goal.key, { locked: !goal.locked })) : undefined}
             onAnother={aiReady && isReplaceable(goal) ? () => void refine('ANOTHER', '', goal) : undefined}
-            onRemove={() => onChange((current) => removeGoal(current, goal.key))}>
+            onRemove={() => onChange((current) => removeGoal(current, goal.key))}
+            arrange={arrangeFor(content, { goalKey: goal.key }, onChange)}>
             <TextField size="small" label={tr('Goal')} value={goal.title} required
               onChange={(event) => onChange((current) => updateGoal(current, goal.key, { title: event.target.value }))} />
             <TextField size="small" label={tr('Success criteria')} value={goal.successCriteria ?? ''} multiline

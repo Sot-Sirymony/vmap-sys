@@ -14,6 +14,7 @@ import { SuggestionRating } from '../ai/SuggestionRating';
 import {
   type DraftUpdate, addClarification, addTasksToStep, emptyTask, isReplaceable, removeTask, replaceTasks, taskFromSuggestion, updateTask,
 } from './draftModel';
+import { arrangeFor } from './arrange';
 import { AnswerQuestion, DateField, ItemCard, PrioritySelect, Prompts, RefineBar, twoColumns } from './parts';
 import { useAiAction } from './useAiAction';
 
@@ -135,7 +136,8 @@ export function TasksStage({ dream, content, onChange, existingSteps, existingTa
                 <ItemCard key={task.key} title={task.title} fromAi={fromAi} edited={task.edited} locked={task.locked} busy={ai.busy !== null}
                   onToggleLock={fromAi ? () => update(task, { locked: !task.locked }) : undefined}
                   onAnother={aiReady && isReplaceable(task) ? () => void refine(row, 'ANOTHER', '', task) : undefined}
-                  onRemove={() => onChange((current) => removeTask(current, row.goal.key, stepKey, task.key))}>
+                  onRemove={() => onChange((current) => removeTask(current, row.goal.key, stepKey, task.key))}
+                  arrange={arrangeFor(content, { goalKey: row.goal.key, stepKey, taskKey: task.key }, onChange)}>
                   <TextField size="small" label={tr('Task')} value={task.title} required
                     onChange={(event) => update(task, { title: event.target.value })} />
                   <Box sx={twoColumns}>

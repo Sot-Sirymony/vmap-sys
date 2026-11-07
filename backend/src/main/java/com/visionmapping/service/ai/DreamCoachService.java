@@ -59,6 +59,7 @@ public class DreamCoachService {
     private final ClaudeClient claudeClient;
     private final AiContextBuilder contextBuilder;
     private final PlanAssistantService planAssistant;
+    private final PlanSessionGuard sessionGuard;
     private final TransactionTemplate transactions;
 
     @Transactional(readOnly = true)
@@ -124,7 +125,7 @@ public class DreamCoachService {
     public record Prepared(AppUser user, String apiKey, String model, BigDecimal budget, String helpLines,
                            Long conversationId, String text, String language, String system,
                            List<ClaudeClient.Turn> turns, List<String> sources, boolean crisis,
-                           String feature, Long dreamId, String section) {
+                           String feature, Long dreamId, String section, String planSessionKey) {
     }
 
     @Transactional(readOnly = true)
@@ -149,10 +150,14 @@ public class DreamCoachService {
         Long conversationId = request.conversationId() == null ? null : owned(request.conversationId()).getId();
         if (AiSafety.looksLikeCrisis(text)) {
             return new Prepared(user, apiKey, settings.getModel(), settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
-                    conversationId, text, language, null, List.of(), List.of(), true, feature, dreamId, section);
+                    conversationId, text, language, null, List.of(), List.of(), true, feature, dreamId, section, null);
         }
         String contextText;
         List<String> sources;
+        if (assistant && "BUILDER".equals(request.surface())) {
+            // PB-NFR-03: after the crisis check, so a crisis message is never held back by the limit.
+            sessionGuard.use(user.getId(), request.dreamId());
+        }
         if (assistant) {
             // PB-NFR-12: only the section's items, never the wider records the Dream Coach reads.
             PlanAssistantService.ChatContext context = planAssistant.chatContext(user, request.dreamId(), request.surface(),
@@ -170,7 +175,8 @@ public class DreamCoachService {
         String system = CoachingGuidelines.system(language, firstName(user.getFullName()), settings.getCoachingGuidelines())
                 + "\n\n" + contextText;
         return new Prepared(user, apiKey, settings.getModel(), settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
-                conversationId, text, language, system, List.copyOf(turns), sources, false, feature, dreamId, section);
+                conversationId, text, language, system, List.copyOf(turns), sources, false, feature, dreamId, section,
+                PlanSessionContext.current());
     }
 
     public AiChatTurnResponse send(AiChatRequest request) {
@@ -310,7 +316,10 @@ public class DreamCoachService {
     }
 
     private static AiUsageLog log(Prepared prepared, String model, long inputTokens, long outputTokens, AiOutcome outcome) {
-        return AiUsage.entry(prepared.user(), prepared.feature(), model, inputTokens, outputTokens, outcome);
+        AiUsageLog entry = AiUsage.entry(prepared.user(), prepared.feature(), model, inputTokens, outputTokens, outcome);
+        // PB-FR-36: a streamed answer is logged on another thread, so the session key travels with the request.
+        entry.setPlanSessionKey(prepared.planSessionKey());
+        return entry;
     }
 
     private AiConversation owned(Long id) {

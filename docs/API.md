@@ -587,7 +587,7 @@ One draft per user per dream. Only its owner can read it; another user's dream a
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/api/ai/plan/drafts/{dreamId}` | `dreamId`, `stage`, `content`, `updatedAt`, `expiresAt`; 204 when there is none |
+| GET | `/api/ai/plan/drafts/{dreamId}` | `dreamId`, `stage`, `content`, `updatedAt`, `expiresAt`, `aiRequestsUsed`, `aiRequestLimit` (V11 Phase 8); 204 when there is none |
 | PUT | `/api/ai/plan/drafts/{dreamId}` | `{ "stage": "CLARIFY\|GOALS\|STEPS\|TASKS\|HELPERS\|REVIEW", "content": { "goals": [...] } }`. A goal or step with `existingId` stands for one already in the plan and only carries new children. Up to 15 goals, 25 steps per goal, 15 tasks per step. Fields may be blank while drafting. Refused for an archived dream |
 | DELETE | `/api/ai/plan/drafts/{dreamId}` | Discards the draft. 204 |
 | POST | `/api/ai/plan/drafts/{dreamId}/add` | Saves every new goal, step and task in one transaction with the normal create rules (a step needs title, owner and date; a task title, owner and due date) → 201 `goalIds`, `stepIds`, `taskIds`. A problem answers 400 naming the item (for example `Step "Visit banks" needs an owner.`) and nothing is saved; the draft stays. An `existingId` that is not this dream's live goal (or that goal's live step) is refused. On success the draft is removed and outcome counts are recorded for items carrying a `requestId` |
@@ -657,6 +657,12 @@ Helps with one section of the Plan page (`surface` `PLAN`, sections `WHOLE`, `ST
 | POST | `/api/ai/plan/dreams/{dreamId}/assistant/apply` | Plan page only: one change as the participant left it, plus `requestId` and `edited` → 201 `itemType`, `id`. Saved through the normal dream, goal, step and obstacle rules (a new step needs a date). Every ref must be in this dream's plan; others answer 404. `ADD_TASK` answers 400 (tasks are changed in Build my plan) |
 
 In Build my plan, cards are applied to the draft in the browser and counted with `POST /api/ai/plan/requests/{id}/outcome`.
+
+### V11: session limit, finished plans, arranging (Phase 8)
+
+- **Session limit (PB-NFR-03).** While a live draft exists for a dream, it allows 15 AI requests: goal, step and task suggestions (saved or draft), clarify, helpers and risks, draft fixes, plan assistant proposals and chat with `surface` `BUILDER`, and the AI part of both plan checks. Past the limit these answer 429 "This plan session has used its 15 AI requests. ..."; the plan check and draft check return their rule issues with `aiChecked` false. A crisis chat message is still answered. `PUT` and `GET /api/ai/plan/drafts/{dreamId}` return `aiRequestsUsed` and `aiRequestLimit`. Adding or discarding the draft ends the session.
+- **Finished plans (PB-FR-36).** Every AI request counted in a session carries the session's key. `POST /api/ai/plan/drafts/{dreamId}/add` records the session's exact requests and cost. `GET /api/admin/ai/plan-metrics` adds `finishedPlans`, `requestsPerFinishedPlan` and `costPerFinishedPlan` (null when there are none), and each feature adds its own `requestsPerFinishedPlan` and `costPerFinishedPlan`. `PLAN_ASSISTANT_CHAT` is listed with the plan features.
+- Reordering, merging and splitting (PB-FR-22) happen in the draft in the browser; no endpoint changes.
 
 ### V9: daily use (Phase 6)
 

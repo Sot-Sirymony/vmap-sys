@@ -26,6 +26,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -54,6 +57,7 @@ public class AiPlanFeedbackService {
     static final int MAX_METRIC_DAYS = 365;
 
     private final AiUsageLogRepository usageLogRepository;
+    private final com.visionmapping.repository.PlanBuilderFinishedPlanRepository finishedPlans;
     private final EntityLookup lookup;
     private final GoalService goalService;
     private final VisionStepService stepService;
@@ -202,22 +206,60 @@ public class AiPlanFeedbackService {
         Roles.requireAdmin(lookup.currentUser(), "Only an administrator can see AI plan builder metrics.");
         int period = Math.max(1, Math.min(days, MAX_METRIC_DAYS));
         Instant from = Instant.now(clock).minus(Duration.ofDays(period));
+        Object[] finished = finishedPlans.totalsSince(from).get(0);
+        long plans = number(finished[0]);
+        // PB-FR-36: per feature, what the sessions of the plans finished in the period asked for and cost.
+        Map<String, Object[]> perPlan = new HashMap<>();
+        for (Object[] row : usageLogRepository.finishedSessionsByFeatureSince(from)) {
+            perPlan.put((String) row[0], row);
+        }
+        Set<String> metricFeatures = new HashSet<>(PLAN_FEATURES);
+        metricFeatures.add(PlanAssistantService.CHAT_FEATURE);
         List<PlanFeatureMetrics> features = new ArrayList<>();
-        for (Object[] row : usageLogRepository.planMetricsSince(from, PLAN_FEATURES)) {
+        Set<String> seen = new HashSet<>();
+        for (Object[] row : usageLogRepository.planMetricsSince(from, metricFeatures)) {
             String feature = (String) row[0];
+            seen.add(feature);
             long requests = number(row[1]);
             long suggestedItems = number(row[2]);
             long added = number(row[3]);
             long edited = number(row[4]);
             long ratings = number(row[5]);
             long thumbsUp = number(row[6]);
-            BigDecimal cost = row[7] == null ? BigDecimal.ZERO : (BigDecimal) row[7];
+            BigDecimal cost = decimal(row[7]);
             features.add(new PlanFeatureMetrics(feature, requests, suggestedItems, added, edited,
                     rate(added + edited, suggestedItems), rate(edited, added + edited), ratings, rate(thumbsUp, ratings),
-                    cost, requests == 0 ? BigDecimal.ZERO : cost.divide(BigDecimal.valueOf(requests), 6, RoundingMode.HALF_UP)));
+                    cost, requests == 0 ? BigDecimal.ZERO : cost.divide(BigDecimal.valueOf(requests), 6, RoundingMode.HALF_UP),
+                    perPlanRequests(perPlan.get(feature), plans), perPlanCost(perPlan.get(feature), plans)));
         }
+        // A finished session can include requests from before the period.
+        perPlan.forEach((feature, row) -> {
+            if (!seen.contains(feature)) {
+                features.add(new PlanFeatureMetrics(feature, 0, 0, 0, 0, null, null, 0, null, BigDecimal.ZERO, BigDecimal.ZERO,
+                        perPlanRequests(row, plans), perPlanCost(row, plans)));
+            }
+        });
         features.sort((left, right) -> left.feature().compareTo(right.feature()));
-        return new PlanMetrics(period, features);
+        long planRequests = number(finished[1]);
+        BigDecimal planCost = decimal(finished[2]);
+        return new PlanMetrics(period, features, plans,
+                plans == 0 ? null : Math.round(planRequests * 10.0 / plans) / 10.0,
+                plans == 0 ? null : planCost.divide(BigDecimal.valueOf(plans), 6, RoundingMode.HALF_UP));
+    }
+
+    private static Double perPlanRequests(Object[] row, long plans) {
+        return row == null || plans == 0 ? null : Math.round(number(row[1]) * 10.0 / plans) / 10.0;
+    }
+
+    private static BigDecimal perPlanCost(Object[] row, long plans) {
+        return row == null || plans == 0 ? null : decimal(row[2]).divide(BigDecimal.valueOf(plans), 6, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal decimal(Object value) {
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
+        }
+        return value == null ? BigDecimal.ZERO : BigDecimal.valueOf(((Number) value).doubleValue());
     }
 
     /** The caller's own plan builder answer; anything else answers 404, the same as one that does not exist. */

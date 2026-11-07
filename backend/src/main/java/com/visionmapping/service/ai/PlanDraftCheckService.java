@@ -61,6 +61,7 @@ public class PlanDraftCheckService {
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
+    private final PlanSessionGuard sessionGuard;
     private final AiStructuredRequests requests;
     private final AiPlanService planService;
     private final PlanBuilderDraftService drafts;
@@ -82,7 +83,8 @@ public class PlanDraftCheckService {
         String records = rules.records();
 
         Optional<String> apiKey = accessService.availableKey(user);
-        if (apiKey.isEmpty() || titles.isEmpty()) {
+        // PB-NFR-03: past the session's limit the rule checks still run.
+        if (apiKey.isEmpty() || titles.isEmpty() || !sessionGuard.tryUse(user.getId(), dreamId)) {
             return new DraftCheck(issues, false, null);
         }
         String prompt = "Review this draft plan like a careful coach before it is saved. Report up to " + MAX_AI_ISSUES
@@ -185,6 +187,7 @@ public class PlanDraftCheckService {
         AppUser user = lookup.currentUser();
         PlanDraftContent content = drafts.stored(dreamId);
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         LocalDate today = LocalDate.now(clock);
         DraftGoal goal = null;
         DraftStep step = null;

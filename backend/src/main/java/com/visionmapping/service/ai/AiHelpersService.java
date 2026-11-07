@@ -74,6 +74,7 @@ public class AiHelpersService {
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
+    private final PlanSessionGuard sessionGuard;
     private final AiStructuredRequests requests;
     private final AiPlanService planService;
     private final AiPlanFeedbackService feedback;
@@ -86,6 +87,7 @@ public class AiHelpersService {
         AppUser user = lookup.currentUser();
         lookup.dream(dreamId);
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         List<PlanHelpersRequest.Item> items = Optional.ofNullable(request.items()).orElse(List.of());
         Set<String> keys = items.stream().map(PlanHelpersRequest.Item::key).collect(Collectors.toSet());
         Map<Long, AiApprovedResource> approved = resourceIdeas.approved();

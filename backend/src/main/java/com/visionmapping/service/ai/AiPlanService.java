@@ -81,6 +81,7 @@ public class AiPlanService {
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final AiPlanFeedbackService feedback;
+    private final PlanSessionGuard sessionGuard;
 
     /** Vision areas the participant does not have yet, to start a plan from. */
     public VisionAreaSuggestions suggestVisionAreas(String language) {
@@ -160,6 +161,7 @@ public class AiPlanService {
         // V11 (PB-FR-15): a goal may not be due after its dream.
         LocalDate latest = lookup.dream(dreamId).getTargetDate();
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId))) + askRecords(ask);
         LocalDate today = LocalDate.now(clock);
         int max = refining(ask) ? refineMax(ask, MAX_GOALS) : stretch ? 1 : MAX_GOALS;
@@ -198,8 +200,9 @@ public class AiPlanService {
         AppUser user = lookup.currentUser();
         // V10 (SEC-01-02): ownership first, so another user's record answers 404
         // whether or not AI is available.
-        lookup.goal(goalId);
+        Long goalDream = transactions.execute(status -> lookup.goal(goalId).getDream().getId());
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), goalDream); // PB-NFR-03
         LocalDate today = LocalDate.now(clock);
         // V11 (PB-FR-15): a step may not be due after its goal, or its dream when the goal has no date.
         LocalDate[] latest = new LocalDate[1];
@@ -221,6 +224,7 @@ public class AiPlanService {
         AppUser user = lookup.currentUser();
         LocalDate dreamDate = lookup.dream(dreamId).getTargetDate();
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         LocalDate today = LocalDate.now(clock);
         LocalDate latest = goal.targetDate() != null ? goal.targetDate() : dreamDate;
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId))
@@ -278,8 +282,9 @@ public class AiPlanService {
      */
     public TaskSuggestions suggestTasks(Long stepId, String language, PlanAskRequest ask) {
         AppUser user = lookup.currentUser();
-        lookup.step(stepId);
+        Long stepDream = transactions.execute(status -> lookup.step(stepId).getGoal().getDream().getId());
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), stepDream); // PB-NFR-03
         LocalDate[] latest = new LocalDate[1];
         String plan = transactions.execute(status -> {
             VisionStep step = lookup.step(stepId);
@@ -302,6 +307,7 @@ public class AiPlanService {
         AppUser user = lookup.currentUser();
         LocalDate dreamDate = lookup.dream(dreamId).getTargetDate();
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         LocalDate latest = firstDate(step.stepTargetDate(), step.goalTargetDate(), dreamDate);
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)))
                 + "\nThe step to break into tasks (new, not saved yet): " + clip(step.stepTitle())
@@ -367,6 +373,7 @@ public class AiPlanService {
             return new ClarifyQuestion(null, null, true, null);
         }
         String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         String plan = transactions.execute(status -> describeDream(user, lookup.dream(dreamId)))
                 + askRecords(new PlanAskRequest(answers, false, null, null, null, null));
         String prompt = "Decide whether this dream is clear enough to turn into goals: what exactly the participant wants, "
@@ -485,7 +492,8 @@ public class AiPlanService {
             return describeDream(user, dream);
         });
         Optional<String> apiKey = accessService.availableKey(user);
-        if (apiKey.isEmpty()) {
+        // PB-NFR-03: past the session's limit the rule checks still run.
+        if (apiKey.isEmpty() || !sessionGuard.tryUse(user.getId(), dreamId)) {
             return new PlanCheck(issues, false, null);
         }
         String prompt = "Review this plan like a careful coach. Report up to " + MAX_AI_ISSUES + " real problems of three "

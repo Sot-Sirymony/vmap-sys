@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Goal, VisionStep } from '../../types/vision';
 import {
-  addClarification, addGoals, addSteps, addTask, applyAssistantChange, countNew, emptyGoal, emptyStep, emptyTask, ensureStepContainer, goalFromSuggestion,
+  addClarification, addGoals, addSteps, addTask, applyAssistantChange, canMove, mergeWithNext, moveItem, splitItem, countNew, emptyGoal, emptyStep, emptyTask, ensureStepContainer, goalFromSuggestion,
   isReplaceable, readiness, removeGoal, removeStep, replaceGoals, stepsFromSuggestions, syncWithPlan, taskFromSuggestion, updateGoal,
   updateTask,
 } from './draftModel';
@@ -164,5 +164,52 @@ describe('plan assistant cards in the draft (V11 Phase 7, PB-FR-46)', () => {
     expect(content.risks?.[0]).toMatchObject({ title: 'Bureau is slow', obstacleType: 'TIME', linkKey: 's1' });
     // A parent that is not in the draft changes nothing.
     expect(applyAssistantChange(content, { kind: 'ADD_STEP', itemType: 'STEP', parentRef: 'gone', title: 'x' })).toBe(content);
+  });
+});
+
+describe('arranging new items before adding (V11 Phase 8, PB-FR-22)', () => {
+  const draft = () => {
+    let content = syncWithPlan({ goals: [] }, 5, [goal(1)]);
+    content = addGoals(content, [
+      { ...emptyGoal(), key: 'g1', title: 'Save', targetDate: '2027-01-01', priority: 'LOW' },
+      { ...emptyGoal(), key: 'g2', title: 'Invest', targetDate: '2027-06-01', priority: 'HIGH' },
+    ]);
+    content = addSteps(content, 'g1', [
+      { ...emptyStep(), key: 's1', title: 'Open account', estimatedHours: 1 },
+      { ...emptyStep(), key: 's2', title: 'Move money', estimatedHours: 2, startsAfterKey: 's1' },
+      { ...emptyStep(), key: 's3', title: 'Check rate', startsAfterKey: 's2' },
+    ]);
+    return content;
+  };
+
+  it('moves only among new items and keeps "starts after" valid', () => {
+    const content = draft();
+    expect(canMove(content, { goalKey: content.goals[0].key }, 1)).toBe(false);
+    expect(canMove(content, { goalKey: 'g1' }, -1)).toBe(false);
+    expect(moveItem(content, { goalKey: 'g1' }, 1).goals.map((item) => item.key).slice(1)).toEqual(['g2', 'g1']);
+    const moved = moveItem(content, { goalKey: 'g1', stepKey: 's2' }, -1);
+    expect(moved.goals[1].steps.map((step) => step.key)).toEqual(['s2', 's1', 's3']);
+    // s2 now comes before the step it started after.
+    expect(moved.goals[1].steps[0].startsAfterKey).toBeNull();
+  });
+
+  it('merges with the next item, keeping the later date, higher priority, hours and children', () => {
+    const steps = mergeWithNext(draft(), { goalKey: 'g1', stepKey: 's1' }).goals[1].steps;
+    expect(steps.map((step) => step.title)).toEqual(['Open account and Move money', 'Check rate']);
+    expect(steps[0]).toMatchObject({ estimatedHours: 3, edited: true });
+    // The link to the merged-away step now points at the joined one.
+    expect(steps[1].startsAfterKey).toBe('s1');
+
+    const goals = mergeWithNext(draft(), { goalKey: 'g1' }).goals;
+    expect(goals).toHaveLength(2);
+    expect(goals[1]).toMatchObject({ title: 'Save and Invest', targetDate: '2027-06-01', priority: 'HIGH' });
+    expect(goals[1].steps).toHaveLength(3);
+  });
+
+  it('splits an item into two, with an empty title to write', () => {
+    const steps = splitItem(draft(), { goalKey: 'g1', stepKey: 's1' }).goals[1].steps;
+    expect(steps.map((step) => step.title)).toEqual(['Open account', '', 'Move money', 'Check rate']);
+    expect(steps[1].startsAfterKey).toBe('s1');
+    expect(splitItem(draft(), { goalKey: draft().goals[0].key }).goals).toHaveLength(3);
   });
 });

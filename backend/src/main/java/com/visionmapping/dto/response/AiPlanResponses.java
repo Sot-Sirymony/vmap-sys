@@ -146,12 +146,24 @@ public final class AiPlanResponses {
     }
 
     /** V11 (PB-FR-36): one plan builder feature over the chosen period. Rates are 0 to 1, null when there is nothing to divide by. */
+    /**
+     * requestsPerFinishedPlan and costPerFinishedPlan (V11 Phase 8): this
+     * feature's requests and cost in the sessions of plans finished in the
+     * period, divided by the number of those plans; null when none finished.
+     */
     public record PlanFeatureMetrics(String feature, long requests, long suggestedItems, long addedItems, long editedItems,
                                      Double acceptanceRate, Double editRate, long ratings, Double thumbsUpRate,
-                                     java.math.BigDecimal costUsd, java.math.BigDecimal averageCostUsd) {
+                                     java.math.BigDecimal costUsd, java.math.BigDecimal averageCostUsd,
+                                     Double requestsPerFinishedPlan, java.math.BigDecimal costPerFinishedPlan) {
     }
 
-    public record PlanMetrics(int days, List<PlanFeatureMetrics> features) {
+    /**
+     * finishedPlans (V11, PB-FR-36): plans added from Build my plan in the
+     * period, with the average AI requests and cost per finished plan (null
+     * when there are none).
+     */
+    public record PlanMetrics(int days, List<PlanFeatureMetrics> features, long finishedPlans, Double requestsPerFinishedPlan,
+                              java.math.BigDecimal costPerFinishedPlan) {
     }
     // V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50).
 

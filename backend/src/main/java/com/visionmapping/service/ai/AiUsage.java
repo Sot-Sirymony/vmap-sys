@@ -20,6 +20,8 @@ final class AiUsage {
                 .outputTokens((int) outputTokens)
                 .costUsd(model == null ? BigDecimal.ZERO : AiPricing.cost(model, inputTokens, outputTokens))
                 .outcome(outcome)
+                // V11 (PB-FR-36): the Build my plan session this request was counted in, if any.
+                .planSessionKey(PlanSessionContext.current())
                 .build();
     }
 }

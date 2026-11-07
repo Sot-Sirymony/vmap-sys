@@ -55,6 +55,13 @@ Instead of the pages above, you can build the plan for one dream in a single gui
    Give the hours a week you have, and the guide flags weeks with too much work; **Spread the dates** moves new work
    later where its step or goal date allows. Then choose **Add plan**.
    Everything is added together, or nothing is. **Undo** right after archives what was just added.
+9. Each new goal, step and task has a menu (⋮) to **Move up**, **Move down**, **Merge with the next one** or
+   **Split into two** before you add the plan. Merging joins the titles and keeps the later date and higher priority;
+   splitting adds an empty item right after it for you to write.
+10. One plan session can use up to 15 AI requests; the guide shows how many are used. After that it carries on with the
+   questions at each stage. Adding or discarding the draft starts a new session.
+
+After adding dreams from **Suggest dreams**, choose **Build my plan for ...** to go straight into the guide for that dream.
 
 ### Plan assistant
 

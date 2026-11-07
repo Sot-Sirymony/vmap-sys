@@ -57,7 +57,9 @@ export function PlanBuilderPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [steps, setSteps] = useState<VisionStep[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [aiReady, setAiReady] = useState(false);
+  const [aiAvailable, setAiReady] = useState(false);
+  // PB-NFR-03: AI requests this session (draft) has used, and its limit.
+  const [session, setSession] = useState<{ used: number; limit: number } | null>(null);
   const [content, setContent] = useState<PlanDraftContent>({ goals: [] });
   const [stage, setStage] = useState<PlanStage>('CLARIFY');
   const [resumed, setResumed] = useState(false);
@@ -109,6 +111,7 @@ export function PlanBuilderPage() {
         setContent(syncWithPlan(draft?.content ?? { goals: [] }, id, plan.goalData));
         setStage(draft?.stage ?? 'CLARIFY');
         setResumed(draft !== null);
+        setSession(draft ? { used: draft.aiRequestsUsed ?? 0, limit: draft.aiRequestLimit ?? 15 } : null);
         setError(plan.found ? '' : tr('Dream not found.'));
       } catch (loadError) {
         if (!cancelled) {
@@ -134,8 +137,11 @@ export function PlanBuilderPage() {
     dirty.current = false;
     setSaveState('saving');
     try {
-      await savePlanDraft(token, id, latest.current.stage, latest.current.content);
+      const saved = await savePlanDraft(token, id, latest.current.stage, latest.current.content);
       setSaveState(dirty.current ? 'saving' : 'saved');
+      if (saved?.aiRequestLimit) {
+        setSession({ used: saved.aiRequestsUsed ?? 0, limit: saved.aiRequestLimit });
+      }
       setSavedVersion((current) => current + 1);
     } catch {
       setSaveState('error');
@@ -185,6 +191,7 @@ export function PlanBuilderPage() {
       const plan = await loadPlan();
       setContent(syncWithPlan({ goals: [], clarifications: latest.current.content.clarifications }, id, plan?.goalData ?? []));
       setAdded(result);
+      setSession(null);
       setNotice(tr('Your plan is added: {goals} goal(s), {steps} step(s) and {tasks} task(s).', {
         goals: result.goalIds.length, steps: result.stepIds.length, tasks: result.taskIds?.length ?? 0,
       }));
@@ -227,6 +234,7 @@ export function PlanBuilderPage() {
       setContent(syncWithPlan({ goals: [] }, id, goals));
       setStage('CLARIFY');
       setResumed(false);
+      setSession(null);
       setSaveState('idle');
       setNotice(tr('Draft discarded.'));
     } catch (discardError) {
@@ -253,6 +261,9 @@ export function PlanBuilderPage() {
   };
 
   const currentTopic = { section: stage };
+  // PB-NFR-03: past the session's limit the guide carries on as a form.
+  const sessionUsedUp = session !== null && session.used >= session.limit;
+  const aiReady = aiAvailable && !sessionUsedUp;
 
   return (
     <PageSection
@@ -272,7 +283,12 @@ export function PlanBuilderPage() {
         onDreamSaved={setDream}>
       <Stack spacing={2}>
         {resumed && !notice && <Alert severity="info" onClose={() => setResumed(false)}>{tr('Picked up where you left off.')}</Alert>}
-        {!aiReady && (
+        {aiAvailable && sessionUsedUp && (
+          <Alert severity="info">
+            {tr('This plan session has used its {limit} AI requests. Keep building with the questions at each stage, or add your plan to start a new session.', { limit: session.limit })}
+          </Alert>
+        )}
+        {!aiAvailable && (
           <Alert severity="info">{tr('AI suggestions are off. You can still build your plan step by step with the questions at each stage.')}</Alert>
         )}
         <Box ref={stageTop} sx={{ overflowX: 'auto', pb: 1, scrollMarginTop: 80 }}>
@@ -294,6 +310,11 @@ export function PlanBuilderPage() {
             {tr('{count} new item(s)', { count: counts.total })}
             {problems > 0 ? ` · ${tr('{count} need attention', { count: problems })}` : ''}
           </Typography>
+          {aiReady && session && (
+            <Typography variant="caption" color="text.secondary">
+              {tr('{used} of {limit} AI requests used in this session', { used: session.used, limit: session.limit })}
+            </Typography>
+          )}
           <Typography variant="caption" color={saveState === 'error' ? 'error' : 'text.secondary'} aria-live="polite">
             {saveState === 'saving' && tr('Saving draft…')}
             {saveState === 'saved' && tr('Draft saved')}

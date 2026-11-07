@@ -25,6 +25,13 @@ const FEATURE_LABELS: Record<string, string> = {
   STRETCH_GOAL: 'Stretch goal',
   PLAN_BUILDER: 'Steps',
   PLAN_CHECK: 'Plan check',
+  CLARIFY: 'Clarify',
+  TASK_BUILDER: 'Tasks',
+  HELPERS_RISKS: 'Helpers and risks',
+  DRAFT_CHECK: 'Check my draft',
+  PLAN_FIX: 'Fix with AI',
+  PLAN_ASSISTANT: 'Plan assistant',
+  PLAN_ASSISTANT_CHAT: 'Plan assistant chat',
 };
 
 const percent = (value?: number | null) => (value === null || value === undefined ? '–' : `${Math.round(value * 100)}%`);
@@ -65,6 +72,17 @@ export function PlanMetricsCard({ token }: { token: string }) {
       <CardContent>
         {error && <Alert severity="error">{error}</Alert>}
         {!metrics && !error && <Loading />}
+        {metrics && (
+          <Typography variant="body2" sx={{ mb: 1.5 }}>
+            {(metrics.finishedPlans ?? 0) === 0
+              ? tr('No plans finished with Build my plan in this period.')
+              : tr('{count} plan(s) finished with Build my plan: {requests} AI requests and {cost} each on average.', {
+                count: metrics.finishedPlans ?? 0,
+                requests: metrics.requestsPerFinishedPlan ?? 0,
+                cost: dollars(metrics.costPerFinishedPlan ?? 0),
+              })}
+          </Typography>
+        )}
         {metrics && metrics.features.length === 0 && (
           <Typography variant="body2" color="text.secondary">{tr('No plan builder suggestions in this period.')}</Typography>
         )}
@@ -81,6 +99,8 @@ export function PlanMetricsCard({ token }: { token: string }) {
                   <TableCell align="right">{tr('Helpful')}</TableCell>
                   <TableCell align="right">{tr('Cost')}</TableCell>
                   <TableCell align="right">{tr('Per request')}</TableCell>
+                  <TableCell align="right">{tr('Requests per finished plan')}</TableCell>
+                  <TableCell align="right">{tr('Cost per finished plan')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -96,6 +116,8 @@ export function PlanMetricsCard({ token }: { token: string }) {
                     </TableCell>
                     <TableCell align="right">{dollars(row.costUsd)}</TableCell>
                     <TableCell align="right">{dollars(row.averageCostUsd)}</TableCell>
+                    <TableCell align="right">{row.requestsPerFinishedPlan ?? '–'}</TableCell>
+                    <TableCell align="right">{row.costPerFinishedPlan == null ? '–' : dollars(row.costPerFinishedPlan)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -91,6 +91,7 @@ public class PlanAssistantService {
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
+    private final PlanSessionGuard sessionGuard;
     private final AiStructuredRequests requests;
     private final AiPlanService planService;
     private final AiPlanFeedbackService feedback;
@@ -166,6 +167,9 @@ public class PlanAssistantService {
             throw new BusinessRuleException("This section has no changes to suggest. Ask a question about it instead.");
         }
         String apiKey = accessService.requireAvailable(user);
+        if ("BUILDER".equals(request.surface())) {
+            sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
+        }
         View view = transactions.execute(status -> view(user, dreamId, request.surface(), request.section(), request.itemRef()));
         LocalDate today = LocalDate.now(clock);
         Ref focus = request.itemRef() == null ? null : view.refs().get(request.itemRef().trim());

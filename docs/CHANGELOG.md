@@ -66,7 +66,7 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [11.0.0] — All 7 phases built; awaiting UAT, the live sample run and the Khmer review
+## [11.0.0] — All 8 phases built; awaiting UAT, the live sample run and the Khmer review
 
 Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improvements.
 
@@ -212,6 +212,23 @@ Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improveme
 - **One assistant on screen (PB-FR-50).** The Dream Coach button steps aside on
   these pages; conversations are tagged with dream and section (migration V67).
 - 125 more Khmer drafts in `docs/km-review-v11.csv`.
+
+### Phase 8 — closing the gaps (2026-11-07)
+
+- **Session limit (PB-NFR-03).** A Build my plan session (its draft) uses at
+  most 15 AI requests. Past that, AI requests about that dream answer 429, the
+  plan checks fall back to their rules, and the guide says why and carries on
+  as a form. The guide shows how many requests are used. Crisis messages are
+  never held back (migration V68).
+- **Requests and cost per finished plan (PB-FR-36).** Every AI request in a
+  session carries the session's key (migration V69), so each plan added from
+  the guide records its exact requests and cost. The admin card shows finished
+  plans with averages, and per feature the requests and cost per finished plan.
+- **Arrange before adding (PB-FR-22).** Move up, Move down, Merge with the next
+  one and Split into two on new goals, steps and tasks.
+- **Continue into the guide (PB-FR-06).** After adding dreams, the dream
+  assistant links to Build my plan for each.
+- 15 more Khmer drafts.
 
 ## [10.0.0] — In progress (phases 1 to 6 of 7 built)
 

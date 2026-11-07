@@ -1,6 +1,6 @@
 import type {
   AssistantChange, DraftFix, DraftGoal, DraftHelper, DraftIssue, DraftRisk, DraftStep, DraftTask, Dream, Goal, GoalSuggestion, HelperSuggestion, PlanClarification,
-  RiskSuggestion, PlanDraftContent, PlanStage, StepSuggestion,
+  Priority, RiskSuggestion, PlanDraftContent, PlanStage, StepSuggestion,
   TaskSuggestion, VisionStep, WeekLoad,
 } from '../../types/vision';
 
@@ -640,6 +640,201 @@ export function missingDreamParts(dream: Dream) {
 }
 
 /** A step that waited for a removed or replaced step can start any time. */
+// ---------- V11 Phase 8: reorder, merge and split before adding (PB-FR-22) ----------
+
+/** Where an item sits: a goal, a step of a goal, or a task of a step. */
+export type ItemPath = { goalKey: string; stepKey?: string; taskKey?: string };
+
+const PRIORITY_ORDER: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+/** The higher of two priorities. */
+function higher(left: Priority, right: Priority): Priority {
+  return PRIORITY_ORDER.indexOf(left) >= PRIORITY_ORDER.indexOf(right) ? left : right;
+}
+
+/** The later of two dates, or whichever is set. */
+function later(left?: string | null, right?: string | null) {
+  if (!left) return right ?? null;
+  if (!right) return left;
+  return left >= right ? left : right;
+}
+
+function joinText(left?: string | null, right?: string | null) {
+  return [left, right].map((text) => text?.trim()).filter(Boolean).join('\n') || null;
+}
+
+function joinTitle(left: string, right: string) {
+  return [left.trim(), right.trim()].filter(Boolean).join(' and ').slice(0, 220);
+}
+
+function addHours(left?: number | null, right?: number | null) {
+  return left == null && right == null ? null : Math.min(999, (left ?? 0) + (right ?? 0));
+}
+
+/** The index of the next (dir 1) or previous (dir -1) new sibling, or -1. Items already in the plan never move. */
+function neighbour<T extends { key: string; existingId?: number | null }>(items: T[], key: string, dir: 1 | -1) {
+  const index = items.findIndex((item) => item.key === key);
+  if (index < 0 || items[index].existingId != null) {
+    return [-1, -1];
+  }
+  for (let other = index + dir; other >= 0 && other < items.length; other += dir) {
+    if (items[other].existingId == null) {
+      return [index, other];
+    }
+  }
+  return [index, -1];
+}
+
+function swap<T>(items: T[], first: number, second: number) {
+  const next = [...items];
+  [next[first], next[second]] = [next[second], next[first]];
+  return next;
+}
+
+/** A step may only start after an earlier new step of its goal; any other link is cleared. */
+function keepOrderValid(steps: DraftStep[]) {
+  return steps.map((step, index) => (step.startsAfterKey && !steps.slice(0, index).some((earlier) => earlier.key === step.startsAfterKey)
+    ? { ...step, startsAfterKey: null } : step));
+}
+
+/** Points links (starts after, helpers, risks) from one key to another. */
+function relink(content: PlanDraftContent, from: string, to: string): PlanDraftContent {
+  return {
+    ...content,
+    goals: content.goals.map((goal) => ({
+      ...goal,
+      steps: goal.steps.map((step) => (step.startsAfterKey === from ? { ...step, startsAfterKey: to === step.key ? null : to } : step)),
+    })),
+    helpers: content.helpers?.map((helper) => (helper.linkKey === from ? { ...helper, linkKey: to } : helper)),
+    risks: content.risks?.map((risk) => (risk.linkKey === from ? { ...risk, linkKey: to } : risk)),
+  };
+}
+
+function withSteps(content: PlanDraftContent, goalKey: string, change: (steps: DraftStep[]) => DraftStep[]): PlanDraftContent {
+  return { ...content, goals: content.goals.map((goal) => (goal.key === goalKey ? { ...goal, steps: keepOrderValid(change(goal.steps)) } : goal)) };
+}
+
+/** PB-FR-22: moves a new goal, step or task up (-1) or down (1) among its new siblings. */
+export function moveItem(content: PlanDraftContent, path: ItemPath, dir: 1 | -1): PlanDraftContent {
+  if (path.taskKey && path.stepKey) {
+    const step = content.goals.find((goal) => goal.key === path.goalKey)?.steps.find((item) => item.key === path.stepKey);
+    const [index, other] = step ? neighbour(step.tasks, path.taskKey, dir) : [-1, -1];
+    return other < 0 ? content : mapStep(content, path.goalKey, path.stepKey, (item) => ({ ...item, tasks: swap(item.tasks, index, other) }));
+  }
+  if (path.stepKey) {
+    const goal = content.goals.find((item) => item.key === path.goalKey);
+    const [index, other] = goal ? neighbour(goal.steps, path.stepKey, dir) : [-1, -1];
+    return other < 0 ? content : withSteps(content, path.goalKey, (steps) => swap(steps, index, other));
+  }
+  const [index, other] = neighbour(content.goals, path.goalKey, dir);
+  return other < 0 ? content : { ...content, goals: swap(content.goals, index, other) };
+}
+
+/** True when the item has a new sibling in that direction, so it can move or merge. */
+export function canMove(content: PlanDraftContent, path: ItemPath, dir: 1 | -1) {
+  return moveItem(content, path, dir) !== content;
+}
+
+/**
+ * PB-FR-22: joins a new goal, step or task with the next new one. Titles and
+ * text are joined, the later date and higher priority kept, hours added and
+ * children kept together. The joined item counts as edited; links to the
+ * second item move to the first.
+ */
+export function mergeWithNext(content: PlanDraftContent, path: ItemPath): PlanDraftContent {
+  if (path.taskKey && path.stepKey) {
+    const step = content.goals.find((goal) => goal.key === path.goalKey)?.steps.find((item) => item.key === path.stepKey);
+    const [index, other] = step ? neighbour(step.tasks, path.taskKey, 1) : [-1, -1];
+    if (!step || other < 0) {
+      return content;
+    }
+    const [first, second] = [step.tasks[index], step.tasks[other]];
+    const merged: DraftTask = { ...first, title: joinTitle(first.title, second.title), dueDate: later(first.dueDate, second.dueDate),
+      priority: higher(first.priority, second.priority), estimatedHours: addHours(first.estimatedHours, second.estimatedHours),
+      edited: true, locked: false };
+    return mapStep(content, path.goalKey, path.stepKey, (item) => ({
+      ...item, tasks: item.tasks.filter((task) => task.key !== second.key).map((task) => (task.key === first.key ? merged : task)),
+    }));
+  }
+  if (path.stepKey) {
+    const goal = content.goals.find((item) => item.key === path.goalKey);
+    const [index, other] = goal ? neighbour(goal.steps, path.stepKey, 1) : [-1, -1];
+    if (!goal || other < 0) {
+      return content;
+    }
+    const [first, second] = [goal.steps[index], goal.steps[other]];
+    const merged: DraftStep = { ...first, title: joinTitle(first.title, second.title), description: joinText(first.description, second.description),
+      targetDate: later(first.targetDate, second.targetDate), priority: higher(first.priority, second.priority),
+      complex: first.complex || second.complex || first.tasks.length + second.tasks.length > 0,
+      resources: joinText(first.resources, second.resources)?.slice(0, 1000) ?? null,
+      estimatedHours: addHours(first.estimatedHours, second.estimatedHours), tasks: [...first.tasks, ...second.tasks].slice(0, 15),
+      edited: true, locked: false };
+    // Steps that waited for the second one now wait for the joined one, before the order is checked.
+    const joined = withSteps(content, path.goalKey, (steps) => steps
+      .filter((step) => step.key !== second.key)
+      .map((step) => (step.key === first.key ? merged : step))
+      .map((step) => (step.startsAfterKey === second.key ? { ...step, startsAfterKey: first.key } : step)));
+    return relink(joined, second.key, first.key);
+  }
+  const [index, other] = neighbour(content.goals, path.goalKey, 1);
+  if (other < 0) {
+    return content;
+  }
+  const [first, second] = [content.goals[index], content.goals[other]];
+  const merged: DraftGoal = { ...first, title: joinTitle(first.title, second.title), description: joinText(first.description, second.description),
+    successCriteria: joinText(first.successCriteria, second.successCriteria), targetDate: later(first.targetDate, second.targetDate),
+    priority: higher(first.priority, second.priority), moonshot: first.moonshot || second.moonshot,
+    steps: keepOrderValid([...first.steps, ...second.steps]).slice(0, 25), edited: true, locked: false };
+  const joined = { ...content, goals: content.goals.filter((goal) => goal.key !== second.key).map((goal) => (goal.key === first.key ? merged : goal)) };
+  return relink(joined, second.key, first.key);
+}
+
+/**
+ * PB-FR-22: splits a new goal, step or task in two: a second item right
+ * after it, with the same date, owner and priority and an empty title for the
+ * participant to write. Children stay with the first.
+ */
+export function splitItem(content: PlanDraftContent, path: ItemPath): PlanDraftContent {
+  if (path.taskKey && path.stepKey) {
+    const taskKey = path.taskKey;
+    return mapStep(content, path.goalKey, path.stepKey, (step) => {
+      const index = step.tasks.findIndex((task) => task.key === taskKey);
+      if (index < 0 || step.tasks.length >= 15) {
+        return step;
+      }
+      const source = step.tasks[index];
+      const copy: DraftTask = { ...emptyTask(), owner: source.owner, dueDate: source.dueDate ?? null, priority: source.priority, edited: true };
+      const tasks = [...step.tasks];
+      tasks.splice(index + 1, 0, copy);
+      return { ...step, tasks: tasks.map((task) => (task.key === source.key ? { ...task, edited: true } : task)) };
+    });
+  }
+  if (path.stepKey) {
+    const stepKey = path.stepKey;
+    return withSteps(content, path.goalKey, (steps) => {
+      const index = steps.findIndex((step) => step.key === stepKey);
+      if (index < 0 || steps[index].existingId != null || steps.length >= 25) {
+        return steps;
+      }
+      const source = steps[index];
+      const copy: DraftStep = { ...emptyStep(), owner: source.owner, targetDate: source.targetDate ?? null, priority: source.priority,
+        startsAfterKey: source.key, edited: true };
+      const next = [...steps];
+      next.splice(index + 1, 0, copy);
+      return next.map((step) => (step.key === source.key ? { ...step, edited: true } : step));
+    });
+  }
+  const index = content.goals.findIndex((goal) => goal.key === path.goalKey);
+  if (index < 0 || content.goals[index].existingId != null || content.goals.length >= 15) {
+    return content;
+  }
+  const source = content.goals[index];
+  const copy: DraftGoal = { ...emptyGoal(), targetDate: source.targetDate ?? null, priority: source.priority, edited: true };
+  const goals = [...content.goals];
+  goals.splice(index + 1, 0, copy);
+  return { ...content, goals: goals.map((goal) => (goal.key === source.key ? { ...goal, edited: true } : goal)) };
+}
+
 function forgetOrder(steps: DraftStep[], goneKeys: string[]): DraftStep[] {
   return steps.map((step) => (step.startsAfterKey && goneKeys.includes(step.startsAfterKey) ? { ...step, startsAfterKey: null } : step));
 }

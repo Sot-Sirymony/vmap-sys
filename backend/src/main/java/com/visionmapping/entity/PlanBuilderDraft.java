@@ -50,4 +50,17 @@ public class PlanBuilderDraft extends BaseAuditableEntity {
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
+
+    /**
+     * V11 (PB-NFR-03): AI requests this session has used; the guide stops
+     * asking Claude at the limit. Only PlanSessionGuard changes it, in one
+     * update, so a draft save never writes an older count back.
+     */
+    @Builder.Default
+    @Column(name = "ai_requests", nullable = false, updatable = false)
+    private int aiRequests = 0;
+
+    /** V11 (PB-FR-36): this session's key, carried by every AI request it makes and kept on the finished plan. */
+    @Column(name = "session_key", length = 36)
+    private String sessionKey;
 }

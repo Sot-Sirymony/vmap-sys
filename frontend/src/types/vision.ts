@@ -1358,7 +1358,16 @@ export type ClarifyField = 'WHY_IMPORTANT' | 'SUCCESS_DEFINITION' | 'TARGET_DATE
 
 export type ClarifyQuestion = { question?: string | null; field?: ClarifyField | null; done: boolean; requestId?: number | null };
 
-export type PlanDraft = { dreamId: number; stage: PlanStage; content: PlanDraftContent; updatedAt: string; expiresAt: string };
+export type PlanDraft = {
+  dreamId: number;
+  stage: PlanStage;
+  content: PlanDraftContent;
+  updatedAt: string;
+  expiresAt: string;
+  // V11 (PB-NFR-03): AI requests this session has used, and its limit.
+  aiRequestsUsed?: number;
+  aiRequestLimit?: number;
+};
 
 export type PlanFeatureMetrics = {
   feature: string;
@@ -1372,9 +1381,19 @@ export type PlanFeatureMetrics = {
   thumbsUpRate?: number | null;
   costUsd: number;
   averageCostUsd: number;
+  // V11 Phase 8 (PB-FR-36): this feature's requests and cost per plan finished in the period.
+  requestsPerFinishedPlan?: number | null;
+  costPerFinishedPlan?: number | null;
 };
 
-export type PlanMetrics = { days: number; features: PlanFeatureMetrics[] };
+export type PlanMetrics = {
+  days: number;
+  features: PlanFeatureMetrics[];
+  // V11 (PB-FR-36): plans added from Build my plan in the period.
+  finishedPlans?: number;
+  requestsPerFinishedPlan?: number | null;
+  costPerFinishedPlan?: number | null;
+};
 
 export type SlippingStep = {
   stepId: number;

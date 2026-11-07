@@ -80,4 +80,8 @@ public class AiUsageLog extends BaseAuditableEntity {
     @Builder.Default
     @Column(name = "edited_items", nullable = false)
     private int editedItems = 0;
+
+    /** V11 (PB-FR-36): the Build my plan session this request belonged to; empty outside one. */
+    @Column(name = "plan_session_key", length = 36)
+    private String planSessionKey;
 }

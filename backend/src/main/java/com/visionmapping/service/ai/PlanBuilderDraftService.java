@@ -20,6 +20,7 @@ import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.PlanBuilderDraft;
+import com.visionmapping.entity.PlanBuilderFinishedPlan;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
@@ -49,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.time.Instant;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,6 +84,8 @@ public class PlanBuilderDraftService {
     private final ObjectMapper objectMapper;
     private final Validator validator;
     private final Clock clock;
+    private final com.visionmapping.repository.PlanBuilderFinishedPlanRepository finishedPlans;
+    private final com.visionmapping.repository.AiUsageLogRepository usageLogRepository;
 
     @Transactional(readOnly = true)
     public Optional<PlanDraftResponse> get(Long dreamId) {
@@ -107,6 +111,9 @@ public class PlanBuilderDraftService {
         AppUser user = lookup.currentUser();
         PlanBuilderDraft draft = repository.findByUser_IdAndDream_Id(user.getId(), dream.getId())
                 .orElseGet(() -> PlanBuilderDraft.builder().user(user).dream(dream).build());
+        if (draft.getSessionKey() == null) {
+            draft.setSessionKey(java.util.UUID.randomUUID().toString());
+        }
         draft.setStage(request.stage());
         draft.setContent(write(request.content()));
         draft.setExpiresAt(clock.instant().plus(KEEP_FOR));
@@ -243,8 +250,27 @@ public class PlanBuilderDraftService {
             count(outcomes, risk.requestId(), risk.edited());
         }
         feedback.recordDraftOutcomes(outcomes);
+        recordFinishedPlan(draft);
         repository.delete(draft);
         return new PlanAddResult(goalIds, stepIds, taskIds, partnerIds, obstacleIds, linkedPartnerIds);
+    }
+
+    /**
+     * PB-FR-36: the AI requests this session made and their exact cost, from
+     * the usage-log rows that carry its key. The key stays on the finished
+     * plan, so the admin metrics can split them by feature.
+     */
+    private void recordFinishedPlan(PlanBuilderDraft draft) {
+        String key = draft.getSessionKey();
+        Object[] totals = key == null ? new Object[] {0L, BigDecimal.ZERO} : usageLogRepository.sessionTotals(key).get(0);
+        finishedPlans.save(PlanBuilderFinishedPlan.builder()
+                .userId(draft.getUser().getId())
+                .dreamId(draft.getDream().getId())
+                .sessionKey(key)
+                .aiRequests(((Number) totals[0]).intValue())
+                .aiCostUsd(totals[1] instanceof BigDecimal cost ? cost : BigDecimal.valueOf(((Number) totals[1]).doubleValue()))
+                .finishedAt(clock.instant())
+                .build());
     }
 
     private static Long goalFor(String key, Map<String, Long> goalByKey, Map<String, Long[]> stepByKey) {
@@ -328,7 +354,8 @@ public class PlanBuilderDraftService {
 
     private PlanDraftResponse toResponse(PlanBuilderDraft draft) {
         return new PlanDraftResponse(draft.getDream().getId(), draft.getStage(), read(draft.getContent()),
-                draft.getUpdatedAt() == null ? clock.instant() : draft.getUpdatedAt(), draft.getExpiresAt());
+                draft.getUpdatedAt() == null ? clock.instant() : draft.getUpdatedAt(), draft.getExpiresAt(),
+                draft.getAiRequests(), PlanSessionGuard.LIMIT);
     }
 
     private String write(PlanDraftContent content) {

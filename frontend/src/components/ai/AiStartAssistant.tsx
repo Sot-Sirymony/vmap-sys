@@ -6,11 +6,13 @@ import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
+import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { Link as RouterLink } from 'react-router';
 import { getAiStatus } from '../../api/aiApi';
 import { recordPlanOutcome, suggestDreams, suggestVisionAreas } from '../../api/aiPlanApi';
 import { createDream } from '../../api/dreamApi';
@@ -117,9 +119,12 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
   const [result, setResult] = useState<{
     areaId: number; rows: DreamRow[]; question?: string | null; requestId?: number | null;
   } | null>(null);
+  // V11 (PB-FR-06): the dreams just added, each offered a way into Build my plan.
+  const [added, setAdded] = useState<{ id: number; title: string }[]>([]);
 
   const ask = (stretch: boolean) => assistant.run(async () => {
     setResult(null);
+    setAdded([]);
     const id = Number(areaId);
     const answer = await suggestDreams(token, id, language, stretch);
     setResult({
@@ -131,9 +136,10 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
   });
 
   const add = (forArea: number, rows: DreamRow[]) => assistant.save('Unable to save dream.', async () => {
+    const saved: { id: number; title: string }[] = [];
     for (const row of rows) {
       // Added as ideas: the participant commits to a dream, and clears any moonshot gate, from the dream itself.
-      await createDream(token, {
+      const dream = await createDream(token, {
         visionAreaId: forArea,
         title: row.title.trim(),
         description: row.description ?? undefined,
@@ -147,7 +153,11 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
         moonshotVision: row.moonshot ? row.reason ?? undefined : undefined,
         scheduleMode: 'BOTTOM_UP',
       });
+      if (dream?.id) {
+        saved.push({ id: dream.id, title: dream.title ?? row.title.trim() });
+      }
     }
+    setAdded(saved);
     reportOutcome(token, result?.requestId, rows.map((row) =>
       wasEdited(row.original, row, ['title', 'whyImportant', 'successDefinition', 'targetDate'])));
     setResult(null);
@@ -211,6 +221,18 @@ export function AiDreamAssistant({ token, visionAreas, initialVisionAreaId, onDa
         </Box>
       )}
       {result && <SuggestionRating key={result.requestId} token={token} requestId={result.requestId} />}
+      {added.length > 0 && (
+        <Alert severity="info" icon={false}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>{tr('Ready to plan? Build my plan walks you from a dream to goals, steps and tasks.')}</Typography>
+          <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+            {added.map((dream) => (
+              <Link key={dream.id} component={RouterLink} to={`/dreams/${dream.id}/build`} variant="body2">
+                {tr('Build my plan for {title}', { title: dream.title })}
+              </Link>
+            ))}
+          </Stack>
+        </Alert>
+      )}
     </AssistantCard>
   );
 }

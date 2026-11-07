@@ -23,6 +23,7 @@ V11 changes one feature area: how a participant turns a dream into a complete, r
 | 11.0.0 | Requirement status after phases 1 to 6 (6 Nov 2026): what is done, partly done, not done and not yet verified | BA |
 | 11.0.0 | Added plan assistant on the Plan page and on each plan section (7 Nov 2026): PB-FR-41 to PB-FR-50, PB-NFR-11 to PB-NFR-14, PAC-16 to PAC-20, Phase 7 | BA |
 | 11.0.0 | Phase 7 built (7 Nov 2026): requirement status updated; PB-FR-46 says how a card is saved on the Plan page | BA |
+| 11.0.0 | Phase 8 built (7 Nov 2026): session request limit, exact requests and cost per finished plan by feature, arranging items before adding, continuing into the guide | BA |
 
 ## Executive summary
 
@@ -264,7 +265,8 @@ Each phase ends with build, tests and a summary, then waits for confirmation (as
 | 5 | Helpers and risks: partner matching and "To Contact" partners, obstacle suggestions with partner type, fears with consent, outreach after adding | PB-FR-23 to PB-FR-27, PB-FR-38, PB-FR-40 |
 | 6 | Check and fix on the draft, one-click and AI fixes, capacity check, plan model setting, quality test set run, Khmer review, docs | PB-FR-16, PB-FR-28, PB-FR-29, PB-FR-39, PB-NFR-06 to PB-NFR-08 |
 | 7 | Plan assistant: side panel on the Plan page and Build my plan, Help with this section, section quick actions, explain, proposed change cards, no-AI section help, one assistant on screen | PB-FR-41 to PB-FR-50, PB-NFR-11 to PB-NFR-14 |
-| Later | Work style and energy, reorder, merge and split, coach visibility, continue from dream assistant | PB-FR-06, PB-FR-17, PB-FR-22, PB-FR-37 |
+| 8 | Close the gaps: 15-request session limit, requests and cost per finished plan, reorder, merge and split, continue into the guide from the dream assistant | PB-NFR-03, PB-FR-36, PB-FR-22, PB-FR-06 |
+| Later | Work style and energy, coach visibility | PB-FR-17, PB-FR-37 |
 
 ### Implementation status
 
@@ -277,20 +279,21 @@ Each phase ends with build, tests and a summary, then waits for confirmation (as
 | 5 | Built and tested locally, 6 Nov 2026 (Claude mocked in tests): helpers matched to the participant's own partners on the server, linked where the partner has no link yet or added as To Contact partners (PB-FR-23); up to five risks with type, severity, solution and the fitting kind of helper, added as Open obstacles (PB-FR-24, PB-FR-25); fear journal used only when ticked for the request (PB-FR-26, the cautious answer to the open question below); outreach drafts for new contacts after adding (PB-FR-27); only the dream, the draft items and ticked fears are sent, never partner names or contacts (PB-FR-38); approved resources first (PB-FR-40). Undo archives created partners and obstacles but leaves links given to existing partners. Not yet tried against the live API |
 | 6 | Built and tested locally, 6 Nov 2026 (Claude mocked in tests): plan check on the draft with built-in and AI issues (PB-FR-28); one-click fixes and Fix with AI proposals applied only by choice (PB-FR-29); hours a week remembered, overloaded weeks flagged and Spread the dates (PB-FR-16); separate plan building model (PB-FR-39); Khmer for all V11 text (PB-NFR-06) with a review export, `docs/km-review-v11.csv`; form controls have labels (the tests find them by label) and the layout is one column on narrow screens, but no WCAG 2.1 AA audit has been done (PB-NFR-07); the 20-dream sample set and an opt-in live run (PB-NFR-08). Outstanding: the live sample run (needs an API key and spend; gives PAC-04 and PAC-12 numbers), the Khmer speaker's review (PAC-13), the 4-week pilot measures (PAC-14), an accessibility audit (PB-NFR-07), and UAT in a browser |
 | 7 | Built and tested locally, 7 Nov 2026 (Claude mocked in tests): plan assistant panel on the Plan page and Build my plan, beside the page on wide screens (1200 px and up) and full screen on smaller ones (PB-FR-41); Help with this section on each Plan page stage, on Milestones and on each Build my plan stage (PB-FR-42); Helping with, following the stage unless Keep this topic is ticked (PB-FR-43); three quick actions per section and a free question (PB-FR-44); chat that sees only the section's items and plan check (PB-FR-45, PB-NFR-12); change cards checked on the server against the section's refs, date limits and owner rule, applied to the draft or saved to the plan by choice (PB-FR-46, PB-FR-47); ratings and outcome counts under PLAN_ASSISTANT (PB-FR-48); program help, guiding questions and the rule-based check without AI (PB-FR-49); the Dream Coach button steps aside on these pages, and conversations are tagged with dream and section, migration V67 (PB-FR-50); 125 Khmer drafts added to `docs/km-review-v11.csv`. Not yet tried against the live API or in a browser |
+| 8 | Built and tested locally, 7 Nov 2026 (Claude mocked in tests): a Build my plan session (its draft) uses at most 15 AI requests; past that, AI requests about that dream answer 429, the plan checks fall back to their rules, and the guide shows why and carries on as a form, with a request count while AI is on (PB-NFR-03, migration V68); every AI request in a session carries the session's key, so each added plan records its exact requests and cost, and the admin card shows finished plans with averages and, per feature, requests and cost per finished plan (PB-FR-36, migrations V68 and V69); Move up, Move down, Merge with the next one and Split into two on each new goal, step and task (PB-FR-22); after adding dreams, the dream assistant links to Build my plan for each (PB-FR-06); 15 Khmer drafts added. Not yet tried against the live API or in a browser |
 
 Phase 1 comes first on purpose: it gives the baseline numbers (acceptance rate, cost per plan) the later phases are judged against, and fixes the two defects that can hurt data today (unchecked dates, partial saves).
 
 ## Requirement status (7 Nov 2026)
 
-Status of every requirement and acceptance criterion after phases 1 to 7 (phases 1 to 6 at commit `3fb474d`, Phase 7 on 7 Nov 2026). **Done** means built and covered by automated tests with Claude mocked; nothing has yet been tried against the live Claude API or by a participant in a browser. **Partly** says what is missing. **Not done** was not built. **Not verified** needs a live run, a reviewer or the pilot.
+Status of every requirement and acceptance criterion after phases 1 to 8 (phases 1 to 6 at commit `3fb474d`, phases 7 and 8 on 7 Nov 2026). **Done** means built and covered by automated tests with Claude mocked; nothing has yet been tried against the live Claude API or by a participant in a browser. **Partly** says what is missing. **Not done** was not built. **Not verified** needs a live run, a reviewer or the pilot.
 
 ### Summary
 
 | | Done | Partly | Not done | Not verified |
 | --- | --- | --- | --- | --- |
-| Functional (PB-FR-01 to 50) | 45 | 1 | 4 | – |
-| Non-functional (PB-NFR-01 to 14) | 6 | 6 | 1 | 1 |
-| Acceptance (PAC-01 to 20) | 14 met in tests | 1 | 2 | 3 |
+| Functional (PB-FR-01 to 50) | 48 | 0 | 2 | – |
+| Non-functional (PB-NFR-01 to 14) | 7 | 6 | 0 | 1 |
+| Acceptance (PAC-01 to 20) | 15 met in tests | 0 | 2 | 3 |
 
 ### Functional requirements
 
@@ -301,7 +304,7 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 | PB-FR-03 | M | Done | Starts from the dream's live goals and steps; they are shown, never changed |
 | PB-FR-04 | M | Done | New items per stage, items needing attention, readiness list |
 | PB-FR-05 | M | Done | Form path with the program's questions when AI is off or not consented |
-| PB-FR-06 | S | **Not done** | Vision area and dream assistants do not offer to continue into the guide |
+| PB-FR-06 | S | Done | After adding dreams, the dream assistant links to Build my plan for each one (Phase 8) |
 | PB-FR-07 | M | Done | Plan assistant card kept on Dream Detail beside the new button |
 | PB-FR-08 | M | Done | Up to three dream questions, one at a time, answered in place |
 | PB-FR-09 | M | Done | Answers kept in the draft (up to six) and sent with every later suggestion |
@@ -317,7 +320,7 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 | PB-FR-19 | M | Done | Fewer, More, Smaller, Bolder, Earlier, Later and a note, for goals, steps and tasks |
 | PB-FR-20 | M | Done | Edited and locked items are kept when refining |
 | PB-FR-21 | S | Done | Another option for one item |
-| PB-FR-22 | S | **Not done** | No reorder, merge or split of suggestions before adding |
+| PB-FR-22 | S | Done | Move up, Move down, Merge with the next one and Split into two on new goals, steps and tasks; items already in the plan never move (Phase 8) |
 | PB-FR-23 | M | Done | Partners matched on the server; linked only where free, or added as To Contact |
 | PB-FR-24 | M | Done | Up to five risks with type, severity and solution, added as Open obstacles |
 | PB-FR-25 | M | Done | Each risk shows the fitting kind of helper; can be tied to a helper |
@@ -331,7 +334,7 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 | PB-FR-33 | M | Done | Drafts are a separate table, never read as plan data |
 | PB-FR-34 | M | Done | Thumbs up or down on every plan builder answer |
 | PB-FR-35 | M | Done | Added, edited and discarded counts per answer, no text (V63) |
-| PB-FR-36 | M | **Partly** | Admin card shows acceptance, edit rate, ratings, requests and cost per request per feature. **Requests and cost per finished plan are not shown** |
+| PB-FR-36 | M | Done | Per feature (stage): acceptance, edit rate, ratings, requests and cost per request, and requests and cost per finished plan. Finished plans with average requests and cost per plan. Exact: every request in a session carries its key (Phase 8, V68, V69) |
 | PB-FR-37 | C | **Not done** | Coaches do not see whether a plan was built with the guide |
 | PB-FR-38 | M | Done | Only the dream, draft items, answers and ticked fears are sent; never partner names or contacts (tested) |
 | PB-FR-39 | S | Done | Separate model for plan building in AI settings |
@@ -353,7 +356,7 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 | --- | --- | --- |
 | PB-NFR-01 Response time | **Not verified** | Progress is shown on every AI action; times not measured against the live API |
 | PB-NFR-02 Cost ≤ $0.25 per plan | **Partly** | Cost per request is logged and shown; the live sample run that measures it has not been done |
-| PB-NFR-03 15 requests per session | **Not done** | No per-session limit was built. The per-person daily limit and the $20 monthly cap (AI-NFR-15) still apply |
+| PB-NFR-03 15 requests per session | Done | A session is the dream's live draft; every plan AI request about that dream counts, including refinements, checks, fixes and the plan assistant in the guide. A request is counted before Claude is called, so a failed call still counts. Crisis messages are never held back (Phase 8) |
 | PB-NFR-04 Validation | Done | Every field from Claude is checked; keys and ids not in the participant's own plan are dropped |
 | PB-NFR-05 Safety and injection | Done | V9 and V10 rules unchanged; participant text reaches Claude only in the data block (tested) |
 | PB-NFR-06 Khmer | **Partly** | All V11 text has Khmer drafts (221 strings); the Khmer speaker's review is pending (`docs/km-review-v11.csv`) |
@@ -361,7 +364,7 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 | PB-NFR-08 Quality test set | **Partly** | 20 sample dreams and an opt-in live run exist; the live run has not been done |
 | PB-NFR-09 Draft privacy | Done | Owner only, 14 days, deleted with the dream and the account |
 | PB-NFR-10 Tests | Done | Backend and frontend tests for every phase; the access sweep covers every new endpoint |
-| PB-NFR-11 Assistant speed and cost | **Partly** | Answers stream; cards use the main model, not the plan model; every answer counts toward the daily limit and monthly cap. No session limit exists (PB-NFR-03); speed and cost not measured live |
+| PB-NFR-11 Assistant speed and cost | **Partly** | Answers stream; cards use the main model; answers count toward the daily limit, the monthly cap and, in Build my plan, the session limit (Phase 8). Speed and cost not measured live |
 | PB-NFR-12 Assistant context and privacy | Done | Only the section's items; no partner names or contacts (tested); other users' dreams and items answer 404, before AI is checked |
 | PB-NFR-13 Assistant accessibility and language | **Partly** | Focus moves into the panel and back; labelled controls; live regions for answers and cards; Khmer drafts pending review; no WCAG audit |
 | PB-NFR-14 Assistant tests | Done | 4 backend flow tests plus the access sweep; 5 panel tests, 2 draft tests, 2 launcher tests and a Khmer coverage test |
@@ -379,12 +382,12 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 | PAC-07 Undo archives only what was added | Met in tests | Links given to existing partners are left in place |
 | PAC-08 Drafts resume and stay private | Met in tests | |
 | PAC-09 No partner names or contacts to Claude | Met in tests | |
-| PAC-10 Ratings and admin metrics | **Partly** | Cost per finished plan not shown (PB-FR-36) |
+| PAC-10 Ratings and admin metrics | Met in tests | Cost per finished plan per feature and for the whole plan (Phase 8) |
 | PAC-11 Every endpoint refuses other users | Met in tests | Automatic route sweep |
 | PAC-12 Cost ≤ $0.25 per plan | **Not verified** | Needs the live sample run |
 | PAC-13 Khmer rated clear and correct | **Not done** | Needs the Khmer reviewer (D-4) |
 | PAC-14 50% kept and rating ≥ 4.0 after 4 weeks | **Not done** | Needs the pilot |
-| PAC-15 Existing tests still pass | Met | 453 backend (1 opt-in skipped) and 486 frontend tests pass after Phase 7 |
+| PAC-15 Existing tests still pass | Met | 455 backend (1 opt-in skipped) and 491 frontend tests pass after Phase 8 |
 | PAC-16 Help per section | Met in tests | |
 | PAC-17 Saved only by choice | Met in tests | Builder and Plan page paths |
 | PAC-18 Section-only context, 404 for others | Met in tests | Chat, section check, proposals and apply |
@@ -400,6 +403,7 @@ Status of every requirement and acceptance criterion after phases 1 to 7 (phases
 - Not deployed and checked on Render; CI runs on push but its result was not checked here.
 - Plan assistant: change cards are not offered for People, Milestones or the whole plan (the assistant explains only); the Plan page has no Tasks section, so tasks are changed in Build my plan.
 - Plan assistant: the panel's plan check in Build my plan reads the saved draft, so it catches up a moment after an edit (the draft saves within a second).
+- Session limit: while a draft exists, plan AI requests about that dream from the dream's own plan assistant card also count toward the session's 15. Without a draft nothing is counted.
 
 ### Open questions answered by the build (for the sponsor to confirm)
 

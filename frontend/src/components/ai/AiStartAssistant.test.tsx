@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../../api/aiApi';
 import { recordPlanOutcome, suggestDreams, suggestVisionAreas } from '../../api/aiPlanApi';
@@ -17,6 +18,7 @@ vi.mock('../../api/visionAreaApi', () => ({ createVisionArea: vi.fn() }));
 
 const ready: AiStatus = { available: true, reason: 'OK', consentGiven: true, dailyLimit: 10, messagesLeftToday: 10 };
 const area = { id: 3, name: 'Career', archived: false } as VisionArea;
+const renderInRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('AiVisionAreaAssistant', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -68,7 +70,7 @@ describe('AiDreamAssistant', () => {
       { title: 'Lead a research team', dreamType: 'LONG_TERM', priority: 'HIGH', moonshot: false,
         whyImportant: 'Grow others', successDefinition: 'A team of five', targetDate: '2028-01-01' },
     ] });
-    render(<AiDreamAssistant token="token" visionAreas={[area]} onDataChange={vi.fn().mockResolvedValue(undefined)} />);
+    renderInRouter(<AiDreamAssistant token="token" visionAreas={[area]} onDataChange={vi.fn().mockResolvedValue(undefined)} />);
 
     expect(await screen.findByRole('button', { name: 'Suggest dreams' })).toBeDisabled();
     await userEvent.click(screen.getByRole('combobox', { name: 'Vision area to plan' }));
@@ -84,10 +86,24 @@ describe('AiDreamAssistant', () => {
     expect(await screen.findByText('1 dream(s) added as ideas.')).toBeInTheDocument();
   });
 
+  it('offers to continue into Build my plan for each dream just added (PB-FR-06)', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    vi.mocked(suggestDreams).mockResolvedValue({ dreams: [
+      { title: 'Lead a research team', dreamType: 'LONG_TERM', priority: 'HIGH', moonshot: false },
+    ] });
+    vi.mocked(createDream).mockResolvedValue({ id: 41, title: 'Lead a research team' } as Awaited<ReturnType<typeof createDream>>);
+    renderInRouter(<AiDreamAssistant token="token" visionAreas={[area]} initialVisionAreaId="3" onDataChange={vi.fn().mockResolvedValue(undefined)} />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Suggest dreams' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add 1 selected dream(s)' }));
+    const link = await screen.findByRole('link', { name: 'Build my plan for Lead a research team' });
+    expect(link).toHaveAttribute('href', '/dreams/41/build');
+  });
+
   it('shows a clarifying question instead of guessing', async () => {
     vi.mocked(getAiStatus).mockResolvedValue(ready);
     vi.mocked(suggestDreams).mockResolvedValue({ dreams: [], clarifyingQuestion: 'What kind of work do you love?' });
-    render(<AiDreamAssistant token="token" visionAreas={[area]} initialVisionAreaId="3" onDataChange={vi.fn()} />);
+    renderInRouter(<AiDreamAssistant token="token" visionAreas={[area]} initialVisionAreaId="3" onDataChange={vi.fn()} />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Suggest a moonshot dream' }));
     expect(suggestDreams).toHaveBeenCalledWith('token', 3, 'en', true);

@@ -8,7 +8,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { Lock, LockOpen, RefreshCw, Trash2 } from 'lucide-react';
+import { Lock, LockOpen, MoreVertical, RefreshCw, Trash2 } from 'lucide-react';
+import Menu from '@mui/material/Menu';
 import { tr } from '../../i18n/translate';
 import type { Priority, RefineAction } from '../../types/vision';
 import { Button } from '../common/Button';
@@ -24,12 +25,38 @@ export function Prompts({ questions }: { questions: string[] }) {
   );
 }
 
+/** PB-FR-22: what the participant can do to arrange a new item before adding it; a missing action is not offered. */
+export type ArrangeActions = { onUp?: () => void; onDown?: () => void; onMerge?: () => void; onSplit?: () => void };
+
+function ArrangeMenu({ name, actions }: { name: string; actions: ArrangeActions }) {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const items: [string, (() => void) | undefined][] = [
+    ['Move up', actions.onUp], ['Move down', actions.onDown], ['Merge with the next one', actions.onMerge], ['Split into two', actions.onSplit],
+  ];
+  if (items.every(([, action]) => !action)) {
+    return null;
+  }
+  return (
+    <>
+      <IconButton size="small" aria-label={tr('Arrange {title}', { title: name })} aria-haspopup="menu"
+        onClick={(event) => setAnchor(event.currentTarget)}>
+        <MoreVertical size={16} />
+      </IconButton>
+      <Menu anchorEl={anchor} open={anchor !== null} onClose={() => setAnchor(null)}>
+        {items.filter(([, action]) => action).map(([label, action]) => (
+          <MenuItem key={label} onClick={() => { setAnchor(null); action?.(); }}>{tr(label)}</MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+}
+
 /**
  * One new or existing item. Existing items are shown, never changed. An AI
  * suggestion can be locked so refining leaves it alone (PB-FR-20), or swapped
  * for another option (PB-FR-21).
  */
-export function ItemCard({ title, fromAi, existing, edited, locked, onToggleLock, onAnother, busy, onRemove, children }: {
+export function ItemCard({ title, fromAi, existing, edited, locked, onToggleLock, onAnother, busy, onRemove, arrange, children }: {
   title: string;
   fromAi?: boolean;
   existing?: boolean;
@@ -39,6 +66,7 @@ export function ItemCard({ title, fromAi, existing, edited, locked, onToggleLock
   onAnother?: () => void;
   busy?: boolean;
   onRemove?: () => void;
+  arrange?: ArrangeActions;
   children?: ReactNode;
 }) {
   const name = title || tr('this item');
@@ -63,6 +91,7 @@ export function ItemCard({ title, fromAi, existing, edited, locked, onToggleLock
               {locked ? <Lock size={16} /> : <LockOpen size={16} />}
             </IconButton>
           )}
+          {arrange && <ArrangeMenu name={name} actions={arrange} />}
           {onRemove && (
             <IconButton size="small" aria-label={tr('Remove {title}', { title: name })} onClick={onRemove}>
               <Trash2 size={16} />
