@@ -29,6 +29,7 @@ public record TaskItemResponse(
         EnergyDemand energyDemand,
         Instant completedAt,
         Integer sortOrder,
+        Integer listOrder,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

@@ -1072,8 +1072,25 @@ button:focus-visible,
   opacity: 0.5;
 }
 
-.data-table tr.row--drag-over td:first-child {
+.data-table tr.row--drag-over td {
+  background: var(--accent);
   box-shadow: inset 0 2px 0 var(--ring);
+}
+
+/* Order number with a drag grip in front of it (Tasks list). */
+.order-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.order-grip {
+  color: var(--text-faint);
+}
+
+.data-table tr.row--reorderable:hover .order-grip {
+  color: var(--primary);
 }
 
 .list-card--overdue {
@@ -2289,6 +2306,29 @@ button:focus-visible,
 
 .map-title {
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The keyboard hint is for mouse-and-keyboard users; a touch screen gets a
+   tap hint instead. */
+.map-hint--touch {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .map-hint--keys {
+    display: none;
+  }
+
+  .map-hint--touch {
+    display: inline;
+  }
+
+  /* Finger-size target for opening and closing a branch. */
+  .map-chevron {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 .map-node--dream > .map-row .map-title {
@@ -2493,8 +2533,316 @@ button:focus-visible,
   grid-template-columns: 1fr;
 }
 
-.kanban-switcher {
-  grid-column: 1 / -1;
+/* Phone board: tabs on top, then the one chosen column at full width. The
+   sideways-swipe rules for .kanban above must not apply here, or the tabs
+   and the column end up squeezed side by side. */
+@media (max-width: 600px) {
+  .kanban.kanban--mobile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    scroll-snap-type: none;
+    overflow-x: visible;
+  }
+
+  /* The page scrolls, not the column: no small scroll box inside a scroll. */
+  .kanban--mobile .kanban-column {
+    max-height: none;
+    min-height: 0;
+  }
+
+  .kanban--mobile .kanban-column .stack-list {
+    overflow-y: visible;
+  }
+
+  /* Room so the floating AI button doesn't cover the last card's menu. */
+  .kanban.kanban--mobile {
+    padding-bottom: 72px;
+  }
+
+  /* The selected tab already names the column; keep the heading for screen
+     readers only. */
+  .kanban--mobile .kanban-column > h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* The phone task cards are cards already; drop the frame around them. */
+  .tasks-list-card.MuiCard-root {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .tasks-list-card > .MuiCardContent-root {
+    padding: 0 0 72px;
+  }
+
+  /* Cards can't be dragged on a touch screen; the status dropdown moves them. */
+  .kanban--mobile .list-card {
+    cursor: default;
+  }
+
+  .kanban--mobile .row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .kanban--mobile .row-actions .MuiFormControl-root {
+    flex: 1;
+  }
+}
+
+.kanban-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 2px 4px;
+  margin: 0 -2px;
+  scroll-snap-type: x proximity;
+}
+
+.kanban-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.kanban-tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--text-soft);
+  font: inherit;
+  font-size: var(--font-body-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.kanban-tab--active {
+  border-color: var(--primary);
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+
+.kanban-tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kanban-tab-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--background-subtle);
+  color: var(--text-label);
+  font-size: var(--font-caption);
+  text-align: center;
+}
+
+/* Phone cards that can be reordered: a drag handle on the left, held with
+   a finger. touch-action: none stops the page scrolling while dragging. */
+.table-card--reorderable {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 4px;
+  padding-left: 4px;
+}
+
+.table-card-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.reorder-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 44px;
+  margin-top: -4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-faint);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.reorder-handle:active {
+  cursor: grabbing;
+  color: var(--primary);
+  background: var(--accent);
+}
+
+.reorder-handle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.table-cards--dragging {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.table-card--dragging {
+  position: relative;
+  z-index: 5;
+  box-shadow: var(--shadow-4);
+  outline: 2px solid var(--primary);
+  transition: none;
+}
+
+.table-card--drag-over {
+  outline: 2px dashed var(--ring);
+  outline-offset: 2px;
+  background: var(--accent);
+}
+
+/* Cards from another step can't take the drop. */
+.table-card--no-drop {
+  opacity: 0.4;
+}
+
+.task-card-order {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--background-subtle);
+  color: var(--text-label);
+  font-weight: 600;
+}
+
+/* Board ordering. Wide screen: the card being hovered is where the dragged
+   one will land. Phone: a handle in the card's corner, held with a finger. */
+.list-card--drop-target {
+  outline: 2px dashed var(--ring);
+  outline-offset: 2px;
+  background: var(--accent);
+}
+
+.list-card--with-handle {
+  position: relative;
+  padding-left: 44px;
+}
+
+.list-card-handle {
+  position: absolute;
+  top: 8px;
+  left: 6px;
+}
+
+.stack-list--dragging {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.board-card--dragging {
+  position: relative;
+  z-index: 5;
+  box-shadow: var(--shadow-4);
+  outline: 2px solid var(--primary);
+}
+
+.board-card--drag-over {
+  outline: 2px dashed var(--ring);
+  outline-offset: 2px;
+  background: var(--accent);
+}
+
+.board-card--no-drop {
+  opacity: 0.4;
+}
+
+/* Tasks list on a phone: a short card instead of every column. */
+.table-card--custom {
+  gap: 6px;
+}
+
+.table-card.row-done .task-card-title {
+  text-decoration: line-through;
+  color: var(--text-soft);
+}
+
+.task-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.task-card-head .MuiIconButton-root {
+  width: 36px;
+  height: 36px;
+  margin: -6px -6px 0 0;
+}
+
+.task-card-title {
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.task-card-place,
+.task-card-meta,
+.task-card-blocker {
+  margin: 0;
+  font-size: var(--font-caption);
+  color: var(--text-soft);
+}
+
+.task-card-place {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-card-blocker,
+.list-card .task-card-blocker {
+  color: var(--destructive);
+}
+
+.task-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-caption);
+  color: var(--text-label);
+}
+
+.task-card-progress > span {
+  min-width: 34px;
+  text-align: right;
+}
+
+.task-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.task-card-status {
+  width: 150px;
 }
 
 @media (max-width: 600px) {
@@ -2508,33 +2856,187 @@ button:focus-visible,
     width: 100%;
   }
 
-  /* The tree keeps its depth cues but with pocket-size indents; the right
-     rail drops to its own full-width line so nothing forces a horizontal
-     scroll (FR-28.3). */
+  /* Until a title is typed, quick-add is one line: title box and Add. */
+  .quick-add-row:not(.quick-add-row--open) > label:not(.quick-add-title) {
+    display: none;
+  }
+
+  .quick-add-row:not(.quick-add-row--open) {
+    flex-wrap: nowrap;
+  }
+
+  .quick-add-row:not(.quick-add-row--open) .quick-add-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .quick-add-row:not(.quick-add-row--open) button {
+    width: auto;
+    min-height: 40px;
+  }
+
+  .quick-add-row input {
+    font-size: 16px;
+  }
+
+  /* Vision Map on a phone (FR-28.3). Each row becomes two lines:
+       line 1: [arrow] title + badges ............ [⋮]
+       line 2:         [status]  [=====progress=== 40%]
+     Indents shrink so a task four levels deep still has room to read, and
+     nothing forces a horizontal scroll. */
+  .map-node--dream {
+    padding: 8px;
+  }
+
+  /* Room below the last add row so the floating AI button doesn't cover it. */
+  .map-tree {
+    padding-bottom: 72px;
+  }
+
   .map-children {
-    margin-left: 8px;
+    margin-left: 4px;
     padding-left: 8px;
   }
 
-  .map-main {
-    min-width: 160px;
+  .map-row {
+    align-items: flex-start;
+    gap: 6px 8px;
+    padding: 8px 6px;
   }
 
-  .map-rail {
-    width: 100%;
+  .map-row > * {
+    order: 3;
+  }
+
+  .map-chevron {
+    order: 0;
+    width: 32px;
+    height: 32px;
+  }
+
+  .map-row > .map-thumb {
+    display: none;
+  }
+
+  .map-main {
+    order: 1;
+    /* Wide enough that the status control can't fit beside it, so it wraps
+       to line 2 — leaving room only for the arrow and the ⋮ button. */
+    flex: 1 1 calc(100% - 92px);
+    min-width: 0;
+  }
+
+  .map-row > .MuiIconButton-root {
+    order: 2;
+    width: 36px;
+    height: 36px;
+    margin: -4px -4px 0 0;
+  }
+
+  /* Status (dropdown, or badge on an archived row) starts line 2 and the
+     progress bar fills the rest of it. */
+  .map-main + * {
+    align-self: center;
   }
 
   .map-status {
-    width: 130px;
+    flex: 0 0 132px;
+    width: auto;
   }
 
+  .map-rail {
+    order: 4;
+    align-self: center;
+    flex: 1 1 0;
+    min-width: 96px;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .map-rail-value {
+    min-width: 34px;
+  }
+
+  /* Tasks have no children, so their empty arrow slot is dropped. */
+  .map-node--task .map-chevron--spacer {
+    display: none;
+  }
+
+  .map-node--task .map-main {
+    flex-basis: calc(100% - 44px);
+  }
+
+  .map-node--dream > .map-row .map-title {
+    font-size: 1.05rem;
+  }
+
+  .map-line {
+    gap: 4px 6px;
+  }
+
+  /* 16px text stops iOS Safari zooming the page when an input is tapped. */
+  .map-tree input,
+  .map-filter-bar input {
+    font-size: 16px;
+  }
+
+  /* Quick-add: no hover on touch, so always fully visible. A step or task
+     add row shows only its title at first; owner and date open up once a
+     title is typed, so the tree isn't a wall of empty forms. */
   .map-add {
     flex-wrap: wrap;
+    opacity: 1;
+  }
+
+  .map-add .MuiTextField-root:first-of-type {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .map-add--task:not(.map-add--open) .MuiTextField-root:nth-of-type(n + 2) {
+    display: none;
+  }
+
+  .map-add--open .MuiTextField-root:first-of-type,
+  .map-add--open > button {
+    flex: 1 1 100%;
   }
 
   .map-add--task .MuiTextField-root:nth-of-type(2),
   .map-add--task .MuiTextField-root:nth-of-type(3) {
     width: 100%;
+  }
+
+  .map-add > button {
+    min-height: 40px;
+  }
+
+  /* Filter card: the Dream picker and the Filters button come first, and
+     every field takes the full width. */
+  .map-filter-bar.MuiCardContent-root {
+    gap: 12px;
+  }
+
+  .map-filter-bar > label,
+  .map-filter-bar > button {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .map-filter-dream {
+    order: -2;
+  }
+
+  .map-filter-toggle {
+    order: -1;
+    min-height: 40px;
+  }
+
+  .map-build-cta > button {
+    width: 100%;
+    min-height: 44px;
   }
 
   .page-heading-actions {

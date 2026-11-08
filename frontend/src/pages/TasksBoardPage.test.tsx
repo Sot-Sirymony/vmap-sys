@@ -42,7 +42,7 @@ describe('TasksBoardPage (CLAUDE.md page 7)', () => {
     vi.mocked(taskApi.updateTask).mockResolvedValue(scholar);
     vi.mocked(taskApi.updateTaskStatus).mockResolvedValue(scholar);
     vi.mocked(taskApi.archiveTask).mockResolvedValue(undefined);
-    vi.mocked(taskApi.reorderTasks).mockResolvedValue(undefined as never);
+    vi.mocked(taskApi.reorderTaskList).mockResolvedValue(undefined as never);
   });
 
   it('lists tasks with owner and due date, highlighting overdue and blocked ones (BR-9)', async () => {
@@ -197,14 +197,16 @@ describe('TasksBoardPage (CLAUDE.md page 7)', () => {
     await waitFor(() => expect(taskApi.updateTask).toHaveBeenCalledWith('token', 12, expect.objectContaining({ priority: 'CRITICAL' })));
   });
 
-  it('reorders tasks within a step, and shows why a move failed', async () => {
+  it('puts any task first, whatever its step, and shows why a move failed', async () => {
     vi.mocked(taskApi.updateTaskStatus).mockRejectedValue(new Error('A blocked task needs a reason.'));
     renderPage(<TasksBoardPage />, { auth: { user: ME } });
     await screen.findByText('Search PubMed', { selector: 'td *, td' });
-    fireEvent.dragStart(row('Search Google Scholar'));
+    // No order saved yet, so the list starts oldest first: 10, 11, 12.
+    // "Call the venue" (another step) dropped onto the first task goes first.
+    fireEvent.dragStart(row('Call the venue'));
     fireEvent.dragOver(row('Search PubMed'));
     fireEvent.drop(row('Search PubMed'));
-    await waitFor(() => expect(taskApi.reorderTasks).toHaveBeenCalledWith('token', 1, [11, 10]));
+    await waitFor(() => expect(taskApi.reorderTaskList).toHaveBeenCalledWith('token', [12, 10, 11]));
 
     await userEvent.click(screen.getByRole('button', { name: 'Board' }));
     const card = screen.getByText('Search Google Scholar').closest('article') as HTMLElement;

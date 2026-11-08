@@ -24,8 +24,11 @@ import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -131,6 +134,31 @@ public class TaskItemService {
         }
         for (int index = 0; index < orderedTaskIds.size(); index++) {
             byId.get(orderedTaskIds.get(index)).setSortOrder(index);
+        }
+    }
+
+    // Tasks page drag-and-drop: the participant's own order across every
+    // step. orderedTaskIds lists the user's tasks front to back; any active
+    // task it leaves out keeps its relative place after the listed ones, so
+    // a client that only knows some tasks can't lose the rest's order.
+    public void reorderTaskList(List<Long> orderedTaskIds) {
+        List<TaskItem> active = taskItemRepository.findByUser_IdAndArchivedFalse(lookup.userId());
+        Map<Long, TaskItem> byId = active.stream().collect(Collectors.toMap(TaskItem::getId, task -> task));
+        if (new HashSet<>(orderedTaskIds).size() != orderedTaskIds.size() || !byId.keySet().containsAll(orderedTaskIds)) {
+            throw new BusinessRuleException("The given order may only list your current tasks, each once.");
+        }
+        Set<Long> listed = new HashSet<>(orderedTaskIds);
+        List<TaskItem> rest = active.stream()
+                .filter(task -> !listed.contains(task.getId()))
+                .sorted(Comparator.comparing(TaskItem::getListOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(TaskItem::getId))
+                .toList();
+        int position = 0;
+        for (Long id : orderedTaskIds) {
+            byId.get(id).setListOrder(position++);
+        }
+        for (TaskItem task : rest) {
+            task.setListOrder(position++);
         }
     }
 

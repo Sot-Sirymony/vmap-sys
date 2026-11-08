@@ -167,6 +167,8 @@ Fields:
 - blockerReason
 - nextAction
 - completedAt
+- sortOrder: order inside its step (Vision Map), 0-based
+- listOrder: the user's own order across all tasks (Tasks page), 0-based; null until first set (V70)
 - createdAt
 - updatedAt
 

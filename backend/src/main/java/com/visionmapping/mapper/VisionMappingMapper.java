@@ -155,6 +155,7 @@ public class VisionMappingMapper {
                 .energyDemand(entity.getEnergyDemand())
                 .completedAt(entity.getCompletedAt())
                 .sortOrder(entity.getSortOrder())
+                .listOrder(entity.getListOrder())
                 .archived(entity.isArchived())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())

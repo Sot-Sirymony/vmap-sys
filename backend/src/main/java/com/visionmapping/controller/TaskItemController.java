@@ -1,6 +1,7 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.ReorderRequest;
+import com.visionmapping.dto.request.SimpleReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.response.TaskItemResponse;
@@ -60,6 +61,13 @@ public class TaskItemController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reorder(@Valid @RequestBody ReorderRequest request) {
         service.reorderTasks(request.parentId(), request.orderedIds());
+    }
+
+    /** Tasks page: the participant's own order across all steps (V70). */
+    @PatchMapping("/list-order")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderList(@Valid @RequestBody SimpleReorderRequest request) {
+        service.reorderTaskList(request.orderedIds());
     }
 
     @DeleteMapping("/{id}")

@@ -1,12 +1,12 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { CheckSquare } from 'lucide-react';
+import { CheckSquare, GripVertical } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listIdealPartnerProfiles } from '../api/idealPartnerProfileApi';
 import { listSteps } from '../api/stepApi';
 import { listVisionAreas } from '../api/visionAreaApi';
-import { archiveTask, permanentlyDeleteTask, createTask, listTasks, reorderTasks, restoreTask, updateTask, updateTaskStatus } from '../api/taskApi';
+import { archiveTask, permanentlyDeleteTask, createTask, listTasks, reorderTaskList, restoreTask, updateTask, updateTaskStatus } from '../api/taskApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Checkbox from '@mui/material/Checkbox';
@@ -429,27 +429,30 @@ export function TasksBoardPage() {
       }
     }
     return true;
-  });
+  }).sort(byListOrder);
+
+  // "#1, #2…": each active task's place in the overall order, so numbers run
+  // 1..N even before the first drag (unordered tasks follow, oldest first).
+  const orderNumber = new Map(
+    crud.items.filter((task) => !task.archived).sort(byListOrder).map((task, index) => [task.id, index + 1]),
+  );
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
   const letterRankOptions = letterRankFilterOptions(crud.items);
 
-  // Drag-and-drop reorder (List view only, see DataTableReorder): siblings
-  // are the dragged task's own step's non-archived tasks, ordered by
-  // current position. Dropping onto a task from a different step is a
-  // no-op — reordering only makes sense within the same parent. The Board
-  // view's drag gesture already means "change status" (StatusBoard), so
-  // this only wires into the List view's table.
+  // Drag-and-drop reorder (List view, see DataTableReorder): the user's own
+  // order across every task, whatever its step — drop a task onto another
+  // and it takes that task's place. Separate from the per-step order the
+  // Vision Map uses, so this never reshuffles a step there. Used by the List
+  // view and the Board (a card dropped onto another card; see StatusBoard).
   async function handleReorderTasks(draggedId: number, targetId: number) {
-    const dragged = crud.items.find((item) => item.id === draggedId);
-    const target = crud.items.find((item) => item.id === targetId);
-    if (!token || !dragged || !target || dragged.stepId !== target.stepId) {
+    if (!token || draggedId === targetId) {
       return;
     }
     const orderedIds = crud.items
-      .filter((item) => item.stepId === dragged.stepId && !item.archived)
-      .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER) || a.id - b.id)
+      .filter((item) => !item.archived)
+      .sort(byListOrder)
       .map((item) => item.id);
     const fromIndex = orderedIds.indexOf(draggedId);
     const toIndex = orderedIds.indexOf(targetId);
@@ -460,7 +463,7 @@ export function TasksBoardPage() {
     nextOrder.splice(fromIndex, 1);
     nextOrder.splice(toIndex, 0, draggedId);
     try {
-      await reorderTasks(token, dragged.stepId, nextOrder);
+      await reorderTaskList(token, nextOrder);
       await crud.reload();
     } catch (reorderError) {
       crud.setError(reorderError instanceof Error ? reorderError.message : tr('Unable to reorder tasks.'));
@@ -486,14 +489,22 @@ export function TasksBoardPage() {
     {
       key: 'position',
       label: tr('Order'),
-      sortValue: (task) => task.sortOrder ?? Number.MAX_SAFE_INTEGER,
-      render: (task) => (task.sortOrder != null ? task.sortOrder + 1 : '—'),
+      sortValue: (task) => orderNumber.get(task.id) ?? Number.MAX_SAFE_INTEGER,
+      // A grip beside the number says "drag this row" at a glance.
+      render: (task) => (
+        <span className="order-cell">
+          {!task.archived && <GripVertical size={16} aria-hidden="true" className="order-grip" />}
+          {orderNumber.get(task.id) ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'title',
       label: tr('Task'),
       sortValue: (task) => task.title,
-      sx: { fontWeight: 500 },
+      // Wide enough that the dream › goal › step path stays on a line or
+      // two; a squeezed column made each row a screen tall, too tall to drag.
+      sx: { fontWeight: 500, minWidth: 280 },
       render: (task) => (
         <>
           {task.title}
@@ -550,6 +561,52 @@ export function TasksBoardPage() {
       ),
     },
   ];
+
+  // The list view's card on a phone: just what you act on. Title and menu,
+  // where it sits (goal › step, one line), who and when, badges, progress,
+  // and a status dropdown so a task can be moved or ticked off in one tap
+  // without opening the full form.
+  function taskMobileCard(task: TaskItem) {
+    const step = steps.find((item) => item.id === task.stepId);
+    const goal = goals.find((item) => item.id === step?.goalId);
+    const place = [goal?.title, step?.title].filter(Boolean).join(' › ');
+    return (
+      <>
+        <div className="task-card-head">
+          <strong className="task-card-title">{task.title}</strong>
+          {taskColumns.find((column) => column.key === 'actions')?.render(task)}
+        </div>
+        <p className="task-card-place">
+          {orderNumber.has(task.id) && <span className="task-card-order" title={tr('Your order')}>#{orderNumber.get(task.id)}</span>}
+          {place}
+        </p>
+        <p className="task-card-meta">
+          {task.owner} · {tr('Due')} <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} />
+        </p>
+        {task.blockerReason && <p className="task-card-blocker">{task.blockerReason}</p>}
+        <div className="task-card-progress">
+          <ProgressBar value={Number(task.progressPercent)} />
+          <span>{Math.round(Number(task.progressPercent))}%</span>
+        </div>
+        <div className="task-card-foot">
+          <PriorityBadge priority={task.priority} />
+          {task.archived ? (
+            <StatusBadge status={task.status} />
+          ) : (
+            <FormControl size="small" className="task-card-status">
+              <Select
+                SelectDisplayProps={{ 'aria-label': tr('Status of {title}', { title: task.title }) }}
+                value={task.status}
+                onChange={(event) => void handleMove(task.id, event.target.value as WorkStatus)}
+              >
+                {columns.map((column) => <MenuItem value={column} key={column}>{workStatusLabels[column]}</MenuItem>)}
+              </Select>
+            </FormControl>
+          )}
+        </div>
+      </>
+    );
+  }
 
   // FR-22.4 field order: identity -> classification -> dates -> details,
   // with labeled dividers so the 14-field form scans as four short groups.
@@ -801,7 +858,7 @@ export function TasksBoardPage() {
         </EmptyState>
       ) : null}
       {crud.items.length > 0 && (viewMode === 'list' ? (
-        <Card>
+        <Card className="tasks-list-card">
           <CardContent>
             <DataTable
               storageKey="tasks"
@@ -810,9 +867,16 @@ export function TasksBoardPage() {
               emptyMessage={tr('No tasks match these filters.')}
               defaultSortKey="position"
               defaultSortDirection="asc"
-              reorder={{ columnKey: 'position', onReorder: (draggedId, targetId) => void handleReorderTasks(draggedId, targetId) }}
+              reorder={{
+                columnKey: 'position',
+                onReorder: (draggedId, targetId) => void handleReorderTasks(draggedId, targetId),
+                // Any task can go anywhere; archived tasks keep no place in the order.
+                canDrag: (id) => !crud.items.find((item) => item.id === id)?.archived,
+                canDrop: (_draggedId, targetId) => !crud.items.find((item) => item.id === targetId)?.archived,
+              }}
               pageResetKey={`${searchTerm}|${filterOwner}|${filterPriority}|${filterLetterRank}|${filterStatus}|${filterVisionAreaId}|${filterDreamId}|${filterGoalId}|${filterDueFrom}|${filterDueTo}|${filterOverdueOnly}|${filterStepId ?? ''}`}
               rowClassName={(task) => (task.archived ? 'row-archived' : isOverdue(task.dueDate, task.status) ? 'row-overdue' : task.status === 'COMPLETED' ? 'row-done' : '')}
+              mobileCard={taskMobileCard}
               selection={{
                 selectedIds,
                 onChange: setSelectedIds,
@@ -871,6 +935,7 @@ export function TasksBoardPage() {
           statusOf={(task) => task.status}
           entityLabel="tasks"
           onMove={(task, nextStatus) => void handleMove(task.id, nextStatus)}
+          onReorder={(draggedId, targetId) => void handleReorderTasks(draggedId, targetId)}
           cardClassName={taskHighlightClass}
           renderCard={(task) => (
             <>
@@ -881,7 +946,7 @@ export function TasksBoardPage() {
                 <span>{task.progressPercent}%</span>
               </div>
               <ProgressBar value={Number(task.progressPercent)} />
-              {task.blockerReason && <p>{task.blockerReason}</p>}
+              {task.blockerReason && <p className="task-card-blocker">{task.blockerReason}</p>}
               {task.status === 'BLOCKED' && profileByStepId.has(task.stepId) && (
                 <p><Link to="/partners">{tr('Ideal partner profile defined for this step →')}</Link></p>
               )}
@@ -909,6 +974,11 @@ function formatHours(task: TaskItem) {
     return '-';
   }
   return `${task.actualHours ?? 0} / ${task.estimatedHours ?? '?'} h`;
+}
+
+// The user's overall order (listOrder), unordered tasks last, oldest first.
+function byListOrder(left: TaskItem, right: TaskItem) {
+  return (left.listOrder ?? Number.MAX_SAFE_INTEGER) - (right.listOrder ?? Number.MAX_SAFE_INTEGER) || left.id - right.id;
 }
 
 function taskHighlightClass(task: TaskItem) {

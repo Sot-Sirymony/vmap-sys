@@ -48,7 +48,9 @@ export function QuickAddRow({ parentLabel, parents, parentValue, onParentChange,
   }
 
   return (
-    <Card className="quick-add-row" component="form" onSubmit={(event: FormEvent) => void handleSubmit(event)}>
+    // `--open` once a title is typed: on a phone the parent and date fields
+    // stay hidden until then, so quick-add is one line, not a whole screen.
+    <Card className={`quick-add-row${title.trim() ? ' quick-add-row--open' : ''}`} component="form" onSubmit={(event: FormEvent) => void handleSubmit(event)}>
       <label>
         {tr(parentLabel)}
         <FormControl fullWidth size="small">

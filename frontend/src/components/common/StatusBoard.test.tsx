@@ -115,16 +115,87 @@ describe('StatusBoard (CLAUDE.md page 7: Kanban columns)', () => {
     expect(screen.getByText('Waiting on mentor').closest('article')).toHaveClass('card--blocked');
   });
 
-  it('shows one column at a time on a phone, with a column switcher', async () => {
+  it('shows one column at a time on a phone, picked from status tabs with counts', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query.includes('max-width:599.95px'), media: query, onchange: null,
       addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
     }));
     renderBoard(vi.fn());
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1);
-    await userEvent.click(screen.getByRole('combobox', { name: 'Show column' }));
-    await userEvent.click(await screen.findByRole('option', { name: 'In Progress (1)' }));
+    expect(screen.getByRole('tablist', { name: 'Show column' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'In Progress 1' }));
+    expect(screen.getByRole('tab', { name: 'In Progress 1' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { level: 2, name: /In Progress/ })).toBeInTheDocument();
     expect(screen.getByText('Save 15 articles')).toBeInTheDocument();
+  });
+
+  describe('ordering cards', () => {
+    const ordered: Card[] = [
+      { id: 1, title: 'First', status: 'NOT_STARTED', archived: false },
+      { id: 2, title: 'Second', status: 'NOT_STARTED', archived: false },
+      { id: 3, title: 'Third', status: 'NOT_STARTED', archived: false },
+      { id: 4, title: 'Doing', status: 'IN_PROGRESS', archived: false },
+    ];
+
+    function renderOrdered(onMove = vi.fn(), onReorder = vi.fn()) {
+      render(
+        <StatusBoard
+          items={ordered}
+          columns={columns}
+          statusOf={(card) => card.status}
+          renderCard={(card) => <h3>{card.title}</h3>}
+          onMove={onMove}
+          onReorder={onReorder}
+          entityLabel="tasks"
+        />,
+      );
+      return { onMove, onReorder };
+    }
+
+    const cardOf = (title: string) => screen.getByText(title).closest('article') as HTMLElement;
+
+    it('drops a card onto another in its column to take its place', () => {
+      const { onMove, onReorder } = renderOrdered();
+      const transfer = dataTransfer();
+      fireEvent.dragStart(cardOf('Third'), { dataTransfer: transfer });
+      fireEvent.dragOver(cardOf('First'), { dataTransfer: transfer });
+      expect(cardOf('First')).toHaveClass('list-card--drop-target');
+      fireEvent.drop(cardOf('First'), { dataTransfer: transfer });
+      expect(onReorder).toHaveBeenCalledWith(3, 1);
+      expect(onMove).not.toHaveBeenCalled();
+      expect(cardOf('First')).not.toHaveClass('list-card--drop-target');
+    });
+
+    it('drops a card onto a card in another column: moves it there and into that place', () => {
+      const { onMove, onReorder } = renderOrdered();
+      const transfer = dataTransfer();
+      fireEvent.dragStart(cardOf('Doing'), { dataTransfer: transfer });
+      fireEvent.dragOver(cardOf('Second'), { dataTransfer: transfer });
+      fireEvent.drop(cardOf('Second'), { dataTransfer: transfer });
+      expect(onMove).toHaveBeenCalledWith(ordered[3], 'NOT_STARTED');
+      expect(onReorder).toHaveBeenCalledWith(4, 2);
+    });
+
+    it('still only changes status when dropped on a column, not a card', () => {
+      const { onMove, onReorder } = renderOrdered();
+      const transfer = dataTransfer();
+      fireEvent.dragStart(cardOf('First'), { dataTransfer: transfer });
+      fireEvent.dragOver(column('Blocked'), { dataTransfer: transfer });
+      fireEvent.drop(column('Blocked'), { dataTransfer: transfer });
+      expect(onMove).toHaveBeenCalledWith(ordered[0], 'BLOCKED');
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it('gives each card a drag handle on a phone, which moves it with the arrow keys', async () => {
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: query.includes('max-width:599.95px'), media: query, onchange: null,
+        addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+      }));
+      const { onReorder } = renderOrdered();
+      expect(cardOf('First')).toHaveAttribute('draggable', 'false');
+      within(cardOf('Second')).getByRole('button', { name: /Drag to reorder/ }).focus();
+      await userEvent.keyboard('{ArrowUp}');
+      expect(onReorder).toHaveBeenCalledWith(2, 1);
+    });
   });
 });

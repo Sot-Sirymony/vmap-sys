@@ -261,6 +261,9 @@ export type TaskItem = {
   // Display order among this step's tasks, for the Vision Map tree's
   // drag-and-drop reorder. Server-managed only — never sent in a request.
   sortOrder?: number | null;
+  // The participant's overall order on the Tasks page, across all steps
+  // ("this first, that second"). Null until the first drag; sorts last.
+  listOrder?: number | null;
   archived: boolean;
 };
 

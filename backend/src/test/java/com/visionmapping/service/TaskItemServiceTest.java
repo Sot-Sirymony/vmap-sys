@@ -343,4 +343,56 @@ class TaskItemServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Task not found: 30");
     }
+
+    @Test
+    void reorderTaskListPutsTasksInTheGivenOrderAcrossSteps() {
+        Goal goal = goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
+        VisionStep stepA = step(20L, goal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        VisionStep stepB = step(21L, goal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        TaskItem first = task(30L, stepA, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        TaskItem second = task(31L, stepB, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        TaskItem third = task(32L, stepA, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        first.setSortOrder(0);
+        third.setSortOrder(1);
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(first, second, third));
+
+        service.reorderTaskList(List.of(32L, 31L, 30L));
+
+        assertThat(third.getListOrder()).isZero();
+        assertThat(second.getListOrder()).isEqualTo(1);
+        assertThat(first.getListOrder()).isEqualTo(2);
+        // The Vision Map's order inside a step is left alone.
+        assertThat(first.getSortOrder()).isZero();
+        assertThat(third.getSortOrder()).isEqualTo(1);
+    }
+
+    @Test
+    void reorderTaskListKeepsUnlistedTasksAfterTheListedOnesInTheirOldOrder() {
+        VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false),
+                WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        TaskItem a = task(30L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        TaskItem b = task(31L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        TaskItem c = task(32L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        a.setListOrder(2);
+        b.setListOrder(0);
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(a, b, c));
+
+        service.reorderTaskList(List.of(32L));
+
+        assertThat(c.getListOrder()).isZero();
+        assertThat(b.getListOrder()).isEqualTo(1);
+        assertThat(a.getListOrder()).isEqualTo(2);
+    }
+
+    @Test
+    void reorderTaskListRejectsAnotherUsersTaskOrADuplicate() {
+        VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false),
+                WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        TaskItem mine = task(30L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(mine));
+
+        assertThatThrownBy(() -> service.reorderTaskList(List.of(30L, 99L))).isInstanceOf(BusinessRuleException.class);
+        assertThatThrownBy(() -> service.reorderTaskList(List.of(30L, 30L))).isInstanceOf(BusinessRuleException.class);
+        assertThat(mine.getListOrder()).isNull();
+    }
 }

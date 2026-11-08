@@ -180,9 +180,20 @@ describe('DataTable', () => {
       expect(bodyRow('First')).not.toHaveAttribute('draggable');
     });
 
-    it('asks for more rows per page when not everything fits on one page', () => {
-      render(<DataTable rows={ordered} columns={columns} emptyMessage="None" defaultSortKey="score" defaultRowsPerPage={2} rowsPerPageOptions={[2, 5]} reorder={{ columnKey: 'score', onReorder: vi.fn() }} />);
-      expect(screen.getByText(/Increase rows per page below/)).toBeInTheDocument();
+    it('still drags when the rows run over several pages', async () => {
+      const onReorder = vi.fn();
+      render(<DataTable rows={ordered} columns={columns} emptyMessage="None" defaultSortKey="score" defaultRowsPerPage={2} rowsPerPageOptions={[2, 5]} reorder={{ columnKey: 'score', onReorder }} />);
+      expect(screen.getByText('Drag a row to move it to a new position.')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /next page/i }));
+      fireEvent.dragStart(bodyRow('Third'));
+      fireEvent.dragOver(bodyRow('Third'));
+      fireEvent.drop(bodyRow('Third'));
+      expect(onReorder).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: /previous page/i }));
+      fireEvent.dragStart(bodyRow('Second'));
+      fireEvent.dragOver(bodyRow('First'));
+      fireEvent.drop(bodyRow('First'));
+      expect(onReorder).toHaveBeenCalledWith(2, 1);
     });
 
     it('moves a row onto another when sorted by position', () => {
@@ -214,11 +225,95 @@ describe('DataTable', () => {
       }));
       render(<DataTable rows={rows} columns={columns} emptyMessage="None" reorder={{ columnKey: 'score', onReorder: vi.fn() }} />);
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
-      expect(screen.getByText('Drag-and-drop reorder needs a wider screen — not available at this size.')).toBeInTheDocument();
+      // Not sorted by its position column, so no drag handles yet — and it says why.
+      expect(screen.getByText(/Sort by "Score" ascending/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Drag to reorder/ })).not.toBeInTheDocument();
       const card = screen.getByText('Carol').closest('article') as HTMLElement;
       expect(within(card).getByText('Score')).toBeInTheDocument();
       expect(within(card).getByText('30')).toBeInTheDocument();
       expect(within(card).getByText('Edit')).toBeInTheDocument();
+    });
+
+    // jsdom has no PointerEvent, so fired pointer events would lose clientY.
+    class TestPointerEvent extends MouseEvent {
+      pointerType: string;
+      pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init);
+        this.pointerType = init.pointerType ?? 'mouse';
+        this.pointerId = init.pointerId ?? 1;
+      }
+    }
+
+    function stubPhone() {
+      vi.stubGlobal('PointerEvent', TestPointerEvent);
+      vi.stubGlobal('matchMedia', (query: string) => ({
+        matches: true, media: query, onchange: null, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+        addListener: vi.fn(), removeListener: vi.fn(), dispatchEvent: vi.fn(),
+      }));
+    }
+
+    function renderReorderable(onReorder = vi.fn(), canDrop?: (draggedId: number, targetId: number) => boolean) {
+      render(
+        <DataTable
+          rows={rows}
+          columns={columns}
+          emptyMessage="None"
+          defaultSortKey="score"
+          reorder={{ columnKey: 'score', onReorder, canDrop }}
+        />,
+      );
+      return onReorder;
+    }
+
+    // Cards in score order: alice (10), Bob (20), Carol (30), each 100px tall.
+    function cardOf(name: string) {
+      return screen.getByText(name).closest('article') as HTMLElement;
+    }
+
+    function layOutCards() {
+      ['alice', 'Bob', 'Carol'].forEach((name, index) => {
+        vi.spyOn(cardOf(name), 'getBoundingClientRect').mockReturnValue({
+          top: index * 100, bottom: index * 100 + 90, left: 0, right: 300, width: 300, height: 90, x: 0, y: index * 100, toJSON: () => ({}),
+        } as DOMRect);
+      });
+    }
+
+    it('drags a card by its handle with a finger and drops it onto another card', () => {
+      stubPhone();
+      const onReorder = renderReorderable();
+      layOutCards();
+      expect(screen.getByText(/Hold ⠿ on a card/)).toBeInTheDocument();
+      const handle = within(cardOf('alice')).getByRole('button', { name: /Drag to reorder/ });
+      fireEvent.pointerDown(handle, { clientY: 40, pointerType: 'touch' });
+      expect(cardOf('alice')).toHaveClass('table-card--dragging');
+      fireEvent.pointerMove(handle, { clientY: 240, pointerType: 'touch' });
+      expect(cardOf('Carol')).toHaveClass('table-card--drag-over');
+      fireEvent.pointerUp(handle, { clientY: 240, pointerType: 'touch' });
+      expect(onReorder).toHaveBeenCalledWith(2, 1);
+      expect(cardOf('alice')).not.toHaveClass('table-card--dragging');
+    });
+
+    it('fades cards that cannot take the drop and ignores a drop on them', () => {
+      stubPhone();
+      const onReorder = renderReorderable(vi.fn(), (_dragged, target) => target !== 1);
+      layOutCards();
+      const handle = within(cardOf('alice')).getByRole('button', { name: /Drag to reorder/ });
+      fireEvent.pointerDown(handle, { clientY: 40, pointerType: 'touch' });
+      expect(cardOf('Carol')).toHaveClass('table-card--no-drop');
+      fireEvent.pointerMove(handle, { clientY: 240, pointerType: 'touch' });
+      fireEvent.pointerUp(handle, { clientY: 240, pointerType: 'touch' });
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it('moves a card one place with the arrow keys on its handle', async () => {
+      stubPhone();
+      const onReorder = renderReorderable();
+      within(cardOf('Bob')).getByRole('button', { name: /Drag to reorder/ }).focus();
+      await userEvent.keyboard('{ArrowUp}');
+      expect(onReorder).toHaveBeenCalledWith(3, 2);
+      await userEvent.keyboard('{ArrowDown}');
+      expect(onReorder).toHaveBeenLastCalledWith(3, 1);
     });
   });
 });

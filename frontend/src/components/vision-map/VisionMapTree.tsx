@@ -1065,7 +1065,12 @@ export function VisionMapTree({
   return (
     <div>
       {error && <p className="map-error" role="alert">{error}</p>}
-      <p className="map-hint">{tr('↑↓ move · → ← expand / collapse · Enter rename · N add child · drag a row to reorder it among its siblings')}</p>
+      <p className="map-hint">
+        {/* Keyboard keys mean nothing on a phone; CSS shows the touch hint
+            instead when the main pointer is a finger. */}
+        <span className="map-hint--keys">{tr('↑↓ move · → ← expand / collapse · Enter rename · N add child · drag a row to reorder it among its siblings')}</span>
+        <span className="map-hint--touch">{tr('Tap the arrow to open or close a branch · tap ⋮ to edit, archive or delete')}</span>
+      </p>
       {energyNudge.dialog}
 
       {editingDream && (
@@ -1447,6 +1452,7 @@ export function VisionMapTree({
           {safeHttpUrl(dream.imageUrl) && (
             <Box
               component="img"
+              className="map-thumb"
               src={safeHttpUrl(dream.imageUrl)}
               alt=""
               loading="lazy"
@@ -1771,7 +1777,7 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
 
   return (
     <div role="treeitem" aria-level={3} aria-selected={false}>
-      <form className="map-add map-add--task" onSubmit={(event) => void handleSubmit(event)}>
+      <form className={`map-add map-add--task${title.trim() ? ' map-add--open' : ''}`} onSubmit={(event) => void handleSubmit(event)}>
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New step title')} aria-label={tr('New step title')} inputRef={inputRef} />
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Step owner')} />
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} aria-label={tr('Step target date')} />
@@ -1827,7 +1833,7 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
 
   return (
     <div role="treeitem" aria-level={4} aria-selected={false}>
-      <form className="map-add map-add--task" onSubmit={(event) => void handleSubmit(event)}>
+      <form className={`map-add map-add--task${title.trim() ? ' map-add--open' : ''}`} onSubmit={(event) => void handleSubmit(event)}>
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New task title')} aria-label={tr('New task title')} inputRef={inputRef} />
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Owner')} />
         <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} aria-label={tr('Due date')} />

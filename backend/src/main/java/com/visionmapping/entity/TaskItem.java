@@ -124,6 +124,13 @@ public class TaskItem extends BaseAuditableEntity {
     @Column(name = "sort_order")
     private Integer sortOrder;
 
+    // The participant's overall order on the Tasks page, across all steps
+    // ("this first, that second"). Independent of sortOrder above, so moving
+    // a task on the Tasks page never reshuffles a step on the Vision Map.
+    // 0-based; null until the first Tasks-page reorder (sorts last, by id).
+    @Column(name = "list_order")
+    private Integer listOrder;
+
     @Column(nullable = false)
     @Setter(AccessLevel.NONE)
     private boolean archived;

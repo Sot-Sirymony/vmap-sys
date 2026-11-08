@@ -46,6 +46,16 @@ export function reorderTasks(token: string, stepId: number, orderedIds: number[]
   });
 }
 
+// Tasks page drag-and-drop: the user's own order across every step, front
+// to back. Tasks left out keep their relative place after the listed ones.
+export function reorderTaskList(token: string, orderedIds: number[]) {
+  return apiClient<void>('/tasks/list-order', {
+    method: 'PATCH',
+    token,
+    body: JSON.stringify({ orderedIds }),
+  });
+}
+
 export function restoreTask(token: string, id: number) {
   return apiClient<void>(`/tasks/${id}/restore`, {
     method: 'POST',

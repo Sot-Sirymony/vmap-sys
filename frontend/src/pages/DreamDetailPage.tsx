@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MoonStar, Rocket } from 'lucide-react';
+import { MoonStar, Rocket, SlidersHorizontal } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
@@ -14,6 +14,7 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
 import { EmptyState } from '../components/common/EmptyState';
@@ -62,6 +63,10 @@ export function DreamDetailPage() {
   const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
   const [filterPriority, setFilterPriority] = useUrlFilter('priority');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
+  // On a phone the filter card would fill the first screen, so only the Dream
+  // picker stays out; the rest sit behind a "Filters" button.
+  const isPhone = useMediaQuery('(max-width:600px)');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   async function load() {
     if (!token) {
@@ -152,6 +157,44 @@ export function DreamDetailPage() {
 
   const selectedArea = visionAreas.find((area) => area.id === selectedDream?.visionAreaId);
   const areaHasNoDreams = Boolean(filterVisionAreaId) && areaDreams.length === 0 && !loading;
+  const collapseFilters = isPhone && !overviewMode;
+  const showMoreFilters = !collapseFilters || filtersOpen;
+  const activeFilterCount = [filterVisionAreaId, filterPriority, filterStatus].filter(Boolean).length + (showArchived ? 1 : 0);
+
+  const supportCards = selectedDream && (
+    <>
+      {!selectedDream.archived && (
+        <Box sx={{ mb: 2 }}>
+          <DreamCommitmentCard
+            key={selectedDream.id}
+            dream={selectedDream}
+            token={token ?? ''}
+            defaultName={user?.fullName ?? ''}
+            onChanged={load}
+          />
+        </Box>
+      )}
+      {!selectedDream.archived && token && (
+        <Box sx={{ mb: 2 }}>
+          <PlanShareCard key={selectedDream.id} dream={selectedDream} token={token} />
+        </Box>
+      )}
+      {!selectedDream.archived && (
+        // V11 (PB-FR-01): the guided path from this dream to a full plan.
+        <Box className="map-build-cta" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+          <Button onClick={() => navigate(`/dreams/${selectedDream.id}/build`)}>{tr('Build my plan')}</Button>
+          <Typography variant="body2" color="text.secondary">
+            {tr('A step-by-step guide from this dream to goals, steps and tasks.')}
+          </Typography>
+        </Box>
+      )}
+      {!selectedDream.archived && token && (
+        <Box sx={{ mb: 2 }}>
+          <AiPlanAssistant key={selectedDream.id} dream={selectedDream} goals={goals} steps={steps} token={token} onDataChange={load} />
+        </Box>
+      )}
+    </>
+  );
 
   return (
     <PageSection
@@ -160,17 +203,32 @@ export function DreamDetailPage() {
     >
       {dreams.length > 0 && (
         <Card>
-          <CardContent sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
-            <FilterSelect
-              label={tr('Vision Area')}
-              value={filterVisionAreaId}
-              onChange={setFilterVisionAreaId}
-              options={optionsFromEntities(visionAreas, (area) => area.name)}
-              allLabel={tr('All areas')}
-            />
+          <CardContent className="map-filter-bar" sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
+            {collapseFilters && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="map-filter-toggle"
+                aria-expanded={filtersOpen}
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <SlidersHorizontal size={16} aria-hidden="true" style={{ marginRight: 6 }} />
+                {filtersOpen ? tr('Hide filters') : tr('Filters')}
+                {!filtersOpen && activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+              </Button>
+            )}
+            {showMoreFilters && (
+              <FilterSelect
+                label={tr('Vision Area')}
+                value={filterVisionAreaId}
+                onChange={setFilterVisionAreaId}
+                options={optionsFromEntities(visionAreas, (area) => area.name)}
+                allLabel={tr('All areas')}
+              />
+            )}
             {!overviewMode && (
               <>
-                <label>
+                <label className="map-filter-dream">
                   {tr('Dream')}
                   <FormControl fullWidth size="small">
                     <Select
@@ -184,6 +242,8 @@ export function DreamDetailPage() {
                     </Select>
                   </FormControl>
                 </label>
+                {showMoreFilters && (
+                <>
                 <FilterSelect
                   label={tr('Priority')}
                   value={filterPriority}
@@ -196,9 +256,13 @@ export function DreamDetailPage() {
                   onChange={setFilterStatus}
                   options={optionsFromLabels(workStatusLabels)}
                 />
+                </>
+                )}
               </>
             )}
-            <ShowArchivedToggle checked={showArchived} onToggle={() => setShowArchived((current) => !current)} />
+            {showMoreFilters && (
+              <ShowArchivedToggle checked={showArchived} onToggle={() => setShowArchived((current) => !current)} />
+            )}
           </CardContent>
         </Card>
       )}
@@ -270,36 +334,9 @@ export function DreamDetailPage() {
             { label: selectedDream.title },
           ]}
         />
-        {!selectedDream.archived && (
-          <Box sx={{ mb: 2 }}>
-            <DreamCommitmentCard
-              key={selectedDream.id}
-              dream={selectedDream}
-              token={token ?? ''}
-              defaultName={user?.fullName ?? ''}
-              onChanged={load}
-            />
-          </Box>
-        )}
-        {!selectedDream.archived && token && (
-          <Box sx={{ mb: 2 }}>
-            <PlanShareCard key={selectedDream.id} dream={selectedDream} token={token} />
-          </Box>
-        )}
-        {!selectedDream.archived && (
-          // V11 (PB-FR-01): the guided path from this dream to a full plan.
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-            <Button onClick={() => navigate(`/dreams/${selectedDream.id}/build`)}>{tr('Build my plan')}</Button>
-            <Typography variant="body2" color="text.secondary">
-              {tr('A step-by-step guide from this dream to goals, steps and tasks.')}
-            </Typography>
-          </Box>
-        )}
-        {!selectedDream.archived && token && (
-          <Box sx={{ mb: 2 }}>
-            <AiPlanAssistant key={selectedDream.id} dream={selectedDream} goals={goals} steps={steps} token={token} onDataChange={load} />
-          </Box>
-        )}
+        {/* On a phone the map itself comes first; the supporting cards
+            follow it, so the tree isn't several screens down. */}
+        {!isPhone && supportCards}
         <VisionMapTree
           dream={selectedDream}
           visionAreaName={selectedArea?.name ?? tr('Unassigned')}
@@ -312,6 +349,7 @@ export function DreamDetailPage() {
           priorityFilter={filterPriority}
           statusFilter={filterStatus}
         />
+        {isPhone && <Box sx={{ mt: 2 }}>{supportCards}</Box>}
         </>
       )}
     </PageSection>

@@ -17,6 +17,7 @@ import { Button } from './Button';
 import { EmptyState } from './EmptyState';
 import { TablePaginationActions } from './TablePaginationActions';
 import { tr } from '../../i18n/translate';
+import { usePointerReorder } from './usePointerReorder';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -46,13 +47,23 @@ export type DataTableSelection<T> = {
 /**
  * Opt-in drag-and-drop row reorder. Only active while the table is sorted
  * ascending by `columnKey` (its "natural" position order — a different
- * column sort would make dragging mean something else) and all rows fit on
- * one page (dragging can't reach a row on another page). Desktop only: the
- * narrow/card layout below sm doesn't support native HTML5 drag.
+ * column sort would make dragging mean something else). It works on every
+ * page: `onReorder` gets ids, and pages rebuild the full order from all their
+ * records, so a drop onto any visible row is enough. On a wide screen
+ * the rows drag natively; on a phone each card gets a drag handle that works
+ * with a finger (pointer events), since native HTML5 drag needs a mouse.
  */
 export type DataTableReorder = {
   columnKey: string;
   onReorder: (draggedId: number, targetId: number) => void;
+  /**
+   * Whether a row may be dropped onto another, e.g. only tasks of the same
+   * step. Rows that can't take the drop fade out while dragging. Defaults to
+   * any other row.
+   */
+  canDrop?: (draggedId: number, targetId: number) => boolean;
+  /** Whether a row can be picked up at all (e.g. not archived). Defaults to yes. */
+  canDrag?: (rowId: number) => boolean;
 };
 
 /**
@@ -74,6 +85,12 @@ type DataTableProps<T> = {
   /** Shown instead of the table when there are no rows. */
   emptyMessage: string;
   rowClassName?: (row: T) => string;
+  /**
+   * Optional phone card (below the sm breakpoint). When given, it replaces
+   * the generic label/value card, so a page can show a short card with only
+   * the fields that matter on a small screen.
+   */
+  mobileCard?: (row: T) => ReactNode;
   defaultSortKey?: string;
   defaultSortDirection?: SortDirection;
   selection?: DataTableSelection<T>;
@@ -124,6 +141,7 @@ export function DataTable<T extends { id: number }>({
   columns,
   emptyMessage,
   rowClassName,
+  mobileCard,
   defaultSortKey,
   defaultSortDirection = 'asc',
   selection,
@@ -168,21 +186,21 @@ export function DataTable<T extends { id: number }>({
     ? sortedRows
     : sortedRows.slice(safePage * currentRowsPerPage, safePage * currentRowsPerPage + currentRowsPerPage);
 
-  // See DataTableReorder: only while sorted ascending by its column, not
-  // server-paged, and every row fits on this one page.
+  // See DataTableReorder: only while sorted ascending by its column and not
+  // server-paged. Paging is fine — a drop names rows by id.
   const reorderActive = Boolean(
-    reorder && !serverPaging && sortKey === reorder.columnKey && sortDirection === 'asc' && totalRows <= currentRowsPerPage,
+    reorder && !serverPaging && sortKey === reorder.columnKey && sortDirection === 'asc',
   );
 
   function rowDragProps(rowId: number) {
-    if (!reorderActive || !reorder) {
+    if (!reorderActive || !reorder || !canPickUp(rowId)) {
       return {};
     }
     return {
       draggable: true,
       onDragStart: () => setDraggedId(rowId),
       onDragOver: (event: DragEvent) => {
-        if (draggedId === null || draggedId === rowId) {
+        if (draggedId === null || !canDropOn(draggedId, rowId)) {
           return;
         }
         event.preventDefault();
@@ -205,6 +223,23 @@ export function DataTable<T extends { id: number }>({
     };
   }
 
+  function canDropOn(sourceId: number, targetId: number): boolean {
+    return sourceId !== targetId && (reorder?.canDrop?.(sourceId, targetId) ?? true);
+  }
+
+  function canPickUp(rowId: number): boolean {
+    return reorder?.canDrag?.(rowId) ?? true;
+  }
+
+  // Phone cards: drag by a handle with a finger (see usePointerReorder).
+  const pointerReorder = usePointerReorder({
+    enabled: reorderActive,
+    orderedIds: visibleRows.map((row) => row.id),
+    onReorder: (draggedId, targetId) => reorder?.onReorder(draggedId, targetId),
+    canDrop: reorder?.canDrop,
+    canDrag: reorder?.canDrag,
+  });
+
   function rowDragClassName(rowId: number): string {
     if (!reorderActive) {
       return '';
@@ -212,10 +247,8 @@ export function DataTable<T extends { id: number }>({
     return `row--reorderable${draggedId === rowId ? ' row--dragging' : ''}${dragOverId === rowId ? ' row--drag-over' : ''}`;
   }
 
-  // Reorder has three silent-failure conditions (wrong sort column, wrong
-  // direction, too many rows for one page) that otherwise look identical to
-  // "dragging just doesn't work" — spell out which one applies so it's never
-  // a mystery.
+  // Reorder is off while sorted by another column or direction, which would
+  // otherwise look like "dragging just doesn't work" — say how to turn it on.
   function reorderStatusMessage(): string | null {
     if (!reorder) {
       return null;
@@ -226,9 +259,6 @@ export function DataTable<T extends { id: number }>({
     if (sortKey !== reorder.columnKey || sortDirection !== 'asc') {
       const columnLabel = columns.find((column) => column.key === reorder.columnKey)?.label ?? tr('its position column');
       return tr('Sort by "{column}" ascending (click its header) to drag rows into a new order.', { column: typeof columnLabel === 'string' ? columnLabel : tr('its position column') });
-    }
-    if (totalRows > currentRowsPerPage) {
-      return 'Increase rows per page below so everything fits on one page to drag rows into a new order.';
     }
     return null;
   }
@@ -307,24 +337,43 @@ export function DataTable<T extends { id: number }>({
     const detailColumns = columns.filter((column) => column !== headerColumn && column !== actionsColumn);
     return (
       <>
-        {reorder && <p className="field-hint">{tr('Drag-and-drop reorder needs a wider screen — not available at this size.')}</p>}
-        <div className="table-cards">
-          {visibleRows.map((row) => (
-            <article className={`table-card ${rowClassName?.(row) ?? ''}`} key={row.id}>
-              <div className="table-card-header">
-                <div className="table-card-title">{headerColumn.render(row)}</div>
-                {actionsColumn && <div>{actionsColumn.render(row)}</div>}
-              </div>
-              <div className="table-card-details">
-                {detailColumns.map((column) => (
-                  <div className="table-card-field" key={column.key}>
-                    <span className="table-card-label">{column.label}</span>
-                    <span>{column.render(row)}</span>
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
+        {reorder && (
+          <p className="field-hint">
+            {reorderActive ? tr('Hold ⠿ on a card and drag it up or down to change its order.') : reorderStatusMessage()}
+          </p>
+        )}
+        <div className={`table-cards${pointerReorder.dragging ? ' table-cards--dragging' : ''}`} ref={pointerReorder.listRef}>
+          {visibleRows.map((row) => {
+            const handle = pointerReorder.handle(row.id);
+            const style = pointerReorder.cardStyle(row.id);
+            const body = mobileCard ? mobileCard(row) : (
+              <>
+                <div className="table-card-header">
+                  <div className="table-card-title">{headerColumn.render(row)}</div>
+                  {actionsColumn && <div>{actionsColumn.render(row)}</div>}
+                </div>
+                <div className="table-card-details">
+                  {detailColumns.map((column) => (
+                    <div className="table-card-field" key={column.key}>
+                      <span className="table-card-label">{column.label}</span>
+                      <span>{column.render(row)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+            return (
+              <article
+                className={`table-card${mobileCard ? ' table-card--custom' : ''}${handle ? ' table-card--reorderable' : ''}${pointerReorder.cardClassName(row.id, 'table-card')} ${rowClassName?.(row) ?? ''}`}
+                key={row.id}
+                data-row-id={row.id}
+                style={style}
+              >
+                {handle}
+                {handle ? <div className="table-card-body">{body}</div> : body}
+              </article>
+            );
+          })}
         </div>
         <TablePagination
           component="div"

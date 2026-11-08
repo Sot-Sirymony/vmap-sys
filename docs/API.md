@@ -333,6 +333,15 @@ Blocked task rule:
 
 If `status` is `BLOCKED`, `blockerReason` is required.
 
+Task order. There are two separate orders:
+
+| Method | Path | Body | Purpose |
+|---|---|---|---|
+| PATCH | `/api/tasks/reorder` | `{ "parentId": stepId, "orderedIds": [...] }` | Order of tasks inside one step (Vision Map). Must list exactly that step's current tasks. Sets `sortOrder` |
+| PATCH | `/api/tasks/list-order` | `{ "orderedIds": [...] }` | The user's own order across all tasks (Tasks page: "this first, that second"). Lists tasks front to back; current tasks left out keep their relative place after the listed ones. Another user's task, an archived task or a repeated id answers 400. Sets `listOrder`. 204 on success |
+
+Task responses carry both `sortOrder` and `listOrder` (0-based, or null before the first reorder; null sorts last).
+
 ### Partners
 
 ```text

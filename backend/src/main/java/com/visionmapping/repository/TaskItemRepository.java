@@ -14,6 +14,9 @@ public interface TaskItemRepository extends JpaRepository<TaskItem, Long>, Coded
 
     List<TaskItem> findByStep_IdAndUser_IdAndArchivedFalse(Long stepId, Long userId);
 
+    /** Every task the user still works on, for the Tasks page's overall order. */
+    List<TaskItem> findByUser_IdAndArchivedFalse(Long userId);
+
     /**
      * The three numbers a step's progress roll-up needs, without loading the
      * tasks. JPQL rather than a native query on purpose: Hibernate flushes
