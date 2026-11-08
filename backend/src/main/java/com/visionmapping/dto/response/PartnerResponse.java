@@ -6,7 +6,9 @@ import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.WorkStyleArchetype;
 import java.time.Instant;
+import lombok.Builder;
 
+@Builder
 public record PartnerResponse(
         Long id,
         String code,

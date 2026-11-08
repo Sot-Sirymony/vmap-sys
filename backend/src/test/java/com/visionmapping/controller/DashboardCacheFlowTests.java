@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.repository.TaskItemRepository;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -99,7 +100,7 @@ class DashboardCacheFlowTests {
 
     private void completeDirectlyInDatabase(long taskId) {
         new TransactionTemplate(transactionManager).executeWithoutResult(tx ->
-                taskItemRepository.findById(taskId).orElseThrow().setStatus(WorkStatus.COMPLETED));
+                taskItemRepository.findById(taskId).orElseThrow().changeStatus(WorkStatus.COMPLETED, Clock.systemUTC()));
     }
 
     /** Area → dream → goal → step → one NOT_STARTED task; returns the task id. */

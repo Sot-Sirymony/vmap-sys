@@ -2,7 +2,6 @@ package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -20,11 +19,13 @@ import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.exception.BusinessRuleException;
+import com.visionmapping.mapper.ScheduleOverrun;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.service.support.ArchiveCascade;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import java.time.Clock;
@@ -60,12 +61,13 @@ public class DreamService {
 
     @Cacheable(CacheConfig.DREAM_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<DreamResponse> listDreams(boolean includeArchived) {
-        return findAllForUser(dreamRepository, lookup.userId(), includeArchived).stream()
+    public List<DreamResponse> listDreams(ArchiveFilter archiveFilter) {
+        return findAllForUser(dreamRepository, lookup.userId(), archiveFilter).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    /** CLAUDE.md Core Business Rule 1: the new record belongs to one vision area, which must be the caller's own. */
     public DreamResponse createDream(DreamRequest request) {
         AppUser user = lookup.currentUser();
         VisionArea visionArea = lookup.visionArea(request.visionAreaId());
@@ -139,7 +141,7 @@ public class DreamService {
         entity.setPriority(request.priority());
         entity.setLetterRank(request.letterRank());
         entity.setTargetDate(request.targetDate());
-        entity.setStatus(request.status());
+        entity.changeStatus(request.status());
         entity.setMoonshot(request.moonshot());
         entity.setMoonshotVision(request.moonshotVision());
         entity.setImageUrl(request.imageUrl());
@@ -181,9 +183,9 @@ public class DreamService {
         return toResponse(entity);
     }
 
-    public DreamResponse updateDreamStatus(Long id, String status) {
+    public DreamResponse updateDreamStatus(Long id, DreamStatus status) {
         Dream entity = lookup.dream(id);
-        entity.setStatus(parseEnum(DreamStatus.class, status));
+        entity.changeStatus(status);
         validateDecisionGate(entity);
         return toResponse(entity);
     }
@@ -204,7 +206,7 @@ public class DreamService {
         entity.setCommitmentFirstAction(request.firstAction());
         entity.setCommittedAt(Instant.now(clock));
         if (entity.getStatus() == DreamStatus.IDEA) {
-            entity.setStatus(DreamStatus.ACTIVE);
+            entity.changeStatus(DreamStatus.ACTIVE);
             validateDecisionGate(entity);
         }
         return toResponse(entity);
@@ -212,8 +214,7 @@ public class DreamService {
 
     public void archiveDream(Long id) {
         Dream entity = lookup.dream(id);
-        entity.setStatus(DreamStatus.ARCHIVED);
-        entity.setArchived(true);
+        entity.archive();
         archiveCascade.archiveGoalsUnder(entity.getId());
     }
 
@@ -314,9 +315,9 @@ public class DreamService {
         boolean overrun = entity.getScheduleMode() == ScheduleMode.TOP_DOWN_FIXED
                 && entity.getTargetDate() != null && latestGoalDate != null
                 && entity.getTargetDate().isBefore(latestGoalDate);
-        String detail = overrun
-                ? "A goal's target date (%s) is after this dream's fixed target date (%s).".formatted(latestGoalDate, entity.getTargetDate())
-                : null;
-        return mapper.toResponse(entity, overrun, detail);
+        return mapper.toResponse(entity, overrun
+                ? ScheduleOverrun.because("A goal's target date (%s) is after this dream's fixed target date (%s)."
+                        .formatted(latestGoalDate, entity.getTargetDate()))
+                : ScheduleOverrun.NONE);
     }
 }

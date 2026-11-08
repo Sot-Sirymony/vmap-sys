@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -107,7 +108,7 @@ public class LearningModuleAdminService {
                 text.getSummary(), text.getGuidance(), text.getExerciseInstructions(), parseFields(text.getFieldsJson()));
     }
 
-    private String relabel(String fieldsJson, Map<String, String> labels) {
+    private String relabel(@Nullable String fieldsJson, @Nullable Map<String, String> labels) {
         if (fieldsJson == null || labels == null) {
             return fieldsJson;
         }
@@ -124,7 +125,7 @@ public class LearningModuleAdminService {
         }
     }
 
-    private List<Field> parseFields(String fieldsJson) {
+    private List<Field> parseFields(@Nullable String fieldsJson) {
         if (fieldsJson == null) {
             return List.of();
         }

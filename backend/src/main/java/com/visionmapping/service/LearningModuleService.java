@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -142,7 +143,7 @@ public class LearningModuleService {
                 completion == null ? null : completion.getCoachRatedAt());
     }
 
-    private static ModuleStatus status(ModuleCompletion completion, boolean earlierAllComplete) {
+    private static ModuleStatus status(@Nullable ModuleCompletion completion, boolean earlierAllComplete) {
         if (completion != null) {
             return ModuleStatus.COMPLETED;
         }
@@ -176,6 +177,7 @@ public class LearningModuleService {
         };
     }
 
+    @Nullable
     private String missingPassion(Long userId) {
         List<Dream> active = dreamRepository.findByUser_IdAndArchivedFalse(userId).stream()
                 .filter(dream -> dream.getStatus() == DreamStatus.ACTIVE)
@@ -190,7 +192,7 @@ public class LearningModuleService {
         return unwritten.isEmpty() ? null : "Write why it matters for: " + String.join(", ", unwritten) + ".";
     }
 
-    private String validatedRowsJson(List<Field> fields, List<Map<String, String>> rows) {
+    private String validatedRowsJson(List<Field> fields, @Nullable List<Map<String, String>> rows) {
         if (rows == null || rows.isEmpty()) {
             throw new BusinessRuleException("Add at least one row to save this exercise.");
         }

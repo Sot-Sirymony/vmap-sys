@@ -26,7 +26,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "reviews")
-public class Review extends BaseAuditableEntity {
+public class Review extends BaseAuditableEntity implements PlanLinked {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -65,6 +66,7 @@ public class PasswordResetService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
+    private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
 
     /** Long enough to find the mail, short enough that a leaked inbox ages out. */
@@ -106,7 +108,7 @@ public class PasswordResetService {
         // Asking twice must not leave two working links alive. The older one is
         // retired so the most recent mail is the only one that opens the account.
         List<PasswordResetToken> outstanding = tokenRepository.findByUserAndUsedAtIsNull(user);
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         outstanding.forEach(token -> token.setUsedAt(now));
         tokenRepository.saveAll(outstanding);
 
@@ -143,7 +145,7 @@ public class PasswordResetService {
             securityEvents.recordFor(token.getUser().getId(), SecurityEventType.PASSWORD_RESET_COMPLETED, SecurityOutcome.DENIED, "link already used");
             throw new BusinessRuleException("This reset link has already been used. Request a new one.");
         }
-        if (!token.getExpiresAt().isAfter(Instant.now())) {
+        if (!token.getExpiresAt().isAfter(clock.instant())) {
             securityEvents.recordFor(token.getUser().getId(), SecurityEventType.PASSWORD_RESET_COMPLETED, SecurityOutcome.DENIED, "link expired");
             throw new BusinessRuleException("This reset link has expired. Request a new one.");
         }
@@ -154,7 +156,7 @@ public class PasswordResetService {
 
         // Spent before returning, so the same link cannot be replayed — including
         // by anyone who later reads it out of the mailbox.
-        token.setUsedAt(Instant.now());
+        token.setUsedAt(clock.instant());
         tokenRepository.save(token);
 
         // V10 (SEC-07-01): the reset proved the person owns the mailbox, so a

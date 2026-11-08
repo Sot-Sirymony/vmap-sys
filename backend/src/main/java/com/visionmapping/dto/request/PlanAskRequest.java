@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -21,6 +22,13 @@ public record PlanAskRequest(
         @Size(max = 300) String note,
         @Size(max = 25) List<@NotNull @Size(max = 220) String> keep,
         @Size(max = 25) List<@NotNull @Size(max = 220) String> replace) {
+
+    public PlanAskRequest {
+        answers = Copies.list(answers);
+        keep = Copies.list(keep);
+        replace = Copies.list(replace);
+    }
+
 
     public static final int MAX_QUESTIONS = 3;
 }

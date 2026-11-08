@@ -29,6 +29,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Registration, sign-in, token refresh, sign-out and password change. Passwords
+ * are stored only as hashes; sign-in attempts are rate-limited per email and per
+ * network, and a changed password ends every other session.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional

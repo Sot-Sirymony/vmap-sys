@@ -42,6 +42,7 @@ import com.visionmapping.service.GoalService;
 import com.visionmapping.service.ObstacleService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.util.Copies;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import java.time.Clock;
@@ -55,6 +56,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -120,10 +122,19 @@ public class PlanAssistantService {
 
     /** What the section holds: records for Claude, refs by ref, and its rule issues. */
     record View(String surface, String section, String records, Map<String, Ref> refs, List<SectionIssue> issues) {
+        public View {
+            refs = Copies.map(refs);
+            issues = Copies.list(issues);
+        }
+    
     }
 
     /** The chat context for a section, and the sources to show under the answer. */
     public record ChatContext(String text, List<String> sources) {
+        public ChatContext {
+            sources = Copies.list(sources);
+        }
+    
     }
 
     // ---------- section check (PB-FR-49), no AI ----------
@@ -191,6 +202,7 @@ public class PlanAssistantService {
         return new AssistantProposals(changes, limit(answer.value().note(), 500), feedback.suggested(answer.usage(), changes.size()));
     }
 
+    @Nullable
     private AssistantChange checked(AiDrafts.AssistantChangeDraft draft, View view, Set<String> kinds, LocalDate today) {
         String kind = upper(draft.kind());
         if (!kinds.contains(kind)) {
@@ -358,10 +370,14 @@ public class PlanAssistantService {
         return step;
     }
 
-    private static Long idOf(String ref, String prefix) {
+    private static Long idOf(@Nullable String ref, String prefix) {
+        if (ref == null) {
+            throw new ResourceNotFoundException("That item is not in this plan.");
+        }
         try {
             return Long.parseLong(ref.substring(prefix.length()));
-        } catch (RuntimeException exception) {
+        } catch (NumberFormatException | IndexOutOfBoundsException exception) {
+            // A reference the client made up or mangled: the same 404 as an unknown id.
             throw new ResourceNotFoundException("That item is not in this plan.");
         }
     }
@@ -681,6 +697,7 @@ public class PlanAssistantService {
         return value == null ? "" : value.trim().toUpperCase();
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (blank(value)) {
             return null;

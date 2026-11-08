@@ -10,6 +10,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * The signed-in user, loaded fresh from the database for each request, so all
+ * data access can be scoped to that user (CLAUDE.md Core Business Rule 13).
+ */
 @Component
 @RequiredArgsConstructor
 public class UserScope {

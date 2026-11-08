@@ -14,12 +14,14 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.GratitudeEntryRepository;
 import com.visionmapping.repository.ReviewRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,8 +41,8 @@ public class ReviewService {
 
     @Cacheable(CacheConfig.REVIEW_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<ReviewResponse> listReviews(boolean includeArchived) {
-        return findAllForUser(reviewRepository, lookup.userId(), includeArchived).stream()
+    public List<ReviewResponse> listReviews(ArchiveFilter archiveFilter) {
+        return findAllForUser(reviewRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -166,6 +168,7 @@ public class ReviewService {
      * the checklist is skipped (validateDiligenceChecklist already rejected
      * any half-answered state before this runs).
      */
+    @Nullable
     private Integer computeDiligenceScore(ReviewRequest request) {
         List<Boolean> answers = diligenceAnswers(request);
         if (answers.stream().anyMatch(Objects::isNull)) {

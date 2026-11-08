@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.time.Instant;
 import java.util.List;
 
@@ -18,4 +19,7 @@ public record CoachParticipantResponse(
         List<String> riskReasons,
         // AI-NFR-03: AI summaries and drafts about them need their own AI consent.
         boolean aiConsent) {
+    public CoachParticipantResponse {
+        riskReasons = Copies.list(riskReasons);
+    }
 }

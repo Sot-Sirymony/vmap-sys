@@ -54,6 +54,7 @@ import java.time.Instant;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -273,6 +274,7 @@ public class PlanBuilderDraftService {
                 .build());
     }
 
+    @Nullable
     private static Long goalFor(String key, Map<String, Long> goalByKey, Map<String, Long[]> stepByKey) {
         if (key == null) {
             return null;

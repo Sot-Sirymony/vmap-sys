@@ -12,6 +12,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.IdealPartnerProfileRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,8 +36,8 @@ public class IdealPartnerProfileService {
 
     @Cacheable(CacheConfig.IDEAL_PARTNER_PROFILE_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<IdealPartnerProfileResponse> listProfiles(boolean includeArchived) {
-        return findAllForUser(idealPartnerProfileRepository, lookup.userId(), includeArchived).stream()
+    public List<IdealPartnerProfileResponse> listProfiles(ArchiveFilter archiveFilter) {
+        return findAllForUser(idealPartnerProfileRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }

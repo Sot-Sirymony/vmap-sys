@@ -1,14 +1,17 @@
 package com.visionmapping.service.support;
 
 import com.visionmapping.exception.TooManyRequestsException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -45,6 +48,7 @@ public class PasswordResetRateLimiter {
     private static final int MAX_TRACKED_KEYS = 10_000;
 
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
+    private final Clock clock;
 
     @Value("${app.password-reset.rate-limit.per-email:3}")
     private int perEmailLimit;
@@ -58,10 +62,15 @@ public class PasswordResetRateLimiter {
     @Value("${app.password-reset.rate-limit.per-ip-window-minutes:60}")
     private long perIpWindowMinutes;
 
+    public PasswordResetRateLimiter(Clock clock) {
+        this.clock = Objects.requireNonNull(clock, "clock");
+    }
+
     /**
      * @throws TooManyRequestsException if either limit is exhausted
      */
-    public void check(String email, String clientIp) {
+    public void check(String email, @Nullable String clientIp) {
+        Objects.requireNonNull(email, "email");
         // The address first: it is the limit a victim depends on, and checking it
         // before the IP means a distributed flood against one inbox still trips.
         consume("email:" + email, perEmailLimit, Duration.ofMinutes(perEmailWindowMinutes),
@@ -73,7 +82,7 @@ public class PasswordResetRateLimiter {
     }
 
     private void consume(String key, int limit, Duration window, String message) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
 
         Window current = windows.compute(key, (ignored, existing) -> {
             if (existing == null || existing.expiresAt.isBefore(now)) {

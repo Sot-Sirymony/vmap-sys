@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,6 +75,7 @@ public class CoachCommentService {
         return toResponse(repository.save(comment));
     }
 
+    @Nullable
     private CoachCommentResponse toResponse(CoachComment comment) {
         AppUser coach = comment.getCoach();
         String title = comment.getTargetId() == null ? null

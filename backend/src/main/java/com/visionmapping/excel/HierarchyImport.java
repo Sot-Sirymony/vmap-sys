@@ -34,6 +34,7 @@ import java.util.Map;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.lang.Nullable;
 
 /**
  * Recreates a workbook's Vision Area → Dream → Goal → Step → Task hierarchy
@@ -209,7 +210,7 @@ class HierarchyImport {
         }
     }
 
-    private void eachRow(Sheet sheet, String sheetName, RowImporter importer) {
+    private void eachRow(@Nullable Sheet sheet, String sheetName, RowImporter importer) {
         createdBySheet.put(sheetName, 0);
         if (sheet == null) {
             return;

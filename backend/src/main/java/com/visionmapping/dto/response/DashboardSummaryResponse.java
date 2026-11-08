@@ -1,9 +1,11 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import lombok.Builder;
 
 /**
  * One payload carrying everything the dashboard renders. The breakdown
@@ -11,6 +13,7 @@ import java.util.Map;
  * separate full-list fetches; serving them here lets the dashboard load
  * with a single request.
  */
+@Builder
 public record DashboardSummaryResponse(
         long totalVisionAreas,
         long activeDreams,
@@ -44,6 +47,20 @@ public record DashboardSummaryResponse(
         Gratitude gratitude
 ) {
 
+    public DashboardSummaryResponse {
+        goalsByStatus = Copies.map(goalsByStatus);
+        dreamsByVisionArea = Copies.map(dreamsByVisionArea);
+        tasksByStatus = Copies.map(tasksByStatus);
+        tasksByPriority = Copies.map(tasksByPriority);
+        activeObstaclesByType = Copies.map(activeObstaclesByType);
+        partnersByStatus = Copies.map(partnersByStatus);
+        reviewCadence = Copies.map(reviewCadence);
+        progressTrend = Copies.list(progressTrend);
+        visionAreaProgress = Copies.list(visionAreaProgress);
+        priorityTasks = Copies.list(priorityTasks);
+    }
+
+
     /** Weekly sample of the running average task progress. */
     public record TrendPoint(LocalDate weekEnd, BigDecimal progress) {
     }
@@ -59,6 +76,10 @@ public record DashboardSummaryResponse(
 
     /** FR-59.2: the dashboard card — a rolling 7-day count plus the 2-3 most recent entries. */
     public record Gratitude(long countThisWeek, List<GratitudeEntryResponse> recent) {
+        public Gratitude {
+            recent = Copies.list(recent);
+        }
+    
     }
 
     /** Average goal progress for one vision area, pre-sorted lowest first. */
@@ -86,5 +107,15 @@ public record DashboardSummaryResponse(
             // window while another area moved — being starved of attention.
             List<VisionAreaResponse> starvedVisionAreas
     ) {
+        public Attention {
+            blockedTasksWithoutPartner = Copies.list(blockedTasksWithoutPartner);
+            complexStepsWithoutTasks = Copies.list(complexStepsWithoutTasks);
+            dreamsWithoutGoals = Copies.list(dreamsWithoutGoals);
+            goalsWithoutSteps = Copies.list(goalsWithoutSteps);
+            inactiveMoonshotGoals = Copies.list(inactiveMoonshotGoals);
+            inactiveMoonshotDreams = Copies.list(inactiveMoonshotDreams);
+            starvedVisionAreas = Copies.list(starvedVisionAreas);
+        }
+    
     }
 }

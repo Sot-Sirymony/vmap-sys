@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,7 @@ public class AiSettingsService {
     private final Clock clock;
 
     @Value("${app.ai.api-key:}")
+    @Nullable
     private String environmentApiKey;
 
     @Transactional(readOnly = true)
@@ -153,9 +155,10 @@ public class AiSettingsService {
         return apiKey(settings());
     }
 
+    @Nullable
     private String apiKey(AiSettings settings) {
         if (settings.getApiKeyEncrypted() != null) {
-            return cipher.decrypt(settings.getApiKeyEncrypted());
+            return cipher.decrypt(settings.getApiKeyEncrypted()).orElse(null);
         }
         return environmentApiKey == null || environmentApiKey.isBlank() ? null : environmentApiKey.trim();
     }
@@ -167,7 +170,7 @@ public class AiSettingsService {
         String last4 = saved ? settings.getApiKeyLast4()
                 : fromEnvironment ? environmentApiKey.trim().substring(Math.max(0, environmentApiKey.trim().length() - 4)) : null;
         return new AiSettingsResponse(settings.isEnabled(), settings.getModel(), MODELS, settings.getMonthlyBudgetUsd(),
-                source, !saved || cipher.decrypt(settings.getApiKeyEncrypted()) != null, last4,
+                source, !saved || cipher.decrypt(settings.getApiKeyEncrypted()).isPresent(), last4,
                 settings.getApiKeyUpdatedAt(),
                 settings.getApiKeyUpdatedBy() == null ? null : settings.getApiKeyUpdatedBy().getFullName(),
                 settings.getLastTestAt(), settings.getLastTestOk(), settings.getLastTestMessage(),

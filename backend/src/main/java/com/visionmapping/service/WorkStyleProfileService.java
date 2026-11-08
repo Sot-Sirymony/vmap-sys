@@ -9,6 +9,7 @@ import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.util.UserScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +73,7 @@ public class WorkStyleProfileService {
      * that smaller margin is itself within {@link #SECONDARY_MARGIN_THRESHOLD}.
      * A user who reads decisively on both axes gets no secondary at all.
      */
+    @Nullable
     static WorkStyleArchetype computeSecondary(int paceFast, int paceDeliberate, int focusTask, int focusPeople) {
         int marginPace = Math.abs(paceFast - paceDeliberate);
         int marginFocus = Math.abs(focusTask - focusPeople);

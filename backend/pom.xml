@@ -173,6 +173,22 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
+                    <!--
+                      BRD 13 EJ-FR-01 (Effective Java Item 27): every compiler warning
+                      fails the build. Baseline on 8 Nov 2026 was 9 warnings (8 serial,
+                      1 deprecation), all fixed. "processing" is off because it only
+                      lists annotations no annotation processor claims, which is normal.
+                      "classfile" is off because Spring's @NonNullApi (BRD 13 EJ-FR-19)
+                      refers to JSR-305 meta-annotations whose jar is not on the class
+                      path; adding it would be a new dependency for no runtime gain.
+                      A kept @SuppressWarnings must sit on the smallest scope with a
+                      comment saying why it is safe.
+                    -->
+                    <showWarnings>true</showWarnings>
+                    <failOnWarning>true</failOnWarning>
+                    <compilerArgs>
+                        <arg>-Xlint:all,-processing,-classfile</arg>
+                    </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

@@ -20,6 +20,7 @@ import java.util.List;
 import com.visionmapping.service.ai.AiReminderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -111,6 +112,7 @@ public class ReminderService {
         }
     }
 
+    @Nullable
     private String composeBody(AppUser user, LocalDate today, Instant now) {
         List<Item> items = dailyPlanService.itemsFor(user.getId(), today);
         boolean reviewDue = dailyPlanService.weeklyReviewDueFor(user.getId(), today);

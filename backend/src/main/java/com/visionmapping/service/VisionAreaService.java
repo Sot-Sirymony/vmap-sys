@@ -2,7 +2,6 @@ package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -16,6 +15,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.service.support.ArchiveCascade;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import java.util.List;
@@ -43,8 +43,8 @@ public class VisionAreaService {
 
     @Cacheable(CacheConfig.VISION_AREA_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<VisionAreaResponse> listVisionAreas(boolean includeArchived) {
-        return findAllForUser(visionAreaRepository, lookup.userId(), includeArchived).stream()
+    public List<VisionAreaResponse> listVisionAreas(ArchiveFilter archiveFilter) {
+        return findAllForUser(visionAreaRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -93,20 +93,19 @@ public class VisionAreaService {
         entity.setVisionStatement(request.visionStatement());
         entity.setPriority(request.priority());
         entity.setLetterRank(request.letterRank());
-        entity.setStatus(request.status());
+        entity.changeStatus(request.status());
         return mapper.toResponse(entity);
     }
 
-    public VisionAreaResponse updateVisionAreaStatus(Long id, String status) {
+    public VisionAreaResponse updateVisionAreaStatus(Long id, LifecycleStatus status) {
         VisionArea entity = lookup.visionArea(id);
-        entity.setStatus(parseEnum(LifecycleStatus.class, status));
+        entity.changeStatus(status);
         return mapper.toResponse(entity);
     }
 
     public void archiveVisionArea(Long id) {
         VisionArea entity = lookup.visionArea(id);
-        entity.setStatus(LifecycleStatus.ARCHIVED);
-        entity.setArchived(true);
+        entity.archive();
         archiveCascade.archiveDreamsUnder(entity.getId());
     }
 

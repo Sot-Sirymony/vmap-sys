@@ -3,7 +3,9 @@ package com.visionmapping.dto.response;
 import com.visionmapping.entity.enums.ReviewType;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import lombok.Builder;
 
+@Builder
 public record ReviewResponse(
         Long id,
         ReviewType reviewType,

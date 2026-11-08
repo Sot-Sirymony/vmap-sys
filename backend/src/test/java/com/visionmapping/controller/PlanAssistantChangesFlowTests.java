@@ -218,6 +218,14 @@ class PlanAssistantChangesFlowTests {
         assertThat(jdbcTemplate.queryForObject("select title from goals where id = ?", String.class, goalId)).isEqualTo("Save a deposit");
     }
 
+    /** BRD 13 EJ-FR-25: a made-up or mangled reference gets the same 404 as an unknown id, never a 500. */
+    @Test
+    void refusesAMangledReferenceWithNotFound() throws Exception {
+        apply(Map.of("kind", "EDIT", "itemRef", "goal:abc", "field", "TITLE", "value", "New title")).andExpect(status().isNotFound());
+        apply(Map.of("kind", "EDIT", "itemRef", "goal:", "field", "TITLE", "value", "New title")).andExpect(status().isNotFound());
+        apply(Map.of("kind", "ADD_RISK", "parentRef", "step:9x", "title", "Prices may rise")).andExpect(status().isNotFound());
+    }
+
     @Test
     void savesARiskTiedToAGoalOrToNothing() throws Exception {
         apply(Map.of("kind", "ADD_RISK", "parentRef", "goal:" + goalId, "title", "Prices may rise", "obstacleType", "MONEY", "severity", "HIGH"))

@@ -68,6 +68,7 @@ public class AiCoachSummary extends BaseAuditableEntity {
     @Column(name = "action_text", length = 2000)
     private String actionText;
 
+    /** The coach's rating of this summary; null until the coach rates it. */
     private Boolean accurate;
 
     @Column(name = "rating_note", length = 1000)

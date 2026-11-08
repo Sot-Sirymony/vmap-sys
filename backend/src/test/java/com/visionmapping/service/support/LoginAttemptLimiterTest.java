@@ -5,11 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.visionmapping.exception.TooManyRequestsException;
-import java.time.Clock;
+import com.visionmapping.support.MutableClock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -123,33 +121,6 @@ class LoginAttemptLimiterTest {
     private void failTimes(String email, String ip, int times) {
         for (int i = 0; i < times; i++) {
             limiter.recordFailure(email, ip);
-        }
-    }
-
-    private static final class MutableClock extends Clock {
-        private Instant now;
-
-        private MutableClock(Instant now) {
-            this.now = now;
-        }
-
-        private void advance(Duration duration) {
-            now = now.plus(duration);
-        }
-
-        @Override
-        public ZoneId getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(ZoneId zone) {
-            return this;
-        }
-
-        @Override
-        public Instant instant() {
-            return now;
         }
     }
 }

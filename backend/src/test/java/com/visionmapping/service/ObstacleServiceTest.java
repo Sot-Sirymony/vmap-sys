@@ -183,7 +183,7 @@ class ObstacleServiceTest {
         Obstacle stored = existing(ObstacleStatus.OPEN);
         when(obstacleRepository.findById(10L)).thenReturn(Optional.of(stored));
 
-        assertThatThrownBy(() -> service.updateObstacleStatus(10L, "ACCEPTED"))
+        assertThatThrownBy(() -> service.updateObstacleStatus(10L, ObstacleStatus.ACCEPTED))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("Accepted obstacles must include at least 3 creative alternatives.");
     }
@@ -194,7 +194,7 @@ class ObstacleServiceTest {
         stored.setRootCause("Underestimated the timeline");
         when(obstacleRepository.findById(10L)).thenReturn(Optional.of(stored));
 
-        ObstacleResponse response = service.updateObstacleStatus(10L, "RESOLVED");
+        ObstacleResponse response = service.updateObstacleStatus(10L, ObstacleStatus.RESOLVED);
 
         assertThat(response.status()).isEqualTo(ObstacleStatus.RESOLVED);
     }
@@ -259,7 +259,7 @@ class ObstacleServiceTest {
         // conflictDefinedWinWin left unanswered
         when(obstacleRepository.findById(11L)).thenReturn(Optional.of(stored));
 
-        assertThatThrownBy(() -> service.updateObstacleStatus(11L, "RESOLVED"))
+        assertThatThrownBy(() -> service.updateObstacleStatus(11L, ObstacleStatus.RESOLVED))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("Resolved PARTNER obstacles must also complete all four conflict engagement checklist items.");
     }

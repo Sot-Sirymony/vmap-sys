@@ -225,7 +225,7 @@ class DreamServiceTest {
         when(visionAreaRepository.findById(dream.getVisionArea().getId())).thenReturn(Optional.of(dream.getVisionArea()));
         lenient().when(goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(22L, 1L)).thenReturn(List.of());
 
-        dream.setStatus(DreamStatus.ACTIVE);
+        dream.changeStatus(DreamStatus.ACTIVE);
         var response = service.updateDream(22L, requestFrom(dream));
 
         assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);
@@ -280,9 +280,9 @@ class DreamServiceTest {
 
         // Paused, then back to Active — the gate must not re-fire even though
         // no checklist item is answered and no counselors are linked.
-        dream.setStatus(DreamStatus.PAUSED);
+        dream.changeStatus(DreamStatus.PAUSED);
         service.updateDream(25L, requestFrom(dream));
-        dream.setStatus(DreamStatus.ACTIVE);
+        dream.changeStatus(DreamStatus.ACTIVE);
         var response = service.updateDream(25L, requestFrom(dream));
 
         assertThat(response.status()).isEqualTo(DreamStatus.ACTIVE);

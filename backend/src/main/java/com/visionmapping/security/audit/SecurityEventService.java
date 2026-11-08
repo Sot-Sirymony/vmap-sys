@@ -11,8 +11,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -80,7 +82,7 @@ public class SecurityEventService {
      * kept, enough to count attempts against one account.
      */
     public void recordForEmail(String email, Long actorId, SecurityEventType type, SecurityOutcome outcome, String detail) {
-        save(type, outcome, actorId, hashEmail(email), null, null, detail);
+        save(type, outcome, actorId, hashEmail(email).orElse(null), null, null, detail);
     }
 
     private void save(SecurityEventType type, SecurityOutcome outcome, Long actorId, String subjectHash,
@@ -100,6 +102,8 @@ public class SecurityEventService {
             SecurityEvent saved = newTransaction.execute(status -> repository.save(event));
             alerts.consider(saved);
         } catch (RuntimeException exception) {
+            // Broad on purpose: writing the audit log must never fail the user's
+            // request. The cause is logged with its stack trace.
             log.error("Could not write security event {} {}", type, outcome, exception);
         }
     }
@@ -113,14 +117,15 @@ public class SecurityEventService {
         }
     }
 
-    public static String hashEmail(String email) {
+    /** SHA-256 of the trimmed, lower-cased address; empty when there is no address to hash (Item 55). */
+    public static Optional<String> hashEmail(String email) {
         if (email == null || email.isBlank()) {
-            return null;
+            return Optional.empty();
         }
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")
                     .digest(email.trim().toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
+            return Optional.of(HexFormat.of().formatHex(digest));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }
@@ -133,6 +138,7 @@ public class SecurityEventService {
                 : null;
     }
 
+    @Nullable
     private static String currentIp() {
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
             String ip = ClientIp.of(attributes.getRequest());
@@ -142,6 +148,7 @@ public class SecurityEventService {
     }
 
     /** One line, so a value can never fake an extra log entry. */
+    @Nullable
     private static String oneLine(String text) {
         if (text == null) {
             return null;

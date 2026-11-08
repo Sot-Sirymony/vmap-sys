@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -85,6 +86,7 @@ public class AiResourceIdeas {
         return value == null ? null : value.replaceAll("(?i)\\b(https?://|www\\.)\\S+", "").trim();
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (value == null || value.isBlank()) {
             return null;

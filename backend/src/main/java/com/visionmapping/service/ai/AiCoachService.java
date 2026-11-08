@@ -35,6 +35,7 @@ import com.visionmapping.service.CoachRiskSignals;
 import com.visionmapping.service.CoachService;
 import com.visionmapping.service.ProgressMetricsService;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.util.Copies;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -101,6 +103,10 @@ public class AiCoachService {
     public ParticipantSummary generateParticipantSummary(Long participantId, String language) {
         AppUser coach = lookup.currentUser();
         record Prepared(AppUser participant, String records, List<String> signals) {
+            public Prepared {
+                signals = Copies.list(signals);
+            }
+        
         }
         Prepared prepared = transactions.execute(status -> {
             AppUser participant = coachService.requireVisibleParticipant(participantId);
@@ -338,6 +344,7 @@ public class AiCoachService {
         items.stream().limit(MAX_LINES).forEach(item -> out.append("- ").append(item).append('\n'));
     }
 
+    @Nullable
     private static String limit(String value) {
         if (value == null || value.isBlank()) {
             return null;

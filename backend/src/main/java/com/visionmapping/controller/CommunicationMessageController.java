@@ -5,6 +5,7 @@ import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.entity.enums.CommunicationStatus;
 import com.visionmapping.service.CommunicationMessageService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,7 +39,7 @@ public class CommunicationMessageController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long partnerId,
             @RequestParam(required = false) CommunicationStatus status) {
-        return service.listCommunicationMessages(pageable, includeArchived, search, partnerId, status);
+        return service.listCommunicationMessages(pageable, ArchiveFilter.of(includeArchived), search, partnerId, status);
     }
 
     @PostMapping
@@ -58,7 +59,7 @@ public class CommunicationMessageController {
     }
 
     @PatchMapping("/{id}/status")
-    public CommunicationMessageResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public CommunicationMessageResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<CommunicationStatus> request) {
         return service.updateCommunicationStatus(id, request.status());
     }
 

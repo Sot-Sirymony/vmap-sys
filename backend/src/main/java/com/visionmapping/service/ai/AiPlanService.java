@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -126,7 +127,8 @@ public class AiPlanService {
     }
 
     /** Dreams for one vision area, or with stretch one bold moonshot dream. */
-    public DreamSuggestions suggestDreams(Long visionAreaId, boolean stretch, String language) {
+    public DreamSuggestions suggestDreams(Long visionAreaId, SuggestionScope scope, String language) {
+        boolean stretch = scope.isStretch();
         AppUser user = lookup.currentUser();
         // V10 (SEC-01-02): ownership first, so another user's record answers 404
         // whether or not AI is available.
@@ -166,15 +168,16 @@ public class AiPlanService {
     }
 
     /** AI-FR-07, or with stretch one bold goal (AI-FR-10). */
-    public GoalSuggestions suggestGoals(Long dreamId, boolean stretch, String language) {
-        return suggestGoals(dreamId, stretch, language, null);
+    public GoalSuggestions suggestGoals(Long dreamId, SuggestionScope scope, String language) {
+        return suggestGoals(dreamId, scope, language, null);
     }
 
     /**
      * AI-FR-07 and AI-FR-10, with V11 Phase 3: clarifying answers (PB-FR-09),
      * suggest anyway (PB-FR-11) and refining the last set (PB-FR-19 to PB-FR-21).
      */
-    public GoalSuggestions suggestGoals(Long dreamId, boolean stretch, String language, PlanAskRequest ask) {
+    public GoalSuggestions suggestGoals(Long dreamId, SuggestionScope scope, String language, PlanAskRequest ask) {
+        boolean stretch = scope.isStretch();
         AppUser user = lookup.currentUser();
         // V10 (SEC-01-02): ownership first, so another user's record answers 404
         // whether or not AI is available.
@@ -372,6 +375,7 @@ public class AiPlanService {
     }
 
     /** Effort Claude suggested, kept when it is a sensible number of hours (more than 0, at most 999.99). */
+    @Nullable
     static java.math.BigDecimal hours(Double value) {
         if (value == null || value.isNaN() || value <= 0 || value > 999.99) {
             return null;
@@ -379,6 +383,7 @@ public class AiPlanService {
         return java.math.BigDecimal.valueOf(value).setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
+    @Nullable
     private static LocalDate firstDate(LocalDate... dates) {
         for (LocalDate date : dates) {
             if (date != null) {
@@ -722,6 +727,7 @@ public class AiPlanService {
     }
 
     /** A date Claude suggested, kept only when it is real and in the future; otherwise the participant picks one. */
+    @Nullable
     static LocalDate futureDate(String value, LocalDate today) {
         if (blank(value)) {
             return null;
@@ -750,6 +756,7 @@ public class AiPlanService {
         }
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (blank(value)) {
             return null;

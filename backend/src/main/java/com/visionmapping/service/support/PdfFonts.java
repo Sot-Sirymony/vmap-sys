@@ -5,6 +5,7 @@ import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.BaseFont;
 import com.lowagie.text.pdf.FontSelector;
 import com.lowagie.text.pdf.LayoutProcessor;
+import java.io.IOException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
@@ -32,23 +33,36 @@ public class PdfFonts {
     @Getter(AccessLevel.NONE)
     private final BaseFont khmerBold;
 
-    public PdfFonts() throws Exception {
+    public PdfFonts() {
         // Built with layout off: once enabled, LayoutProcessor tries to load every
         // new font from a file, and Helvetica is built in rather than a file. The
         // switch is global, so a second application context in one JVM finds it on.
         LayoutProcessor.disable();
         // They are real BaseFonts because FontFactory would defer creating them to
         // the first PDF drawn, by which time layout is on.
-        BaseFont helvetica = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
-        BaseFont helveticaBold = BaseFont.createFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+        BaseFont helvetica = font(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+        BaseFont helveticaBold = font(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
         title = new Font(helveticaBold, 18);
         heading = new Font(helveticaBold, 12);
         body = new Font(helvetica, 10);
         small = new Font(helvetica, 9);
         smallBold = new Font(helveticaBold, 9);
         LayoutProcessor.enable();
-        khmerRegular = BaseFont.createFont(KHMER_REGULAR, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-        khmerBold = BaseFont.createFont(KHMER_BOLD, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        khmerRegular = font(KHMER_REGULAR, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        khmerBold = font(KHMER_BOLD, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+    }
+
+    /**
+     * Loads one font. A missing or damaged font file is a packaging fault the
+     * app cannot recover from, so it fails start-up with the file's name
+     * (BRD 13 EJ-FR-24, Effective Java Items 71, 73 and 75).
+     */
+    static BaseFont font(String name, String encoding, boolean embedded) {
+        try {
+            return BaseFont.createFont(name, encoding, embedded);
+        } catch (IOException | RuntimeException exception) {
+            throw new IllegalStateException("Cannot load the PDF font " + name, exception);
+        }
     }
 
     public Phrase phrase(String text, Font latin) {

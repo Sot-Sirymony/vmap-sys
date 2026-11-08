@@ -1,5 +1,7 @@
 package com.visionmapping.exception;
 
+import java.io.Serial;
+
 /**
  * A caller has exceeded a rate limit. Distinct from BusinessRuleException
  * because it maps to 429 rather than 400: the request was well formed and may
@@ -9,6 +11,9 @@ package com.visionmapping.exception;
  * <p>When the wait is known, it is sent as a Retry-After header (V10, SEC-06-02).
  */
 public class TooManyRequestsException extends RuntimeException {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private final Long retryAfterSeconds;
 

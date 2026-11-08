@@ -1,6 +1,7 @@
 package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,8 +24,17 @@ public record SharedPlanResponse(
         Instant expiresAt,
         List<SharedGoal> goals) {
 
+    public SharedPlanResponse {
+        goals = Copies.list(goals);
+    }
+
+
     public record SharedGoal(String title, WorkStatus status, LocalDate targetDate, BigDecimal progressPercent,
                              List<SharedStep> steps) {
+        public SharedGoal {
+            steps = Copies.list(steps);
+        }
+    
     }
 
     public record SharedStep(String title, WorkStatus status, LocalDate targetDate) {

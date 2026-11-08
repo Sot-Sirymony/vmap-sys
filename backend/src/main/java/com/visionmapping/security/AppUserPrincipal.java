@@ -2,6 +2,7 @@ package com.visionmapping.security;
 
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.enums.UserStatus;
+import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
 import lombok.Getter;
@@ -11,6 +12,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 @Getter
 public class AppUserPrincipal implements UserDetails {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private final Long id;
     private final String fullName;

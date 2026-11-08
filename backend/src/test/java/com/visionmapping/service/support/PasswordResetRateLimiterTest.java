@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.visionmapping.exception.TooManyRequestsException;
+import com.visionmapping.support.MutableClock;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +21,7 @@ class PasswordResetRateLimiterTest {
 
     @BeforeEach
     void setUp() {
-        limiter = new PasswordResetRateLimiter();
+        limiter = new PasswordResetRateLimiter(Clock.systemUTC());
         ReflectionTestUtils.setField(limiter, "perEmailLimit", 3);
         ReflectionTestUtils.setField(limiter, "perEmailWindowMinutes", 15L);
         ReflectionTestUtils.setField(limiter, "perIpLimit", 20);
@@ -114,5 +118,25 @@ class PasswordResetRateLimiterTest {
         }
 
         assertThatCode(() -> limiter.check("pat@example.com", IP)).doesNotThrowAnyException();
+    }
+
+    /** BRD 13 EJ-FR-22: the window closes on the injected clock, not the system one. */
+    @Test
+    @DisplayName("allows the address again once its window has passed")
+    void windowReopensOnTheInjectedClock() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-11-01T09:00:00Z"));
+        PasswordResetRateLimiter timed = new PasswordResetRateLimiter(clock);
+        ReflectionTestUtils.setField(timed, "perEmailLimit", 3);
+        ReflectionTestUtils.setField(timed, "perEmailWindowMinutes", 15L);
+        ReflectionTestUtils.setField(timed, "perIpLimit", 20);
+        ReflectionTestUtils.setField(timed, "perIpWindowMinutes", 60L);
+        for (int i = 0; i < 3; i += 1) {
+            timed.check("pat@example.com", IP);
+        }
+        assertThatThrownBy(() -> timed.check("pat@example.com", IP)).isInstanceOf(TooManyRequestsException.class);
+
+        clock.advance(Duration.ofMinutes(16));
+
+        assertThatCode(() -> timed.check("pat@example.com", IP)).doesNotThrowAnyException();
     }
 }

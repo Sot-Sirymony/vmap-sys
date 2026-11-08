@@ -31,8 +31,14 @@ import com.visionmapping.entity.Review;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
+/**
+ * Turns entities into the API's response records, so controllers never expose
+ * an entity (CLAUDE.md Backend Design Rules). Wide responses are built with their
+ * builders; a guard-rail test checks that every field is set.
+ */
 @Component
 public class VisionMappingMapper {
 
@@ -43,37 +49,81 @@ public class VisionMappingMapper {
     }
 
     public DreamResponse toResponse(Dream entity) {
-        return toResponse(entity, false, null);
+        return toResponse(entity, ScheduleOverrun.NONE);
     }
 
     // FR-51: overrun is computed by the caller (DreamService), which alone
     // holds the child-repository access needed to know it accurately.
-    public DreamResponse toResponse(Dream entity, boolean scheduleOverrun, String scheduleOverrunDetail) {
-        return new DreamResponse(entity.getId(), entity.getCode(), entity.getVisionArea().getId(), entity.getTitle(),
-                entity.getDescription(), entity.getWhyImportant(), entity.getSuccessDefinition(), entity.getDreamType(),
-                entity.getPriority(), entity.getLetterRank(), entity.getTargetDate(), entity.getStatus(), entity.isMoonshot(),
-                entity.getMoonshotVision(), entity.getImageUrl(), entity.getScheduleMode(), scheduleOverrun, scheduleOverrunDetail,
-                entity.getDecisionSkippedResearch(), entity.getDecisionAssumedNoChange(),
-                entity.getDecisionTrustedUnverifiedClaim(), entity.getDecisionJudgedByAppearance(),
-                entity.getDecisionUnderTimePressure(), entity.getDecisionNoOutsideInput(),
-                entity.getDecisionChasedEasyReward(), entity.getDecisionDismissedDisagreeingAdvice(),
-                entity.getDecisionGateClearedAt(), entity.getCommitmentSignedName(), entity.getCommitmentStartDate(),
-                entity.getCommitmentFirstAction(), entity.getCommittedAt(), entity.getSortOrder(),
-                entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+    public DreamResponse toResponse(Dream entity, ScheduleOverrun scheduleOverrun) {
+        return DreamResponse.builder()
+                .id(entity.getId())
+                .code(entity.getCode())
+                .visionAreaId(entity.getVisionArea().getId())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .whyImportant(entity.getWhyImportant())
+                .successDefinition(entity.getSuccessDefinition())
+                .dreamType(entity.getDreamType())
+                .priority(entity.getPriority())
+                .letterRank(entity.getLetterRank())
+                .targetDate(entity.getTargetDate())
+                .status(entity.getStatus())
+                .moonshot(entity.isMoonshot())
+                .moonshotVision(entity.getMoonshotVision())
+                .imageUrl(entity.getImageUrl())
+                .scheduleMode(entity.getScheduleMode())
+                .scheduleOverrun(scheduleOverrun.overrun())
+                .scheduleOverrunDetail(scheduleOverrun.detail())
+                .decisionSkippedResearch(entity.getDecisionSkippedResearch())
+                .decisionAssumedNoChange(entity.getDecisionAssumedNoChange())
+                .decisionTrustedUnverifiedClaim(entity.getDecisionTrustedUnverifiedClaim())
+                .decisionJudgedByAppearance(entity.getDecisionJudgedByAppearance())
+                .decisionUnderTimePressure(entity.getDecisionUnderTimePressure())
+                .decisionNoOutsideInput(entity.getDecisionNoOutsideInput())
+                .decisionChasedEasyReward(entity.getDecisionChasedEasyReward())
+                .decisionDismissedDisagreeingAdvice(entity.getDecisionDismissedDisagreeingAdvice())
+                .decisionGateClearedAt(entity.getDecisionGateClearedAt())
+                .commitmentSignedName(entity.getCommitmentSignedName())
+                .commitmentStartDate(entity.getCommitmentStartDate())
+                .commitmentFirstAction(entity.getCommitmentFirstAction())
+                .committedAt(entity.getCommittedAt())
+                .sortOrder(entity.getSortOrder())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public GoalResponse toResponse(Goal entity) {
-        return toResponse(entity, false, null);
+        return toResponse(entity, ScheduleOverrun.NONE);
     }
 
     // FR-51: overrun is computed by the caller (GoalService), same reasoning
     // as the Dream overload above.
-    public GoalResponse toResponse(Goal entity, boolean scheduleOverrun, String scheduleOverrunDetail) {
-        return new GoalResponse(entity.getId(), entity.getCode(), entity.getDream().getId(), entity.getTitle(),
-                entity.getDescription(), entity.getSuccessCriteria(), entity.getPriority(), entity.getLetterRank(), entity.getTargetDate(),
-                entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
-                entity.isMoonshot(), entity.getMoonshotVision(), entity.getScheduleMode(), scheduleOverrun,
-                scheduleOverrunDetail, entity.getSortOrder(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+    public GoalResponse toResponse(Goal entity, ScheduleOverrun scheduleOverrun) {
+        return GoalResponse.builder()
+                .id(entity.getId())
+                .code(entity.getCode())
+                .dreamId(entity.getDream().getId())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .successCriteria(entity.getSuccessCriteria())
+                .priority(entity.getPriority())
+                .letterRank(entity.getLetterRank())
+                .targetDate(entity.getTargetDate())
+                .status(entity.getStatus())
+                .progressPercent(entity.getProgressPercent())
+                .manualProgressOverride(entity.isManualProgressOverride())
+                .moonshot(entity.isMoonshot())
+                .moonshotVision(entity.getMoonshotVision())
+                .scheduleMode(entity.getScheduleMode())
+                .scheduleOverrun(scheduleOverrun.overrun())
+                .scheduleOverrunDetail(scheduleOverrun.detail())
+                .sortOrder(entity.getSortOrder())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public VisionStepResponse toResponse(VisionStep entity) {
@@ -85,22 +135,66 @@ public class VisionMappingMapper {
     }
 
     public TaskItemResponse toResponse(TaskItem entity) {
-        return new TaskItemResponse(entity.getId(), entity.getCode(), entity.getStep().getId(), entity.getTitle(),
-                entity.getDescription(), entity.getOwner(), entity.getPriority(), entity.getLetterRank(), entity.getStartDate(), entity.getDueDate(),
-                entity.getStatus(), entity.getProgressPercent(), entity.getEstimatedHours(), entity.getActualHours(),
-                entity.getBlockerReason(), entity.getNextAction(), entity.getEnergyDemand(), entity.getCompletedAt(),
-                entity.getSortOrder(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return TaskItemResponse.builder()
+                .id(entity.getId())
+                .code(entity.getCode())
+                .stepId(entity.getStep().getId())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .owner(entity.getOwner())
+                .priority(entity.getPriority())
+                .letterRank(entity.getLetterRank())
+                .startDate(entity.getStartDate())
+                .dueDate(entity.getDueDate())
+                .status(entity.getStatus())
+                .progressPercent(entity.getProgressPercent())
+                .estimatedHours(entity.getEstimatedHours())
+                .actualHours(entity.getActualHours())
+                .blockerReason(entity.getBlockerReason())
+                .nextAction(entity.getNextAction())
+                .energyDemand(entity.getEnergyDemand())
+                .completedAt(entity.getCompletedAt())
+                .sortOrder(entity.getSortOrder())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public PartnerResponse toResponse(Partner entity) {
-        return new PartnerResponse(entity.getId(), entity.getCode(), entity.getName(), entity.getRole(),
-                entity.getOrganization(), entity.getEmail(), entity.getPhone(), entity.getStrength(), entity.getSupportType(),
-                entity.getOfferType(), id(entity.getRelatedVisionArea()), id(entity.getRelatedDream()), id(entity.getRelatedGoal()),
-                id(entity.getRelatedStep()), id(entity.getRelatedTask()), entity.getStatus(), entity.getNotes(),
-                entity.getFlagDishonesty(), entity.getFlagAnger(), entity.getFlagPoorJudgment(), entity.getFlagOutsizedReward(),
-                entity.getFlagFlatteryPressure(), entity.getFlagGossip(), entity.getFlagDisregardBoundaries(),
-                entity.getRiskOverrideNote(), entity.getPrimaryMotivator(), entity.getVettedAt(),
-                entity.getWorkStyleType(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return PartnerResponse.builder()
+                .id(entity.getId())
+                .code(entity.getCode())
+                .name(entity.getName())
+                .role(entity.getRole())
+                .organization(entity.getOrganization())
+                .email(entity.getEmail())
+                .phone(entity.getPhone())
+                .strength(entity.getStrength())
+                .supportType(entity.getSupportType())
+                .offerType(entity.getOfferType())
+                .relatedVisionAreaId(id(entity.getRelatedVisionArea()))
+                .relatedDreamId(id(entity.getRelatedDream()))
+                .relatedGoalId(id(entity.getRelatedGoal()))
+                .relatedStepId(id(entity.getRelatedStep()))
+                .relatedTaskId(id(entity.getRelatedTask()))
+                .status(entity.getStatus())
+                .notes(entity.getNotes())
+                .flagDishonesty(entity.getFlagDishonesty())
+                .flagAnger(entity.getFlagAnger())
+                .flagPoorJudgment(entity.getFlagPoorJudgment())
+                .flagOutsizedReward(entity.getFlagOutsizedReward())
+                .flagFlatteryPressure(entity.getFlagFlatteryPressure())
+                .flagGossip(entity.getFlagGossip())
+                .flagDisregardBoundaries(entity.getFlagDisregardBoundaries())
+                .riskOverrideNote(entity.getRiskOverrideNote())
+                .primaryMotivator(entity.getPrimaryMotivator())
+                .vettedAt(entity.getVettedAt())
+                .workStyleType(entity.getWorkStyleType())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public IdealPartnerProfileResponse toResponse(IdealPartnerProfile entity) {
@@ -125,38 +219,103 @@ public class VisionMappingMapper {
     }
 
     public CommunicationMessageResponse toResponse(CommunicationMessage entity) {
-        return new CommunicationMessageResponse(entity.getId(), id(entity.getPartner()), id(entity.getRelatedDream()),
-                id(entity.getRelatedGoal()), id(entity.getRelatedTask()), entity.getAudience(), entity.getPurpose(),
-                entity.getSubject(), entity.getHook(), entity.getProblem(), entity.getRequest(),
-                entity.getBenefitToPartner(), entity.getWordPicture(), entity.getExpectedOutcome(),
-                entity.getObjectionsAndAnswers(), entity.getSocialProof(), entity.getValueComparison(), entity.getCallToAction(),
-                entity.getMessageBody(), entity.getStatus(),
-                entity.getFollowUpDate(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return CommunicationMessageResponse.builder()
+                .id(entity.getId())
+                .partnerId(id(entity.getPartner()))
+                .relatedDreamId(id(entity.getRelatedDream()))
+                .relatedGoalId(id(entity.getRelatedGoal()))
+                .relatedTaskId(id(entity.getRelatedTask()))
+                .audience(entity.getAudience())
+                .purpose(entity.getPurpose())
+                .subject(entity.getSubject())
+                .hook(entity.getHook())
+                .problem(entity.getProblem())
+                .request(entity.getRequest())
+                .benefitToPartner(entity.getBenefitToPartner())
+                .wordPicture(entity.getWordPicture())
+                .expectedOutcome(entity.getExpectedOutcome())
+                .objectionsAndAnswers(entity.getObjectionsAndAnswers())
+                .socialProof(entity.getSocialProof())
+                .valueComparison(entity.getValueComparison())
+                .callToAction(entity.getCallToAction())
+                .messageBody(entity.getMessageBody())
+                .status(entity.getStatus())
+                .followUpDate(entity.getFollowUpDate())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public ReviewResponse toResponse(Review entity) {
-        return new ReviewResponse(entity.getId(), entity.getReviewType(), entity.getReviewDate(), entity.getLetterRank(),
-                id(entity.getRelatedVisionArea()), id(entity.getRelatedDream()), entity.getSummary(),
-                entity.getCompletedTasks(), entity.getDelayedTasks(), entity.getBlockedTasks(), entity.getLessonsLearned(),
-                entity.getNextActions(), entity.getDiligenceClearVision(), entity.getDiligenceWorkedPlan(),
-                entity.getDiligenceUsedLeverage(), entity.getDiligencePriorityFirst(), entity.getDiligenceSmarterRoute(),
-                entity.getDiligenceRightlyPlanned(), entity.getDiligenceRightlyPerformed(), entity.getDiligenceExpeditious(),
-                entity.getDiligenceEfficient(), entity.getDiligenceQualityOutcome(), entity.getDiligenceScorePercent(),
-                entity.getDiligenceNote(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return ReviewResponse.builder()
+                .id(entity.getId())
+                .reviewType(entity.getReviewType())
+                .reviewDate(entity.getReviewDate())
+                .letterRank(entity.getLetterRank())
+                .relatedVisionAreaId(id(entity.getRelatedVisionArea()))
+                .relatedDreamId(id(entity.getRelatedDream()))
+                .summary(entity.getSummary())
+                .completedTasks(entity.getCompletedTasks())
+                .delayedTasks(entity.getDelayedTasks())
+                .blockedTasks(entity.getBlockedTasks())
+                .lessonsLearned(entity.getLessonsLearned())
+                .nextActions(entity.getNextActions())
+                .diligenceClearVision(entity.getDiligenceClearVision())
+                .diligenceWorkedPlan(entity.getDiligenceWorkedPlan())
+                .diligenceUsedLeverage(entity.getDiligenceUsedLeverage())
+                .diligencePriorityFirst(entity.getDiligencePriorityFirst())
+                .diligenceSmarterRoute(entity.getDiligenceSmarterRoute())
+                .diligenceRightlyPlanned(entity.getDiligenceRightlyPlanned())
+                .diligenceRightlyPerformed(entity.getDiligenceRightlyPerformed())
+                .diligenceExpeditious(entity.getDiligenceExpeditious())
+                .diligenceEfficient(entity.getDiligenceEfficient())
+                .diligenceQualityOutcome(entity.getDiligenceQualityOutcome())
+                .diligenceScorePercent(entity.getDiligenceScorePercent())
+                .diligenceNote(entity.getDiligenceNote())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public ObstacleResponse toResponse(Obstacle entity) {
-        return new ObstacleResponse(entity.getId(), id(entity.getRelatedDream()), id(entity.getRelatedGoal()),
-                id(entity.getRelatedStep()), id(entity.getRelatedTask()), entity.getTitle(), entity.getDescription(),
-                entity.getObstacleType(), entity.getSeverity(), entity.getLetterRank(), entity.getSolution(), entity.getRootCause(),
-                entity.getCreativeAlternatives(), entity.getConflictIncident(), entity.getConflictCost(),
-                entity.getConflictOtherPerspective(), entity.getConflictLesson(), entity.getConflictPrivateNote(),
-                entity.getConflictNextAction(), entity.getConflictExpectation(), entity.getConflictExpectationAgreed(),
-                entity.getExpectationReleasedAt(), entity.getConflictNoCharacterAttacks(),
-                entity.getConflictStayedOnIncident(), entity.getConflictNoThreatsOrSarcasm(),
-                entity.getConflictDefinedWinWin(), entity.getCriticismOverstated(), entity.getCriticismDelivery(),
-                entity.getCriticismSubstance(), id(entity.getRequiredPartner()),
-                entity.getStatus(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+        return ObstacleResponse.builder()
+                .id(entity.getId())
+                .relatedDreamId(id(entity.getRelatedDream()))
+                .relatedGoalId(id(entity.getRelatedGoal()))
+                .relatedStepId(id(entity.getRelatedStep()))
+                .relatedTaskId(id(entity.getRelatedTask()))
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .obstacleType(entity.getObstacleType())
+                .severity(entity.getSeverity())
+                .letterRank(entity.getLetterRank())
+                .solution(entity.getSolution())
+                .rootCause(entity.getRootCause())
+                .creativeAlternatives(entity.getCreativeAlternatives())
+                .conflictIncident(entity.getConflictIncident())
+                .conflictCost(entity.getConflictCost())
+                .conflictOtherPerspective(entity.getConflictOtherPerspective())
+                .conflictLesson(entity.getConflictLesson())
+                .conflictPrivateNote(entity.getConflictPrivateNote())
+                .conflictNextAction(entity.getConflictNextAction())
+                .conflictExpectation(entity.getConflictExpectation())
+                .conflictExpectationAgreed(entity.getConflictExpectationAgreed())
+                .expectationReleasedAt(entity.getExpectationReleasedAt())
+                .conflictNoCharacterAttacks(entity.getConflictNoCharacterAttacks())
+                .conflictStayedOnIncident(entity.getConflictStayedOnIncident())
+                .conflictNoThreatsOrSarcasm(entity.getConflictNoThreatsOrSarcasm())
+                .conflictDefinedWinWin(entity.getConflictDefinedWinWin())
+                .criticismOverstated(entity.getCriticismOverstated())
+                .criticismDelivery(entity.getCriticismDelivery())
+                .criticismSubstance(entity.getCriticismSubstance())
+                .requiredPartnerId(id(entity.getRequiredPartner()))
+                .status(entity.getStatus())
+                .archived(entity.isArchived())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
     }
 
     public IssueReportResponse toResponse(IssueReport entity) {
@@ -173,27 +332,33 @@ public class VisionMappingMapper {
                 entity.isArchived());
     }
 
-    private Long id(VisionArea entity) {
+    @Nullable
+    private Long id(@Nullable VisionArea entity) {
         return entity == null ? null : entity.getId();
     }
 
-    private Long id(Dream entity) {
+    @Nullable
+    private Long id(@Nullable Dream entity) {
         return entity == null ? null : entity.getId();
     }
 
-    private Long id(Goal entity) {
+    @Nullable
+    private Long id(@Nullable Goal entity) {
         return entity == null ? null : entity.getId();
     }
 
-    private Long id(VisionStep entity) {
+    @Nullable
+    private Long id(@Nullable VisionStep entity) {
         return entity == null ? null : entity.getId();
     }
 
-    private Long id(TaskItem entity) {
+    @Nullable
+    private Long id(@Nullable TaskItem entity) {
         return entity == null ? null : entity.getId();
     }
 
-    private Long id(Partner entity) {
+    @Nullable
+    private Long id(@Nullable Partner entity) {
         return entity == null ? null : entity.getId();
     }
 }

@@ -6,8 +6,6 @@ import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
-import com.visionmapping.entity.enums.DreamStatus;
-import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
 import com.visionmapping.repository.IdealPartnerProfileRepository;
@@ -38,29 +36,28 @@ public class ArchiveCascade {
 
     public void archiveDreamsUnder(Long visionAreaId) {
         for (Dream dream : dreamRepository.findByVisionArea_IdAndUser_Id(visionAreaId, lookup.userId())) {
-            dream.setStatus(DreamStatus.ARCHIVED);
-            dream.setArchived(true);
+            dream.archive();
             archiveGoalsUnder(dream.getId());
         }
     }
 
     public void archiveGoalsUnder(Long dreamId) {
         for (Goal goal : goalRepository.findByDream_IdAndUser_Id(dreamId, lookup.userId())) {
-            goal.setArchived(true);
+            goal.archive();
             archiveStepsUnder(goal.getId());
         }
     }
 
     public void archiveStepsUnder(Long goalId) {
         for (VisionStep step : visionStepRepository.findByGoal_IdAndUser_Id(goalId, lookup.userId())) {
-            step.setArchived(true);
+            step.archive();
             archiveTasksUnder(step.getId());
         }
     }
 
     public void archiveTasksUnder(Long stepId) {
         for (TaskItem task : taskItemRepository.findByStep_IdAndUser_Id(stepId, lookup.userId())) {
-            task.setArchived(true);
+            task.archive();
         }
         // BR-13: the step's ideal partner profile is archived with it.
         setProfileArchived(stepId, true);
@@ -128,28 +125,16 @@ public class ArchiveCascade {
     // --- Up-chain: restoring a child brings its archived parents back --------
 
     public void unarchiveVisionArea(VisionArea area) {
-        if (area.isArchived()) {
-            area.setArchived(false);
-            // ARCHIVED was set by the archive cascade; the original status is
-            // unknown, so come back as Paused rather than silently Active.
-            if (area.getStatus() == LifecycleStatus.ARCHIVED) {
-                area.setStatus(LifecycleStatus.PAUSED);
-            }
-        }
+        area.restore();
     }
 
     public void unarchiveDreamChain(Dream dream) {
         unarchiveVisionArea(dream.getVisionArea());
-        if (dream.isArchived()) {
-            dream.setArchived(false);
-            if (dream.getStatus() == DreamStatus.ARCHIVED) {
-                dream.setStatus(DreamStatus.PAUSED);
-            }
-        }
+        dream.restore();
     }
 
     public void unarchiveGoalChain(Goal goal) {
         unarchiveDreamChain(goal.getDream());
-        goal.setArchived(false);
+        goal.restore();
     }
 }

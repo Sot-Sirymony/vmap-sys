@@ -9,6 +9,7 @@ import com.anthropic.errors.PermissionDeniedException;
 import com.anthropic.errors.RateLimitException;
 import com.anthropic.errors.UnauthorizedException;
 import java.time.Duration;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,6 +23,7 @@ public class ClaudeKeyChecker {
     public record Result(boolean ok, String message) {
     }
 
+    @Nullable
     private final String baseUrl;
     private final Duration timeout;
     private final int maxRetries;
@@ -31,7 +33,7 @@ public class ClaudeKeyChecker {
     }
 
     /** BRD 12 COV-FR-28: a local stub server for tests; baseUrl null means the real Claude API. */
-    ClaudeKeyChecker(String baseUrl, Duration timeout, int maxRetries) {
+    ClaudeKeyChecker(@Nullable String baseUrl, Duration timeout, int maxRetries) {
         this.baseUrl = baseUrl;
         this.timeout = timeout;
         this.maxRetries = maxRetries;

@@ -24,6 +24,7 @@ import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
 import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AttitudeCheckInRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.FearEntryRepository;
@@ -234,7 +235,7 @@ class AiContextBuilderTest {
 
     @Test
     void fallsBackToTheCurrentModuleWhenTheOpenOneIsLocked() {
-        when(modules.getModule(eq(9), eq("en"))).thenThrow(new IllegalStateException("Locked"));
+        when(modules.getModule(eq(9), eq("en"))).thenThrow(new BusinessRuleException("Finish the earlier modules to unlock this one."));
         when(modules.listModules("en")).thenReturn(List.of(
                 new LearningModuleSummaryResponse(1, 1, ModuleStage.BREAK_CHAINS, "Beliefs", "Done already", ModuleStatus.COMPLETED, null),
                 new LearningModuleSummaryResponse(2, 2, ModuleStage.BREAK_CHAINS, "Fears", "Name what scares you", ModuleStatus.AVAILABLE, null)));
@@ -243,6 +244,18 @@ class AiContextBuilderTest {
 
         assertThat(context.records()).contains("Their current module: 2. Fears - Name what scares you");
         assertThat(context.sources()).contains(AiContextBuilder.MODULE);
+    }
+
+    /** BRD 13 EJ-FR-25: an unexpected failure is logged, and the chat still gets the current module. */
+    @Test
+    void fallsBackToTheCurrentModuleWhenLoadingTheOpenOneFailsUnexpectedly() {
+        when(modules.getModule(eq(9), eq("en"))).thenThrow(new IllegalStateException("Database hiccup"));
+        when(modules.listModules("en")).thenReturn(List.of(
+                new LearningModuleSummaryResponse(2, 2, ModuleStage.BREAK_CHAINS, "Fears", "Name what scares you", ModuleStatus.AVAILABLE, null)));
+
+        AiContext context = builder.build(chan, new Focus("/modules/9", null, 9), "en");
+
+        assertThat(context.records()).contains("Their current module: 2. Fears - Name what scares you");
     }
 
     @Test

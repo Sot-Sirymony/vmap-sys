@@ -6,6 +6,7 @@ import com.visionmapping.dto.response.PartnerResponse;
 import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.service.PartnerService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,7 +41,7 @@ public class PartnerController {
             @RequestParam(required = false) PartnerSupportType supportType,
             @RequestParam(required = false) PartnerStatus status,
             @RequestParam(required = false) Long dreamId) {
-        return service.listPartners(pageable, includeArchived, search, supportType, status, dreamId);
+        return service.listPartners(pageable, ArchiveFilter.of(includeArchived), search, supportType, status, dreamId);
     }
 
     @PostMapping
@@ -60,7 +61,7 @@ public class PartnerController {
     }
 
     @PatchMapping("/{id}/status")
-    public PartnerResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public PartnerResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<PartnerStatus> request) {
         return service.updatePartnerStatus(id, request.status());
     }
 

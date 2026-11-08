@@ -9,6 +9,11 @@ import java.time.temporal.ChronoUnit;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Gives every entity its {@code createdAt} and {@code updatedAt} times, set by
+ * JPA when a row is first saved and each time it changes. Times are cut to whole
+ * microseconds, the most the database keeps, so a saved time reads back unchanged.
+ */
 @Getter
 @Setter
 @MappedSuperclass

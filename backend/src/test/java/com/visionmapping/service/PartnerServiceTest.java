@@ -119,7 +119,7 @@ class PartnerServiceTest {
                 .supportType(PartnerSupportType.FINANCIAL).status(PartnerStatus.TO_CONTACT).build();
         when(partnerRepository.findById(43L)).thenReturn(Optional.of(partner));
 
-        service.updatePartnerStatus(43L, "ACTIVE");
+        service.updatePartnerStatus(43L, PartnerStatus.ACTIVE);
 
         assertThat(partner.getVettedAt()).isNotNull();
     }
@@ -133,7 +133,7 @@ class PartnerServiceTest {
 
         // Re-saving with a flag set and no note must not re-trigger the gate.
         partner.setFlagAnger(true);
-        service.updatePartnerStatus(44L, "ACTIVE");
+        service.updatePartnerStatus(44L, PartnerStatus.ACTIVE);
 
         assertThat(partner.getVettedAt()).isEqualTo(java.time.Instant.parse("2026-01-01T00:00:00Z"));
     }
@@ -145,7 +145,7 @@ class PartnerServiceTest {
                 .flagAnger(true).build();
         when(partnerRepository.findById(45L)).thenReturn(Optional.of(partner));
 
-        service.updatePartnerStatus(45L, "ACTIVE");
+        service.updatePartnerStatus(45L, PartnerStatus.ACTIVE);
 
         assertThat(partner.getVettedAt()).isNull();
     }

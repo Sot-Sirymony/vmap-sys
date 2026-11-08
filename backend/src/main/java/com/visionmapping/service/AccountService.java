@@ -3,6 +3,7 @@ package com.visionmapping.service;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
 import com.visionmapping.dto.request.DeleteAccountRequest;
+import com.visionmapping.dto.response.AccountExportResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
@@ -32,9 +33,7 @@ import com.visionmapping.repository.VisionAreaRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.util.UserScope;
 import jakarta.persistence.EntityManager;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -125,106 +124,66 @@ public class AccountService {
     /** The password hash is deliberately never part of this. Archived records are. */
     @Transactional(readOnly = true)
     @SecurityAudit(value = SecurityEventType.ACCOUNT_EXPORTED)
-    public Map<String, Object> exportData() {
+    public AccountExportResponse exportData() {
         AppUser user = userScope.currentUser();
         Long userId = user.getId();
-        Map<String, Object> data = new LinkedHashMap<>();
-        Map<String, Object> account = new LinkedHashMap<>();
-        account.put("fullName", user.getFullName());
-        account.put("email", user.getEmail());
-        account.put("reminderEmail", user.getReminderEmail());
-        account.put("aiConsentAt", user.getAiConsentAt());
-        account.put("cohort", user.getCohort() == null ? null : user.getCohort().getName());
-        account.put("shareJournalsWithCoach", user.isShareJournalsWithCoach());
-        account.put("createdAt", user.getCreatedAt());
-        data.put("account", account);
-        data.put("coachComments", coachCommentService.mine());
-        data.put("visionAreas", visionAreaRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("dreams", dreamRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("goals", goalRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("steps", visionStepRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("tasks", taskItemRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("partners", partnerRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("communicationMessages", communicationMessageRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("reviews", reviewRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("obstacles", obstacleRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("progressLogs", progressLogRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("gratitudeEntries", gratitudeEntryRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("fearEntries", fearEntryRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("attitudeCheckIns", attitudeCheckInRepository.findByUser_IdOrderByCheckInDateAsc(userId).stream().map(mapper::toResponse).toList());
-        data.put("habits", habitRepository.findByUser_Id(userId).stream()
-                .map(habit -> Map.of("name", habit.getName(), "archived", habit.isArchived(),
-                        "checkedDates", habitCheckRepository.findDatesByHabitId(habit.getId())))
-                .toList());
-        data.put("assessments", chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(userId).stream()
-                .map(assessment -> Map.of("takenOn", assessment.getTakenOn(), "settling", assessment.getSettlingScore(),
-                        "fear", assessment.getFearScore(), "criticism", assessment.getCriticismScore(), "vision", assessment.getVisionScore(),
-                        "knowledge", assessment.getKnowledgeScore(), "resources", assessment.getResourcesScore()))
-                .toList());
-        data.put("moduleCompletions", moduleCompletionRepository.findByUser_Id(userId).stream()
-                .map(completion -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("moduleNumber", completion.getModuleNumber());
-                    row.put("completedAt", completion.getCompletedAt());
-                    row.put("rowsJson", completion.getRowsJson());
-                    row.put("coachRating", completion.getCoachRating());
-                    row.put("coachFeedback", completion.getCoachFeedback());
-                    row.put("coachRatedAt", completion.getCoachRatedAt());
-                    return row;
-                })
-                .toList());
-        data.put("milestones", milestoneRepository.findByUser_Id(userId).stream()
-                .map(milestone -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("dreamId", milestone.getDream().getId());
-                    row.put("title", milestone.getTitle());
-                    row.put("achievedOn", milestone.getAchievedOn());
-                    row.put("note", milestone.getNote());
-                    row.put("archived", milestone.isArchived());
-                    return row;
-                })
-                .toList());
-        data.put("idealPartnerProfiles", idealPartnerProfileRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("issueReports", issueReportRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList());
-        data.put("goalSynergyLinks", goalSynergyLinkRepository.findByUser_Id(userId).stream()
-                .map(link -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("goalId", link.getGoal().getId());
-                    row.put("relatedGoalId", link.getRelatedGoal().getId());
-                    row.put("note", link.getNote());
-                    return row;
-                })
-                .toList());
-        // AI-FR-25 and AI-NFR-03: Dream Coach history and the consent record.
-        data.put("aiConsentEvents", aiConsentEventRepository.findByUser_IdOrderByCreatedAtAsc(userId).stream()
-                .map(event -> Map.of("action", event.getAction(), "at", event.getCreatedAt()))
-                .toList());
-        data.put("aiMessages", aiMessageRepository.findByUser_IdOrderByIdAsc(userId).stream()
-                .map(message -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("conversationId", message.getConversation().getId());
-                    row.put("conversationTitle", message.getConversation().getTitle());
-                    row.put("role", message.getRole());
-                    row.put("content", message.getContent());
-                    row.put("createdAt", message.getCreatedAt());
-                    return row;
-                })
-                .toList());
-        // The token hash is left out: it is a credential, not the user's content.
-        data.put("planShares", planShareRepository.findByUser_IdOrderByCreatedAtDesc(userId).stream()
-                .map(share -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("dreamId", share.getDream().getId());
-                    row.put("partnerId", share.getPartner() == null ? null : share.getPartner().getId());
-                    row.put("message", share.getMessage());
-                    row.put("createdAt", share.getCreatedAt());
-                    row.put("expiresAt", share.getExpiresAt());
-                    row.put("revokedAt", share.getRevokedAt());
-                    row.put("viewCount", share.getViewCount());
-                    return row;
-                })
-                .toList());
-        return data;
+        return AccountExportResponse.builder()
+                .account(new AccountExportResponse.Account(user.getFullName(), user.getEmail(), user.getReminderEmail(),
+                        user.getAiConsentAt(), user.getCohort() == null ? null : user.getCohort().getName(),
+                        user.isShareJournalsWithCoach(), user.getCreatedAt()))
+                .coachComments(coachCommentService.mine())
+                .visionAreas(visionAreaRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .dreams(dreamRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .goals(goalRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .steps(visionStepRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .tasks(taskItemRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .partners(partnerRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .communicationMessages(communicationMessageRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .reviews(reviewRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .obstacles(obstacleRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .progressLogs(progressLogRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .gratitudeEntries(gratitudeEntryRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .fearEntries(fearEntryRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .attitudeCheckIns(attitudeCheckInRepository.findByUser_IdOrderByCheckInDateAsc(userId).stream()
+                        .map(mapper::toResponse).toList())
+                .habits(habitRepository.findByUser_Id(userId).stream()
+                        .map(habit -> new AccountExportResponse.Habit(habit.getName(), habit.isArchived(),
+                                habitCheckRepository.findDatesByHabitId(habit.getId())))
+                        .toList())
+                .assessments(chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(userId).stream()
+                        .map(assessment -> new AccountExportResponse.Assessment(assessment.getTakenOn(),
+                                assessment.getSettlingScore(), assessment.getFearScore(), assessment.getCriticismScore(),
+                                assessment.getVisionScore(), assessment.getKnowledgeScore(), assessment.getResourcesScore()))
+                        .toList())
+                .moduleCompletions(moduleCompletionRepository.findByUser_Id(userId).stream()
+                        .map(completion -> new AccountExportResponse.ModuleCompletion(completion.getModuleNumber(),
+                                completion.getCompletedAt(), completion.getRowsJson(), completion.getCoachRating(),
+                                completion.getCoachFeedback(), completion.getCoachRatedAt()))
+                        .toList())
+                .milestones(milestoneRepository.findByUser_Id(userId).stream()
+                        .map(milestone -> new AccountExportResponse.Milestone(milestone.getDream().getId(), milestone.getTitle(),
+                                milestone.getAchievedOn(), milestone.getNote(), milestone.isArchived()))
+                        .toList())
+                .idealPartnerProfiles(idealPartnerProfileRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .issueReports(issueReportRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .goalSynergyLinks(goalSynergyLinkRepository.findByUser_Id(userId).stream()
+                        .map(link -> new AccountExportResponse.GoalSynergyLink(link.getGoal().getId(),
+                                link.getRelatedGoal().getId(), link.getNote()))
+                        .toList())
+                .aiConsentEvents(aiConsentEventRepository.findByUser_IdOrderByCreatedAtAsc(userId).stream()
+                        .map(event -> new AccountExportResponse.AiConsentEvent(event.getAction(), event.getCreatedAt()))
+                        .toList())
+                .aiMessages(aiMessageRepository.findByUser_IdOrderByIdAsc(userId).stream()
+                        .map(message -> new AccountExportResponse.AiMessage(message.getConversation().getId(),
+                                message.getConversation().getTitle(), message.getRole(), message.getContent(),
+                                message.getCreatedAt()))
+                        .toList())
+                .planShares(planShareRepository.findByUser_IdOrderByCreatedAtDesc(userId).stream()
+                        .map(share -> new AccountExportResponse.PlanShare(share.getDream().getId(),
+                                share.getPartner() == null ? null : share.getPartner().getId(), share.getMessage(),
+                                share.getCreatedAt(), share.getExpiresAt(), share.getRevokedAt(), share.getViewCount()))
+                        .toList())
+                .build();
     }
 
     @SecurityAudit(value = SecurityEventType.ACCOUNT_DELETED)

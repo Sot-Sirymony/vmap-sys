@@ -47,6 +47,8 @@ public class HealthController {
             connection.ping();
             return "redis:up";
         } catch (RuntimeException unreachable) {
+            // Broad on purpose: whatever the driver throws, the honest health
+            // answer is "down", and the health check itself must not fail.
             return "redis:down";
         }
     }

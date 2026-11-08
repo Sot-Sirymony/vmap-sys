@@ -6,10 +6,12 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Set;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,15 +28,19 @@ public class JwtService {
 
     private final SecretKey secretKey;
     private final long expirationMinutes;
+    /** Issue and expiry times come from here, so tests can fix them (BRD 13 EJ-FR-22). */
+    private final Clock clock;
 
     public JwtService(
             @Value("${app.security.jwt-secret}") String jwtSecret,
             @Value("${app.security.jwt-expiration-minutes}") long expirationMinutes,
-            Environment environment
+            Environment environment,
+            Clock clock
     ) {
         validateSecret(jwtSecret, environment);
         this.secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes;
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     private static void validateSecret(String jwtSecret, Environment environment) {
@@ -56,7 +62,7 @@ public class JwtService {
      * every request, so a role change applies at once.
      */
     public String generateToken(AppUserPrincipal principal, Long sessionId) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         return Jwts.builder()
                 .issuer(ISSUER)
                 .subject(principal.getUsername())
@@ -84,6 +90,9 @@ public class JwtService {
         Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
                 .requireIssuer(ISSUER)
+                // The same clock as generateToken; java.util.Date is used only
+                // here and above, because the JWT library asks for it (EJ-FR-23).
+                .clock(() -> Date.from(clock.instant()))
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

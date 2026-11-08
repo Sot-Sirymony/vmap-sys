@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -14,6 +15,10 @@ public final class AiCoachResponses {
     public record ParticipantSummary(Long id, LocalDate weekStart, Instant generatedAt, String progress, String mood,
                                      String risks, String suggestedAction, List<String> riskSignals, Boolean accurate,
                                      String ratingNote) {
+        public ParticipantSummary {
+            riskSignals = Copies.list(riskSignals);
+        }
+    
     }
 
     /** AI-FR-21. Only participants who gave AI consent are included; the others are counted. */

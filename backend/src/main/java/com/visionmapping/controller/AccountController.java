@@ -2,11 +2,11 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.DeleteAccountRequest;
 import com.visionmapping.dto.request.ReminderSettingsRequest;
+import com.visionmapping.dto.response.AccountExportResponse;
 import com.visionmapping.dto.response.ReminderSettingsResponse;
 import com.visionmapping.service.AccountService;
 import com.visionmapping.service.ReminderService;
 import jakarta.validation.Valid;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +26,7 @@ public class AccountController {
     private final ReminderService reminderService;
 
     @GetMapping("/export")
-    public Map<String, Object> export() {
+    public AccountExportResponse export() {
         return accountService.exportData();
     }
 

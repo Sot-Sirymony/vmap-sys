@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +33,11 @@ public record AiSettingsResponse(
         String coachingGuidelines,
         // V11 (PB-FR-39): null when plan building uses the main model.
         String planModel) {
+
+    public AiSettingsResponse {
+        models = Copies.list(models);
+    }
+
 
     public record ModelOption(String id, String label) {
     }

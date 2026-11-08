@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -17,6 +18,10 @@ public final class AiDailyResponses {
 
     /** AI-FR-12: best first. Empty, with a note, when there is nothing open to pick from. */
     public record NextStep(List<Pick> picks, String note) {
+        public NextStep {
+            picks = Copies.list(picks);
+        }
+    
     }
 
     /** AI-FR-14: fills the weekly review form; the participant edits and saves it. */
@@ -40,5 +45,9 @@ public final class AiDailyResponses {
     }
 
     public record ResourceIdeas(List<ResourceIdea> resources) {
+        public ResourceIdeas {
+            resources = Copies.list(resources);
+        }
+    
     }
 }

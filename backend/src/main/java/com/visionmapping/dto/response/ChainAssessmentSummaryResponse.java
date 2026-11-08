@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -9,4 +10,7 @@ public record ChainAssessmentSummaryResponse(
         BigDecimal improvementPercent,
         boolean retakeSuggested
 ) {
+    public ChainAssessmentSummaryResponse {
+        assessments = Copies.list(assessments);
+    }
 }

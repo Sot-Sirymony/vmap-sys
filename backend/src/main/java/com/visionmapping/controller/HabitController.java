@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.HabitRequest;
 import com.visionmapping.dto.response.HabitResponse;
 import com.visionmapping.service.HabitService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,7 +32,7 @@ public class HabitController {
     public List<HabitResponse> list(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listHabits(date, includeArchived);
+        return service.listHabits(date, ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping

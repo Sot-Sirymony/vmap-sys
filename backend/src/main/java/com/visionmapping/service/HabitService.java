@@ -12,6 +12,7 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.HabitCheckRepository;
 import com.visionmapping.repository.HabitRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -41,8 +42,8 @@ public class HabitService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public List<HabitResponse> listHabits(LocalDate date, boolean includeArchived) {
-        return findAllForUser(habitRepository, lookup.userId(), includeArchived).stream()
+    public List<HabitResponse> listHabits(LocalDate date, ArchiveFilter archiveFilter) {
+        return findAllForUser(habitRepository, lookup.userId(), archiveFilter).stream()
                 .sorted(Comparator.comparing(Habit::getId))
                 .map(habit -> toResponse(habit, date))
                 .toList();

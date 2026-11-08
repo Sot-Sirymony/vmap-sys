@@ -205,9 +205,9 @@ class DashboardServiceTest {
         TaskItem dueOutside = task(31L, parentStep, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
         dueOutside.setDueDate(LocalDate.of(2026, 5, 1));
         TaskItem completedInside = task(32L, parentStep, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
-        completedInside.setCompletedAt(LocalDate.of(2026, 3, 20).atStartOfDay(ZoneOffset.UTC).toInstant());
+        completedInside.changeStatus(WorkStatus.COMPLETED, fixedAt(LocalDate.of(2026, 3, 20)));
         TaskItem completedOutside = task(33L, parentStep, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
-        completedOutside.setCompletedAt(LocalDate.of(2026, 1, 5).atStartOfDay(ZoneOffset.UTC).toInstant());
+        completedOutside.changeStatus(WorkStatus.COMPLETED, fixedAt(LocalDate.of(2026, 1, 5)));
 
         when(taskItemRepository.findByUser_IdAndArchivedFalse(1L))
                 .thenReturn(List.of(dueInside, dueOutside, completedInside, completedOutside));
@@ -345,7 +345,7 @@ class DashboardServiceTest {
     @Test
     void attentionIgnoresCompletedRecords() {
         Dream completedDream = dream(1L, visionArea(1L));
-        completedDream.setStatus(DreamStatus.COMPLETED);
+        completedDream.changeStatus(DreamStatus.COMPLETED);
         Goal completedGoal = goal(10L, completedDream, WorkStatus.COMPLETED, BigDecimal.valueOf(100), false);
         VisionStep completedComplexStep = step(20L, completedGoal, WorkStatus.COMPLETED, BigDecimal.valueOf(100), true, false);
 
@@ -496,12 +496,12 @@ class DashboardServiceTest {
         VisionArea area = visionArea(1L);
         Dream stale = dream(1L, area);
         stale.setMoonshot(true);
-        stale.setStatus(DreamStatus.IDEA);
+        stale.changeStatus(DreamStatus.IDEA);
         Dream moving = dream(2L, area);
         moving.setMoonshot(true);
-        moving.setStatus(DreamStatus.ACTIVE);
+        moving.changeStatus(DreamStatus.ACTIVE);
         Dream standardIdea = dream(3L, area);
-        standardIdea.setStatus(DreamStatus.IDEA);
+        standardIdea.changeStatus(DreamStatus.IDEA);
 
         when(dreamRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(List.of(stale, moving, standardIdea));
 
@@ -584,5 +584,10 @@ class DashboardServiceTest {
 
         assertThat(summary.gratitude().recent()).hasSize(1);
         verify(gratitudeEntryRepository, never()).findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(1L);
+    }
+
+    /** A clock fixed at the start of the given day (UTC), so a completed task gets that completion time. */
+    private static Clock fixedAt(LocalDate day) {
+        return Clock.fixed(day.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC);
     }
 }

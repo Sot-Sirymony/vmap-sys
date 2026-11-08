@@ -5,7 +5,9 @@ import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
 import java.time.Instant;
+import lombok.Builder;
 
+@Builder
 public record ObstacleResponse(
         Long id,
         Long relatedDreamId,

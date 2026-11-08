@@ -129,7 +129,7 @@ class IssueReportServiceTest {
         when(userScope.currentUser()).thenReturn(admin);
         when(issueReportRepository.findById(10L)).thenReturn(Optional.of(stored(ReportType.BUG, IssueReportStatus.IN_PROGRESS, null)));
 
-        assertThatThrownBy(() -> service.updateStatus(10L, "RESOLVED", null))
+        assertThatThrownBy(() -> service.updateStatus(10L, IssueReportStatus.RESOLVED, null))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("A resolved bug must include a resolution note.");
     }
@@ -139,7 +139,7 @@ class IssueReportServiceTest {
         when(userScope.currentUser()).thenReturn(admin);
         when(issueReportRepository.findById(10L)).thenReturn(Optional.of(stored(ReportType.BUG, IssueReportStatus.IN_PROGRESS, null)));
 
-        IssueReportResponse response = service.updateStatus(10L, "RESOLVED", "Fixed the click handler in 4.0.1");
+        IssueReportResponse response = service.updateStatus(10L, IssueReportStatus.RESOLVED, "Fixed the click handler in 4.0.1");
 
         assertThat(response.status()).isEqualTo(IssueReportStatus.RESOLVED);
         assertThat(response.resolutionNote()).isEqualTo("Fixed the click handler in 4.0.1");
@@ -153,7 +153,7 @@ class IssueReportServiceTest {
 
     @Test
     void nonAdminCannotChangeStatus() {
-        assertThatThrownBy(() -> service.updateStatus(10L, "IN_REVIEW", null))
+        assertThatThrownBy(() -> service.updateStatus(10L, IssueReportStatus.IN_REVIEW, null))
                 .isInstanceOf(AccessDeniedException.class);
     }
 

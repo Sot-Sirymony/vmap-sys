@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -194,7 +195,7 @@ public class PermanentDeleteCascade {
         }
     }
 
-    private <T> boolean references(T related, Function<T, Long> idOf, Set<Long> deletedIds) {
+    private <T> boolean references(@Nullable T related, Function<T, Long> idOf, Set<Long> deletedIds) {
         return related != null && deletedIds.contains(idOf.apply(related));
     }
 

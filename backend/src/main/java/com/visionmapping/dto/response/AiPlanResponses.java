@@ -2,6 +2,7 @@ package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.Priority;
+import com.visionmapping.util.Copies;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,6 +22,10 @@ public final class AiPlanResponses {
 
     /** requestId (V11, PB-FR-34): the AI request to rate and report outcomes against. */
     public record VisionAreaSuggestions(List<VisionAreaSuggestion> areas, Long requestId) {
+        public VisionAreaSuggestions {
+            areas = Copies.list(areas);
+        }
+    
     }
 
     public record DreamSuggestion(String title, String description, String whyImportant, String successDefinition,
@@ -28,6 +33,10 @@ public final class AiPlanResponses {
     }
 
     public record DreamSuggestions(List<DreamSuggestion> dreams, String clarifyingQuestion, Long requestId) {
+        public DreamSuggestions {
+            dreams = Copies.list(dreams);
+        }
+    
     }
 
     public record GoalSuggestion(String title, String description, String successCriteria, LocalDate targetDate,
@@ -35,6 +44,10 @@ public final class AiPlanResponses {
     }
 
     public record GoalSuggestions(List<GoalSuggestion> goals, String clarifyingQuestion, Long requestId) {
+        public GoalSuggestions {
+            goals = Copies.list(goals);
+        }
+    
     }
 
     /**
@@ -48,6 +61,10 @@ public final class AiPlanResponses {
     }
 
     public record StepSuggestions(List<StepSuggestion> steps, String clarifyingQuestion, Long requestId) {
+        public StepSuggestions {
+            steps = Copies.list(steps);
+        }
+    
     }
 
     /** V11 (PB-FR-14): one suggested task for a complex step. */
@@ -56,6 +73,10 @@ public final class AiPlanResponses {
     }
 
     public record TaskSuggestions(List<TaskSuggestion> tasks, String clarifyingQuestion, Long requestId) {
+        public TaskSuggestions {
+            tasks = Copies.list(tasks);
+        }
+    
     }
 
     /** V11 (PB-FR-23): one of the participant's own partners who may fit a helper. */
@@ -64,6 +85,10 @@ public final class AiPlanResponses {
 
     /** V11 (PB-FR-23): a kind of helper the plan needs, and the participant's partners who match by role or support type. */
     public record HelperSuggestion(String role, String supportType, String forKey, String reason, List<PartnerMatch> matches) {
+        public HelperSuggestion {
+            matches = Copies.list(matches);
+        }
+    
     }
 
     /**
@@ -77,6 +102,12 @@ public final class AiPlanResponses {
 
     public record HelpersAndRisks(List<HelperSuggestion> helpers, List<RiskSuggestion> risks,
                                   List<com.visionmapping.dto.response.AiDailyResponses.ResourceIdea> resources, Long requestId) {
+        public HelpersAndRisks {
+            helpers = Copies.list(helpers);
+            risks = Copies.list(risks);
+            resources = Copies.list(resources);
+        }
+    
     }
 
     /**
@@ -91,6 +122,10 @@ public final class AiPlanResponses {
     }
 
     public record DraftCheck(List<DraftIssue> issues, boolean aiChecked, Long requestId) {
+        public DraftCheck {
+            issues = Copies.list(issues);
+        }
+    
     }
 
     /**
@@ -107,6 +142,10 @@ public final class AiPlanResponses {
     }
 
     public record PlanCapacity(java.math.BigDecimal hoursPerWeek, List<WeekLoad> planned) {
+        public PlanCapacity {
+            planned = Copies.list(planned);
+        }
+    
     }
 
     /** kind: MISSING_OWNER, MISSING_DATE, MISSING_RESOURCE, NO_STEPS, AFTER_GOAL_DATE, OVERDUE, VAGUE_STEP, UNREALISTIC_TIMING, GAP. */
@@ -115,6 +154,10 @@ public final class AiPlanResponses {
 
     /** aiChecked is false when AI could not run; the rule-based checks still did. requestId is null then. */
     public record PlanCheck(List<PlanIssue> issues, boolean aiChecked, Long requestId) {
+        public PlanCheck {
+            issues = Copies.list(issues);
+        }
+    
     }
 
     public record SlippingStep(Long stepId, String title, Long goalId, String goalTitle, LocalDate targetDate, int overdueReschedules) {
@@ -140,6 +183,16 @@ public final class AiPlanResponses {
     public record PlanAddResult(List<Long> goalIds, List<Long> stepIds, List<Long> taskIds, List<Long> partnerIds,
                                 List<Long> obstacleIds, List<Long> linkedPartnerIds) {
 
+        public PlanAddResult {
+            goalIds = Copies.list(goalIds);
+            stepIds = Copies.list(stepIds);
+            taskIds = Copies.list(taskIds);
+            partnerIds = Copies.list(partnerIds);
+            obstacleIds = Copies.list(obstacleIds);
+            linkedPartnerIds = Copies.list(linkedPartnerIds);
+        }
+
+
         public PlanAddResult(List<Long> goalIds, List<Long> stepIds) {
             this(goalIds, stepIds, List.of(), List.of(), List.of(), List.of());
         }
@@ -164,6 +217,10 @@ public final class AiPlanResponses {
      */
     public record PlanMetrics(int days, List<PlanFeatureMetrics> features, long finishedPlans, Double requestsPerFinishedPlan,
                               java.math.BigDecimal costPerFinishedPlan) {
+        public PlanMetrics {
+            features = Copies.list(features);
+        }
+    
     }
     // V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50).
 
@@ -176,6 +233,10 @@ public final class AiPlanResponses {
 
     /** PB-FR-49: what the panel shows for a section, with or without AI. canPropose says the section takes change cards. */
     public record SectionCheck(String surface, String section, List<SectionIssue> issues, boolean canPropose) {
+        public SectionCheck {
+            issues = Copies.list(issues);
+        }
+    
     }
 
     /**
@@ -193,6 +254,10 @@ public final class AiPlanResponses {
 
     /** requestId: the answer to rate and count outcomes against (PB-FR-48). */
     public record AssistantProposals(List<AssistantChange> changes, String note, Long requestId) {
+        public AssistantProposals {
+            changes = Copies.list(changes);
+        }
+    
     }
 
     /** PB-FR-46: what a saved change card became on the Plan page. */

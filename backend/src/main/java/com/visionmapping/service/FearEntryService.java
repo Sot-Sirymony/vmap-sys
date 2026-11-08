@@ -9,6 +9,7 @@ import com.visionmapping.entity.FearEntry;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.FearEntryRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.Comparator;
 import java.util.List;
@@ -27,8 +28,8 @@ public class FearEntryService {
     private final FearEntryRepository fearEntryRepository;
 
     @Transactional(readOnly = true)
-    public List<FearEntryResponse> listFearEntries(boolean includeArchived) {
-        return findAllForUser(fearEntryRepository, lookup.userId(), includeArchived).stream()
+    public List<FearEntryResponse> listFearEntries(ArchiveFilter archiveFilter) {
+        return findAllForUser(fearEntryRepository, lookup.userId(), archiveFilter).stream()
                 .sorted(Comparator.comparing(FearEntry::getCreatedAt).reversed())
                 .map(mapper::toResponse)
                 .toList();

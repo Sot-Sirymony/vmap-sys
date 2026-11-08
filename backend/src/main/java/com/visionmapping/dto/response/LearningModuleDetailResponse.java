@@ -2,6 +2,7 @@ package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.ModuleStage;
 import com.visionmapping.entity.enums.ModuleStatus;
+import com.visionmapping.util.Copies;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,12 @@ public record LearningModuleDetailResponse(
         String coachName,
         Instant coachRatedAt
 ) {
+
+    public LearningModuleDetailResponse {
+        fields = Copies.list(fields);
+        rows = Copies.list(rows);
+    }
+
 
     public record Field(String key, String label, String type) {
     }

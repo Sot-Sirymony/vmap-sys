@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.GratitudeEntryRequest;
 import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.service.GratitudeEntryService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class GratitudeEntryController {
 
     @GetMapping
     public List<GratitudeEntryResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listGratitudeEntries(includeArchived);
+        return service.listGratitudeEntries(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping

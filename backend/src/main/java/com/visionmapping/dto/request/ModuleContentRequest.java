@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.Map;
@@ -12,4 +13,7 @@ public record ModuleContentRequest(
         @NotBlank @Size(max = 1000) String exerciseInstructions,
         @Size(max = 50) Map<@Size(max = 60) String, @Size(max = 200) String> fieldLabels
 ) {
+    public ModuleContentRequest {
+        fieldLabels = Copies.map(fieldLabels);
+    }
 }

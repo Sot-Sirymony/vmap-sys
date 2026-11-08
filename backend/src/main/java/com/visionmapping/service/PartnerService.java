@@ -3,7 +3,6 @@ package com.visionmapping.service;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.likeTerm;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -18,6 +17,7 @@ import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
 import java.time.Instant;
@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,20 +47,20 @@ public class PartnerService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public Page<PartnerResponse> listPartners(Pageable pageable, boolean includeArchived, String search) {
-        return listPartners(pageable, includeArchived, search, null, null, null);
+    public Page<PartnerResponse> listPartners(Pageable pageable, ArchiveFilter archiveFilter, String search) {
+        return listPartners(pageable, archiveFilter, search, null, null, null);
     }
 
     @Transactional(readOnly = true)
     public Page<PartnerResponse> listPartners(
             Pageable pageable,
-            boolean includeArchived,
+            ArchiveFilter archiveFilter,
             String search,
-            PartnerSupportType supportType,
-            PartnerStatus status,
-            Long dreamId) {
+            @Nullable PartnerSupportType supportType,
+            @Nullable PartnerStatus status,
+            @Nullable Long dreamId) {
         return partnerRepository
-                .findFiltered(lookup.userId(), includeArchived, supportType, status, dreamId, likeTerm(search), pageable)
+                .findFiltered(lookup.userId(), archiveFilter.includesArchived(), supportType, status, dreamId, likeTerm(search).orElse(null), pageable)
                 .map(mapper::toResponse);
     }
 
@@ -135,9 +136,9 @@ public class PartnerService {
         return mapper.toResponse(entity);
     }
 
-    public PartnerResponse updatePartnerStatus(Long id, String status) {
+    public PartnerResponse updatePartnerStatus(Long id, PartnerStatus status) {
         Partner entity = lookup.partner(id);
-        entity.setStatus(parseEnum(PartnerStatus.class, status));
+        entity.setStatus(status);
         prepareForActive(entity);
         return mapper.toResponse(entity);
     }
@@ -147,7 +148,7 @@ public class PartnerService {
      * from Build my plan, only where the partner has no link at that level yet,
      * so an existing link is never overwritten. Returns whether anything changed.
      */
-    public boolean linkToPlanIfFree(Long partnerId, Long goalId, Long stepId) {
+    public boolean linkToPlanIfFree(Long partnerId, @Nullable Long goalId, @Nullable Long stepId) {
         Partner partner = lookup.partner(partnerId);
         boolean changed = false;
         if (stepId != null && partner.getRelatedStep() == null) {

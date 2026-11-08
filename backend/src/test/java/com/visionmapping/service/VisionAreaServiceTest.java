@@ -122,10 +122,10 @@ class VisionAreaServiceTest {
         Goal goal = goal(10L, dream);
         VisionStep activeStep = step(20L, goal);
         VisionStep archivedStep = step(21L, goal);
-        archivedStep.setArchived(true);
+        archivedStep.archive();
         TaskItem activeTask = task(30L, activeStep);
         TaskItem archivedTask = task(31L, activeStep);
-        archivedTask.setArchived(true);
+        archivedTask.archive();
         when(visionAreaRepository.findById(1L)).thenReturn(Optional.of(area));
         when(dreamRepository.findByVisionArea_IdAndUser_Id(1L, 1L)).thenReturn(List.of(dream));
         when(goalRepository.findByDream_IdAndUser_Id(1L, 1L)).thenReturn(List.of(goal));

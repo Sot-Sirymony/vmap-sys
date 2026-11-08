@@ -2,7 +2,6 @@ package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -14,12 +13,14 @@ import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.ObstacleRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +44,8 @@ public class ObstacleService {
 
     @Cacheable(CacheConfig.OBSTACLE_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<ObstacleResponse> listObstacles(boolean includeArchived) {
-        return findAllForUser(obstacleRepository, lookup.userId(), includeArchived).stream()
+    public List<ObstacleResponse> listObstacles(ArchiveFilter archiveFilter) {
+        return findAllForUser(obstacleRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -158,9 +159,9 @@ public class ObstacleService {
         return mapper.toResponse(entity);
     }
 
-    public ObstacleResponse updateObstacleStatus(Long id, String status) {
+    public ObstacleResponse updateObstacleStatus(Long id, ObstacleStatus status) {
         Obstacle entity = lookup.obstacle(id);
-        entity.setStatus(parseEnum(ObstacleStatus.class, status));
+        entity.setStatus(status);
         prepareObstacle(entity);
         return mapper.toResponse(entity);
     }
@@ -207,7 +208,7 @@ public class ObstacleService {
     }
 
     /** One alternative per line; blank lines don't count toward the minimum. */
-    private static long countAlternatives(String creativeAlternatives) {
+    private static long countAlternatives(@Nullable String creativeAlternatives) {
         if (isBlank(creativeAlternatives)) {
             return 0;
         }

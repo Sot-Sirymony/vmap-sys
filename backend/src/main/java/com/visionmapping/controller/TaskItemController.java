@@ -4,7 +4,9 @@ import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.response.TaskItemResponse;
+import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.service.TaskItemService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +32,7 @@ public class TaskItemController {
 
     @GetMapping
     public List<TaskItemResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listTasks(includeArchived);
+        return service.listTasks(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping
@@ -50,7 +52,7 @@ public class TaskItemController {
     }
 
     @PatchMapping("/{id}/status")
-    public TaskItemResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public TaskItemResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
         return service.updateTaskStatus(id, request.status());
     }
 

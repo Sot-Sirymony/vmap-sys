@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -209,6 +210,7 @@ public class AiHelpersService {
         return SEVERITIES.contains(upper) ? upper : "MEDIUM";
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (blank(value)) {
             return null;

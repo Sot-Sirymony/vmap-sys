@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.FearEntryRequest;
 import com.visionmapping.dto.response.FearEntryResponse;
 import com.visionmapping.service.FearEntryService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class FearEntryController {
 
     @GetMapping
     public List<FearEntryResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listFearEntries(includeArchived);
+        return service.listFearEntries(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping

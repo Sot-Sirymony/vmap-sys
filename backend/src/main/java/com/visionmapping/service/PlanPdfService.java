@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,7 +110,7 @@ public class PlanPdfService {
         return table;
     }
 
-    private void addRow(PdfPTable table, String work, String owner, Object date, Object status) {
+    private void addRow(PdfPTable table, String work, String owner, @Nullable Object date, Object status) {
         table.addCell(pdfFonts.phrase(work, pdfFonts.getSmall()));
         table.addCell(pdfFonts.phrase(owner, pdfFonts.getSmall()));
         table.addCell(pdfFonts.phrase(date == null ? "No date" : date.toString(), pdfFonts.getSmall()));
@@ -122,7 +123,7 @@ public class PlanPdfService {
         document.add(heading);
     }
 
-    private void addLabelled(Document document, String label, Object value) throws DocumentException {
+    private void addLabelled(Document document, String label, @Nullable Object value) throws DocumentException {
         if (value != null && !value.toString().isBlank()) {
             document.add(new Paragraph(pdfFonts.phrase(label + ": " + value, pdfFonts.getBody())));
         }

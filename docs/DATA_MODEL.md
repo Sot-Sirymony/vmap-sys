@@ -340,3 +340,64 @@ same columns), and the coach's `accurate`, `ratingNote`, `ratedAt` (AC-16).
 **V60.** **Cohort** adds `aiEnabled` (default true). **AiSettings** adds `coachingGuidelines`
 (the program's own, added after the built-in rules). **AiApprovedResource**
 (`ai_approved_resources`, AI-FR-26): `kind`, `name`, `url`, `description`, `active`.
+
+## Java coding rules (BRD 13)
+
+The backend follows *Effective Java* (3rd edition). These rules came out of BRD 13; most are checked by
+`backend/src/test/java/com/visionmapping/architecture/EffectiveJavaRulesTest.java`, so breaking one fails
+the build. Item numbers are from the book.
+
+### Entities
+
+- **The core entities keep their own rules (Items 15, 17, 76).** `VisionArea`, `Dream`, `Goal`,
+  `VisionStep` and `TaskItem` have no public setter for `status`, `progressPercent`, `archived`,
+  `blockerReason` or `completedAt`. Use the named methods: `changeStatus`, `archive`, `restore`,
+  `applyRollup` (goal, step), and `update`, `checkNewTask`, `recordProgress` (task). Core Business Rule 6
+  (Blocked needs a reason) and the "Completed means 100%" rule live in `TaskItem`. *Checked.*
+- **Check, then write.** `TaskItem.update(Details, Clock)` checks the new values before changing anything,
+  so a refused update leaves the task as it was.
+- **Identity equality (Items 10, 11).** No entity uses Lombok `@Data`, `@EqualsAndHashCode` or `@Value`.
+  *Checked.*
+- **Three-way flags.** A boxed `Boolean` field means null is a real answer ("not answered yet"). Every
+  such field says so in a comment. Use `boolean` when null has no meaning.
+- **Linked records (Items 18, 23).** Partners, obstacles, messages, reviews and progress logs implement
+  `PlanLinked`; use `linkedVisionAreaId()` instead of walking the links by hand.
+
+### Types and signatures
+
+- **Enums, not strings (Items 34, 62).** Status fields in request bodies are enums. Each status enum has a
+  `@JsonCreator fromLabel` that accepts "In Progress", "in-progress" and "IN_PROGRESS"; an unknown value
+  gets HTTP 400 listing the allowed values.
+- **No mode flags (Item 51).** Use a small enum instead of a `boolean` that changes behaviour:
+  `ArchiveFilter`, `ProgressOverride`, `SuggestionScope`. A controller may keep a `boolean` query parameter
+  and convert it once with `of(...)`.
+- **Builders for wide records (Item 2).** A response record with more than 20 fields is built with its
+  Lombok builder. Every `XResponse.builder()` chain must set every field. *Checked.*
+
+### Nulls and immutability
+
+- **No null from a public method (Items 54, 55).** Return `Optional` or an empty collection. A deliberate
+  exception, such as the `EntityLookup.optionalX(id)` link lookups, is marked `@Nullable`. *Checked.*
+- **Not null by default (Item 49).** `service`, `service.support`, `mapper`, `util` and `excel` have
+  `@NonNullApi` and `@NonNullFields` in `package-info.java`. Mark every parameter, field or return that may
+  be null with `org.springframework.lang.Nullable`.
+- **Check arguments first (Item 49).** Shared helpers start with `Objects.requireNonNull(arg, "arg")`.
+- **Records copy their collections (Items 17, 50).** A record with a `List`, `Set` or `Map` component copies
+  it in a compact constructor with `Copies.list/set/map`. Null stays null, so the JSON does not change.
+  *Checked by `RecordCopiesTest`.*
+
+### Time, exceptions and visibility
+
+- **Time from the injected `Clock` (Items 5, 59).** No `Instant.now()`, `LocalDate.now()` or
+  `System.currentTimeMillis()` outside `BaseAuditableEntity` and the three error-body writers. *Checked.*
+  Use `clock.instant()`, not `clock.millis()`: the app's clock ticks in microseconds, and on Java 17
+  `millis()` of such a clock divides by zero.
+- **Exceptions (Items 71, 73, 75, 77).** No `throws Exception`. Wrap a low-level failure in an exception
+  that fits, keep the cause, and say what failed (for example the font file's name). A broad `catch` needs a
+  comment saying why it is safe, must log or rethrow, and must be covered by a test.
+- **Compiler warnings fail the build (Item 27).** `pom.xml` compiles with `-Xlint:all` (except
+  `processing` and `classfile`) and `failOnWarning`. A kept `@SuppressWarnings` sits on the smallest scope
+  with a comment.
+- **Small visibility (Item 15).** A class used only inside its package is package-private, like
+  `ReminderJob`, `DashboardTrend` and `DashboardAttention`. Do not make Spring beans that are proxied
+  (`@Transactional`, `@Cacheable`) or JPA entities `final`.

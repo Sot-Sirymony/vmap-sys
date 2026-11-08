@@ -2,7 +2,6 @@ package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -16,13 +15,16 @@ import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
+import com.visionmapping.mapper.ScheduleOverrun;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.GoalRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveCascade;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
+import com.visionmapping.service.support.ProgressOverride;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -57,12 +59,13 @@ public class GoalService {
 
     @Cacheable(CacheConfig.GOAL_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<GoalResponse> listGoals(boolean includeArchived) {
-        return findAllForUser(goalRepository, lookup.userId(), includeArchived).stream()
+    public List<GoalResponse> listGoals(ArchiveFilter archiveFilter) {
+        return findAllForUser(goalRepository, lookup.userId(), archiveFilter).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    /** CLAUDE.md Core Business Rule 2: the new record belongs to one dream, which must be the caller's own. */
     public GoalResponse createGoal(GoalRequest request) {
         AppUser user = lookup.currentUser();
         Dream dream = lookup.dream(request.dreamId());
@@ -109,20 +112,20 @@ public class GoalService {
         entity.setPriority(request.priority());
         entity.setLetterRank(request.letterRank());
         entity.setTargetDate(request.targetDate());
-        entity.setStatus(request.status());
+        entity.changeStatus(request.status());
         entity.setMoonshot(request.moonshot());
         entity.setMoonshotVision(request.moonshotVision());
         entity.setScheduleMode(request.scheduleMode());
-        validateGoalCompletion(entity, false);
+        validateGoalCompletion(entity, ProgressOverride.NONE);
         validateScheduleCascade(entity);
         return toResponse(entity);
     }
 
-    public GoalResponse updateGoalStatus(Long id, String status, boolean manualOverride) {
+    public GoalResponse updateGoalStatus(Long id, WorkStatus status, ProgressOverride override) {
         Goal entity = lookup.goal(id);
-        entity.setStatus(parseEnum(WorkStatus.class, status));
-        validateGoalCompletion(entity, manualOverride);
-        if (manualOverride) {
+        entity.changeStatus(status);
+        validateGoalCompletion(entity, override);
+        if (override.isManual()) {
             entity.setManualProgressOverride(true);
         }
         return toResponse(entity);
@@ -145,7 +148,7 @@ public class GoalService {
 
     public void archiveGoal(Long id) {
         Goal entity = lookup.goal(id);
-        entity.setArchived(true);
+        entity.archive();
         archiveCascade.archiveStepsUnder(entity.getId());
     }
 
@@ -164,8 +167,9 @@ public class GoalService {
         permanentDeleteCascade.deleteGoal(goal);
     }
 
-    private void validateGoalCompletion(Goal goal, boolean manualOverride) {
-        if (goal.getStatus() != WorkStatus.COMPLETED || manualOverride) {
+    /** CLAUDE.md Core Business Rule 8: Completed only when every step is, unless the participant overrides. */
+    private void validateGoalCompletion(Goal goal, ProgressOverride override) {
+        if (goal.getStatus() != WorkStatus.COMPLETED || override.isManual()) {
             return;
         }
         boolean allStepsComplete = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), goal.getUser().getId()).stream()
@@ -206,9 +210,9 @@ public class GoalService {
         boolean overrun = entity.getScheduleMode() == ScheduleMode.TOP_DOWN_FIXED
                 && entity.getTargetDate() != null && latestStepDate != null
                 && entity.getTargetDate().isBefore(latestStepDate);
-        String detail = overrun
-                ? "A step's target date (%s) is after this goal's fixed target date (%s).".formatted(latestStepDate, entity.getTargetDate())
-                : null;
-        return mapper.toResponse(entity, overrun, detail);
+        return mapper.toResponse(entity, overrun
+                ? ScheduleOverrun.because("A step's target date (%s) is after this goal's fixed target date (%s)."
+                        .formatted(latestStepDate, entity.getTargetDate()))
+                : ScheduleOverrun.NONE);
     }
 }

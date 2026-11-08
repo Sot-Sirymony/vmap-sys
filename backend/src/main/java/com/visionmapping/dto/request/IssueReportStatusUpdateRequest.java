@@ -1,6 +1,7 @@
 package com.visionmapping.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import com.visionmapping.entity.enums.IssueReportStatus;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -9,7 +10,7 @@ import jakarta.validation.constraints.Size;
  * in the service.
  */
 public record IssueReportStatusUpdateRequest(
-        @NotBlank @Size(max = 40) String status,
+        @NotNull IssueReportStatus status,
         @Size(max = 3000) String resolutionNote
 ) {
 }

@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -81,7 +82,7 @@ public class LoginAttemptLimiter {
      *
      * @throws TooManyRequestsException when the email or the caller is locked
      */
-    public void checkAllowed(String email, String clientIp) {
+    public void checkAllowed(@Nullable String email, @Nullable String clientIp) {
         Instant now = clock.instant();
         refuseIfLocked(accountKey(email), now,
                 "Too many sign-in attempts for this email. Try again in %d minutes, or reset your password.");
@@ -91,7 +92,7 @@ public class LoginAttemptLimiter {
         }
     }
 
-    public void recordFailure(String email, String clientIp) {
+    public void recordFailure(@Nullable String email, @Nullable String clientIp) {
         Instant now = clock.instant();
         fail(accountKey(email), maxFailuresPerAccount, Duration.ofMinutes(lockMinutes), now);
         if (hasText(clientIp)) {
@@ -140,7 +141,7 @@ public class LoginAttemptLimiter {
         return entries.size() < before;
     }
 
-    private static String accountKey(String email) {
+    private static String accountKey(@Nullable String email) {
         return "email:" + (email == null ? "" : email.trim().toLowerCase());
     }
 
@@ -148,7 +149,7 @@ public class LoginAttemptLimiter {
         return "ip:" + clientIp.trim();
     }
 
-    private static boolean hasText(String value) {
+    private static boolean hasText(@Nullable String value) {
         return value != null && !value.isBlank();
     }
 

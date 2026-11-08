@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,7 +63,7 @@ public class PlanShareService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional(readOnly = true)
-    public List<PlanShareResponse> list(Long dreamId) {
+    public List<PlanShareResponse> list(@Nullable Long dreamId) {
         Long userId = lookup.userId();
         List<PlanShare> shares = dreamId == null
                 ? planShareRepository.findByUser_IdOrderByCreatedAtDesc(userId)
@@ -138,7 +139,7 @@ public class PlanShareService {
                 dream.getTargetDate(), averageProgress(goals), share.getExpiresAt(), sharedGoals);
     }
 
-    private PlanShareResponse toResponse(PlanShare share, String token) {
+    private PlanShareResponse toResponse(PlanShare share, @Nullable String token) {
         return new PlanShareResponse(share.getId(), share.getDream().getId(), share.getDream().getTitle(),
                 share.getPartner() == null ? null : share.getPartner().getId(),
                 share.getPartner() == null ? null : share.getPartner().getName(),
@@ -156,13 +157,14 @@ public class PlanShareService {
                 .divide(BigDecimal.valueOf(goals.size()), 0, RoundingMode.HALF_UP);
     }
 
-    private static String firstName(String fullName) {
+    private static String firstName(@Nullable String fullName) {
         String trimmed = fullName == null ? "" : fullName.trim();
         int space = trimmed.indexOf(' ');
         return space < 0 ? trimmed : trimmed.substring(0, space);
     }
 
-    private static String blankToNull(String value) {
+    @Nullable
+    private static String blankToNull(@Nullable String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 

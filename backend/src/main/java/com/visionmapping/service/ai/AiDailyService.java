@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -308,6 +309,7 @@ public class AiDailyService {
         return Math.max(1, Math.min(5, value));
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (value == null || value.isBlank()) {
             return null;

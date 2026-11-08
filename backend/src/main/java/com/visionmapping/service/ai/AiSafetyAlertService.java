@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,15 +39,16 @@ public class AiSafetyAlertService {
     /** Returns true when a coach was alerted, false when it went to the administrators. */
     public boolean raise(Long participantId) {
         AppUser participant = appUserRepository.findById(participantId).orElseThrow();
-        AppUser coach = coachOf(participant);
+        AppUser coach = coachOf(participant).orElse(null);
         repository.save(AiSafetyAlert.builder().user(participant).coach(coach).alertType("CRISIS").build());
         log.warn("AI safety alert raised for user {} ({})", participant.getId(), coach == null ? "no coach" : "coach notified");
         return coach != null;
     }
 
-    public static AppUser coachOf(AppUser participant) {
+    /** The coach of the participant's active cohort; empty when there is none (Item 55). */
+    public static Optional<AppUser> coachOf(AppUser participant) {
         Cohort cohort = participant.getCohort();
-        return cohort == null || cohort.isArchived() ? null : cohort.getCoach();
+        return cohort == null || cohort.isArchived() ? Optional.empty() : Optional.ofNullable(cohort.getCoach());
     }
 
     @Transactional(readOnly = true)

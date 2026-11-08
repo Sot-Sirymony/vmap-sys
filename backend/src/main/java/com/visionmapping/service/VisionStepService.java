@@ -2,7 +2,6 @@ package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -19,9 +18,11 @@ import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveCascade;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
+import com.visionmapping.service.support.ProgressOverride;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -33,6 +34,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,12 +60,13 @@ public class VisionStepService {
 
     @Cacheable(CacheConfig.STEP_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<VisionStepResponse> listSteps(boolean includeArchived) {
-        return findAllForUser(visionStepRepository, lookup.userId(), includeArchived).stream()
+    public List<VisionStepResponse> listSteps(ArchiveFilter archiveFilter) {
+        return findAllForUser(visionStepRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
 
+    /** CLAUDE.md Core Business Rule 3: the new record belongs to one goal, which must be the caller's own. */
     public VisionStepResponse createStep(VisionStepRequest request) {
         AppUser user = lookup.currentUser();
         Goal goal = lookup.goal(request.goalId());
@@ -115,7 +118,7 @@ public class VisionStepService {
             entity.setOverdueReschedules(entity.getOverdueReschedules() + 1);
         }
         entity.setTargetDate(request.targetDate());
-        entity.setStatus(request.status());
+        entity.changeStatus(request.status());
         if (request.resources() != null) {
             entity.setResources(blankToNull(request.resources()));
         }
@@ -136,11 +139,11 @@ public class VisionStepService {
         return mapper.toResponse(entity);
     }
 
-    public VisionStepResponse updateStepStatus(Long id, String status, boolean manualOverride) {
+    public VisionStepResponse updateStepStatus(Long id, WorkStatus status, ProgressOverride override) {
         VisionStep entity = lookup.step(id);
-        entity.setStatus(parseEnum(WorkStatus.class, status));
+        entity.changeStatus(status);
         validateComplexStep(entity);
-        if (manualOverride) {
+        if (override.isManual()) {
             entity.setManualProgressOverride(true);
         }
         progress.recalculateGoal(entity.getGoal());
@@ -166,7 +169,7 @@ public class VisionStepService {
 
     public void archiveStep(Long id) {
         VisionStep entity = lookup.step(id);
-        entity.setArchived(true);
+        entity.archive();
         archiveCascade.archiveTasksUnder(entity.getId());
         progress.recalculateGoal(entity.getGoal());
     }
@@ -179,7 +182,7 @@ public class VisionStepService {
     public void restoreStep(Long id) {
         VisionStep entity = lookup.step(id);
         archiveCascade.unarchiveGoalChain(entity.getGoal());
-        entity.setArchived(false);
+        entity.restore();
         // BR-13: the step's ideal partner profile follows the step back.
         archiveCascade.setProfileArchived(entity.getId(), false);
         progress.recalculateGoal(entity.getGoal());
@@ -195,7 +198,8 @@ public class VisionStepService {
      * V11 (PB-FR-12): the step this one starts after must be the caller's own
      * (another user's answers 404), under the same goal, and not the step itself.
      */
-    private VisionStep startsAfter(Long stepId, Goal goal, Long ownId) {
+    @Nullable
+    private VisionStep startsAfter(@Nullable Long stepId, Goal goal, Long ownId) {
         if (stepId == null || stepId == 0) {
             return null;
         }
@@ -206,6 +210,7 @@ public class VisionStepService {
         return earlier;
     }
 
+    /** CLAUDE.md Core Business Rule 7: a complex step cannot be completed before it has at least one task. */
     private void validateComplexStep(VisionStep step) {
         if (step.isComplex() && step.getStatus() == WorkStatus.COMPLETED
                 && taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), step.getUser().getId()).isEmpty()) {
@@ -232,7 +237,8 @@ public class VisionStepService {
         }
     }
 
-    private static String blankToNull(String value) {
+    @Nullable
+    private static String blankToNull(@Nullable String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 }

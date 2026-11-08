@@ -29,7 +29,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "obstacles")
-public class Obstacle extends BaseAuditableEntity {
+public class Obstacle extends BaseAuditableEntity implements PlanLinked {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -129,7 +129,8 @@ public class Obstacle extends BaseAuditableEntity {
 
     // FR-62.1: a four-item conduct checklist, required before a PARTNER-type
     // obstacle can be marked Resolved (BR-51) — completeness gates the
-    // transition, never the answers themselves.
+    // transition, never the answers themselves. Boolean, not boolean: null
+    // means "not answered yet".
     @Column(name = "conflict_no_character_attacks")
     private Boolean conflictNoCharacterAttacks;
 

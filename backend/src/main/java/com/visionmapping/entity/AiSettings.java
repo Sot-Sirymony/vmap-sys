@@ -59,6 +59,7 @@ public class AiSettings extends BaseAuditableEntity {
     @Column(name = "last_test_at")
     private Instant lastTestAt;
 
+    /** Null until the key has been tested once. */
     @Column(name = "last_test_ok")
     private Boolean lastTestOk;
 

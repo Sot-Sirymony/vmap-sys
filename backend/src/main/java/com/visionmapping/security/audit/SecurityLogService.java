@@ -6,6 +6,7 @@ import com.visionmapping.entity.SecurityEvent;
 import com.visionmapping.repository.SecurityEventRepository;
 import com.visionmapping.security.Roles;
 import com.visionmapping.service.support.EntityLookup;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -25,6 +26,7 @@ public class SecurityLogService {
     private final SecurityEventRepository repository;
     private final SecurityAlertService alerts;
     private final EntityLookup lookup;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public SecurityLogResponse search(SecurityEventType type, SecurityOutcome outcome, Long actorId,
@@ -32,7 +34,7 @@ public class SecurityLogService {
         Roles.requireAdmin(lookup.currentUser(), "Only an administrator can read the security log.");
         int pageSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         Instant start = from == null ? Instant.EPOCH : from.atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant end = to == null ? Instant.now().plusSeconds(60) : to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        Instant end = to == null ? clock.instant().plusSeconds(60) : to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         Page<SecurityEvent> found = repository.search(type, outcome, actorId, start, end,
                 PageRequest.of(Math.max(0, page), pageSize));
         return new SecurityLogResponse(

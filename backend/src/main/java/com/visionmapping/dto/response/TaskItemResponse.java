@@ -6,7 +6,9 @@ import com.visionmapping.entity.enums.WorkStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import lombok.Builder;
 
+@Builder
 public record TaskItemResponse(
         Long id,
         String code,

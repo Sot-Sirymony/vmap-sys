@@ -25,6 +25,7 @@ import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DayOfWeek;
@@ -38,6 +39,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -115,6 +117,12 @@ public class PlanDraftCheckService {
 
     /** The draft described for Claude, its titles and types by key, and the rule issues. */
     record Rules(String records, Map<String, String> titles, Map<String, String> types, List<DraftIssue> issues) {
+        public Rules {
+            titles = Copies.map(titles);
+            types = Copies.map(types);
+            issues = Copies.list(issues);
+        }
+    
     }
 
     /**
@@ -355,6 +363,7 @@ public class PlanDraftCheckService {
         return Optional.ofNullable(content.goals()).orElse(List.of());
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (blank(value)) {
             return null;

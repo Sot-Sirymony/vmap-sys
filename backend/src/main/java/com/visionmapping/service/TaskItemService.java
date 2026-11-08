@@ -1,9 +1,7 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
-import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -19,11 +17,11 @@ import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.ProgressLogRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.service.support.ArchiveCascade;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -36,15 +34,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The executable unit of work. Every change to a task rolls its progress up
- * into its step and goal, records a progress-log entry when the percentage
- * moves, and enforces the blocked-needs-a-reason and completed-is-100 rules.
+ * into its step and goal and records a progress-log entry when the percentage
+ * moves. The blocked-needs-a-reason and completed-is-100 rules live in
+ * {@link TaskItem} itself, so no caller can skip them.
  */
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class TaskItemService {
-
-    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100).setScale(2, RoundingMode.HALF_UP);
 
     private final EntityLookup lookup;
     private final ProgressCalculator progress;
@@ -57,12 +54,13 @@ public class TaskItemService {
 
     @Cacheable(CacheConfig.TASK_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<TaskItemResponse> listTasks(boolean includeArchived) {
-        return findAllForUser(taskItemRepository, lookup.userId(), includeArchived).stream()
+    public List<TaskItemResponse> listTasks(ArchiveFilter archiveFilter) {
+        return findAllForUser(taskItemRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
 
+    /** CLAUDE.md Core Business Rule 4: the new record belongs to one step, which must be the caller's own. */
     public TaskItemResponse createTask(TaskItemRequest request) {
         AppUser user = lookup.currentUser();
         VisionStep step = lookup.step(request.stepId());
@@ -86,7 +84,7 @@ public class TaskItemService {
                 .energyDemand(request.energyDemand())
                 .sortOrder(Math.toIntExact(taskItemRepository.countByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId())))
                 .build();
-        prepareTask(entity);
+        entity.checkNewTask(clock);
         TaskItem saved = taskItemRepository.save(entity);
         progress.recalculateStep(step);
         return mapper.toResponse(saved);
@@ -102,33 +100,20 @@ public class TaskItemService {
         TaskItem entity = lookup.task(id);
         BigDecimal progressBefore = entity.getProgressPercent();
         VisionStep oldStep = entity.getStep();
-        entity.setStep(lookup.step(request.stepId()));
-        entity.setTitle(request.title());
-        entity.setDescription(request.description());
-        entity.setOwner(request.owner());
-        entity.setPriority(request.priority());
-        entity.setLetterRank(request.letterRank());
-        entity.setStartDate(request.startDate());
-        entity.setDueDate(request.dueDate());
-        entity.setStatus(request.status());
-        entity.setProgressPercent(progress.normalizeProgress(request.progressPercent()));
-        entity.setEstimatedHours(request.estimatedHours());
-        entity.setActualHours(request.actualHours());
-        entity.setBlockerReason(request.blockerReason());
-        entity.setNextAction(request.nextAction());
-        entity.setEnergyDemand(request.energyDemand());
-        prepareTask(entity);
+        entity.update(new TaskItem.Details(lookup.step(request.stepId()), request.title(), request.description(),
+                request.owner(), request.priority(), request.letterRank(), request.startDate(), request.dueDate(),
+                request.status(), progress.normalizeProgress(request.progressPercent()), request.estimatedHours(),
+                request.actualHours(), request.blockerReason(), request.nextAction(), request.energyDemand()), clock);
         progress.recalculateStep(oldStep);
         progress.recalculateStep(entity.getStep());
         logProgressChange(entity, progressBefore);
         return mapper.toResponse(entity);
     }
 
-    public TaskItemResponse updateTaskStatus(Long id, String status) {
+    public TaskItemResponse updateTaskStatus(Long id, WorkStatus status) {
         TaskItem entity = lookup.task(id);
         BigDecimal progressBefore = entity.getProgressPercent();
-        entity.setStatus(parseEnum(WorkStatus.class, status));
-        prepareTask(entity);
+        entity.changeStatus(status, clock);
         progress.recalculateStep(entity.getStep());
         logProgressChange(entity, progressBefore);
         return mapper.toResponse(entity);
@@ -151,15 +136,15 @@ public class TaskItemService {
 
     public void archiveTask(Long id) {
         TaskItem entity = lookup.task(id);
-        entity.setArchived(true);
+        entity.archive();
         progress.recalculateStep(entity.getStep());
     }
 
     public void restoreTask(Long id) {
         TaskItem entity = lookup.task(id);
         archiveCascade.unarchiveGoalChain(entity.getStep().getGoal());
-        entity.getStep().setArchived(false);
-        entity.setArchived(false);
+        entity.getStep().restore();
+        entity.restore();
         progress.recalculateStep(entity.getStep());
     }
 
@@ -167,20 +152,6 @@ public class TaskItemService {
         TaskItem task = lookup.task(id);
         requireArchived(task.isArchived(), "Task");
         permanentDeleteCascade.deleteTask(task);
-    }
-
-    private void prepareTask(TaskItem entity) {
-        if (entity.getStatus() == WorkStatus.BLOCKED && isBlank(entity.getBlockerReason())) {
-            throw new BusinessRuleException("Blocked tasks must include a blocker reason.");
-        }
-        if (entity.getStatus() == WorkStatus.COMPLETED) {
-            entity.setProgressPercent(ONE_HUNDRED);
-            if (entity.getCompletedAt() == null) {
-                entity.setCompletedAt(Instant.now(clock));
-            }
-        } else {
-            entity.setCompletedAt(null);
-        }
     }
 
     private void logProgressChange(TaskItem entity, BigDecimal progressBefore) {

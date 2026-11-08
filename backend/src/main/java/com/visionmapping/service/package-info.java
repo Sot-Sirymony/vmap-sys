@@ -1,0 +1,13 @@
+/**
+ * Business logic for the Vision Mapping method.
+ *
+ * <p>Parameters, return values and fields are non-null unless marked
+ * {@code @Nullable} (BRD 13 EJ-FR-19, Effective Java Item 49). Tools such as
+ * the IDE and SonarQube use this to find a null passed where it is not allowed.
+ */
+@NonNullApi
+@NonNullFields
+package com.visionmapping.service;
+
+import org.springframework.lang.NonNullApi;
+import org.springframework.lang.NonNullFields;

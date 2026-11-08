@@ -36,6 +36,7 @@ import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
+import com.visionmapping.service.support.ProgressOverride;
 import com.visionmapping.service.support.Rollups;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
@@ -132,7 +133,7 @@ class VisionStepServiceTest {
         when(visionStepRepository.findById(20L)).thenReturn(Optional.of(complexStep));
         when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.updateStepStatus(20L, "COMPLETED", false))
+        assertThatThrownBy(() -> service.updateStepStatus(20L, WorkStatus.COMPLETED, ProgressOverride.NONE))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("A complex step must have at least one task before it can be completed.");
     }
@@ -146,7 +147,7 @@ class VisionStepServiceTest {
         when(taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(20L, 1L)).thenReturn(List.of(existingTask));
         when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(complexStep)));
 
-        service.updateStepStatus(20L, "COMPLETED", false);
+        service.updateStepStatus(20L, WorkStatus.COMPLETED, ProgressOverride.NONE);
 
         assertThat(complexStep.getStatus()).isEqualTo(WorkStatus.COMPLETED);
     }

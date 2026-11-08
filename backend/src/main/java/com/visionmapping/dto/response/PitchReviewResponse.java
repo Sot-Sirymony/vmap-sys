@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -14,4 +15,7 @@ public record PitchReviewResponse(
         String coachFeedback,
         String coachName,
         Instant coachRatedAt) {
+    public PitchReviewResponse {
+        rows = Copies.list(rows);
+    }
 }

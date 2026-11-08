@@ -10,7 +10,9 @@ import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.GratitudeEntryRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.util.Copies;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -41,8 +43,8 @@ public class GratitudeEntryService {
 
     @Cacheable(CacheConfig.GRATITUDE_ENTRY_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<GratitudeEntryResponse> listGratitudeEntries(boolean includeArchived) {
-        return findAllForUser(gratitudeEntryRepository, lookup.userId(), includeArchived).stream()
+    public List<GratitudeEntryResponse> listGratitudeEntries(ArchiveFilter archiveFilter) {
+        return findAllForUser(gratitudeEntryRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
     }
@@ -106,6 +108,10 @@ public class GratitudeEntryService {
     }
 
     public record GratitudeSummary(long countThisWeek, List<GratitudeEntryResponse> recent) {
+        public GratitudeSummary {
+            recent = Copies.list(recent);
+        }
+    
     }
 
     private GratitudeEntry entry(Long id) {

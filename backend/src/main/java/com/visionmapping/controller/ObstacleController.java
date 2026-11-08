@@ -3,7 +3,9 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ObstacleResponse;
+import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.service.ObstacleService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ public class ObstacleController {
 
     @GetMapping
     public List<ObstacleResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listObstacles(includeArchived);
+        return service.listObstacles(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping
@@ -54,7 +56,7 @@ public class ObstacleController {
     }
 
     @PatchMapping("/{id}/status")
-    public ObstacleResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public ObstacleResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<ObstacleStatus> request) {
         return service.updateObstacleStatus(id, request.status());
     }
 

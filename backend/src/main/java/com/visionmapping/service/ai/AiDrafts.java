@@ -1,6 +1,7 @@
 package com.visionmapping.service.ai;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
+import com.visionmapping.util.Copies;
 import java.util.List;
 
 /**
@@ -22,6 +23,10 @@ public final class AiDrafts {
     }
 
     public record AreaDrafts(List<AreaDraft> areas) {
+        public AreaDrafts {
+            areas = Copies.list(areas);
+        }
+    
     }
 
     public record DreamDraft(
@@ -38,6 +43,10 @@ public final class AiDrafts {
     public record DreamDrafts(
             List<DreamDraft> dreams,
             @JsonPropertyDescription("One question to ask first when too little is known to suggest dreams; empty otherwise") String clarifyingQuestion) {
+        public DreamDrafts {
+            dreams = Copies.list(dreams);
+        }
+    
     }
 
     public record GoalDraft(
@@ -52,6 +61,10 @@ public final class AiDrafts {
     public record GoalDrafts(
             List<GoalDraft> goals,
             @JsonPropertyDescription("One question to ask first when the dream is too vague to plan; empty otherwise") String clarifyingQuestion) {
+        public GoalDrafts {
+            goals = Copies.list(goals);
+        }
+    
     }
 
     public record StepDraft(
@@ -78,6 +91,10 @@ public final class AiDrafts {
     public record StepDrafts(
             List<StepDraft> steps,
             @JsonPropertyDescription("One question to ask first when the goal is too vague to plan; empty otherwise") String clarifyingQuestion) {
+        public StepDrafts {
+            steps = Copies.list(steps);
+        }
+    
     }
 
     // V11 Phase 4: the task builder (PB-FR-14).
@@ -94,6 +111,10 @@ public final class AiDrafts {
     public record TaskDrafts(
             List<TaskDraft> tasks,
             @JsonPropertyDescription("One question to ask first when the step is too vague to break down; empty otherwise") String clarifyingQuestion) {
+        public TaskDrafts {
+            tasks = Copies.list(tasks);
+        }
+    
     }
 
     // V11 Phase 5: helpers, risks and resources (PB-FR-23 to PB-FR-26, PB-FR-40).
@@ -119,6 +140,12 @@ public final class AiDrafts {
             @JsonPropertyDescription("Up to five kinds of helpers the plan needs") List<HelperDraft> helpers,
             @JsonPropertyDescription("Up to five likely obstacles") List<RiskDraft> risks,
             @JsonPropertyDescription("Up to six resources") List<ResourceDraft> resources) {
+        public HelpersRisksDraft {
+            helpers = Copies.list(helpers);
+            risks = Copies.list(risks);
+            resources = Copies.list(resources);
+        }
+    
     }
 
     // V11 Phase 6: the draft check and its AI fixes (PB-FR-28, PB-FR-29).
@@ -131,6 +158,10 @@ public final class AiDrafts {
     }
 
     public record DraftReview(List<DraftIssueDraft> issues) {
+        public DraftReview {
+            issues = Copies.list(issues);
+        }
+    
     }
 
     public record FixDraft(
@@ -159,6 +190,10 @@ public final class AiDrafts {
     }
 
     public record PlanReview(List<IssueDraft> issues) {
+        public PlanReview {
+            issues = Copies.list(issues);
+        }
+    
     }
 
     public record RescueDraft(
@@ -180,6 +215,10 @@ public final class AiDrafts {
     public record NextStepDraft(
             @JsonPropertyDescription("Best first, at most three") List<PickDraft> picks,
             @JsonPropertyDescription("One short encouraging line; empty if nothing fits") String note) {
+        public NextStepDraft {
+            picks = Copies.list(picks);
+        }
+    
     }
 
     public record WeeklyReviewDraft(
@@ -213,6 +252,10 @@ public final class AiDrafts {
     }
 
     public record ResourceDrafts(List<ResourceDraft> resources) {
+        public ResourceDrafts {
+            resources = Copies.list(resources);
+        }
+    
     }
 
     // Phase 7: module help.
@@ -223,6 +266,10 @@ public final class AiDrafts {
     }
 
     public record RowDraft(List<FieldValue> values) {
+        public RowDraft {
+            values = Copies.list(values);
+        }
+    
     }
 
     public record ModuleHelpDraft(
@@ -231,6 +278,12 @@ public final class AiDrafts {
             @JsonPropertyDescription("Draft answers for the exercise, at most three rows; empty when not asked for") List<RowDraft> rows,
             @JsonPropertyDescription("Two or three sentences of honest, kind feedback; empty when not asked for") String feedback,
             @JsonPropertyDescription("Up to three specific improvements; empty when not asked for") List<String> improvements) {
+        public ModuleHelpDraft {
+            questions = Copies.list(questions);
+            rows = Copies.list(rows);
+            improvements = Copies.list(improvements);
+        }
+    
     }
 
     public record AssessmentExplanationDraft(
@@ -273,10 +326,18 @@ public final class AiDrafts {
             @JsonPropertyDescription("What the participant does to complete it, one or two sentences") String exerciseInstructions,
             @JsonPropertyDescription("Two or three short worked examples about made-up people") String examples,
             @JsonPropertyDescription("Three to five quiz questions with answers") List<QuizItem> quiz) {
+        public ModuleContentDraft {
+            quiz = Copies.list(quiz);
+        }
+    
     }
 
     public record TranslationDraft(
             @JsonPropertyDescription("One translation per input text, in the same order") List<String> translations) {
+        public TranslationDraft {
+            translations = Copies.list(translations);
+        }
+    
     }
     // V11 Phase 7: the plan assistant's proposed changes (PB-FR-46).
 
@@ -298,5 +359,9 @@ public final class AiDrafts {
     public record AssistantChangeDrafts(
             List<AssistantChangeDraft> changes,
             @JsonPropertyDescription("One or two sentences for the participant about these changes, or why none are needed") String note) {
+        public AssistantChangeDrafts {
+            changes = Copies.list(changes);
+        }
+    
     }
 }

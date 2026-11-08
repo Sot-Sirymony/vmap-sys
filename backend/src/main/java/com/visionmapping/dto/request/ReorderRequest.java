@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -17,4 +18,7 @@ public record ReorderRequest(
         @NotNull Long parentId,
         @NotEmpty @Size(max = 1000) List<Long> orderedIds
 ) {
+    public ReorderRequest {
+        orderedIds = Copies.list(orderedIds);
+    }
 }

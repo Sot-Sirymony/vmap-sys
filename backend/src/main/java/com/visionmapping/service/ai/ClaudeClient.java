@@ -2,6 +2,7 @@ package com.visionmapping.service.ai;
 
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.core.JsonSchemaLocalValidation;
 import com.anthropic.core.JsonValue;
 import com.anthropic.errors.AnthropicInvalidDataException;
 import com.anthropic.errors.AnthropicIoException;
@@ -15,6 +16,7 @@ import com.anthropic.models.beta.messages.BetaStopReason;
 import com.anthropic.models.beta.messages.BetaTextBlock;
 import com.anthropic.models.beta.messages.MessageCreateParams;
 import com.anthropic.models.beta.messages.StructuredMessage;
+import com.anthropic.models.beta.messages.StructuredOutputConfig;
 import com.anthropic.models.beta.messages.StructuredTextBlock;
 import com.visionmapping.exception.AiUnavailableException;
 import java.time.Duration;
@@ -125,7 +127,10 @@ public class ClaudeClient {
         }
         try {
             StructuredMessage<T> message = client(apiKey).beta().messages()
-                    .create(params.outputConfig(type, BetaOutputConfig.Effort.MEDIUM).build());
+                    .create(params.outputConfig(StructuredOutputConfig.<T>builder()
+                            .format(type, JsonSchemaLocalValidation.YES)
+                            .effort(BetaOutputConfig.Effort.MEDIUM)
+                            .build()).build());
             boolean refused = message.stopReason().map(BetaStopReason.REFUSAL::equals).orElse(false);
             T value = refused ? null : message.content().stream()
                     .flatMap(block -> block.text().stream())

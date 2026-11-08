@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
+import org.springframework.lang.Nullable;
 
 /**
  * Typed, forgiving access to one spreadsheet row. Wraps Apache POI so the
@@ -59,6 +60,7 @@ class RowReader {
         };
     }
 
+    @Nullable
     String textOrNull(int column) {
         String value = text(column);
         return value.isEmpty() ? null : value;
@@ -72,6 +74,7 @@ class RowReader {
         return value;
     }
 
+    @Nullable
     Long referenceOrNull(int column) {
         String value = text(column);
         return value.isEmpty() ? null : parseReference(value, "reference in column " + (column + 1));
@@ -81,6 +84,7 @@ class RowReader {
         return parseReference(requiredText(column, field), field);
     }
 
+    @Nullable
     LocalDate dateOrNull(int column) {
         String value = text(column);
         if (value.isEmpty()) {

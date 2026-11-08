@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -186,6 +187,7 @@ public class AiAdminService {
         return Roles.requireAdmin(lookup.currentUser(), "Only an administrator can change AI settings.");
     }
 
+    @Nullable
     private static String limit(String value, int max) {
         if (value == null || value.isBlank()) {
             return null;

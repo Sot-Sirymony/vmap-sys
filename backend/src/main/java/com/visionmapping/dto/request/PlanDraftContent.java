@@ -4,6 +4,7 @@ import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.Severity;
+import com.visionmapping.util.Copies;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -31,6 +32,14 @@ public record PlanDraftContent(
         // V11 Phase 5 (PB-FR-23 to PB-FR-25): helpers to link or add as partners, and risks to add as obstacles.
         @Size(max = 10) List<@NotNull @Valid DraftHelper> helpers,
         @Size(max = 10) List<@NotNull @Valid DraftRisk> risks) {
+
+    public PlanDraftContent {
+        goals = Copies.list(goals);
+        clarifications = Copies.list(clarifications);
+        helpers = Copies.list(helpers);
+        risks = Copies.list(risks);
+    }
+
 
     /**
      * A helper: partnerId links one of the participant's partners; without it a
@@ -78,6 +87,10 @@ public record PlanDraftContent(
             boolean edited,
             boolean locked,
             @Size(max = 25) List<@NotNull @Valid DraftStep> steps) {
+        public DraftGoal {
+            steps = Copies.list(steps);
+        }
+    
     }
 
     public record DraftStep(
@@ -97,6 +110,10 @@ public record PlanDraftContent(
             // V11 Phase 4 (PB-FR-12): effort, and the key of the step in this goal it starts after.
             @DecimalMin("0.00") @DecimalMax("999.99") BigDecimal estimatedHours,
             @Size(max = 40) String startsAfterKey) {
+        public DraftStep {
+            tasks = Copies.list(tasks);
+        }
+    
     }
 
     public record DraftTask(

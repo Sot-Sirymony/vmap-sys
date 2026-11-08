@@ -6,8 +6,10 @@ import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.DreamResponse;
+import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.service.DreamService;
 import com.visionmapping.service.PlanPdfService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +39,7 @@ public class DreamController {
 
     @GetMapping
     public List<DreamResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listDreams(includeArchived);
+        return service.listDreams(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping
@@ -57,7 +59,7 @@ public class DreamController {
     }
 
     @PatchMapping("/{id}/status")
-    public DreamResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public DreamResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<DreamStatus> request) {
         return service.updateDreamStatus(id, request.status());
     }
 

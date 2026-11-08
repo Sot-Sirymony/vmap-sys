@@ -7,6 +7,8 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -44,6 +47,7 @@ public class SecretCipher {
 
     private final SecretKeySpec key;
     /** Null when the current key already is the JWT-derived one. */
+    @Nullable
     private final SecretKeySpec legacyKey;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -59,7 +63,7 @@ public class SecretCipher {
         this(settingsKey, jwtSecret, true);
     }
 
-    private SecretCipher(String settingsKey, String jwtSecret, boolean allowFallback) {
+    private SecretCipher(@Nullable String settingsKey, @Nullable String jwtSecret, boolean allowFallback) {
         boolean hasSettingsKey = settingsKey != null && !settingsKey.isBlank();
         if (!allowFallback) {
             validateForProduction(settingsKey, jwtSecret);
@@ -75,7 +79,7 @@ public class SecretCipher {
         return Arrays.stream(environment.getActiveProfiles()).anyMatch(PROFILES_ALLOWING_FALLBACK::contains);
     }
 
-    private static void validateForProduction(String settingsKey, String jwtSecret) {
+    private static void validateForProduction(@Nullable String settingsKey, String jwtSecret) {
         if (settingsKey == null || settingsKey.isBlank()) {
             throw new IllegalStateException(
                     "SETTINGS_ENCRYPTION_KEY must be set outside the local/test profiles (SEC-04-03).");
@@ -100,6 +104,7 @@ public class SecretCipher {
     }
 
     public String encrypt(String plain) {
+        Objects.requireNonNull(plain, "plain");
         try {
             byte[] iv = new byte[IV_BYTES];
             secureRandom.nextBytes(iv);
@@ -112,16 +117,17 @@ public class SecretCipher {
         }
     }
 
-    /** Null when the value was sealed with another key or is damaged. */
-    public String decrypt(String sealed) {
+    /** Empty when there is no value, or it was sealed with another key, or it is damaged (Item 55). */
+    public Optional<String> decrypt(@Nullable String sealed) {
         String plain = decryptWith(key, sealed);
         if (plain == null && legacyKey != null) {
             plain = decryptWith(legacyKey, sealed);
         }
-        return plain;
+        return Optional.ofNullable(plain);
     }
 
-    private static String decryptWith(SecretKeySpec candidate, String sealed) {
+    @Nullable
+    private static String decryptWith(SecretKeySpec candidate, @Nullable String sealed) {
         if (sealed == null || !sealed.startsWith(PREFIX)) {
             return null;
         }

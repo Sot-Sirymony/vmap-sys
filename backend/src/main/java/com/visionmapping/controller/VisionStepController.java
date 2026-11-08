@@ -5,7 +5,10 @@ import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.VisionStepRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
+import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.service.VisionStepService;
+import com.visionmapping.service.support.ArchiveFilter;
+import com.visionmapping.service.support.ProgressOverride;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +34,7 @@ public class VisionStepController {
 
     @GetMapping
     public List<VisionStepResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listSteps(includeArchived);
+        return service.listSteps(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping
@@ -51,8 +54,8 @@ public class VisionStepController {
     }
 
     @PatchMapping("/{id}/status")
-    public VisionStepResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
-        return service.updateStepStatus(id, request.status(), request.manualOverride());
+    public VisionStepResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
+        return service.updateStepStatus(id, request.status(), ProgressOverride.of(request.manualOverride()));
     }
 
     @PatchMapping("/reorder")

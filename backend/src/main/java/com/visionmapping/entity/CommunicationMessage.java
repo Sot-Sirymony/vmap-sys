@@ -26,7 +26,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "communication_messages")
-public class CommunicationMessage extends BaseAuditableEntity {
+public class CommunicationMessage extends BaseAuditableEntity implements PlanLinked {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

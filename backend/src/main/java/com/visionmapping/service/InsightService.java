@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +37,7 @@ public class InsightService {
     private final ObstacleRepository obstacleRepository;
     private final Clock clock;
 
-    public List<InsightResponse> searchInsights(String query) {
+    public List<InsightResponse> searchInsights(@Nullable String query) {
         Long userId = lookup.userId();
         List<InsightResponse> insights = new ArrayList<>();
 

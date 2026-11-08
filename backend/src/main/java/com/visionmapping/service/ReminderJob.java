@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ReminderJob {
+class ReminderJob {
 
     private final AppUserRepository appUserRepository;
     private final ReminderService reminderService;
@@ -27,6 +27,8 @@ public class ReminderJob {
             try {
                 reminderService.remindIfDue(user.getId(), now);
             } catch (RuntimeException exception) {
+                // Broad on purpose: one user's failure must not stop the reminders
+                // of everyone after them. The cause is logged with its stack trace.
                 log.error("Could not process the reminder for user {}", user.getId(), exception);
             }
         }

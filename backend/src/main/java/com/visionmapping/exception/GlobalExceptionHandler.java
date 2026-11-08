@@ -26,6 +26,12 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+/**
+ * Turns every exception into an {@link ErrorResponse} with the right HTTP
+ * status, in one place. Messages are short and safe to show: raw framework
+ * messages, which can name internal classes or echo the request, are never
+ * returned. Unexpected exceptions are logged and answered with a plain 500.
+ */
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
@@ -110,7 +116,14 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         // The raw Jackson message names internal classes and echoes the payload,
-        // so it isn't safe or useful to return verbatim.
+        // so it isn't safe or useful to return verbatim. A rule broken while
+        // reading the body (an unknown status, BRD 13 EJ-FR-11) has its own
+        // short message, which is safe to return.
+        for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof BusinessRuleException rule) {
+                return buildResponse(HttpStatus.BAD_REQUEST, rule.getMessage(), request);
+            }
+        }
         return buildResponse(HttpStatus.BAD_REQUEST, "Malformed or invalid request body.", request);
     }
 

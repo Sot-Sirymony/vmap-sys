@@ -1,8 +1,13 @@
 package com.visionmapping.service.support;
 
+import com.visionmapping.entity.enums.EnumLabels;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.UserScopedRepository;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import org.springframework.lang.Nullable;
 
 /**
  * Stateless helpers every entity service shares: generating the next display
@@ -16,8 +21,11 @@ public final class ServiceSupport {
     }
 
     /** The rows every "list X" endpoint returns: the user's records, hiding archived ones unless asked. */
-    public static <T> List<T> findAllForUser(UserScopedRepository<T> repository, Long userId, boolean includeArchived) {
-        return includeArchived
+    public static <T> List<T> findAllForUser(UserScopedRepository<T> repository, Long userId, ArchiveFilter archiveFilter) {
+        Objects.requireNonNull(repository, "repository");
+        Objects.requireNonNull(userId, "userId");
+        Objects.requireNonNull(archiveFilter, "archiveFilter");
+        return archiveFilter.includesArchived()
                 ? repository.findByUser_Id(userId)
                 : repository.findByUser_IdAndArchivedFalse(userId);
     }
@@ -29,6 +37,8 @@ public final class ServiceSupport {
      * (user_id, code) unique constraint.
      */
     public static String nextCode(String prefix, List<String> existingCodes) {
+        Objects.requireNonNull(prefix, "prefix");
+        Objects.requireNonNull(existingCodes, "existingCodes");
         int max = 0;
         for (String code : existingCodes) {
             max = Math.max(max, codeSuffix(code));
@@ -41,7 +51,7 @@ public final class ServiceSupport {
      * may have non-numeric suffixes; those can never collide with the generated
      * numeric format, so they count as 0.
      */
-    private static int codeSuffix(String code) {
+    private static int codeSuffix(@Nullable String code) {
         if (code == null) {
             return 0;
         }
@@ -56,30 +66,34 @@ public final class ServiceSupport {
         }
     }
 
-    public static boolean isBlank(String value) {
+    public static boolean isBlank(@Nullable String value) {
         return value == null || value.isBlank();
     }
 
-    /** Null (not an empty string) means "no search", which the query treats as "match everything". */
-    public static String likeTerm(String search) {
+    /**
+     * The LIKE pattern for a search box, or empty when there is nothing to
+     * search for (Item 55). Callers pass {@code orElse(null)} to the query,
+     * which reads a null term as "match everything".
+     */
+    public static Optional<String> likeTerm(@Nullable String search) {
         if (search == null || search.isBlank()) {
-            return null;
+            return Optional.empty();
         }
-        return "%" + search.trim().toLowerCase() + "%";
+        return Optional.of("%" + search.trim().toLowerCase(Locale.ROOT) + "%");
     }
 
+    /** CLAUDE.md Core Business Rule 12: only an archived record may be deleted for good. */
     public static void requireArchived(boolean archived, String label) {
+        Objects.requireNonNull(label, "label");
         if (!archived) {
             throw new BusinessRuleException(label + " must be archived before it can be permanently deleted.");
         }
     }
 
+    /** For text that is not a request body, such as list filters. Request bodies bind the enum directly. */
     public static <E extends Enum<E>> E parseEnum(Class<E> enumType, String status) {
-        try {
-            return Enum.valueOf(enumType, status.trim().toUpperCase().replace('-', '_').replace(' ', '_'));
-        } catch (IllegalArgumentException exception) {
-            throw new BusinessRuleException("Invalid status: " + status);
-        }
+        Objects.requireNonNull(enumType, "enumType");
+        return EnumLabels.parse(enumType, status);
     }
 
     /**
@@ -87,6 +101,8 @@ public final class ServiceSupport {
      * day ahead of the server's. Anything later than that is not a real "today".
      */
     public static void requireNotFutureDay(java.time.LocalDate date, java.time.Clock clock) {
+        Objects.requireNonNull(date, "date");
+        Objects.requireNonNull(clock, "clock");
         if (date.isAfter(java.time.LocalDate.now(clock).plusDays(1))) {
             throw new BusinessRuleException("This date is in the future.");
         }

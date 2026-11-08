@@ -21,8 +21,9 @@ import com.visionmapping.repository.AiMessageRepository;
 import com.visionmapping.repository.AiUsageLogRepository;
 import com.visionmapping.service.AiSettingsService;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -61,6 +62,7 @@ public class DreamCoachService {
     private final AiContextBuilder contextBuilder;
     private final PlanAssistantService planAssistant;
     private final PlanSessionGuard sessionGuard;
+    private final Clock clock;
     private final TransactionTemplate transactions;
 
     @Transactional(readOnly = true)
@@ -127,6 +129,11 @@ public class DreamCoachService {
                            Long conversationId, String text, String language, String system,
                            List<ClaudeClient.Turn> turns, List<String> sources, boolean crisis,
                            String feature, Long dreamId, String section, String planSessionKey) {
+        public Prepared {
+            turns = Copies.list(turns);
+            sources = Copies.list(sources);
+        }
+    
     }
 
     @Transactional(readOnly = true)
@@ -295,7 +302,7 @@ public class DreamCoachService {
                 .safetyFlag(flag).usageLog(usage)
                 .contextSources(sources.isEmpty() ? null : String.join(",", sources)).build());
         // Moves the conversation to the top of the list.
-        conversation.setUpdatedAt(Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+        conversation.setUpdatedAt(clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         conversationRepository.saveAndFlush(conversation);
         return new AiChatTurnResponse(conversation.getId(), conversation.getTitle(), toResponse(asked), toResponse(answered));
     }

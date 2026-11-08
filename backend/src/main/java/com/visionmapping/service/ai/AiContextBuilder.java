@@ -14,6 +14,8 @@ import com.visionmapping.entity.enums.DreamStatus;
 import com.visionmapping.entity.enums.ModuleStatus;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.exception.BusinessRuleException;
+import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.AttitudeCheckInRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.FearEntryRepository;
@@ -22,6 +24,7 @@ import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.LearningModuleService;
+import com.visionmapping.util.Copies;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -30,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
  * included. The records are wrapped as data so text inside them cannot change
  * Claude's rules.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AiContextBuilder {
@@ -73,6 +78,10 @@ public class AiContextBuilder {
 
     /** text is the records wrapped as data for a system prompt; records is the same content unwrapped. */
     public record AiContext(String text, List<String> sources, String records) {
+        public AiContext {
+            sources = Copies.list(sources);
+        }
+    
     }
 
     /** What the screen is about: the page path, and the dream or module open on it, if any. */
@@ -274,8 +283,12 @@ public class AiContextBuilder {
                     out.append('\n');
                 }
                 return true;
-            } catch (RuntimeException exception) {
-                // Locked or unknown: fall through to the current module.
+            } catch (BusinessRuleException | ResourceNotFoundException expected) {
+                // Locked or unknown module: fall through to the current module.
+            } catch (RuntimeException unexpected) {
+                // Anything else is a bug, so it is logged; the chat still gets the
+                // current module rather than failing (Effective Java Item 77).
+                log.warn("Could not add module {} to the AI context", moduleNumber, unexpected);
             }
         }
         LearningModuleSummaryResponse current = learningModuleService.listModules(language).stream()

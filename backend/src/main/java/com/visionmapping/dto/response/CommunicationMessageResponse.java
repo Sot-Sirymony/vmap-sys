@@ -3,7 +3,9 @@ package com.visionmapping.dto.response;
 import com.visionmapping.entity.enums.CommunicationStatus;
 import java.time.Instant;
 import java.time.LocalDate;
+import lombok.Builder;
 
+@Builder
 public record CommunicationMessageResponse(
         Long id,
         Long partnerId,

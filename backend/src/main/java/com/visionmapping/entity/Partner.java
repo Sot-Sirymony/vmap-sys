@@ -30,7 +30,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "partners")
-public class Partner extends BaseAuditableEntity {
+public class Partner extends BaseAuditableEntity implements PlanLinked {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -100,6 +100,7 @@ public class Partner extends BaseAuditableEntity {
     // FR-50.1: seven original, plain-language integrity-and-reliability
     // checks. Gate only fires the first time a FINANCIAL/TECHNICAL partner
     // moves to ACTIVE (BR-39); otherwise diagnostic/audit-trail metadata.
+    // Boolean, not boolean: null means "not checked yet"; only true counts.
     @Column(name = "flag_dishonesty")
     private Boolean flagDishonesty;
 

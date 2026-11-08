@@ -15,12 +15,14 @@ import com.visionmapping.repository.AttitudeCheckInRepository;
 import com.visionmapping.repository.ReviewRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +54,7 @@ public class DailyPlanService {
                 .map(mapper::toResponse)
                 .orElse(null);
         LocalDate lastWeeklyReview = lastWeeklyReview(userId);
-        return new DailyPlanResponse(date, items, attitude, habitService.listHabits(date, false),
+        return new DailyPlanResponse(date, items, attitude, habitService.listHabits(date, ArchiveFilter.ACTIVE_ONLY),
                 weeklyReviewDue(lastWeeklyReview, date), lastWeeklyReview,
                 visionStepRepository.countByUser_IdAndArchivedFalseAndTargetDateIsNull(userId));
     }
@@ -80,7 +82,7 @@ public class DailyPlanService {
                 .orElse(null);
     }
 
-    private static boolean weeklyReviewDue(LocalDate lastWeeklyReview, LocalDate date) {
+    private static boolean weeklyReviewDue(@Nullable LocalDate lastWeeklyReview, LocalDate date) {
         return lastWeeklyReview == null || !lastWeeklyReview.plusDays(WEEKLY_REVIEW_INTERVAL_DAYS).isAfter(date);
     }
 

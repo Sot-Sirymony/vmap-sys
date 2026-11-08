@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.time.Instant;
 import java.util.List;
 
@@ -14,4 +15,7 @@ public record AiConversationResponse(
         List<AiMessageResponse> messages,
         Long dreamId,
         String section) {
+    public AiConversationResponse {
+        messages = Copies.list(messages);
+    }
 }

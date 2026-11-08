@@ -2,6 +2,7 @@ package com.visionmapping.excel;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
+import com.visionmapping.service.support.ArchiveFilter;
 import org.apache.poi.openxml4j.util.ZipSecureFile;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Locale;
@@ -65,6 +66,7 @@ import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -141,47 +143,47 @@ public class ExcelService {
             ), headerStyle);
 
             writeRows(workbook, VISION_AREAS, List.of("ID", CODE, "Name", "Description", PRIORITY, STATUS),
-                    visionAreaService.listVisionAreas(false).stream()
+                    visionAreaService.listVisionAreas(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.description()), item.priority(), item.status()))
                             .toList(), headerStyle);
 
             writeRows(workbook, DREAMS, List.of("ID", CODE, "Vision Area ID", TITLE, "Why Important", "Success Definition", TYPE, PRIORITY, "Target Date", STATUS),
-                    dreamService.listDreams(false).stream()
+                    dreamService.listDreams(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), item.code(), item.visionAreaId(), item.title(), value(item.whyImportant()), value(item.successDefinition()), item.dreamType(), item.priority(), value(item.targetDate()), item.status()))
                             .toList(), headerStyle);
 
             writeRows(workbook, GOALS, List.of("ID", CODE, "Dream ID", TITLE, "Success Criteria", PRIORITY, "Target Date", STATUS, "Progress"),
-                    goalService.listGoals(false).stream()
+                    goalService.listGoals(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), item.code(), item.dreamId(), item.title(), value(item.successCriteria()), item.priority(), value(item.targetDate()), item.status(), item.progressPercent()))
                             .toList(), headerStyle);
 
             writeRows(workbook, STEPS, List.of("ID", CODE, "Goal ID", TITLE, "Sequence", "Complex", PRIORITY, "Target Date", STATUS, "Progress", "Owner"),
-                    visionStepService.listSteps(false).stream()
+                    visionStepService.listSteps(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), item.code(), item.goalId(), item.title(), item.sequenceNumber(), item.complex(), item.priority(), value(item.targetDate()), item.status(), item.progressPercent(), value(item.owner())))
                             .toList(), headerStyle);
 
             writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action", "Energy"),
-                    taskItemService.listTasks(false).stream()
+                    taskItemService.listTasks(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction()), value(item.energyDemand())))
                             .toList(), headerStyle);
 
             writeRows(workbook, "Partners", List.of("ID", CODE, "Name", "Role", "Organization", "Email", "Support Type", "Offer Type", STATUS, "Notes"),
-                    partnerService.listPartners(Pageable.unpaged(), false, null).stream()
+                    partnerService.listPartners(Pageable.unpaged(), ArchiveFilter.ACTIVE_ONLY, null).stream()
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.role()), value(item.organization()), value(item.email()), item.supportType(), value(item.offerType()), item.status(), value(item.notes())))
                             .toList(), headerStyle);
 
             writeRows(workbook, "Communication", List.of("ID", "Partner ID", "Audience", "Purpose", "Subject", "Request", "Message", STATUS, "Follow Up"),
-                    communicationMessageService.listCommunicationMessages(Pageable.unpaged(), false, null).stream()
+                    communicationMessageService.listCommunicationMessages(Pageable.unpaged(), ArchiveFilter.ACTIVE_ONLY, null).stream()
                             .map(item -> List.of(item.id(), value(item.partnerId()), value(item.audience()), value(item.purpose()), value(item.subject()), value(item.request()), value(item.messageBody()), item.status(), value(item.followUpDate())))
                             .toList(), headerStyle);
 
             writeRows(workbook, "Reviews", List.of("ID", TYPE, "Date", "Vision Area ID", "Dream ID", "Summary", "Next Actions"),
-                    reviewService.listReviews(false).stream()
+                    reviewService.listReviews(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), item.reviewType(), item.reviewDate(), value(item.relatedVisionAreaId()), value(item.relatedDreamId()), value(item.summary()), value(item.nextActions())))
                             .toList(), headerStyle);
 
             writeRows(workbook, "Obstacles", List.of("ID", "Dream ID", "Goal ID", "Step ID", "Task ID", TITLE, TYPE, "Severity", STATUS, "Solution"),
-                    obstacleService.listObstacles(false).stream()
+                    obstacleService.listObstacles(ArchiveFilter.ACTIVE_ONLY).stream()
                             .map(item -> List.of(item.id(), value(item.relatedDreamId()), value(item.relatedGoalId()), value(item.relatedStepId()), value(item.relatedTaskId()), item.title(), item.obstacleType(), item.severity(), item.status(), value(item.solution())))
                             .toList(), headerStyle);
 
@@ -270,6 +272,7 @@ public class ExcelService {
     }
 
     /** Null when the workbook may be imported. */
+    @Nullable
     static String refusalReason(Workbook workbook) {
         if (workbook instanceof XSSFWorkbook xssf && xssf.isMacroEnabled()) {
             return "Workbooks with macros cannot be imported. Save it as a plain .xlsx workbook and try again.";
@@ -352,7 +355,7 @@ public class ExcelService {
         return style;
     }
 
-    private void addDropdown(Sheet sheet, int columnIndex, String csvValues) {
+    private void addDropdown(@Nullable Sheet sheet, int columnIndex, String csvValues) {
         if (sheet == null) {
             return;
         }
@@ -365,7 +368,7 @@ public class ExcelService {
         return !text.isEmpty() && FORMULA_TRIGGERS.indexOf(text.charAt(0)) >= 0;
     }
 
-    private Object value(Object value) {
+    private Object value(@Nullable Object value) {
         return value == null ? "" : value;
     }
 }

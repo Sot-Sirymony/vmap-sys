@@ -5,7 +5,9 @@ import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.VisionAreaRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
+import com.visionmapping.entity.enums.LifecycleStatus;
 import com.visionmapping.service.VisionAreaService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,7 @@ public class VisionAreaController {
 
     @GetMapping
     public List<VisionAreaResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listVisionAreas(includeArchived);
+        return service.listVisionAreas(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping
@@ -51,7 +53,7 @@ public class VisionAreaController {
     }
 
     @PatchMapping("/{id}/status")
-    public VisionAreaResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public VisionAreaResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<LifecycleStatus> request) {
         return service.updateVisionAreaStatus(id, request.status());
     }
 

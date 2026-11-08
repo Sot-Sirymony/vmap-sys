@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,6 +19,13 @@ public record AiPlanAddRequest(
         @Valid @Size(max = 20) List<@NotNull @Valid StepItem> steps,
         // Suggested tasks for one step, from the Vision Map plan assistant.
         @Valid @Size(max = 20) List<@NotNull @Valid TaskItem> tasks) {
+
+    public AiPlanAddRequest {
+        goals = Copies.list(goals);
+        steps = Copies.list(steps);
+        tasks = Copies.list(tasks);
+    }
+
 
     /** Goals and steps only, as before tasks could be added here. */
     public AiPlanAddRequest(Long requestId, List<GoalItem> goals, List<StepItem> steps) {

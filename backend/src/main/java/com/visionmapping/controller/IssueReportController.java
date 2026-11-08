@@ -4,6 +4,7 @@ import com.visionmapping.dto.request.IssueReportRequest;
 import com.visionmapping.dto.request.IssueReportStatusUpdateRequest;
 import com.visionmapping.dto.response.IssueReportResponse;
 import com.visionmapping.service.IssueReportService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,7 @@ public class IssueReportController {
     /** FR-38.3: the caller's own reports. */
     @GetMapping
     public List<IssueReportResponse> listMine(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listMyReports(includeArchived);
+        return service.listMyReports(ArchiveFilter.of(includeArchived));
     }
 
     /** FR-38.4: admin triage queue, optionally filtered. */

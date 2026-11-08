@@ -16,17 +16,25 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.lang.Nullable;
 
+/**
+ * A specific result needed to reach one dream (Core Business Rule 2). Its
+ * progress is the average of its steps (Rule 10) and is set only through
+ * {@link #applyRollup}, unless the participant chose a manual override.
+ */
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Entity
 @Table(name = "goals")
 public class Goal extends BaseAuditableEntity {
@@ -70,9 +78,11 @@ public class Goal extends BaseAuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
+    @Setter(AccessLevel.NONE)
     private WorkStatus status;
 
     @Column(name = "progress_percent", nullable = false, precision = 5, scale = 2)
+    @Setter(AccessLevel.NONE)
     private BigDecimal progressPercent;
 
     @Column(name = "manual_progress_override", nullable = false)
@@ -100,5 +110,40 @@ public class Goal extends BaseAuditableEntity {
     private Integer sortOrder;
 
     @Column(nullable = false)
+    @Setter(AccessLevel.NONE)
     private boolean archived;
+
+    /**
+     * A status the participant chose. Rules that need other records (a complex
+     * step needs tasks, a goal needs its steps done) are checked by the service.
+     */
+    public void changeStatus(WorkStatus newStatus) {
+        status = Objects.requireNonNull(newStatus, "status");
+    }
+
+    /**
+     * CLAUDE.md Core Business Rules 10 and 11: progress is the average of the
+     * unarchived children, and the goal completes once every child is complete.
+     */
+    public void applyRollup(BigDecimal averageProgress, boolean allChildrenComplete) {
+        progressPercent = Objects.requireNonNull(averageProgress, "averageProgress");
+        if (allChildrenComplete) {
+            status = WorkStatus.COMPLETED;
+        }
+    }
+
+    /** Rule 12: hidden, never deleted. Children are archived by ArchiveCascade. */
+    public void archive() {
+        archived = true;
+    }
+
+    public void restore() {
+        archived = false;
+    }
+
+    /** The id of its dream's area, or null while the link is missing. */
+    @Nullable
+    public Long visionAreaId() {
+        return getDream() == null ? null : getDream().visionAreaId();
+    }
 }

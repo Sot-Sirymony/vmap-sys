@@ -137,7 +137,7 @@ class TaskItemServiceTest {
         when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task1, task2)));
         when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
-        TaskItemResponse response = service.updateTaskStatus(30L, "COMPLETED");
+        TaskItemResponse response = service.updateTaskStatus(30L, WorkStatus.COMPLETED);
 
         assertThat(response.progressPercent()).isEqualByComparingTo("100.00");
         assertThat(step.getProgressPercent()).isEqualByComparingTo("80.00");
@@ -157,7 +157,7 @@ class TaskItemServiceTest {
         when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task1, task2)));
         when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
-        service.updateTaskStatus(30L, "COMPLETED");
+        service.updateTaskStatus(30L, WorkStatus.COMPLETED);
 
         assertThat(step.getStatus()).isEqualTo(WorkStatus.COMPLETED);
         assertThat(step.getProgressPercent()).isEqualByComparingTo("100.00");
@@ -174,7 +174,7 @@ class TaskItemServiceTest {
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task));
         when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
-        service.updateTaskStatus(30L, "IN_PROGRESS");
+        service.updateTaskStatus(30L, WorkStatus.IN_PROGRESS);
 
         assertThat(step.getProgressPercent()).isEqualByComparingTo("42.00");
         assertThat(goal.getProgressPercent()).isEqualByComparingTo("42.00");
@@ -183,17 +183,15 @@ class TaskItemServiceTest {
     @Test
     void restoringTaskRestoresArchivedParentChain() {
         VisionArea area = visionArea(1L);
-        area.setArchived(true);
-        area.setStatus(LifecycleStatus.ARCHIVED);
+        area.archive();
         Dream dream = dream(1L, area);
-        dream.setArchived(true);
-        dream.setStatus(DreamStatus.ARCHIVED);
+        dream.archive();
         Goal goal = goal(10L, dream, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false);
-        goal.setArchived(true);
+        goal.archive();
         VisionStep step = step(20L, goal, WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
-        step.setArchived(true);
+        step.archive();
         TaskItem task = task(30L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
-        task.setArchived(true);
+        task.archive();
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(task));
         when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(task)));
         when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
@@ -298,13 +296,13 @@ class TaskItemServiceTest {
         VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false),
                 WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
         TaskItem completedTask = task(30L, step, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
-        completedTask.setCompletedAt(java.time.Instant.now());
+        completedTask.changeStatus(WorkStatus.COMPLETED, java.time.Clock.systemUTC());
 
         when(taskItemRepository.findById(30L)).thenReturn(Optional.of(completedTask));
         when(taskItemRepository.rollUpForStep(20L, 1L)).thenAnswer(invocation -> Rollups.ofTasks(List.of(completedTask)));
         when(visionStepRepository.rollUpForGoal(10L, 1L)).thenAnswer(invocation -> Rollups.ofSteps(List.of(step)));
 
-        TaskItemResponse response = service.updateTaskStatus(30L, "IN_PROGRESS");
+        TaskItemResponse response = service.updateTaskStatus(30L, WorkStatus.IN_PROGRESS);
 
         assertThat(response.completedAt()).isNull();
     }

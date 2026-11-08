@@ -74,7 +74,7 @@ class SecurityLogFlowTests {
         Map<String, Object> failed = latest("LOGIN_FAILED", userId);
         assertThat(failed.get("outcome")).isEqualTo("DENIED");
         assertThat(failed.get("ip_address")).isEqualTo(ip);
-        assertThat(failed.get("subject_hash")).isEqualTo(SecurityEventService.hashEmail(email));
+        assertThat(failed.get("subject_hash")).isEqualTo(SecurityEventService.hashEmail(email).orElseThrow());
         assertThat(failed.get("detail")).isEqualTo("BadCredentialsException");
         assertThat(latest("LOGIN_SUCCEEDED", userId).get("outcome")).isEqualTo("SUCCESS");
 
@@ -183,7 +183,7 @@ class SecurityLogFlowTests {
     void tenFailedSignInsOnOneAccountRaiseOneAlertWithoutTheEmail() throws Exception {
         String email = uniqueEmail();
         register(email);
-        String hash = SecurityEventService.hashEmail(email);
+        String hash = SecurityEventService.hashEmail(email).orElseThrow();
 
         for (int i = 0; i < 10; i++) {
             login(email, "WrongPassword9", uniqueIp());
@@ -254,7 +254,7 @@ class SecurityLogFlowTests {
 
     private long countBySubject(String type, String email) {
         return jdbc.queryForObject("select count(*) from security_events where event_type = ? and subject_hash = ?",
-                Long.class, type, SecurityEventService.hashEmail(email));
+                Long.class, type, SecurityEventService.hashEmail(email).orElseThrow());
     }
 
     private String register(String email) throws Exception {

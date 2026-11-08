@@ -12,6 +12,10 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * A task as the participant enters it. CLAUDE.md Core Business Rule 5: title,
+ * owner, due date, priority and status are required.
+ */
 public record TaskItemRequest(
         @NotNull Long stepId,
         @NotBlank @Size(max = 220) String title,

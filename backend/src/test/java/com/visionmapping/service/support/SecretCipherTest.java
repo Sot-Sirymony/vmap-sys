@@ -14,22 +14,22 @@ class SecretCipherTest {
         String first = cipher.encrypt("sk-ant-secret");
         assertThat(first).startsWith("v1:").doesNotContain("sk-ant-secret");
         assertThat(cipher.encrypt("sk-ant-secret")).isNotEqualTo(first);
-        assertThat(cipher.decrypt(first)).isEqualTo("sk-ant-secret");
+        assertThat(cipher.decrypt(first)).contains("sk-ant-secret");
     }
 
     @Test
     void anotherKeyOrDamagedValueGivesNullNotAnError() {
         String sealed = new SecretCipher("one", "jwt").encrypt("sk-ant-secret");
-        assertThat(new SecretCipher("two", "jwt").decrypt(sealed)).isNull();
-        assertThat(new SecretCipher("one", "jwt").decrypt("v1:not-base64!")).isNull();
-        assertThat(new SecretCipher("one", "jwt").decrypt(null)).isNull();
-        assertThat(new SecretCipher("one", "jwt").decrypt("v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")).isNull();
+        assertThat(new SecretCipher("two", "jwt").decrypt(sealed)).isEmpty();
+        assertThat(new SecretCipher("one", "jwt").decrypt("v1:not-base64!")).isEmpty();
+        assertThat(new SecretCipher("one", "jwt").decrypt(null)).isEmpty();
+        assertThat(new SecretCipher("one", "jwt").decrypt("v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")).isEmpty();
     }
 
     @Test
     void fallsBackToTheJwtSecretWhenNoSettingsKeyIsSet() {
         String sealed = new SecretCipher("", "jwt-secret").encrypt("value");
-        assertThat(new SecretCipher(null, "jwt-secret").decrypt(sealed)).isEqualTo("value");
+        assertThat(new SecretCipher(null, "jwt-secret").decrypt(sealed)).contains("value");
     }
 
     private static final String STRONG_KEY = "a-settings-key-that-is-long-enough-1234";
@@ -42,10 +42,10 @@ class SecretCipherTest {
 
         SecretCipher afterV10 = new SecretCipher(STRONG_KEY, JWT);
 
-        assertThat(afterV10.decrypt(sealedBeforeV10)).isEqualTo("sk-ant-old");
+        assertThat(afterV10.decrypt(sealedBeforeV10)).contains("sk-ant-old");
         // New values use the new key only: the JWT secret alone cannot open them.
         String sealedAfter = afterV10.encrypt("sk-ant-new");
-        assertThat(new SecretCipher("", JWT).decrypt(sealedAfter)).isNull();
+        assertThat(new SecretCipher("", JWT).decrypt(sealedAfter)).isEmpty();
     }
 
     @Test
@@ -67,6 +67,6 @@ class SecretCipherTest {
         MockEnvironment local = new MockEnvironment();
         local.setActiveProfiles("local");
 
-        assertThat(new SecretCipher("", JWT, local).decrypt(new SecretCipher("", JWT).encrypt("v"))).isEqualTo("v");
+        assertThat(new SecretCipher("", JWT, local).decrypt(new SecretCipher("", JWT).encrypt("v"))).contains("v");
     }
 }

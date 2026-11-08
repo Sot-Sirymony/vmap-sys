@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +76,7 @@ public class GoalSynergyLinkService {
      * links drop out of the listing (no dangling links) without the row itself
      * being destroyed — it comes back when the goal is restored.
      */
+    @Nullable
     private GoalSynergyLinkResponse toResponse(Goal viewed, GoalSynergyLink link) {
         Goal other = link.getGoal().getId().equals(viewed.getId()) ? link.getRelatedGoal() : link.getGoal();
         if (other.isArchived()) {

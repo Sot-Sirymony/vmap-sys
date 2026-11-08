@@ -192,6 +192,27 @@ How the tests are written (BRD 12 COV-NFR-01 to COV-NFR-08):
 - **Both languages.** Each page area has at least one test in Khmer.
 - **Not flaky.** No fixed sleeps; long form pages set their own time limit.
 
+### Java code quality (BRD 13)
+
+The backend follows *Effective Java*; the rules are listed in `docs/DATA_MODEL.md` under "Java coding
+rules". They are checked on every build:
+
+```bash
+cd backend
+mvn test -Dtest='EffectiveJavaRulesTest,RecordCopiesTest'   # the guard-rail tests on their own
+mvn clean verify                                            # everything; compiler warnings fail the build
+```
+
+`EffectiveJavaRulesTest` fails when, for example, a core entity gets a public status setter, a class reads
+the system clock directly, a public method returns null without `@Nullable`, or a response builder leaves
+a field unset. Fix the code; do not add an exception to the test.
+
+The measures from BRD 13's target-state table, read from the source tree (no build needed):
+
+```bash
+node scripts/effective-java-report.mjs            # or --markdown for a table
+```
+
 ### Plan builder sample run (V11, PB-NFR-08)
 
 Before changing plan builder prompts or the model, run the 20 sample dreams in

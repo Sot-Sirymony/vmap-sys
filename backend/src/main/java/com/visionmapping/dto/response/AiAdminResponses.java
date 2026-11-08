@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.util.List;
 
 /**
@@ -16,9 +17,17 @@ public final class AiAdminResponses {
 
     public record ModuleContentDraft(String title, String summary, String guidance, String exerciseInstructions,
                                      String examples, List<QuizItem> quiz) {
+        public ModuleContentDraft {
+            quiz = Copies.list(quiz);
+        }
+    
     }
 
     /** One per input text, same order; null where a draft was dropped (for example a placeholder went missing). */
     public record Translations(List<String> translations) {
+        public Translations {
+            translations = Copies.list(translations);
+        }
+    
     }
 }

@@ -17,17 +17,26 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.lang.Nullable;
 
+/**
+ * A meaningful future outcome under one vision area (CLAUDE.md Core Business
+ * Rule 1). Holds the coaching answers (why it matters, what success looks like),
+ * the decision-gate checklist and the signed commitment. Status and archive flag
+ * change only through {@link #changeStatus}, {@link #archive} and {@link #restore}.
+ */
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Entity
 @Table(name = "dreams")
 public class Dream extends BaseAuditableEntity {
@@ -77,6 +86,7 @@ public class Dream extends BaseAuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
+    @Setter(AccessLevel.NONE)
     private DreamStatus status;
 
     // FR-31: aspirational metadata only — never touches progress/completion.
@@ -152,5 +162,37 @@ public class Dream extends BaseAuditableEntity {
     private Integer sortOrder;
 
     @Column(nullable = false)
+    @Setter(AccessLevel.NONE)
     private boolean archived;
+
+    /** A status the participant chose. The decision gate is checked by the service. */
+    public void changeStatus(DreamStatus newStatus) {
+        status = Objects.requireNonNull(newStatus, "status");
+    }
+
+    /** Rule 12: hidden, never deleted, and marked Archived. Children are archived by ArchiveCascade. */
+    public void archive() {
+        status = DreamStatus.ARCHIVED;
+        archived = true;
+    }
+
+    /**
+     * Brings an archived dream back. Its status before the archive is not kept,
+     * so it returns as Paused rather than silently Active.
+     */
+    public void restore() {
+        if (!archived) {
+            return;
+        }
+        archived = false;
+        if (status == DreamStatus.ARCHIVED) {
+            status = DreamStatus.PAUSED;
+        }
+    }
+
+    /** The id of the vision area it sits in, or null while the link is missing. */
+    @Nullable
+    public Long visionAreaId() {
+        return getVisionArea() == null ? null : getVisionArea().getId();
+    }
 }

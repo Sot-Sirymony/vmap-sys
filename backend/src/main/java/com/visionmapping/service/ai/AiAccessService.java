@@ -22,6 +22,7 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -102,6 +103,7 @@ public class AiAccessService {
         return reason == null ? OK : reason;
     }
 
+    @Nullable
     private String reason(AppUser user, AiSettings settings) {
         if (!settings.isEnabled() || aiSettingsService.activeApiKey() == null
                 || appUserRepository.existsByIdAndCohort_ArchivedFalseAndCohort_AiEnabledFalse(user.getId())) {

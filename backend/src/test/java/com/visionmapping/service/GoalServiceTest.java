@@ -36,6 +36,7 @@ import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.PermanentDeleteCascade;
+import com.visionmapping.service.support.ProgressOverride;
 import com.visionmapping.util.UserScope;
 import java.math.BigDecimal;
 import java.util.List;
@@ -130,7 +131,7 @@ class GoalServiceTest {
         when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
         when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(incompleteStep));
 
-        assertThatThrownBy(() -> service.updateGoalStatus(10L, "COMPLETED", false))
+        assertThatThrownBy(() -> service.updateGoalStatus(10L, WorkStatus.COMPLETED, ProgressOverride.NONE))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("A goal cannot be completed until all steps are completed, unless manualOverride is true.");
     }
@@ -142,7 +143,7 @@ class GoalServiceTest {
         when(goalRepository.findById(10L)).thenReturn(Optional.of(goal));
         lenient().when(visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(10L, 1L)).thenReturn(List.of(incompleteStep));
 
-        service.updateGoalStatus(10L, "COMPLETED", true);
+        service.updateGoalStatus(10L, WorkStatus.COMPLETED, ProgressOverride.MANUAL);
 
         assertThat(goal.getStatus()).isEqualTo(WorkStatus.COMPLETED);
         assertThat(goal.isManualProgressOverride()).isTrue();

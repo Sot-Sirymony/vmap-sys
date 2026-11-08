@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -13,4 +14,11 @@ public record AiPlanUndoRequest(
         // V11 Phase 5: partners and obstacles the add created.
         @Size(max = 10) List<@NotNull Long> partnerIds,
         @Size(max = 10) List<@NotNull Long> obstacleIds) {
+    public AiPlanUndoRequest {
+        goalIds = Copies.list(goalIds);
+        stepIds = Copies.list(stepIds);
+        taskIds = Copies.list(taskIds);
+        partnerIds = Copies.list(partnerIds);
+        obstacleIds = Copies.list(obstacleIds);
+    }
 }

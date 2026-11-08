@@ -7,6 +7,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.lang.Nullable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +35,8 @@ public class SecurityAuditAspect {
             // Recorded once, as ACCESS_DENIED, by the exception handler.
             throw denied;
         } catch (Throwable failure) {
+            // Broad on purpose: any failure of the audited call is logged, then
+            // rethrown unchanged, so callers see exactly what they would without the aspect.
             events.record(audit.value(), SecurityOutcome.FAILURE, target, idFrom(call.getArgs(), null),
                     action + " failed: " + failure.getClass().getSimpleName());
             throw failure;
@@ -42,6 +45,7 @@ public class SecurityAuditAspect {
         return result;
     }
 
+    @Nullable
     private static Long idFrom(Object[] args, Object result) {
         for (Object arg : args) {
             if (arg instanceof Long id) {

@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.ReviewRequest;
 import com.visionmapping.dto.response.ReviewResponse;
 import com.visionmapping.service.ReviewService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class ReviewController {
 
     @GetMapping
     public List<ReviewResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listReviews(includeArchived);
+        return service.listReviews(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping

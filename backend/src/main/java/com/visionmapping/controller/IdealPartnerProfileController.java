@@ -3,6 +3,7 @@ package com.visionmapping.controller;
 import com.visionmapping.dto.request.IdealPartnerProfileRequest;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
 import com.visionmapping.service.IdealPartnerProfileService;
+import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class IdealPartnerProfileController {
 
     @GetMapping
     public List<IdealPartnerProfileResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listProfiles(includeArchived);
+        return service.listProfiles(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping

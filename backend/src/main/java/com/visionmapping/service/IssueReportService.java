@@ -21,10 +21,13 @@ import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.IssueReportRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,8 +51,8 @@ public class IssueReportService {
     /** FR-38.3: the caller's own reports, newest first. */
     @Cacheable(CacheConfig.ISSUE_REPORT_LIST_CACHE)
     @Transactional(readOnly = true)
-    public List<IssueReportResponse> listMyReports(boolean includeArchived) {
-        return findAllForUser(issueReportRepository, lookup.userId(), includeArchived).stream()
+    public List<IssueReportResponse> listMyReports(ArchiveFilter archiveFilter) {
+        return findAllForUser(issueReportRepository, lookup.userId(), archiveFilter).stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(mapper::toResponse)
                 .toList();
@@ -57,7 +60,7 @@ public class IssueReportService {
 
     /** FR-38.4: the full queue for admins, optionally filtered. */
     @Transactional(readOnly = true)
-    public List<IssueReportResponse> listAllReports(String reportType, String status, String severity) {
+    public List<IssueReportResponse> listAllReports(@Nullable String reportType, @Nullable String status, @Nullable String severity) {
         requireAdmin();
         ReportType typeFilter = reportType == null ? null : parseEnum(ReportType.class, reportType);
         IssueReportStatus statusFilter = status == null ? null : parseEnum(IssueReportStatus.class, status);
@@ -103,11 +106,11 @@ public class IssueReportService {
 
     /** FR-38.4: admin-only status change, with the resolution rule (BR-32). */
     @SecurityAudit(value = SecurityEventType.ISSUE_REPORT_TRIAGED, target = "issue_report")
-    public IssueReportResponse updateStatus(Long id, String status, String resolutionNote) {
+    public IssueReportResponse updateStatus(Long id, IssueReportStatus status, @Nullable String resolutionNote) {
         requireAdmin();
         IssueReport report = issueReportRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Issue report not found: " + id));
-        IssueReportStatus newStatus = parseEnum(IssueReportStatus.class, status);
+        IssueReportStatus newStatus = Objects.requireNonNull(status, "status");
         if (resolutionNote != null) {
             report.setResolutionNote(resolutionNote);
         }
@@ -134,7 +137,7 @@ public class IssueReportService {
         issueReportRepository.delete(report);
     }
 
-    private static void requireSeverityForBug(ReportType type, Severity severity) {
+    private static void requireSeverityForBug(ReportType type, @Nullable Severity severity) {
         if (type == ReportType.BUG && severity == null) {
             throw new BusinessRuleException("A bug report must include a severity.");
         }

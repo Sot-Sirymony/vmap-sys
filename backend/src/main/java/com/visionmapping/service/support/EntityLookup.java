@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -43,6 +44,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class EntityLookup {
 
+    @Nullable
     private SecurityEventService securityEvents;
 
     private final UserScope userScope;
@@ -66,73 +68,90 @@ public class EntityLookup {
     }
 
     public VisionArea visionArea(Long id) {
-        return owned(visionAreaRepository.findById(id), e -> e.getUser().getId(), "Vision area", id);
+        return owned(visionAreaRepository::findById, e -> e.getUser().getId(), "Vision area", id);
     }
 
     public Dream dream(Long id) {
-        return owned(dreamRepository.findById(id), e -> e.getUser().getId(), "Dream", id);
+        return owned(dreamRepository::findById, e -> e.getUser().getId(), "Dream", id);
     }
 
     public Goal goal(Long id) {
-        return owned(goalRepository.findById(id), e -> e.getUser().getId(), "Goal", id);
+        return owned(goalRepository::findById, e -> e.getUser().getId(), "Goal", id);
     }
 
     public VisionStep step(Long id) {
-        return owned(visionStepRepository.findById(id), e -> e.getUser().getId(), "Step", id);
+        return owned(visionStepRepository::findById, e -> e.getUser().getId(), "Step", id);
     }
 
     public TaskItem task(Long id) {
-        return owned(taskItemRepository.findById(id), e -> e.getUser().getId(), "Task", id);
+        return owned(taskItemRepository::findById, e -> e.getUser().getId(), "Task", id);
     }
 
     public Partner partner(Long id) {
-        return owned(partnerRepository.findById(id), e -> e.getUser().getId(), "Partner", id);
+        return owned(partnerRepository::findById, e -> e.getUser().getId(), "Partner", id);
     }
 
     public CommunicationMessage communicationMessage(Long id) {
-        return owned(communicationMessageRepository.findById(id), e -> e.getUser().getId(), "Communication message", id);
+        return owned(communicationMessageRepository::findById, e -> e.getUser().getId(), "Communication message", id);
     }
 
     public Review review(Long id) {
-        return owned(reviewRepository.findById(id), e -> e.getUser().getId(), "Review", id);
+        return owned(reviewRepository::findById, e -> e.getUser().getId(), "Review", id);
     }
 
     public Obstacle obstacle(Long id) {
-        return owned(obstacleRepository.findById(id), e -> e.getUser().getId(), "Obstacle", id);
+        return owned(obstacleRepository::findById, e -> e.getUser().getId(), "Obstacle", id);
     }
 
     public ProgressLog progressLog(Long id) {
-        return owned(progressLogRepository.findById(id), e -> e.getUser().getId(), "Progress log", id);
+        return owned(progressLogRepository::findById, e -> e.getUser().getId(), "Progress log", id);
     }
 
-    public VisionArea optionalVisionArea(Long id) {
+    /** Null in, null out: maps an optional link id from a request to an optional relation. */
+    @Nullable
+    public VisionArea optionalVisionArea(@Nullable Long id) {
         return id == null ? null : visionArea(id);
     }
 
-    public Dream optionalDream(Long id) {
+    /** Null in, null out: maps an optional link id from a request to an optional relation. */
+    @Nullable
+    public Dream optionalDream(@Nullable Long id) {
         return id == null ? null : dream(id);
     }
 
-    public Goal optionalGoal(Long id) {
+    /** Null in, null out: maps an optional link id from a request to an optional relation. */
+    @Nullable
+    public Goal optionalGoal(@Nullable Long id) {
         return id == null ? null : goal(id);
     }
 
-    public VisionStep optionalStep(Long id) {
+    /** Null in, null out: maps an optional link id from a request to an optional relation. */
+    @Nullable
+    public VisionStep optionalStep(@Nullable Long id) {
         return id == null ? null : step(id);
     }
 
-    public TaskItem optionalTask(Long id) {
+    /** Null in, null out: maps an optional link id from a request to an optional relation. */
+    @Nullable
+    public TaskItem optionalTask(@Nullable Long id) {
         return id == null ? null : task(id);
     }
 
-    public Partner optionalPartner(Long id) {
+    /** Null in, null out: maps an optional link id from a request to an optional relation. */
+    @Nullable
+    public Partner optionalPartner(@Nullable Long id) {
         return id == null ? null : partner(id);
     }
 
-    private <T> T owned(Optional<T> found, Function<T, Long> ownerId, String label, Long id) {
+    /**
+     * CLAUDE.md Core Business Rules 13 and 14: a record is returned only to its
+     * owner; anyone else gets the same 404 as for a record that does not exist.
+     * Takes the repository's finder, not an Optional parameter (Item 55).
+     */
+    private <T> T owned(Function<Long, Optional<T>> finder, Function<T, Long> ownerId, String label, Long id) {
         Supplier<ResourceNotFoundException> notFound =
                 () -> new ResourceNotFoundException(label + " not found: " + id);
-        T entity = found.orElseThrow(notFound);
+        T entity = finder.apply(id).orElseThrow(notFound);
         if (!ownerId.apply(entity).equals(userId())) {
             // V10 (SEC-09-01): the caller still gets the same 404 as for a
             // record that does not exist, but the log notes the attempt, and

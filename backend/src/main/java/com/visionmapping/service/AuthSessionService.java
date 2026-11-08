@@ -23,6 +23,7 @@ import java.util.HexFormat;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -146,7 +147,7 @@ public class AuthSessionService {
 
     /** Signing out: ends the session the refresh token belongs to. Unknown tokens are ignored. */
     @Transactional
-    public void logout(String refreshToken) {
+    public void logout(@Nullable String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             return;
         }

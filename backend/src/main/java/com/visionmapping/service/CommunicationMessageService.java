@@ -1,7 +1,6 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.likeTerm;
-import static com.visionmapping.service.support.ServiceSupport.parseEnum;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -11,11 +10,13 @@ import com.visionmapping.entity.CommunicationMessage;
 import com.visionmapping.entity.enums.CommunicationStatus;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.CommunicationMessageRepository;
+import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,19 +35,19 @@ public class CommunicationMessageService {
 
     @Transactional(readOnly = true)
     public Page<CommunicationMessageResponse> listCommunicationMessages(
-            Pageable pageable, boolean includeArchived, String search) {
-        return listCommunicationMessages(pageable, includeArchived, search, null, null);
+            Pageable pageable, ArchiveFilter archiveFilter, String search) {
+        return listCommunicationMessages(pageable, archiveFilter, search, null, null);
     }
 
     @Transactional(readOnly = true)
     public Page<CommunicationMessageResponse> listCommunicationMessages(
             Pageable pageable,
-            boolean includeArchived,
+            ArchiveFilter archiveFilter,
             String search,
-            Long partnerId,
-            CommunicationStatus status) {
+            @Nullable Long partnerId,
+            @Nullable CommunicationStatus status) {
         return communicationMessageRepository
-                .findFiltered(lookup.userId(), includeArchived, partnerId, status, likeTerm(search), pageable)
+                .findFiltered(lookup.userId(), archiveFilter.includesArchived(), partnerId, status, likeTerm(search).orElse(null), pageable)
                 .map(mapper::toResponse);
     }
 
@@ -69,9 +70,9 @@ public class CommunicationMessageService {
         return mapper.toResponse(entity);
     }
 
-    public CommunicationMessageResponse updateCommunicationStatus(Long id, String status) {
+    public CommunicationMessageResponse updateCommunicationStatus(Long id, CommunicationStatus status) {
         CommunicationMessage entity = lookup.communicationMessage(id);
-        entity.setStatus(parseEnum(CommunicationStatus.class, status));
+        entity.setStatus(status);
         return mapper.toResponse(entity);
     }
 

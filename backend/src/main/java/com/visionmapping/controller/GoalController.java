@@ -5,7 +5,10 @@ import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
 import com.visionmapping.dto.response.GoalResponse;
+import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.service.GoalService;
+import com.visionmapping.service.support.ArchiveFilter;
+import com.visionmapping.service.support.ProgressOverride;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +34,7 @@ public class GoalController {
 
     @GetMapping
     public List<GoalResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listGoals(includeArchived);
+        return service.listGoals(ArchiveFilter.of(includeArchived));
     }
 
     @PostMapping
@@ -51,8 +54,8 @@ public class GoalController {
     }
 
     @PatchMapping("/{id}/status")
-    public GoalResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
-        return service.updateGoalStatus(id, request.status(), request.manualOverride());
+    public GoalResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
+        return service.updateGoalStatus(id, request.status(), ProgressOverride.of(request.manualOverride()));
     }
 
     @PatchMapping("/reorder")

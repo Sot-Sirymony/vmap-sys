@@ -22,6 +22,7 @@ import com.visionmapping.service.DreamService;
 import com.visionmapping.dto.request.PlanDraftRequest;
 import com.visionmapping.dto.response.PlanDraftResponse;
 import com.visionmapping.service.ai.PlanBuilderDraftService;
+import com.visionmapping.service.ai.SuggestionScope;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import com.visionmapping.dto.request.AiPlanOutcomeRequest;
@@ -79,7 +80,7 @@ public class AiPlanController {
     public DreamSuggestions dreams(@PathVariable Long visionAreaId,
                                    @RequestParam(defaultValue = "false") boolean stretch,
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestDreams(visionAreaId, stretch, language);
+        return service.suggestDreams(visionAreaId, SuggestionScope.of(stretch), language);
     }
 
     @PostMapping("/dreams/{dreamId}/goal-suggestions")
@@ -87,7 +88,7 @@ public class AiPlanController {
                                  @RequestParam(defaultValue = "false") boolean stretch,
                                  @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
                                  @Valid @RequestBody(required = false) PlanAskRequest ask) {
-        return service.suggestGoals(dreamId, stretch, language, ask);
+        return service.suggestGoals(dreamId, SuggestionScope.of(stretch), language, ask);
     }
 
     @PostMapping("/goals/{goalId}/step-suggestions")

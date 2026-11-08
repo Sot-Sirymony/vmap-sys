@@ -14,6 +14,7 @@ import com.visionmapping.service.support.EntityLookup;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,7 +98,7 @@ public class PlanStatusService {
         return new PlanStatusResponse(dream.getId(), stages, statementDone && goalsDone && stepsDone && datesDone);
     }
 
-    private static boolean hasText(String value) {
+    private static boolean hasText(@Nullable String value) {
         return value != null && !value.isBlank();
     }
 

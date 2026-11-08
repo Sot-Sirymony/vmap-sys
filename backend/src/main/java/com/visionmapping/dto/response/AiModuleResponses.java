@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.util.Copies;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +17,12 @@ public final class AiModuleResponses {
     /** mode START fills questions and example; DRAFT fills rows; FEEDBACK fills feedback and improvements. */
     public record ModuleHelp(String mode, List<String> questions, String example, List<Map<String, String>> rows,
                              String feedback, List<String> improvements) {
+        public ModuleHelp {
+            questions = Copies.list(questions);
+            rows = Copies.list(rows);
+            improvements = Copies.list(improvements);
+        }
+    
     }
 
     /** focusModule and focusTitle are null when Claude named no module that exists. */

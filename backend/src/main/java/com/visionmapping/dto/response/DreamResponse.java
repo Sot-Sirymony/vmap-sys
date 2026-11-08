@@ -6,7 +6,9 @@ import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.ScheduleMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import lombok.Builder;
 
+@Builder
 public record DreamResponse(
         Long id,
         String code,

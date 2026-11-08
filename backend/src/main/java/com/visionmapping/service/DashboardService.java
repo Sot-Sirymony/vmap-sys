@@ -2,17 +2,12 @@ package com.visionmapping.service;
 
 import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
-import com.visionmapping.dto.response.DreamResponse;
-import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
-import com.visionmapping.dto.response.VisionAreaResponse;
-import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Obstacle;
-import com.visionmapping.entity.Partner;
-import com.visionmapping.entity.ProgressLog;
+import com.visionmapping.entity.PlanLinked;
 import com.visionmapping.entity.Review;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionArea;
@@ -42,39 +37,35 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Assembles the single dashboard payload: the KPI counts, the per-status and
- * per-area breakdowns, the top-priority task list, and the twelve-week progress
- * trend reconstructed from the progress-log history.
+ * per-area breakdowns and the top-priority task list. Two package-private
+ * collaborators build the larger parts: {@link DashboardTrend} (the
+ * twelve-week progress trend) and {@link DashboardAttention} (the method's
+ * rules checked against the records). Split in BRD 13 EJ-FR-29.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DashboardService {
 
-    private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-    private static final int TREND_WEEKS = 12;
-    // FR-37.1: an area with an active goal but no progress in this many days —
-    // while another area did move — is flagged as being starved of attention.
-    private static final int STARVATION_WINDOW_DAYS = 14;
-    private static final int DAYS_PER_WEEK = 7;
+    static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    static final int TREND_WEEKS = 12;
+    static final int DAYS_PER_WEEK = 7;
     private static final int TOP_PRIORITY_TASK_LIMIT = 5;
     private static final int RECENT_GRATITUDE_ENTRY_LIMIT = 3;
     private static final int KPI_PROGRESS_SCALE = 2;
@@ -95,24 +86,12 @@ public class DashboardService {
     private final GratitudeEntryRepository gratitudeEntryRepository;
     private final Clock clock;
 
-    /** Every unarchived record of the user, already narrowed to one area when the caller asked for it. */
-    private record ScopedData(
-            List<VisionArea> areas,
-            List<Dream> dreams,
-            List<Goal> goals,
-            List<VisionStep> steps,
-            List<TaskItem> tasks,
-            List<Obstacle> obstacles,
-            List<Partner> partners,
-            List<Review> reviews,
-            List<ProgressLog> progressLogs) {
-    }
 
     public DashboardSummaryResponse buildDashboardSummary() {
         return buildDashboardSummary(null, null, null);
     }
 
-    public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId) {
+    public DashboardSummaryResponse buildDashboardSummary(@Nullable Long visionAreaId) {
         return buildDashboardSummary(visionAreaId, null, null);
     }
 
@@ -129,44 +108,44 @@ public class DashboardService {
      *                     last of the current month.
      */
     @Cacheable(CacheConfig.DASHBOARD_CACHE)
-    public DashboardSummaryResponse buildDashboardSummary(Long visionAreaId, LocalDate periodStart, LocalDate periodEnd) {
+    public DashboardSummaryResponse buildDashboardSummary(@Nullable Long visionAreaId, @Nullable LocalDate periodStart, @Nullable LocalDate periodEnd) {
         LocalDate today = LocalDate.now(clock);
-        ScopedData data = loadScopedData(visionAreaId, today);
+        DashboardData data = loadDashboardData(visionAreaId, today);
         LocalDate weekEnd = today.plusDays(DAYS_PER_WEEK);
         // The selectable window for the two time-based tiles. Defaults to the
         // current month when the caller passes nothing.
         LocalDate periodFrom = periodStart != null ? periodStart : today.withDayOfMonth(1);
         LocalDate periodTo = periodEnd != null ? periodEnd : today.withDayOfMonth(today.lengthOfMonth());
 
-        return new DashboardSummaryResponse(
-                data.areas().size(),
-                data.dreams().stream().filter(dream -> dream.getStatus() == DreamStatus.ACTIVE).count(),
-                data.goals().stream().filter(DashboardService::isOpenGoal).count(),
-                data.tasks().stream().filter(task -> task.getStatus() != WorkStatus.COMPLETED).count(),
-                data.tasks().stream().filter(task -> task.getStatus() == WorkStatus.COMPLETED).count(),
-                data.tasks().stream().filter(task -> progress.isOverdue(task, today)).count(),
-                data.tasks().stream().filter(task -> task.getStatus() == WorkStatus.BLOCKED).count(),
-                averageGoalProgress(data.goals(), KPI_PROGRESS_SCALE),
-                countTasksDueBetween(data.tasks(), today, weekEnd),
-                countTasksDueBetween(data.tasks(), periodFrom, periodTo),
-                countTasksCompletedBetween(data.tasks(), periodFrom, periodTo),
-                countBy(data.goals(), goal -> goal.getStatus().name()),
-                countBy(data.dreams(), dream -> dream.getVisionArea().getName()),
-                countBy(data.tasks(), task -> task.getStatus().name()),
-                countBy(data.tasks(), task -> task.getPriority().name()),
-                activeObstaclesByType(data.obstacles()),
-                countBy(data.partners(), partner -> partner.getStatus().name()),
-                reviewCadence(data.reviews()),
-                buildProgressTrend(data.progressLogs(), today),
-                buildAreaProgress(data.areas(), data.goals()),
-                topPriorityTasks(data.tasks()),
-                countWeeksWithDiligence(data.reviews(), today),
-                data.goals().stream().filter(Goal::isMoonshot).count(),
-                data.dreams().stream().filter(Dream::isMoonshot).count(),
-                buildAttention(data),
-                buildEnergyBudget(data.tasks(), today),
-                buildGratitude(today)
-        );
+        return DashboardSummaryResponse.builder()
+                .totalVisionAreas(data.areas().size())
+                .activeDreams(data.dreams().stream().filter(dream -> dream.getStatus() == DreamStatus.ACTIVE).count())
+                .activeGoals(data.goals().stream().filter(DashboardService::isOpenGoal).count())
+                .activeTasks(data.tasks().stream().filter(task -> task.getStatus() != WorkStatus.COMPLETED).count())
+                .completedTasks(data.tasks().stream().filter(task -> task.getStatus() == WorkStatus.COMPLETED).count())
+                .overdueTasks(data.tasks().stream().filter(task -> progress.isOverdue(task, today)).count())
+                .blockedTasks(data.tasks().stream().filter(task -> task.getStatus() == WorkStatus.BLOCKED).count())
+                .averageProgress(averageGoalProgress(data.goals(), KPI_PROGRESS_SCALE))
+                .tasksDueThisWeek(countTasksDueBetween(data.tasks(), today, weekEnd))
+                .tasksDueInPeriod(countTasksDueBetween(data.tasks(), periodFrom, periodTo))
+                .completedTasksInPeriod(countTasksCompletedBetween(data.tasks(), periodFrom, periodTo))
+                .goalsByStatus(countBy(data.goals(), goal -> goal.getStatus().name()))
+                .dreamsByVisionArea(countBy(data.dreams(), dream -> dream.getVisionArea().getName()))
+                .tasksByStatus(countBy(data.tasks(), task -> task.getStatus().name()))
+                .tasksByPriority(countBy(data.tasks(), task -> task.getPriority().name()))
+                .activeObstaclesByType(activeObstaclesByType(data.obstacles()))
+                .partnersByStatus(countBy(data.partners(), partner -> partner.getStatus().name()))
+                .reviewCadence(reviewCadence(data.reviews()))
+                .progressTrend(DashboardTrend.build(data.progressLogs(), today, clock.getZone()))
+                .visionAreaProgress(buildAreaProgress(data.areas(), data.goals()))
+                .priorityTasks(topPriorityTasks(data.tasks()))
+                .weeksWithDiligence(countWeeksWithDiligence(data.reviews(), today))
+                .moonshotGoals(data.goals().stream().filter(Goal::isMoonshot).count())
+                .moonshotDreams(data.dreams().stream().filter(Dream::isMoonshot).count())
+                .attention(DashboardAttention.build(data, mapper, clock.instant()))
+                .energyBudget(buildEnergyBudget(data.tasks(), today))
+                .gratitude(buildGratitude(today))
+                .build();
     }
 
     /**
@@ -214,26 +193,26 @@ public class DashboardService {
         return new DashboardSummaryResponse.EnergyBudget(charge, neutral, drain, charge - drain);
     }
 
-    private ScopedData loadScopedData(Long visionAreaId, LocalDate today) {
+    private DashboardData loadDashboardData(Long visionAreaId, LocalDate today) {
         Long userId = lookup.userId();
-        return new ScopedData(
+        return new DashboardData(
                 scoped(visionAreaRepository.findByUser_IdAndArchivedFalse(userId), VisionArea::getId, visionAreaId),
-                scoped(dreamRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(goalRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(visionStepRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(taskItemRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(obstacleRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(partnerRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
-                scoped(reviewRepository.findByUser_IdAndArchivedFalse(userId), DashboardService::areaIdOf, visionAreaId),
+                scoped(dreamRepository.findByUser_IdAndArchivedFalse(userId), Dream::visionAreaId, visionAreaId),
+                scoped(goalRepository.findByUser_IdAndArchivedFalse(userId), Goal::visionAreaId, visionAreaId),
+                scoped(visionStepRepository.findByUser_IdAndArchivedFalse(userId), VisionStep::visionAreaId, visionAreaId),
+                scoped(taskItemRepository.findByUser_IdAndArchivedFalse(userId), TaskItem::visionAreaId, visionAreaId),
+                scoped(obstacleRepository.findByUser_IdAndArchivedFalse(userId), PlanLinked::linkedVisionAreaId, visionAreaId),
+                scoped(partnerRepository.findByUser_IdAndArchivedFalse(userId), PlanLinked::linkedVisionAreaId, visionAreaId),
+                scoped(reviewRepository.findByUser_IdAndArchivedFalse(userId), PlanLinked::linkedVisionAreaId, visionAreaId),
                 // Only the trend window (plus each task's last pre-window value) —
                 // the log table is the one that grows without bound.
                 scoped(progressLogRepository.findTrendWindow(
-                        userId, trendStart(today).atStartOfDay(clock.getZone()).toInstant()),
-                        DashboardService::areaIdOf, visionAreaId));
+                        userId, DashboardTrend.start(today).atStartOfDay(clock.getZone()).toInstant()),
+                        PlanLinked::linkedVisionAreaId, visionAreaId));
     }
 
     /** Keeps only the records belonging to the chosen area; null means keep everything. */
-    private static <T> List<T> scoped(List<T> records, Function<T, Long> areaIdOf, Long visionAreaId) {
+    private static <T> List<T> scoped(List<T> records, Function<T, Long> areaIdOf, @Nullable Long visionAreaId) {
         if (visionAreaId == null) {
             return records;
         }
@@ -242,7 +221,7 @@ public class DashboardService {
                 .toList();
     }
 
-    private static boolean isOpenGoal(Goal goal) {
+    static boolean isOpenGoal(Goal goal) {
         return goal.getStatus() == WorkStatus.IN_PROGRESS || goal.getStatus() == WorkStatus.NOT_STARTED;
     }
 
@@ -337,272 +316,4 @@ public class DashboardService {
                 .toList();
     }
 
-    // Which area a record belongs to, walking up the hierarchy. A record that
-    // links to nothing has no area, so it drops out of an area-scoped view —
-    // it genuinely isn't part of that area.
-    private static Long areaIdOf(Dream dream) {
-        return dream.getVisionArea() == null ? null : dream.getVisionArea().getId();
-    }
-
-    private static Long areaIdOf(Goal goal) {
-        return goal.getDream() == null ? null : areaIdOf(goal.getDream());
-    }
-
-    private static Long areaIdOf(VisionStep step) {
-        return step.getGoal() == null ? null : areaIdOf(step.getGoal());
-    }
-
-    private static Long areaIdOf(TaskItem task) {
-        return task.getStep() == null ? null : areaIdOf(task.getStep());
-    }
-
-    private static Long areaIdOf(Obstacle obstacle) {
-        if (obstacle.getRelatedTask() != null) {
-            return areaIdOf(obstacle.getRelatedTask());
-        }
-        if (obstacle.getRelatedStep() != null) {
-            return areaIdOf(obstacle.getRelatedStep());
-        }
-        if (obstacle.getRelatedGoal() != null) {
-            return areaIdOf(obstacle.getRelatedGoal());
-        }
-        if (obstacle.getRelatedDream() != null) {
-            return areaIdOf(obstacle.getRelatedDream());
-        }
-        return null;
-    }
-
-    private static Long areaIdOf(Partner partner) {
-        if (partner.getRelatedVisionArea() != null) {
-            return partner.getRelatedVisionArea().getId();
-        }
-        if (partner.getRelatedTask() != null) {
-            return areaIdOf(partner.getRelatedTask());
-        }
-        if (partner.getRelatedStep() != null) {
-            return areaIdOf(partner.getRelatedStep());
-        }
-        if (partner.getRelatedGoal() != null) {
-            return areaIdOf(partner.getRelatedGoal());
-        }
-        if (partner.getRelatedDream() != null) {
-            return areaIdOf(partner.getRelatedDream());
-        }
-        return null;
-    }
-
-    private static Long areaIdOf(Review review) {
-        if (review.getRelatedVisionArea() != null) {
-            return review.getRelatedVisionArea().getId();
-        }
-        if (review.getRelatedDream() != null) {
-            return areaIdOf(review.getRelatedDream());
-        }
-        return null;
-    }
-
-    private static Long areaIdOf(ProgressLog log) {
-        return log.getRelatedTask() == null ? null : areaIdOf(log.getRelatedTask());
-    }
-
-    /**
-     * The method's own rules, checked against the user's records. Everything here
-     * is derived from lists already loaded above, so this costs one extra query
-     * (steps) rather than four.
-     */
-    private DashboardSummaryResponse.Attention buildAttention(ScopedData data) {
-        Set<Long> stepIdsWithTasks = data.tasks().stream()
-                .map(task -> task.getStep().getId())
-                .collect(Collectors.toSet());
-        Set<Long> goalIdsWithSteps = data.steps().stream()
-                .map(step -> step.getGoal().getId())
-                .collect(Collectors.toSet());
-        Set<Long> dreamIdsWithGoals = data.goals().stream()
-                .map(goal -> goal.getDream().getId())
-                .collect(Collectors.toSet());
-        // A task counts as having a partner if any partner points at it.
-        Set<Long> taskIdsWithPartner = data.partners().stream()
-                .map(Partner::getRelatedTask)
-                .filter(Objects::nonNull)
-                .map(TaskItem::getId)
-                .collect(Collectors.toSet());
-
-        List<TaskItemResponse> blockedTasksWithoutPartner = data.tasks().stream()
-                .filter(task -> task.getStatus() == WorkStatus.BLOCKED)
-                .filter(task -> !taskIdsWithPartner.contains(task.getId()))
-                .map(mapper::toResponse)
-                .toList();
-
-        // Business rule: a step marked complex should be broken into tasks.
-        List<VisionStepResponse> complexStepsWithoutTasks = data.steps().stream()
-                .filter(VisionStep::isComplex)
-                .filter(step -> step.getStatus() != WorkStatus.COMPLETED)
-                .filter(step -> !stepIdsWithTasks.contains(step.getId()))
-                .map(mapper::toResponse)
-                .toList();
-
-        // A dream with no goals is still a wish — nothing can be executed on it.
-        List<DreamResponse> dreamsWithoutGoals = data.dreams().stream()
-                .filter(dream -> dream.getStatus() != DreamStatus.COMPLETED)
-                .filter(dream -> !dreamIdsWithGoals.contains(dream.getId()))
-                .map(mapper::toResponse)
-                .toList();
-
-        List<GoalResponse> goalsWithoutSteps = data.goals().stream()
-                .filter(goal -> goal.getStatus() != WorkStatus.COMPLETED)
-                .filter(goal -> !goalIdsWithSteps.contains(goal.getId()))
-                .map(mapper::toResponse)
-                .toList();
-
-        // FR-25.2: a moonshot that never started is ambition going stale —
-        // surfaced so the user either starts it or consciously revises it.
-        List<GoalResponse> inactiveMoonshotGoals = data.goals().stream()
-                .filter(Goal::isMoonshot)
-                .filter(goal -> goal.getStatus() == WorkStatus.NOT_STARTED)
-                .map(mapper::toResponse)
-                .toList();
-
-        // FR-31.4: same rule one level up — a moonshot dream still at the Idea
-        // stage is ambition going stale, same as an unstarted moonshot goal.
-        List<DreamResponse> inactiveMoonshotDreams = data.dreams().stream()
-                .filter(Dream::isMoonshot)
-                .filter(dream -> dream.getStatus() == DreamStatus.IDEA)
-                .map(mapper::toResponse)
-                .toList();
-
-        return new DashboardSummaryResponse.Attention(
-                blockedTasksWithoutPartner,
-                complexStepsWithoutTasks,
-                dreamsWithoutGoals,
-                goalsWithoutSteps,
-                inactiveMoonshotGoals,
-                inactiveMoonshotDreams,
-                starvedVisionAreas(data));
-    }
-
-    /**
-     * FR-37.1 (BR-31): areas being starved of attention — an active goal but no
-     * task progress logged in the last {@value #STARVATION_WINDOW_DAYS} days,
-     * *while at least one other area did move* in that window. The "another area
-     * moved" gate is what makes this an imbalance signal rather than a
-     * holiday-lull false alarm. Purely computed and read-only: it never mutates
-     * or persists anything, and it naturally yields nothing in an area-scoped
-     * view (a cross-area comparison needs more than one area).
-     */
-    private List<VisionAreaResponse> starvedVisionAreas(ScopedData data) {
-        Instant cutoff = Instant.now(clock).minus(STARVATION_WINDOW_DAYS, ChronoUnit.DAYS);
-        Set<Long> areasWithRecentProgress = data.progressLogs().stream()
-                .filter(log -> log.getLoggedAt() != null && !log.getLoggedAt().isBefore(cutoff))
-                .map(DashboardService::areaIdOf)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        // No area moved at all → a global lull, not an imbalance. Flag nothing.
-        if (areasWithRecentProgress.isEmpty()) {
-            return List.of();
-        }
-        Set<Long> areasWithActiveGoal = data.goals().stream()
-                .filter(DashboardService::isOpenGoal)
-                .map(DashboardService::areaIdOf)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        return data.areas().stream()
-                .filter(area -> area.getStatus() != LifecycleStatus.ARCHIVED)
-                .filter(area -> areasWithActiveGoal.contains(area.getId()))
-                .filter(area -> !areasWithRecentProgress.contains(area.getId()))
-                .map(mapper::toResponse)
-                .toList();
-    }
-
-    /**
-     * Weekly samples of the running "average task progress" over the last
-     * twelve weeks, reconstructed from the progress-log history: each task's
-     * latest logged value as of a given day carries forward until its next
-     * change, and each week reports the last day that had any data. Mirrors
-     * the same Average Progress KPI, but as a trend instead of one number.
-     */
-    private List<DashboardSummaryResponse.TrendPoint> buildProgressTrend(List<ProgressLog> logs, LocalDate today) {
-        int totalDays = TREND_WEEKS * DAYS_PER_WEEK;
-        LocalDate start = trendStart(today);
-        List<BigDecimal> dailyAverages = dailyAverageProgress(groupLogsByTask(logs), start, totalDays);
-        return trimLeadingEmptyWeeks(weeklySamples(dailyAverages, start));
-    }
-
-    /** First day of the twelve-week trend window; also the cut-off for which log rows are loaded. */
-    private static LocalDate trendStart(LocalDate today) {
-        return today.minusDays((long) TREND_WEEKS * DAYS_PER_WEEK - 1L);
-    }
-
-    /** Each task's log entries in the order they were written, so "latest as of a day" is a forward scan. */
-    private static Map<Long, List<ProgressLog>> groupLogsByTask(List<ProgressLog> logs) {
-        Map<Long, List<ProgressLog>> byTask = logs.stream()
-                .collect(Collectors.groupingBy(log -> log.getRelatedTask().getId()));
-        byTask.values().forEach(entries -> entries.sort(Comparator.comparing(ProgressLog::getLoggedAt)));
-        return byTask;
-    }
-
-    /** Average of every task's carried-forward progress, one value per day; null on days with no data yet. */
-    private List<BigDecimal> dailyAverageProgress(Map<Long, List<ProgressLog>> logsByTask, LocalDate start, int totalDays) {
-        List<BigDecimal> dailyAverages = new ArrayList<>(totalDays);
-        for (int i = 0; i < totalDays; i++) {
-            LocalDate cursor = start.plusDays(i);
-            List<BigDecimal> valuesAsOfDay = logsByTask.values().stream()
-                    .map(entries -> latestProgressAsOf(entries, cursor))
-                    .filter(Objects::nonNull)
-                    .toList();
-            dailyAverages.add(valuesAsOfDay.isEmpty()
-                    ? null
-                    : valuesAsOfDay.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(BigDecimal.valueOf(valuesAsOfDay.size()), 2, RoundingMode.HALF_UP));
-        }
-        return dailyAverages;
-    }
-
-    /** The last value logged on or before the cursor day, or null if the task had no log yet. */
-    private BigDecimal latestProgressAsOf(List<ProgressLog> sortedEntries, LocalDate cursor) {
-        ProgressLog latest = null;
-        for (ProgressLog entry : sortedEntries) {
-            LocalDate logDate = entry.getLoggedAt().atZone(clock.getZone()).toLocalDate();
-            if (logDate.isAfter(cursor)) {
-                break;
-            }
-            latest = entry;
-        }
-        return latest == null ? null : latest.getProgressPercentAfter();
-    }
-
-    /** One point per week, sampled from the last day of that week that had any data. */
-    private static List<DashboardSummaryResponse.TrendPoint> weeklySamples(List<BigDecimal> dailyAverages, LocalDate start) {
-        List<DashboardSummaryResponse.TrendPoint> weeklyPoints = new ArrayList<>(TREND_WEEKS);
-        for (int week = 0; week < TREND_WEEKS; week++) {
-            weeklyPoints.add(new DashboardSummaryResponse.TrendPoint(
-                    start.plusDays(week * (long) DAYS_PER_WEEK + 6),
-                    lastKnownAverageInWeek(dailyAverages, week)));
-        }
-        return weeklyPoints;
-    }
-
-    private static BigDecimal lastKnownAverageInWeek(List<BigDecimal> dailyAverages, int week) {
-        for (int day = week * DAYS_PER_WEEK + 6; day >= week * DAYS_PER_WEEK; day--) {
-            if (dailyAverages.get(day) != null) {
-                return dailyAverages.get(day);
-            }
-        }
-        return null;
-    }
-
-    /** Drops the weeks before the first logged data; gaps after that render as zero. */
-    private static List<DashboardSummaryResponse.TrendPoint> trimLeadingEmptyWeeks(
-            List<DashboardSummaryResponse.TrendPoint> weeklyPoints) {
-        int firstDataIndex = 0;
-        while (firstDataIndex < weeklyPoints.size() && weeklyPoints.get(firstDataIndex).progress() == null) {
-            firstDataIndex++;
-        }
-        if (firstDataIndex == weeklyPoints.size()) {
-            return List.of();
-        }
-        return weeklyPoints.subList(firstDataIndex, weeklyPoints.size()).stream()
-                .map(point -> new DashboardSummaryResponse.TrendPoint(
-                        point.weekEnd(), point.progress() == null ? ZERO : point.progress()))
-                .toList();
-    }
 }

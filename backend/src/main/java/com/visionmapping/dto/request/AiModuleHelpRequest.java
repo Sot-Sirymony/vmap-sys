@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -11,4 +12,7 @@ public record AiModuleHelpRequest(
         @NotNull @Pattern(regexp = "START|DRAFT|FEEDBACK") String mode,
         @Size(max = 20) List<Map<String, String>> rows,
         @Pattern(regexp = "en|km") String language) {
+    public AiModuleHelpRequest {
+        rows = Copies.list(rows);
+    }
 }

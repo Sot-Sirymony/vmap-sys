@@ -2,6 +2,7 @@ package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.util.Copies;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -15,6 +16,12 @@ public record DailyPlanResponse(
         LocalDate lastWeeklyReviewDate,
         long undatedStepCount
 ) {
+
+    public DailyPlanResponse {
+        items = Copies.list(items);
+        habits = Copies.list(habits);
+    }
+
 
     public enum Kind {
         STEP,

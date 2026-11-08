@@ -24,7 +24,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "progress_logs")
-public class ProgressLog {
+public class ProgressLog implements PlanLinked {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

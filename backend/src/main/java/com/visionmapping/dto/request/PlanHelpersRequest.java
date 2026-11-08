@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import com.visionmapping.util.Copies;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,11 @@ public record PlanHelpersRequest(
         @Size(max = 60) List<@NotNull @Valid Item> items,
         boolean useFears,
         @Valid PlanAskRequest ask) {
+
+    public PlanHelpersRequest {
+        items = Copies.list(items);
+    }
+
 
     public record Item(
             @NotBlank @Size(max = 40) String key,

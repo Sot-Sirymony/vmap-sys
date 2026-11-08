@@ -6,13 +6,10 @@ import com.visionmapping.dto.response.ProgressLogResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
-import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.ProgressLogRepository;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.ProgressCalculator;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -30,8 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class ProgressLogService {
-
-    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100).setScale(2, RoundingMode.HALF_UP);
 
     private final EntityLookup lookup;
     private final ProgressCalculator progress;
@@ -56,11 +51,7 @@ public class ProgressLogService {
                 .note(request.note())
                 .loggedAt(Instant.now(clock))
                 .build();
-        task.setProgressPercent(entity.getProgressPercentAfter());
-        if (ONE_HUNDRED.compareTo(entity.getProgressPercentAfter()) == 0) {
-            task.setStatus(WorkStatus.COMPLETED);
-            task.setCompletedAt(Instant.now(clock));
-        }
+        task.recordProgress(entity.getProgressPercentAfter(), clock);
         progress.recalculateStep(task.getStep());
         return mapper.toResponse(progressLogRepository.save(entity));
     }

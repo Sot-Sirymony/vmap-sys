@@ -1,8 +1,11 @@
 package com.visionmapping.service.support;
 
 import com.visionmapping.security.AppUserPrincipal;
+import java.time.Clock;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -23,8 +26,14 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 public class UserCacheEvictor {
 
     private final ConcurrentHashMap<Long, AtomicLong> generations = new ConcurrentHashMap<>();
+    private final Clock clock;
+
+    public UserCacheEvictor(Clock clock) {
+        this.clock = Objects.requireNonNull(clock, "clock");
+    }
 
     /** The authenticated user's id, or null on unauthenticated paths (register, login). */
+    @Nullable
     public static Long currentUserIdOrNull() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getPrincipal() instanceof AppUserPrincipal principal
@@ -55,10 +64,18 @@ public class UserCacheEvictor {
     }
 
     private void bump(Long userId) {
-        stamp(userId).updateAndGet(current -> Math.max(current + 1, System.currentTimeMillis()));
+        stamp(userId).updateAndGet(current -> Math.max(current + 1, nowMillis()));
     }
 
     private AtomicLong stamp(Long userId) {
-        return generations.computeIfAbsent(userId, id -> new AtomicLong(System.currentTimeMillis()));
+        return generations.computeIfAbsent(userId, id -> new AtomicLong(nowMillis()));
+    }
+
+    /**
+     * Not {@code clock.millis()}: the app's clock ticks in microseconds, and on
+     * Java 17 {@code millis()} of a sub-millisecond tick clock divides by zero.
+     */
+    private long nowMillis() {
+        return clock.instant().toEpochMilli();
     }
 }

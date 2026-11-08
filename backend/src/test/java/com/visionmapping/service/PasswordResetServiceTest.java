@@ -23,8 +23,10 @@ import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.PasswordResetTokenRepository;
 import com.visionmapping.service.mail.PasswordResetMailer;
 import com.visionmapping.service.support.PasswordResetRateLimiter;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,7 +76,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents);
+        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, Clock.systemUTC());
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
@@ -260,5 +262,23 @@ class PasswordResetServiceTest {
 
     private String eqEmail() {
         return org.mockito.ArgumentMatchers.eq(EMAIL);
+    }
+
+    /** BRD 13 EJ-FR-22: expiry and the spent time come from the injected clock. */
+    @Test
+    @DisplayName("uses the injected clock for expiry and for the time the token was spent")
+    void usesTheInjectedClock() {
+        Instant now = Instant.parse("2026-11-01T09:00:00Z");
+        PasswordResetService fixed = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer,
+                rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, Clock.fixed(now, ZoneOffset.UTC));
+        PasswordResetToken expiresNow = storedTokenFor("the-token", now);
+        PasswordResetToken expiresLater = storedTokenFor("other-token", now.plusSeconds(1));
+        when(tokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(expiresNow))
+                .thenReturn(Optional.of(expiresLater));
+
+        assertThatThrownBy(() -> fixed.resetPassword(new ResetPasswordRequest("the-token", NEW_PASSWORD)))
+                .hasMessageContaining("expired");
+        fixed.resetPassword(new ResetPasswordRequest("other-token", NEW_PASSWORD));
+        assertThat(expiresLater.getUsedAt()).isEqualTo(now);
     }
 }
