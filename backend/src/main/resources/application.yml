@@ -42,6 +42,21 @@ server:
     mime-types: application/json,application/xml,text/plain,text/css,text/javascript
     min-response-size: 2KB
 
+# OpenAPI description (/v3/api-docs) and Swagger UI (/swagger-ui.html).
+# Off by default: a public map of every endpoint helps an attacker more than a
+# participant. The local and test profiles turn it on; elsewhere set
+# SWAGGER_ENABLED=true to turn it on deliberately.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+  default-produces-media-type: application/json
+  paths-to-match: /api/**
+
 app:
   security:
     jwt-secret: ${JWT_SECRET:vision-mapping-development-secret-key-change-before-production}
@@ -124,6 +139,11 @@ app:
     today-url: ${REMINDERS_TODAY_URL:}
 
 ---
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
 spring:
   config:
     activate:
@@ -238,6 +258,11 @@ server:
     max-connections: 200
 
 ---
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 spring:
   config:
     activate:

@@ -6,6 +6,11 @@ Base URL:
 http://localhost:8080/api
 ```
 
+Interactive documentation: <http://localhost:8080/swagger-ui.html> (OpenAPI description at
+`/v3/api-docs`). It is generated from the controllers, so it is always current. It is on in the `local`
+and `test` profiles and off in production unless `SWAGGER_ENABLED=true`. In Swagger UI, sign in with
+`POST /api/auth/login`, then use **Authorize** and paste the `token`.
+
 Protected endpoints require:
 
 ```text

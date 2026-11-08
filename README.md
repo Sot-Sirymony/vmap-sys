@@ -238,6 +238,16 @@ node scripts/export-km-review.mjs > ../docs/km-review-v11.csv
 
 ## API Summary
 
+**Interactive documentation (Swagger UI).** With the backend running on the `local` profile, open
+<http://localhost:8080/swagger-ui.html>. The machine-readable OpenAPI description is at
+<http://localhost:8080/v3/api-docs>. To call protected endpoints from the page: run `POST /api/auth/login`,
+copy the `token` from the answer, choose **Authorize** and paste it (without `Bearer`).
+
+Swagger is on in the `local` and `test` profiles and **off in production**, because a public map of every
+endpoint helps an attacker more than a participant. Set `SWAGGER_ENABLED=true` to turn it on deliberately
+(and `SWAGGER_ENABLED=false` to turn it off locally). The docs pages get their own Content-Security-Policy;
+every API answer keeps the strict one.
+
 Public:
 - `GET /api/health`
 - `POST /api/auth/register`
@@ -325,6 +335,7 @@ Everything that differs between local dev and Render is env-driven — nothing i
 | `PORT` | Set by Render automatically | Backend binds to it via `server.port: ${PORT:8080}` |
 | `SPRING_PROFILES_ACTIVE` | `prod` (in `render.yaml`) | Activates the Postgres-from-parts profile instead of `local`/`test` |
 | `CACHE_TYPE`, `REDIS_URL` | Set in `render.yaml`; `REDIS_URL` auto-injected from `vision-mapping-cache` via `fromService` | FR-30 Redis cache. Both unset → the backend runs uncached, exactly as before. Locally: start Redis and set `CACHE_TYPE=redis` to enable |
+| `SWAGGER_ENABLED` | Not set in `render.yaml` (off) | Turns on Swagger UI and `/v3/api-docs`. Leave it unset in production unless the API description should be public |
 | `CORS_ALLOWED_ORIGINS` | Set in `render.yaml`, defaults to the predicted frontend URL | Comma-separated list; must include the frontend's real Render URL |
 | `VITE_API_BASE_URL` | Set in `render.yaml`, defaults to the predicted backend URL + `/api` | Baked into the frontend bundle at **build** time, not runtime |
 

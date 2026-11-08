@@ -23,8 +23,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ContentSecurityPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,6 +41,16 @@ public class SecurityConfig {
 
     static final String API_CONTENT_SECURITY_POLICY =
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+    /**
+     * Swagger UI is a real page: it loads its own scripts, styles and images and
+     * calls the API from the same origin. Swagger UI sets inline styles, hence
+     * 'unsafe-inline' for styles only; scripts stay 'self'. Still no framing.
+     */
+    static final String DOCS_CONTENT_SECURITY_POLICY =
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+                    + "frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+    /** The OpenAPI description and Swagger UI; they answer 404 when springdoc is off. */
+    static final String[] DOCS_PATHS = {"/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**"};
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()";
     static final long HSTS_MAX_AGE_SECONDS = 31_536_000L;
 
@@ -74,7 +90,11 @@ public class SecurityConfig {
                 // never send it. Browsers ignore HSTS received over plain HTTP, so
                 // local development is unaffected.
                 .headers(headers -> headers
-                        .contentSecurityPolicy(csp -> csp.policyDirectives(API_CONTENT_SECURITY_POLICY))
+                        // The docs pages get their own policy; every other response the strict one.
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(docsPaths()),
+                                new ContentSecurityPolicyHeaderWriter(API_CONTENT_SECURITY_POLICY)))
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(docsPaths(),
+                                new ContentSecurityPolicyHeaderWriter(DOCS_CONTENT_SECURITY_POLICY)))
                         .frameOptions(frame -> frame.deny())
                         .referrerPolicy(referrer -> referrer.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
@@ -111,6 +131,10 @@ public class SecurityConfig {
                                 // sign-in to draw the sign-in page. Read-only.
                                 "/api/ui-text"
                         ).permitAll()
+                        // The API description and Swagger UI, when springdoc is turned
+                        // on (local and test profiles, or SWAGGER_ENABLED=true). Every
+                        // call made from the UI still needs a token.
+                        .requestMatchers(DOCS_PATHS).permitAll()
                         // V9 (v0.1 FR-10): a partner opens a shared plan without an
                         // account. Read-only; the 256-bit token in the path is the key.
                         .requestMatchers(HttpMethod.GET, "/api/shared-plans/*").permitAll()
@@ -166,5 +190,10 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
+    }
+
+    private static RequestMatcher docsPaths() {
+        PathPatternRequestMatcher.Builder paths = PathPatternRequestMatcher.withDefaults();
+        return new OrRequestMatcher(Arrays.stream(DOCS_PATHS).map(paths::matcher).map(RequestMatcher.class::cast).toList());
     }
 }
