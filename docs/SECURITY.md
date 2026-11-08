@@ -82,6 +82,29 @@ To see coverage locally: `mvn verify` in `backend/` writes
 `target/site/jacoco/index.html`, and `npm run test:coverage` in `frontend/`
 writes `coverage/lcov-report/index.html`.
 
+### Test coverage as a control (BRD 12)
+
+Coverage on `main` is 85.1% for the whole project (backend 88.1%, frontend
+83.3%). Both CI jobs fail below their minimums (backend lines 94%, branches
+75%; frontend lines 85%, statements 84%, branches 78%, functions 78%), so a
+change cannot quietly remove the tests that guard it. The tests that matter
+most for security:
+
+| Control | Tests |
+| --- | --- |
+| Another user's record answers 404; no token answers 401 (BR-13, SEC-01) | `AccessControlSweepTests` (every route), `CoreResourceLifecycleFlowTests`, `SupportingResourceFlowTests` |
+| Admin and coach routes refused by role; a coach may read, never change (D-6) | `CoachingFlowTests`, `SupportingResourceFlowTests`, `CoachParticipantPage.test.tsx`, `CohortsPage.test.tsx` |
+| Journals reach a coach only when shared (D-6) | `CoachingFlowTests`, `CoachParticipantPage.test.tsx` |
+| What goes to Claude: the participant's own records only, never a private conflict note, wrapped so text cannot pose as instructions (AI-NFR-04, AI-NFR-13, SEC-05-07) | `AiContextBuilderTest`, `ParticipantDataBlockTest` |
+| AI controls hidden while AI is off (AI-NFR-02) | `PitchCoachCard.test.tsx`, `CommunicationBuilderPage.test.tsx`, `ReviewsPage.test.tsx` |
+| Crisis wording always gets the help lines (AI-NFR-09) | `AiSafetyTest`, `DreamCoachFlowTests` |
+| A password reset link is logged only on local and test runs (SEC-09-07) | `MailersTest` |
+| Excel export never carries formulas or private notes | `ExcelSecurityFlowTests`, `ExcelImportFlowTests` |
+
+No test calls the Claude API, Google or a mail server: they are mocked, or
+run against local stand-ins (`ClaudeStubServer`, GreenMail). Both suites were
+run with outside network access blocked and passed (BRD 12 CAC-07).
+
 ### Update deadlines (SEC-03-03)
 
 | Severity | Fix within |

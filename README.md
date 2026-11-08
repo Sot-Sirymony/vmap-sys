@@ -148,6 +148,15 @@ npm run build
 
 ### Test coverage (BRD 12)
 
+Coverage on `main` from SonarQube Cloud (lines and branches together), commit `f7e7666`, 7 Nov 2026:
+
+| Area | Coverage |
+| --- | --- |
+| Whole project | 85.1% |
+| Backend | 88.1% |
+| Frontend | 83.3% (pages 83.4%, vision map 82.2%, other 83.3%) |
+
+About 945 frontend tests (Vitest and React Testing Library) and 590 backend tests (JUnit 5 and Mockito).
 CI fails when coverage falls below the minimum, on either side:
 
 ```bash
@@ -155,15 +164,33 @@ cd backend && mvn verify                 # tests, JaCoCo report and check (targe
 cd frontend && npm run test:coverage     # tests with coverage and thresholds (coverage/lcov-report/index.html)
 ```
 
-The minimums are in `backend/pom.xml` (`coverage.line.minimum`, `coverage.branch.minimum`) and
-`frontend/vite.config.ts` (`test.coverage.thresholds`). They are raised at the end of each BRD 12 phase
-and never lowered without the product owner's approval.
+| Side | Minimum | Where it is set |
+| --- | --- | --- |
+| Backend | lines 94%, branches 75% | `backend/pom.xml` (`coverage.line.minimum`, `coverage.branch.minimum`) |
+| Frontend | lines 85%, statements 84%, branches 78%, functions 78% | `frontend/vite.config.ts` (`test.coverage.thresholds`) |
 
-The whole-project figure from SonarQube Cloud, by area, for the end of each phase:
+The minimums are never lowered without the product owner's approval. New code must also reach 80% on
+SonarQube's quality gate.
+
+The figure for the current `main`, by area:
 
 ```bash
 node scripts/coverage-report.mjs            # or --markdown for a table
 ```
+
+How the tests are written (BRD 12 COV-NFR-01 to COV-NFR-08):
+
+- **Behaviour, not lines.** Each test checks something a user or the business cares about: what is shown,
+  what is saved, what is refused. Tests find elements by role and label, as a user would.
+- **No outside calls.** Claude, Google sign-in and mail are mocked or stubbed. The Claude client is tested
+  against a local stub of the Claude API (`backend/src/test/java/com/visionmapping/service/ai/ClaudeStubServer.java`).
+  Both suites pass with outside network access turned off.
+- **Shared helpers.** Frontend page tests use `src/test/render.tsx` (`renderPage`: router, signed-in user and
+  toasts), `src/test/apiMocks.ts` (empty answers by default) and `src/test/builders.ts` (valid records).
+- **Access control.** Backend flow tests check every resource for 400 on invalid input, 401 without a token
+  and 404 for another user's record; `AccessControlSweepTests` covers every route.
+- **Both languages.** Each page area has at least one test in Khmer.
+- **Not flaky.** No fixed sleeps; long form pages set their own time limit.
 
 ### Plan builder sample run (V11, PB-NFR-08)
 
