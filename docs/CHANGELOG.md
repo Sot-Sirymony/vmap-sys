@@ -657,6 +657,31 @@ back coaches and cohorts (decisions D-1, D-6 to D-8).
 - **Changed** admin AI requests, like coach ones, do not use the admin's own daily limit.
 - **Added** `AiAdminFlowTests` (5) and `ModuleContentAiCard.test.tsx` (2).
 
+## [8.1.0] — Phase 5 built (Strengths and Gaps); Khmer text awaiting review
+
+Implements the v0.2 additions in [VMS_BRD_V8.1.0](VMS_BRD_V8.1.0.md): FR-79 to FR-84,
+NFR-11, BR-61 to BR-64.
+
+- **Added** the Strengths and Gaps page (`/strengths`, under Plan): strengths and
+  weaknesses with required evidence, relevance to one dream, an optional outside view with
+  a mismatch flag, and suggestions from Work Style and six-chain scores of 2 or lower that
+  are saved only once confirmed.
+- **Added** one way to cover each high-relevance weakness. Partner creates a partner
+  (To Contact); Delegate and Resource add a row to module 7 or 6 (saving that module's
+  exercise if it had none); Learn adds a dated step to one of the dream's goals, at most 2
+  at a time across all dreams; Accept needs a reason. Removing the gap or its cover asks
+  whether to remove that record too. The last row of a module exercise is always kept, so
+  a finished module never becomes unfinished.
+- **Added** the one-page profile, saving and retakes with what changed, a `STRENGTHS`
+  stage on the Plan page after the dream statement (it does not affect `planReady`), a
+  *Strengths and gaps* section in the plan PDF, and a link from the Assessment page and its
+  retake reminder.
+- **Added** tables `self_assessment_items` and `self_assessment_snapshots` (migration
+  `V71__strengths_and_gaps.sql`), included in the account export and in account deletion.
+- **Added** about 120 Khmer entries (drafts for a Khmer speaker to review).
+- Tests: `StrengthsAndGapsFlowTests` (8), `StrengthsPage.test.tsx` (6), plus updates to
+  the access sweep, export shape, plan status, Plan page and API contract tests.
+
 ## [8.0.0] — In progress (all 4 phases built; NFR-03 partial, see Phase 4)
 
 Implements [VMS_BRD_V8.0.0](VMS_BRD_V8.0.0.md) for personal use. See its

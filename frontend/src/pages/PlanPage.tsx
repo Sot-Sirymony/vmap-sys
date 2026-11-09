@@ -35,6 +35,8 @@ const WHOLE_PLAN = { section: 'WHOLE' as const };
 
 function stagePath(key: string, dreamId: number) {
   switch (key) {
+    case 'STRENGTHS':
+      return `/strengths?dreamId=${dreamId}`;
     case 'DATES':
       return '/steps';
     case 'RESOURCES':

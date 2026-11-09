@@ -489,9 +489,23 @@ the server's date is rejected for check-ins and habit checks.
 | GET | `/api/modules` | All modules in order, with status for this user |
 | GET | `/api/modules/{number}` | Content, saved rows, and what is missing. **400** while locked |
 | PUT | `/api/modules/{number}/completion` | Save `{ "rows": [...] }`. Data-proven modules send an empty list |
-| GET | `/api/plan-status/{dreamId}` | The six plan stages and `planReady` |
+| GET | `/api/plan-status/{dreamId}` | The seven plan stages and `planReady`. The `STRENGTHS` stage (V8.1) never affects `planReady` |
 | GET, POST | `/api/milestones` | List with `?dreamId=`, or add one |
 | DELETE | `/api/milestones/{id}` | Archive |
+
+## Strengths and Gaps (V8.1)
+
+Private to the account (BR-64); no coach endpoint reads them.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET, POST | `/api/self-assessment-items` | List with `?dreamId=` (and `includeArchived`), or add a strength or weakness. `evidence` is required (BR-61) |
+| PUT | `/api/self-assessment-items/{id}` | Update. Changing a weakness to a strength clears its cover but keeps the linked record |
+| PUT | `/api/self-assessment-items/{id}/cover` | Choose the one way a high-relevance weakness is covered: `PARTNER` (`partnerName`), `DELEGATE` or `RESOURCE` (`note`), `LEARN` (`goalId`, `targetDate`; at most 2 at once, BR-62) or `ACCEPT` (`note`). **400** if it already has one |
+| DELETE | `/api/self-assessment-items/{id}/cover` | Clear the cover. `?removeLinked=true` also archives the partner or step, or removes the exercise row. Returns `{ linkedItemRemoved, note }` |
+| DELETE | `/api/self-assessment-items/{id}` | Archive, with the same `removeLinked` choice (`POST .../restore`, `DELETE .../permanent`) |
+| GET | `/api/strengths-profiles/{dreamId}` | The one-page profile: what I bring, what I lack, recorded only, `complete`, Learn use, and changes since the last earlier save |
+| POST | `/api/strengths-profiles/{dreamId}/snapshots` | Save the profile today (a second save that day replaces it). **400** with no items |
 
 ## Progress and Account (V8)
 

@@ -69,6 +69,20 @@ describe('PlanPage (V9 written plan)', () => {
     expect(currentLocation()).toBe('/partners?create=partner');
   });
 
+  it('sends the Strengths and Gaps stage to that page for the same dream (V8.1 FR-84)', async () => {
+    vi.mocked(planApi.getPlanStatus).mockResolvedValueOnce({
+      dreamId: 1,
+      planReady: false,
+      stages: [
+        { key: 'STATEMENT', label: 'Dream statement', detail: 'Written.', done: true },
+        { key: 'STRENGTHS', label: 'Strengths and gaps', detail: 'Take an honest look.', done: false },
+      ],
+    });
+    renderPage(<PlanPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Do this next' }));
+    expect(currentLocation()).toBe('/strengths?dreamId=1');
+  });
+
   it('says when the core of the plan is written', async () => {
     vi.mocked(planApi.getPlanStatus).mockResolvedValue(status(1, ['STATEMENT', 'GOALS', 'DATES', 'PEOPLE']));
     renderPage(<PlanPage />);

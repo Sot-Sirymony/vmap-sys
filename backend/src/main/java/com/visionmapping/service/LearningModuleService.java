@@ -128,6 +128,65 @@ public class LearningModuleService {
         return toDetail(module, language);
     }
 
+    /**
+     * V8.1 FR-82: adds one row to a form exercise (the resource gap list or the
+     * leverage map) on the user's behalf. The row is the exercise's real output,
+     * so if the module has no saved exercise yet this saves it, as any data-proven
+     * module would be; nothing else is unlocked out of order (BR-56).
+     */
+    public void appendExerciseRow(int moduleNumber, Map<String, String> row) {
+        ModuleCompletion completion = completionsByModule().get(moduleNumber);
+        List<Map<String, String>> rows = new ArrayList<>();
+        if (completion == null) {
+            completion = ModuleCompletion.builder()
+                    .user(lookup.currentUser())
+                    .moduleNumber(moduleNumber)
+                    .completedAt(Instant.now(clock))
+                    .build();
+        } else if (completion.getRowsJson() != null) {
+            rows.addAll(parse(completion.getRowsJson(), ROWS));
+        }
+        rows.add(row);
+        completion.setRowsJson(serializeRows(rows));
+        completionRepository.save(completion);
+    }
+
+    /**
+     * V8.1 FR-82: removes the first row equal to {@code row}. Returns null when
+     * removed, or why not. The last row is kept, so removing a gap never
+     * takes a finished module back to unfinished and locks later ones.
+     */
+    @Nullable
+    public String removeExerciseRow(int moduleNumber, Map<String, String> row) {
+        ModuleCompletion completion = completionsByModule().get(moduleNumber);
+        if (completion == null || completion.getRowsJson() == null) {
+            return "The exercise row was already gone.";
+        }
+        List<Map<String, String>> rows = new ArrayList<>(parse(completion.getRowsJson(), ROWS));
+        int index = rows.indexOf(row);
+        if (index < 0) {
+            return "The exercise row was changed or removed, so it was left as it is.";
+        }
+        if (rows.size() == 1) {
+            return "The exercise row was kept because it is the only one in that module. Edit it on the module page.";
+        }
+        rows.remove(index);
+        completion.setRowsJson(serializeRows(rows));
+        return null;
+    }
+
+    private String serializeRows(List<Map<String, String>> rows) {
+        try {
+            String json = objectMapper.writeValueAsString(rows);
+            if (json.length() > MAX_ROWS_JSON_LENGTH) {
+                throw new BusinessRuleException("That module's exercise is full. Remove a row there first.");
+            }
+            return json;
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Could not serialize exercise rows", exception);
+        }
+    }
+
     private LearningModuleDetailResponse toDetail(LearningModule module, String language) {
         LearningModuleContent text = contentByModule(language).get(module.getNumber());
         ModuleCompletion completion = completionsByModule().get(module.getNumber());

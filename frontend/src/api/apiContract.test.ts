@@ -52,7 +52,7 @@ function sampleFor(name: string, position: number): unknown {
   if (/^(ids|orderedIds)$/.test(name)) return [3, 1, 2];
   if (/(^id|Id|Number|^number)$/.test(name)) return 10 + position;
   if (name === 'language') return 'km';
-  if (/^(includeArchived|stretch|enabled|consent|checked)$/.test(name)) return true;
+  if (/^(includeArchived|stretch|enabled|consent|checked|removeLinked)$/.test(name)) return true;
   if (/date$/i.test(name)) return '2026-11-07';
   if (name === 'page') return 0;
   if (name === 'size') return 50;

@@ -170,6 +170,8 @@ class AccessControlSweepTests {
         create("progress-logs", Map.of("relatedTaskId", taskId, "progressPercentBefore", 0, "progressPercentAfter", 10));
         create("gratitude-entries", Map.of("category", "PERSON", "description", "My mentor",
                 "entryDate", LocalDate.now().toString()));
+        create("self-assessment-items", Map.of("dreamId", dreamId, "kind", "WEAKNESS", "description", "Bookkeeping",
+                "evidence", "Missed a filing", "relevance", "HIGH"));
         create("fear-entries", Map.of("fear", "Rejection", "worstCase", "They say no", "likelihood", "LOW",
                 "firstTest", "Ask once"));
         Map<String, Object> habit = Map.of("name", "Read daily");
@@ -323,6 +325,7 @@ class AccessControlSweepTests {
         attempts.put("/api/progress-logs", with(createBodies.get("progress-logs"), "relatedTaskId", ownerIds.get("tasks")));
         attempts.put("/api/ideal-partner-profiles",
                 with(createBodies.get("ideal-partner-profiles"), "stepId", ownerIds.get("steps")));
+        attempts.put("/api/self-assessment-items", with(createBodies.get("self-assessment-items"), "dreamId", ownerIds.get("dreams")));
         attempts.put("/api/milestones", with(createBodies.get("milestones"), "dreamId", ownerIds.get("dreams")));
         attempts.put("/api/plan-shares", with(createBodies.get("plan-shares"), "dreamId", ownerIds.get("dreams")));
         attempts.put("/api/reviews", with(createBodies.get("reviews"), "relatedDreamId", ownerIds.get("dreams")));
@@ -524,6 +527,9 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/commitment")) {
             return json(Map.of("signedName", "Other", "startDate", LocalDate.now().toString(), "firstAction", "Start"));
+        }
+        if (pattern.endsWith("/cover") && route.method() == HttpMethod.PUT) {
+            return json(Map.of("method", "ACCEPT", "note", "Someone else's reason"));
         }
         if (pattern.endsWith("/synergy-links")) {
             return json(Map.of("relatedGoalId", ownerIds.get("goals")));

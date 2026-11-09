@@ -44,7 +44,9 @@ public record AccountExportResponse(
         List<GoalSynergyLink> goalSynergyLinks,
         List<AiConsentEvent> aiConsentEvents,
         List<AiMessage> aiMessages,
-        List<PlanShare> planShares
+        List<PlanShare> planShares,
+        List<SelfAssessmentItemResponse> selfAssessmentItems,
+        List<SelfAssessmentSnapshot> selfAssessmentSnapshots
 ) {
 
     public AccountExportResponse {
@@ -72,6 +74,8 @@ public record AccountExportResponse(
         aiConsentEvents = Copies.list(aiConsentEvents);
         aiMessages = Copies.list(aiMessages);
         planShares = Copies.list(planShares);
+        selfAssessmentItems = Copies.list(selfAssessmentItems);
+        selfAssessmentSnapshots = Copies.list(selfAssessmentSnapshots);
     }
 
 
@@ -112,5 +116,9 @@ public record AccountExportResponse(
     /** The token hash is left out: it is a credential, not the user's content. */
     public record PlanShare(Long dreamId, Long partnerId, String message, Instant createdAt, Instant expiresAt,
                             Instant revokedAt, int viewCount) {
+    }
+
+    /** V8.1 FR-84: one saved copy of a Strengths and Gaps profile; itemsJson is the items as they were saved. */
+    public record SelfAssessmentSnapshot(Long dreamId, LocalDate takenOn, String itemsJson) {
     }
 }

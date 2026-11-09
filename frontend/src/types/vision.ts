@@ -1515,3 +1515,83 @@ export type ModuleContentDraft = {
   examples?: string | null;
   quiz: { question: string; answer?: string | null }[];
 };
+
+// V8.1 FR-79 to FR-84: the Strengths and Gaps profile.
+export type StrengthKind = 'STRENGTH' | 'WEAKNESS';
+export type Relevance = 'HIGH' | 'MEDIUM' | 'LOW';
+export type GapCoverMethod = 'PARTNER' | 'DELEGATE' | 'RESOURCE' | 'LEARN' | 'ACCEPT';
+export type SelfAssessmentSource = 'MANUAL' | 'WORK_STYLE' | 'SIX_CHAIN';
+
+export type SelfAssessmentItem = {
+  id: number;
+  dreamId: number;
+  kind: StrengthKind;
+  description: string;
+  evidence: string;
+  relevance: Relevance;
+  source: SelfAssessmentSource;
+  outsideBy?: string | null;
+  outsideView?: string | null;
+  outsideAgrees?: boolean | null;
+  outsideMismatch: boolean;
+  coverMethod?: GapCoverMethod | null;
+  coverNote?: string | null;
+  linkedPartnerId?: number | null;
+  linkedStepId?: number | null;
+  linkedModuleNumber?: number | null;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SelfAssessmentItemRequest = {
+  dreamId: number;
+  kind: StrengthKind;
+  description: string;
+  evidence: string;
+  relevance: Relevance;
+  source?: SelfAssessmentSource;
+  outsideBy?: string;
+  outsideView?: string;
+  outsideAgrees?: boolean | null;
+};
+
+export type GapCoverRequest = {
+  method: GapCoverMethod;
+  note?: string;
+  partnerName?: string;
+  partnerSupportType?: PartnerSupportType;
+  goalId?: number;
+  targetDate?: string;
+};
+
+export type GapCoverRemoval = {
+  linkedItemRemoved: boolean;
+  note?: string | null;
+};
+
+export type StrengthsProfileChange = {
+  type: 'ADDED' | 'REMOVED' | 'CHANGED';
+  kind: StrengthKind;
+  description: string;
+  relevanceBefore?: Relevance | null;
+  relevanceAfter?: Relevance | null;
+  coverBefore?: GapCoverMethod | null;
+  coverAfter?: GapCoverMethod | null;
+};
+
+export type StrengthsProfile = {
+  dreamId: number;
+  dreamTitle: string;
+  whatIBring: SelfAssessmentItem[];
+  whatILack: SelfAssessmentItem[];
+  recordedOnly: SelfAssessmentItem[];
+  complete: boolean;
+  uncoveredGaps: number;
+  learnInUse: number;
+  learnLimit: number;
+  lastSavedOn?: string | null;
+  comparedWith?: string | null;
+  retakeSuggested: boolean;
+  changes: StrengthsProfileChange[];
+};

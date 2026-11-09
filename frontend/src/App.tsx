@@ -14,6 +14,7 @@ import { RegisterPage } from './pages/RegisterPage';
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const TodayPage = lazy(() => import('./pages/TodayPage').then((m) => ({ default: m.TodayPage })));
 const JournalPage = lazy(() => import('./pages/JournalPage').then((m) => ({ default: m.JournalPage })));
+const StrengthsPage = lazy(() => import('./pages/StrengthsPage').then((m) => ({ default: m.StrengthsPage })));
 const AssessmentPage = lazy(() => import('./pages/AssessmentPage').then((m) => ({ default: m.AssessmentPage })));
 const ModulesPage = lazy(() => import('./pages/ModulesPage').then((m) => ({ default: m.ModulesPage })));
 const ModuleDetailPage = lazy(() => import('./pages/ModuleDetailPage').then((m) => ({ default: m.ModuleDetailPage })));
@@ -74,6 +75,7 @@ export function App() {
             <Route path="/today" element={<TodayPage />} />
             <Route path="/journal" element={<JournalPage />} />
             <Route path="/assessment" element={<AssessmentPage />} />
+            <Route path="/strengths" element={<StrengthsPage />} />
             <Route path="/modules" element={<ModulesPage />} />
             <Route path="/modules/:moduleNumber" element={<ModuleDetailPage />} />
             <Route path="/plan" element={<PlanPage />} />

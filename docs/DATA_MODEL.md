@@ -241,6 +241,18 @@ Belongs to:
 - **Milestone:** `dreamId`, `title`, `achievedOn`, `note`, `archived`. Removed with its
   dream on permanent delete.
 
+## V8.1 Strengths and Gaps
+
+- **SelfAssessmentItem:** `dreamId`, `kind` (STRENGTH, WEAKNESS), `description`, `evidence`
+  (required), `relevance` (HIGH, MEDIUM, LOW), `source` (MANUAL, WORK_STYLE, SIX_CHAIN), an
+  optional outside view (`outsideBy`, `outsideView`, `outsideAgrees`), and for a
+  high-relevance weakness one `coverMethod` (PARTNER, DELEGATE, RESOURCE, LEARN, ACCEPT) with
+  `coverNote`. The record the cover created is kept in `linkedPartnerId`, `linkedStepId`, or
+  `linkedModuleNumber` plus `linkedModuleRow` (a row of module 6 or 7). Removed with its
+  dream; a deleted partner or step only clears the link. Migration `V71`.
+- **SelfAssessmentSnapshot:** `dreamId`, `takenOn`, `itemsJson`. One per user, dream and day.
+  A retake is compared with the latest save before today.
+
 ## V9 Cohorts and coaches
 
 **UserRole** adds `COACH`. **Cohort** (`cohorts`, V52): `name`, `joinCode` (8 characters,

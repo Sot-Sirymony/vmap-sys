@@ -6,7 +6,7 @@ import { createSeedAccount, deleteSeedAccount, expectNoAccessibilityViolations, 
  * phone check matters most here. English still on screen is reported as an
  * annotation (user data such as dream titles is English in the seed account).
  */
-const PAGES = ['/', '/today', '/journal', '/assessment', '/modules', '/plan', '/vision-areas', '/dreams', '/vision-map', '/goals',
+const PAGES = ['/', '/today', '/journal', '/assessment', '/strengths', '/modules', '/plan', '/vision-areas', '/dreams', '/vision-map', '/goals',
   '/steps', '/steps/undated', '/tasks', '/obstacles', '/partners', '/work-style', '/communication', '/reviews', '/insights',
   '/issue-reports', '/import-export', '/settings/appearance', '/settings/security', '/settings/account'];
 

@@ -170,8 +170,9 @@ class ModulesAndPlanFlowTests {
                 .andExpect(jsonPath("$.planReady").value(false))
                 .andExpect(jsonPath("$.stages[0].key").value("STATEMENT"))
                 .andExpect(jsonPath("$.stages[0].done").value(true))
-                .andExpect(jsonPath("$.stages[1].done").value(false))
-                .andExpect(jsonPath("$.stages[4].done").value(false));
+                .andExpect(jsonPath("$.stages[1].key").value("STRENGTHS"))
+                .andExpect(jsonPath("$.stages[2].done").value(false))
+                .andExpect(jsonPath("$.stages[5].done").value(false));
 
         long goalId = goal(token, dreamId, false);
         long stepId = step(token, goalId);
@@ -179,12 +180,12 @@ class ModulesAndPlanFlowTests {
                 .andExpect(status().isCreated());
         mockMvc.perform(get("/api/plan-status/" + dreamId).header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.planReady").value(true))
-                .andExpect(jsonPath("$.stages[4].done").value(true));
+                .andExpect(jsonPath("$.stages[5].done").value(true));
 
         jdbcTemplate.update("update vision_steps set target_date = null where id = ?", stepId);
         mockMvc.perform(get("/api/plan-status/" + dreamId).header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.planReady").value(false))
-                .andExpect(jsonPath("$.stages[3].detail").value("1 step still without a date."));
+                .andExpect(jsonPath("$.stages[4].detail").value("1 step still without a date."));
 
         String stranger = registerAndToken("plan-stranger");
         mockMvc.perform(get("/api/plan-status/" + dreamId).header("Authorization", "Bearer " + stranger)).andExpect(status().isNotFound());

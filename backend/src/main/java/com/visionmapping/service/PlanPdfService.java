@@ -6,6 +6,8 @@ import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import com.visionmapping.dto.response.SelfAssessmentItemResponse;
+import com.visionmapping.dto.response.StrengthsProfileResponse;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Milestone;
@@ -40,6 +42,7 @@ public class PlanPdfService {
     private final VisionStepRepository visionStepRepository;
     private final TaskItemRepository taskItemRepository;
     private final MilestoneRepository milestoneRepository;
+    private final StrengthsProfileService strengthsProfileService;
 
     public byte[] exportPlan(Long dreamId) {
         Dream dream = lookup.dream(dreamId);
@@ -58,6 +61,7 @@ public class PlanPdfService {
                 addLabelled(document, "Commitment", "Signed by %s. Starts %s. First action: %s".formatted(
                         dream.getCommitmentSignedName(), dream.getCommitmentStartDate(), dream.getCommitmentFirstAction()));
             }
+            addStrengthsProfile(document, strengthsProfileService.profile(dreamId));
             List<Goal> goals = goalRepository.findByDream_IdAndUser_IdAndArchivedFalse(dreamId, userId).stream()
                     .sorted(Comparator.comparing(Goal::getId))
                     .toList();
@@ -82,6 +86,48 @@ public class PlanPdfService {
             throw new IllegalStateException("Could not build the plan PDF", exception);
         }
         return output.toByteArray();
+    }
+
+    /** V8.1 FR-84: the one-page profile, strengths first and with no score (NFR-11). Left out until it has an item. */
+    private void addStrengthsProfile(Document document, StrengthsProfileResponse profile) throws DocumentException {
+        if (profile.whatIBring().isEmpty() && profile.whatILack().isEmpty() && profile.recordedOnly().isEmpty()) {
+            return;
+        }
+        addSection(document, "Strengths and gaps");
+        addSubheading(document, "What I bring");
+        if (profile.whatIBring().isEmpty()) {
+            document.add(new Paragraph(pdfFonts.phrase("No high-relevance strengths written yet.", pdfFonts.getBody())));
+        }
+        for (SelfAssessmentItemResponse item : profile.whatIBring()) {
+            document.add(new Paragraph(pdfFonts.phrase("•  " + item.description(), pdfFonts.getBody())));
+        }
+        addSubheading(document, "What I lack, and how each gap is covered");
+        if (profile.whatILack().isEmpty()) {
+            document.add(new Paragraph(pdfFonts.phrase("No high-relevance gaps written yet.", pdfFonts.getBody())));
+        }
+        for (SelfAssessmentItemResponse item : profile.whatILack()) {
+            document.add(new Paragraph(pdfFonts.phrase("•  " + item.description() + "  →  " + coverText(item), pdfFonts.getBody())));
+        }
+    }
+
+    private static String coverText(SelfAssessmentItemResponse item) {
+        if (item.coverMethod() == null) {
+            return "Not covered yet";
+        }
+        String method = switch (item.coverMethod()) {
+            case PARTNER -> "Partner";
+            case DELEGATE -> "Delegate or automate";
+            case RESOURCE -> "Resource";
+            case LEARN -> "Learn";
+            case ACCEPT -> "Accepted";
+        };
+        return item.coverNote() == null || item.coverNote().isBlank() ? method : method + ": " + item.coverNote();
+    }
+
+    private void addSubheading(Document document, String title) throws DocumentException {
+        Paragraph heading = new Paragraph(pdfFonts.phrase(title, pdfFonts.getSmallBold()));
+        heading.setSpacingBefore(6);
+        document.add(heading);
     }
 
     private PdfPTable workTable(Goal goal, Long userId) {

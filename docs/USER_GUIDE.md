@@ -76,6 +76,29 @@ instead of the Dream Coach. Each section also has a **Help with this section** b
   if you like, then choose **Apply to draft** (Build my plan) or **Save to my plan** (Plan page), or **Dismiss** it.
   Nothing changes unless you choose it.
 
+## Strengths and Gaps
+
+Take an honest look at what you bring and what you lack for one dream. You are not trying
+to fix every weakness.
+
+1. Open `Strengths and Gaps` (under Plan). Your top-ranked dream is chosen first.
+2. Add strengths first, then gaps. Each needs one real example as evidence.
+3. Say how much each matters to the dream. Only items that matter a lot need action.
+4. Optional: type in what someone else said, and whether you agree. If you do not, the
+   item is marked *Outside view differs*.
+5. For each gap that matters a lot, choose one way to cover it:
+   - Partner: adds them to your Partners page.
+   - Delegate or automate: adds a row to the Multiply Your Effort module.
+   - Resource: adds a row to the Close Your Resource Gaps module.
+   - Learn it myself: adds a dated step to one of the dream's goals. At most 2 at a time.
+   - Accept it: write one line on why it does not matter enough.
+6. Use `Save this profile`. After about 12 weeks, look again and use `Save a retake` to
+   see what changed. When you remove a gap, you choose whether to keep what it added.
+
+The profile appears on the Plan page after the dream statement and in the plan PDF. It
+never stops the plan from being ready. Suggestions from Work Style and low assessment
+scores are only saved once you add your own evidence.
+
 ## Manage Tasks
 
 The Tasks page shows a board with these columns:

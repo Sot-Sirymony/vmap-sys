@@ -19,6 +19,7 @@ import {
   MoonStar,
   Network,
   Palette,
+  Scale,
   Send,
   ShieldAlert,
   Sparkles,
@@ -70,6 +71,8 @@ export const navGroups: NavGroup[] = [
       { to: '/plan', label: tr('Plan'), icon: ListChecks },
       { to: '/modules', label: tr('Modules'), icon: GraduationCap },
       { to: '/assessment', label: tr('Assessment'), icon: Gauge },
+      // V8.1 FR-79 to FR-84: what I bring, what I lack, and how each gap is covered.
+      { to: '/strengths', label: tr('Strengths and Gaps'), icon: Scale },
     ],
   },
   {

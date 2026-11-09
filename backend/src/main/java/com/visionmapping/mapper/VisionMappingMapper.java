@@ -4,6 +4,7 @@ import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.AttitudeCheckInResponse;
 import com.visionmapping.dto.response.FearEntryResponse;
+import com.visionmapping.dto.response.SelfAssessmentItemResponse;
 import com.visionmapping.dto.response.GratitudeEntryResponse;
 import com.visionmapping.dto.response.IdealPartnerProfileResponse;
 import com.visionmapping.dto.response.IssueReportResponse;
@@ -21,6 +22,7 @@ import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.AttitudeCheckIn;
 import com.visionmapping.entity.FearEntry;
+import com.visionmapping.entity.SelfAssessmentItem;
 import com.visionmapping.entity.GratitudeEntry;
 import com.visionmapping.entity.IdealPartnerProfile;
 import com.visionmapping.entity.IssueReport;
@@ -207,6 +209,15 @@ public class VisionMappingMapper {
     public FearEntryResponse toResponse(FearEntry entity) {
         return new FearEntryResponse(entity.getId(), entity.getFear(), entity.getWorstCase(), entity.getLikelihood(),
                 entity.getFirstTest(), id(entity.getRelatedDream()), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
+    }
+
+    public SelfAssessmentItemResponse toResponse(SelfAssessmentItem entity) {
+        return new SelfAssessmentItemResponse(entity.getId(), entity.getDream().getId(), entity.getKind(),
+                entity.getDescription(), entity.getEvidence(), entity.getRelevance(), entity.getSource(),
+                entity.getOutsideBy(), entity.getOutsideView(), entity.getOutsideAgrees(),
+                entity.getOutsideView() != null && Boolean.FALSE.equals(entity.getOutsideAgrees()),
+                entity.getCoverMethod(), entity.getCoverNote(), id(entity.getLinkedPartner()), id(entity.getLinkedStep()),
+                entity.getLinkedModuleNumber(), entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     public AttitudeCheckInResponse toResponse(AttitudeCheckIn entity) {

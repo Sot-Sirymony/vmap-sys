@@ -14,6 +14,8 @@ import com.visionmapping.repository.ChainAssessmentRepository;
 import com.visionmapping.repository.CommunicationMessageRepository;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.FearEntryRepository;
+import com.visionmapping.repository.SelfAssessmentItemRepository;
+import com.visionmapping.repository.SelfAssessmentSnapshotRepository;
 import com.visionmapping.repository.GoalRepository;
 import com.visionmapping.repository.GoalSynergyLinkRepository;
 import com.visionmapping.repository.GratitudeEntryRepository;
@@ -61,6 +63,8 @@ public class AccountService {
     /** Children before parents. A test fails if a table with a user_id is missing here. */
     static final List<String> USER_TABLES_IN_DELETE_ORDER = List.of(
             "plan_builder_drafts",
+            "self_assessment_snapshots",
+            "self_assessment_items",
             "ai_messages",
             "ai_conversations",
             "ai_consent_events",
@@ -120,6 +124,8 @@ public class AccountService {
     private final PlanShareRepository planShareRepository;
     private final AiConsentEventRepository aiConsentEventRepository;
     private final AiMessageRepository aiMessageRepository;
+    private final SelfAssessmentItemRepository selfAssessmentItemRepository;
+    private final SelfAssessmentSnapshotRepository selfAssessmentSnapshotRepository;
 
     /** The password hash is deliberately never part of this. Archived records are. */
     @Transactional(readOnly = true)
@@ -182,6 +188,11 @@ public class AccountService {
                         .map(share -> new AccountExportResponse.PlanShare(share.getDream().getId(),
                                 share.getPartner() == null ? null : share.getPartner().getId(), share.getMessage(),
                                 share.getCreatedAt(), share.getExpiresAt(), share.getRevokedAt(), share.getViewCount()))
+                        .toList())
+                .selfAssessmentItems(selfAssessmentItemRepository.findByUser_Id(userId).stream().map(mapper::toResponse).toList())
+                .selfAssessmentSnapshots(selfAssessmentSnapshotRepository.findByUser_IdOrderByTakenOnAsc(userId).stream()
+                        .map(snapshot -> new AccountExportResponse.SelfAssessmentSnapshot(snapshot.getDream().getId(),
+                                snapshot.getTakenOn(), snapshot.getItemsJson()))
                         .toList())
                 .build();
     }

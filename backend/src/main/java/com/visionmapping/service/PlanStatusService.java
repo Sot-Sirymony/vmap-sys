@@ -35,6 +35,7 @@ public class PlanStatusService {
     private final VisionStepRepository visionStepRepository;
     private final ObstacleRepository obstacleRepository;
     private final PartnerRepository partnerRepository;
+    private final StrengthsProfileService strengthsProfileService;
 
     public PlanStatusResponse statusFor(Long dreamId) {
         return evaluate(lookup.dream(dreamId), lookup.userId());
@@ -79,10 +80,13 @@ public class PlanStatusService {
         boolean datesDone = stepsDone && undatedSteps == 0;
         boolean resourcesDone = obstacleRepository.existsForDreamTree(userId, dream.getId());
         boolean peopleDone = partnerRepository.existsAnyPartnerForDream(userId, dream.getId());
+        // V8.1 BR-63: shown after the statement, but like resources and people it never holds back planReady.
+        StrengthsProfileService.ProfileState strengths = strengthsProfileService.stateFor(userId, dream.getId());
 
         List<Stage> stages = List.of(
                 new Stage("STATEMENT", "Dream statement", statementDone,
                         statementDone ? "Why it matters and what success looks like are written." : "Write why it matters and what success looks like."),
+                new Stage("STRENGTHS", "Strengths and gaps", strengths.complete(), strengthsDetail(strengths)),
                 new Stage("GOALS", "Goals", goalsDone,
                         goalsDone ? count(goals.size(), "goal") + " in place." : "Add the major results this dream needs."),
                 new Stage("STEPS", "Steps", stepsDone,
@@ -96,6 +100,18 @@ public class PlanStatusService {
                 new Stage("PEOPLE", "People", peopleDone,
                         peopleDone ? "A partner is linked to this dream or one of its goals." : "Link a partner or mentor to this dream or one of its goals."));
         return new PlanStatusResponse(dream.getId(), stages, statementDone && goalsDone && stepsDone && datesDone);
+    }
+
+    private static String strengthsDetail(StrengthsProfileService.ProfileState strengths) {
+        if (strengths.complete()) {
+            return "What you bring and what you lack are written, and every important gap is covered.";
+        }
+        if (strengths.uncoveredGaps() > 0) {
+            return count(strengths.uncoveredGaps(), "important gap") + " still without a way to cover it.";
+        }
+        return strengths.started()
+                ? "Add at least one strength and one weakness."
+                : "Take an honest look at what you bring and what you lack for this dream.";
     }
 
     private static boolean hasText(@Nullable String value) {

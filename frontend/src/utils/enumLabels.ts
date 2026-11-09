@@ -1,5 +1,8 @@
 import type {
   FearLikelihood,
+  GapCoverMethod,
+  Relevance,
+  StrengthKind,
   CommunicationStatus,
   DreamStatus,
   DreamType,
@@ -264,4 +267,24 @@ export const issueReportStatusLabels: Record<IssueReportStatus, string> = {
   RESOLVED: tr('Resolved'),
   CLOSED: tr('Closed'),
   WONT_FIX: "Won't Fix",
+};
+
+// V8.1 NFR-11: a weakness is called a gap to cover, never a failing.
+export const strengthKindLabels: Record<StrengthKind, string> = {
+  STRENGTH: tr('Strength'),
+  WEAKNESS: tr('Gap to cover'),
+};
+
+export const relevanceLabels: Record<Relevance, string> = {
+  HIGH: tr('Matters a lot'),
+  MEDIUM: tr('Matters some'),
+  LOW: tr('Matters little'),
+};
+
+export const gapCoverMethodLabels: Record<GapCoverMethod, string> = {
+  PARTNER: tr('Partner'),
+  DELEGATE: tr('Delegate or automate'),
+  RESOURCE: tr('Resource'),
+  LEARN: tr('Learn it myself'),
+  ACCEPT: tr('Accept it'),
 };

@@ -32,6 +32,8 @@ const SERVER_PATTERNS: [RegExp, string, string[]][] = [
   [/^(\d+) steps? in place\.$/, '{count} step(s) in place.', ['count']],
   [/^(\d+) goals? still without steps\.$/, '{count} goal(s) still without steps.', ['count']],
   [/^(\d+) steps? still without a date\.$/, '{count} step(s) still without a date.', ['count']],
+  // V8.1 BR-63: the Strengths and Gaps stage on the Plan page.
+  [/^(\d+) important gaps? still without a way to cover it\.$/, '{count} important gap(s) still without a way to cover it.', ['count']],
   [/^\+(\d+)% from your baseline$/, '+{percent}% from your baseline', ['percent']],
   [/^(\d+)% or more of the last 7 days' steps$/, "{percent}% or more of the last 7 days' steps", ['percent']],
   [/^(\d+) of (\d+) \((\d+)%\)$/, '{done} of {total} ({percent}%)', ['done', 'total', 'percent']],

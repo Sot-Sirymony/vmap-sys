@@ -8,6 +8,7 @@ import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
+import { useNavigate } from 'react-router';
 import { getChainAssessments, saveChainAssessment } from '../api/chainAssessmentApi';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -35,6 +36,7 @@ const CHAINS: { key: ChainScoreKey; label: string; question: string }[] = [
 export function AssessmentPage() {
   const { t } = useI18n();
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<ChainAssessmentSummary | null>(null);
   const [scores, setScores] = useState<Partial<Record<ChainScoreKey, number>>>({});
   const [loadError, setLoadError] = useState('');
@@ -90,13 +92,23 @@ export function AssessmentPage() {
   const latest = assessments[assessments.length - 1];
 
   return (
-    <PageSection title={t('Assessment')} subtitle={t('See how much each of six common barriers holds you back')}>
+    <PageSection
+      title={t('Assessment')}
+      subtitle={t('See how much each of six common barriers holds you back')}
+      actions={<Button variant="secondary" onClick={() => navigate('/strengths')}>{t('Strengths and Gaps')}</Button>}
+    >
       {loadError && <ErrorMessage message={loadError} onRetry={() => void load()} />}
       {!summary && !loadError && <Loading />}
       {summary && (
         <Stack spacing={2}>
           {summary.retakeSuggested && (
-            <Alert severity="info">{t('It has been 12 weeks or more since your last assessment. Take it again to see what has changed.')}</Alert>
+            <Alert
+              severity="info"
+              action={<Button variant="secondary" onClick={() => navigate('/strengths')}>{t('Strengths and Gaps')}</Button>}
+            >
+              {t('It has been 12 weeks or more since your last assessment. Take it again to see what has changed.')}
+              {' '}{t('Look again at your strengths and gaps too.')}
+            </Alert>
           )}
 
           {baseline && (
