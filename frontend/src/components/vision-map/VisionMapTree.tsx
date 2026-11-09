@@ -46,6 +46,7 @@ import { RowActionsMenu } from '../common/RowActionsMenu';
 import { StatusBadge } from '../common/StatusBadge';
 import { Textarea } from '../common/Textarea';
 import { tr } from '../../i18n/translate';
+import { progressTone, progressToneLegend } from '../../utils/progressTone';
 import { safeHttpUrl } from '../../utils/safeUrl';
 
 type VisionMapTreeProps = {
@@ -1043,8 +1044,8 @@ export function VisionMapTree({
   function rail(progress: number) {
     return (
       <div className="map-rail">
-        <ProgressBar value={progress} />
-        <span className="map-rail-value">{Math.round(progress)}%</span>
+        <ProgressBar value={progress} colored />
+        <span className={`map-rail-value progress-text--${progressTone(progress)}`}>{Math.round(progress)}%</span>
       </div>
     );
   }
@@ -1071,6 +1072,7 @@ export function VisionMapTree({
         <span className="map-hint--keys">{tr('↑↓ move · → ← expand / collapse · Enter rename · N add child · drag a row to reorder it among its siblings')}</span>
         <span className="map-hint--touch">{tr('Tap the arrow to open or close a branch · tap ⋮ to edit, archive or delete')}</span>
       </p>
+      <ProgressLegend />
       {energyNudge.dialog}
 
       {editingDream && (
@@ -1672,6 +1674,21 @@ export function VisionMapTree({
       </div>
     </div>
     </div>
+  );
+}
+
+// What the progress colours mean, above the tree. The colour always sits
+// next to its number, so it adds meaning without being the only signal.
+function ProgressLegend() {
+  return (
+    <ul className="progress-legend" aria-label={tr('Progress colours')}>
+      {progressToneLegend().map((item) => (
+        <li key={item.tone}>
+          <span className={`progress-legend-dot progress-dot--${item.tone}`} aria-hidden="true" />
+          {item.label} <span className="progress-legend-range">{item.range}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

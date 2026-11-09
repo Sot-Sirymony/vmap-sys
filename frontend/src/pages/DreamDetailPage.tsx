@@ -34,6 +34,7 @@ import { PlanShareCard } from '../components/vision-map/PlanShareCard';
 import { AiPlanAssistant } from '../components/ai/AiPlanAssistant';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
+import { progressTone } from '../utils/progressTone';
 
 /** Per-dream rollup for the overview cards. */
 type DreamStats = { goals: number; steps: number; tasks: number; progress: number };
@@ -306,8 +307,8 @@ export function DreamDetailPage() {
                       )}
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ProgressBar value={stats.progress} />
-                      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{stats.progress}%</Typography>
+                      <ProgressBar value={stats.progress} colored />
+                      <Typography variant="caption" className={`progress-text--${progressTone(stats.progress)}`} sx={{ flexShrink: 0, fontWeight: 600 }}>{stats.progress}%</Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary">
                       {stats.goals === 0

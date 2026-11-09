@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,5 +47,16 @@ describe('VisionMapTree', () => {
     await userEvent.type(rename, 'Own a family home{Enter}');
     expect(updateDream).toHaveBeenCalledWith('token', 5, expect.objectContaining({ title: 'Own a family home' }));
     expect(onDataChange).toHaveBeenCalled();
+  });
+
+  it('colours progress by how far along it is, with a legend for the colours', () => {
+    renderTree();
+    const legend = screen.getByRole('list', { name: 'Progress colours' });
+    expect(within(legend).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Just started 0–24%', 'In progress 25–74%', 'Nearly done 75–99%', 'Done 100%',
+    ]);
+    // A dream with no goals yet is 0%: the red "just started" level.
+    expect(screen.getByLabelText('Progress 0%')).toHaveClass('progress-bar--low');
+    expect(screen.getByText('0%', { selector: '.map-rail-value' })).toHaveClass('progress-text--low');
   });
 });

@@ -78,6 +78,17 @@
   --info-strong: #006C9C;
   --done-text: #065E49;          /* answered coaching questions — success.darker, AA on --info-bg */
   --danger-bg: #FFE9D5;          /* overdue row wash — error.lighter */
+  /* Progress colours (Vision Map): the status palette's Fluent hues, so a
+     finished bar is the same green as a Completed badge. -text variants are
+     darkened where needed to keep the % label at 4.5:1 on white. */
+  --progress-low: #d13438;       /* 0–24%: just started */
+  --progress-mid: #FFAB00;       /* 25–74%: in progress — warning.main amber, far from the red */
+  --progress-high: #0078d4;      /* 75–99%: nearly done */
+  --progress-done: #107c10;      /* 100%: done */
+  --progress-low-text: #b4262a;
+  --progress-mid-text: #7A4100;  /* warning.darker: amber text needs it for 4.5:1 */
+  --progress-high-text: #0063b1;
+  --progress-done-text: #0e6b0e;
   --hint: #0d7d70;               /* field hints */
   --moonshot-fg: #6b21a8;        /* moonshot text; light-legible violet */
   /* FR-47 — the palette as plain CSS variables, for styles that cannot reach
@@ -215,6 +226,14 @@
   --info-strong: #6cb8f6;
   --done-text: #77ED8B;
   --danger-bg: #3a1d1f;
+  --progress-low: #e37d80;
+  --progress-mid: #f5c451;
+  --progress-high: #6cb8f6;
+  --progress-done: #6bbf6c;
+  --progress-low-text: #f0a3a5;
+  --progress-mid-text: #f5d38a;
+  --progress-high-text: #9ec9ec;
+  --progress-done-text: #a4d7a6;
   --hint: #6ccdc2;
   --moonshot-fg: #cdbce6;
   /* Dark surfaces swallow the soft light-mode shadows entirely — those alphas
@@ -2428,6 +2447,85 @@ button:focus-visible,
 
 .map-add--task .MuiTextField-root:nth-of-type(3) {
   width: 160px;
+}
+
+/* Progress colours: the bar, its % label and the legend dots share one token
+   per level. The track is a light wash of the same colour. */
+.progress-bar--low,
+.progress-dot--low {
+  --progress-color: var(--progress-low);
+}
+
+.progress-bar--mid,
+.progress-dot--mid {
+  --progress-color: var(--progress-mid);
+}
+
+.progress-bar--high,
+.progress-dot--high {
+  --progress-color: var(--progress-high);
+}
+
+.progress-bar--done,
+.progress-dot--done {
+  --progress-color: var(--progress-done);
+}
+
+.MuiLinearProgress-root[class*="progress-bar--"] {
+  background-color: color-mix(in srgb, var(--progress-color) 18%, transparent);
+}
+
+.MuiLinearProgress-root[class*="progress-bar--"] .MuiLinearProgress-bar {
+  background-color: var(--progress-color);
+}
+
+.progress-text--low {
+  color: var(--progress-low-text);
+}
+
+.progress-text--mid {
+  color: var(--progress-mid-text);
+}
+
+.progress-text--high {
+  color: var(--progress-high-text);
+}
+
+.progress-text--done {
+  color: var(--progress-done-text);
+}
+
+.map-rail-value[class*="progress-text--"] {
+  font-weight: 600;
+}
+
+.progress-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 10px;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-caption);
+  color: var(--text-soft);
+}
+
+.progress-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--progress-color);
+  flex-shrink: 0;
+}
+
+.progress-legend-range {
+  color: var(--text-faint);
 }
 
 /* Guided-flow coaching prompt on an empty branch (rendered above its
