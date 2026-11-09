@@ -217,6 +217,7 @@ exports[`API contract (BRD 12 COV-FR-25) > sends the expected method, path and b
   "taskApi.createTask(token, request) -> POST /tasks [auth] {"sample":"value"}",
   "taskApi.listTasks(token, includeArchived) -> GET /tasks?includeArchived=true [auth]",
   "taskApi.permanentlyDeleteTask(token, id) -> DELETE /tasks/11/permanent [auth]",
+  "taskApi.reorderTaskList(token, orderedIds) -> PATCH /tasks/list-order [auth] {"orderedIds":[3,1,2]}",
   "taskApi.reorderTasks(token, stepId, orderedIds) -> PATCH /tasks/reorder [auth] {"parentId":11,"orderedIds":[3,1,2]}",
   "taskApi.restoreTask(token, id) -> POST /tasks/11/restore [auth]",
   "taskApi.updateTask(token, id, request) -> PUT /tasks/11 [auth] {"sample":"value"}",
