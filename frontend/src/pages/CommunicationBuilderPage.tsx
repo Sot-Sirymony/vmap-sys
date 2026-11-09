@@ -1,4 +1,10 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { HelpWithThis, PageAssistantProvider, PageHelpButton, type PageFormSource } from '../components/ai/page-assistant/PageAssistant';
+import { MESSAGE_FIELD_LABELS } from '../components/ai/page-assistant/pageHelp';
+import { CommunicationHelpers } from '../components/communication/CommunicationHelpers';
+import { DraftPriorityCard, FollowUpDueCard } from '../components/communication/CommunicationListHelpers';
+import { progressLine } from '../utils/messageTemplates';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import { archiveCommunicationMessage, permanentlyDeleteCommunicationMessage, createCommunicationMessage, listCommunicationMessages, restoreCommunicationMessage, updateCommunicationMessage } from '../api/communicationApi';
@@ -30,7 +36,7 @@ import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import type { CommunicationMessage, CommunicationMessageRequest, CommunicationStatus, Dream, Goal, Partner, TaskItem } from '../types/vision';
+import type { CommunicationMessage, CommunicationMessageRequest, CommunicationStatus, Dream, Goal, NewMessageDraft, Partner, TaskItem } from '../types/vision';
 import { communicationStatusLabels } from '../utils/enumLabels';
 import { generateMessageBody, type MessageTone } from '../utils/communicationMessageGenerator';
 import { PageSection } from './PageSection';
@@ -106,6 +112,32 @@ export function CommunicationBuilderPage() {
   const [followUpDate, setFollowUpDate] = useState('');
   // AI-FR-17: a draft the participant edits and sends themselves.
   const [aiDrafting, setAiDrafting] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // V15 (AH-FR-36): "Draft a message to them" from an obstacle opens a new message filled from it.
+  // Nothing is saved until the participant saves it here; the params are stripped so a refresh does not reopen it.
+  useEffect(() => {
+    if (searchParams.get('create') !== 'message') {
+      return;
+    }
+    const fill: [string, (value: string) => void][] = [
+      ['partnerId', setPartnerId], ['audience', setAudience], ['purpose', setPurpose], ['problem', setProblem], ['request', setRequest],
+    ];
+    for (const [key, setter] of fill) {
+      const value = searchParams.get(key);
+      if (value) {
+        setter(value);
+      }
+    }
+    setCreateOpen(true);
+    const next = new URLSearchParams(searchParams);
+    for (const key of ['create', ...fill.map(([key]) => key)]) {
+      next.delete(key);
+    }
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [aiDraftError, setAiDraftError] = useState('');
 
   useEffect(() => {
@@ -290,6 +322,8 @@ export function CommunicationBuilderPage() {
   // the same row actions.
   function renderMessageActions(message: CommunicationMessage) {
     return (
+      <>
+      <HelpWithThis compact area="item" itemId={message.id} title={message.subject || tr('Message')} />
       <RowActionsMenu
         onEdit={() => startEdit(message)}
         onArchive={() => void crud.archive(message.id)}
@@ -298,6 +332,7 @@ export function CommunicationBuilderPage() {
         archived={message.archived}
         label={tr('Message actions')}
       />
+      </>
     );
   }
 
@@ -336,8 +371,64 @@ export function CommunicationBuilderPage() {
     },
   ];
 
+  // V15 (AH-FR-05, AH-FR-06): while the form is open, the assistant reads it as typed and a card fills one field.
+  const formOpen = createOpen || crud.editingId !== null;
+  const readForm = () => ({
+    partnerId, relatedDreamId, relatedGoalId, relatedTaskId, audience, purpose, subject, hook, problem, request,
+    benefitToPartner, wordPicture, expectedOutcome, objectionsAndAnswers, socialProof, valueComparison, callToAction,
+    messageBody, status, followUpDate,
+  });
+  const applyField = (field: string, value: string) => {
+    const setters: Record<string, (next: string) => void> = {
+      audience: setAudience, purpose: setPurpose, subject: setSubject, hook: setHook, problem: setProblem, request: setRequest,
+      benefitToPartner: setBenefitToPartner, wordPicture: setWordPicture, expectedOutcome: setExpectedOutcome,
+      objectionsAndAnswers: setObjectionsAndAnswers, socialProof: setSocialProof, valueComparison: setValueComparison,
+      callToAction: setCallToAction, messageBody: setMessageBody,
+    };
+    if (field === 'status' && (['DRAFT', 'SENT', 'FOLLOWED_UP', 'REPLIED', 'CLOSED'] as string[]).includes(value)) {
+      // AH-FR-52: a proposed status only fills the form; the participant saves it.
+      setStatus(value as CommunicationStatus);
+    } else {
+      setters[field]?.(value);
+    }
+  };
+  const formSource: PageFormSource | null = formOpen ? { itemId: crud.editingId, read: readForm, apply: applyField } : null;
+
+  // V15 (AH-FR-49, AH-FR-65): a follow-up or thank-you opens as a new message to the same partner, to edit and save.
+  function openNewMessage(draft: NewMessageDraft) {
+    cancelEdit();
+    setPartnerId(draft.partnerId ? String(draft.partnerId) : '');
+    setSubject(draft.subject);
+    setRequest(draft.request);
+    setMessageBody(draft.messageBody);
+    setRelatedDreamId(draft.relatedDreamId ? String(draft.relatedDreamId) : '');
+    setRelatedGoalId(draft.relatedGoalId ? String(draft.relatedGoalId) : '');
+    setRelatedTaskId(draft.relatedTaskId ? String(draft.relatedTaskId) : '');
+    setStatus('DRAFT');
+    setCreateOpen(true);
+  }
+
+  // AH-FR-65: progress for the thank-you, from the linked task, else the linked goal.
+  const linkedTask = tasks.find((task) => String(task.id) === relatedTaskId);
+  const linkedGoal = goals.find((goal) => String(goal.id) === relatedGoalId);
+  const progressText = linkedTask ? progressLine(linkedTask.title, linkedTask.progressPercent)
+    : progressLine(linkedGoal?.title, linkedGoal?.progressPercent);
+
+  const formTopic = formOpen ? { area: 'message', itemId: crud.editingId, title: subject || tr('New message') } : null;
+
   const formFields = (
     <>
+      <div className="field-full">
+        <HelpWithThis area="message" itemId={crud.editingId} title={subject || tr('New message')} label={tr('your message')} />
+      </div>
+      {token && (
+        // V15 Phase 3 (AH-FR-44 to AH-FR-65): helpers that fill this form or open a new message or task.
+        <CommunicationHelpers token={token} messageId={crud.editingId} status={status}
+          partnerName={partners.find((partner) => String(partner.id) === partnerId)?.name ?? null} progressText={progressText}
+          read={readForm} apply={applyField} onRebuildWithTemplate={handleGenerateMessage} onNewMessage={openNewMessage}
+          partnerStyle={partners.find((partner) => String(partner.id) === partnerId)?.workStyleType ?? null}
+          partnerMotivator={partners.find((partner) => String(partner.id) === partnerId)?.primaryMotivator ?? null} />
+      )}
       <label>
         {tr('Partner')}
         <FormControl fullWidth size="small">
@@ -347,9 +438,10 @@ export function CommunicationBuilderPage() {
           </Select>
         </FormControl>
       </label>
-      <label>
+      <label htmlFor="message-audience">
         {tr('Audience')}
-        <Input value={audience} onChange={(event) => setAudience(event.target.value)} />
+        <HelpWithThis compact area="field:audience" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.audience)} />
+        <Input value={audience} id="message-audience" onChange={(event) => setAudience(event.target.value)} />
       </label>
       <label>
         {tr('Dream')}
@@ -382,9 +474,10 @@ export function CommunicationBuilderPage() {
         {tr('Follow Up')}
         <Input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} />
       </label>
-      <label>
+      <label htmlFor="message-subject">
         {tr('Subject')}
-        <Input value={subject} onChange={(event) => setSubject(event.target.value)} />
+        <HelpWithThis compact area="field:subject" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.subject)} />
+        <Input value={subject} id="message-subject" onChange={(event) => setSubject(event.target.value)} />
       </label>
       <label>
         {tr('Status')}
@@ -396,65 +489,77 @@ export function CommunicationBuilderPage() {
           </Select>
         </FormControl>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-purpose">
         Purpose
-        <Textarea value={purpose} onChange={(event) => setPurpose(event.target.value)} />
+        <HelpWithThis compact area="field:purpose" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.purpose)} />
+        <Textarea value={purpose} id="message-purpose" onChange={(event) => setPurpose(event.target.value)} />
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-hook">
         Hook
-        <Input value={hook} onChange={(event) => setHook(event.target.value)} placeholder={tr('An opening line that earns attention')} />
+        <HelpWithThis compact area="field:hook" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.hook)} />
+        <Input value={hook} id="message-hook" onChange={(event) => setHook(event.target.value)} placeholder={tr('An opening line that earns attention')} />
         <span className="field-hint">
           {tr('Open with something specific to them, not a generic greeting. Try one of: a genuine question about their work; a shared connection or moment ("We met at..."); or a concrete result you admire ("Your talk on X changed how I...").')}
         </span>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-problem">
         Problem
-        <Textarea value={problem} onChange={(event) => setProblem(event.target.value)} />
+        <HelpWithThis compact area="field:problem" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.problem)} />
+        <Textarea value={problem} id="message-problem" onChange={(event) => setProblem(event.target.value)} />
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-wordPicture">
         {tr('Word Picture')}
-        <Textarea value={wordPicture} onChange={(event) => setWordPicture(event.target.value)} />
+        <HelpWithThis compact area="field:wordPicture" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.wordPicture)} />
+        <Textarea value={wordPicture} id="message-wordPicture" onChange={(event) => setWordPicture(event.target.value)} />
         <span className="field-hint">
           {tr('Optional. A short, relatable scene that makes the ask concrete. Instead of "I need mentorship," paint it: "I have the pieces but keep taking wrong turns - like driving a new city without a map."')}
         </span>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-objectionsAndAnswers">
         {tr('Objections & Answers')}
-        <Textarea value={objectionsAndAnswers} onChange={(event) => setObjectionsAndAnswers(event.target.value)} />
+        <HelpWithThis compact area="field:objectionsAndAnswers" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.objectionsAndAnswers)} />
+        <Textarea value={objectionsAndAnswers} id="message-objectionsAndAnswers" onChange={(event) => setObjectionsAndAnswers(event.target.value)} />
         <span className="field-hint">{tr('Optional. The pushback you expect, and how you\'d answer it.')}</span>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-socialProof">
         {tr('Social Proof')}
-        <Textarea value={socialProof} onChange={(event) => setSocialProof(event.target.value)} />
+        <HelpWithThis compact area="field:socialProof" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.socialProof)} />
+        <Textarea value={socialProof} id="message-socialProof" onChange={(event) => setSocialProof(event.target.value)} />
         <span className="field-hint">{tr('Optional. Credibility points — prior results, references.')}</span>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-valueComparison">
         {tr('Value Comparison')}
-        <Textarea value={valueComparison} onChange={(event) => setValueComparison(event.target.value)} />
+        <HelpWithThis compact area="field:valueComparison" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.valueComparison)} />
+        <Textarea value={valueComparison} id="message-valueComparison" onChange={(event) => setValueComparison(event.target.value)} />
         <span className="field-hint">{tr('Optional. Why this is worth more to them than it costs them.')}</span>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-request">
         Request
-        <Textarea value={request} onChange={(event) => setRequest(event.target.value)} />
+        <HelpWithThis compact area="field:request" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.request)} />
+        <Textarea value={request} id="message-request" onChange={(event) => setRequest(event.target.value)} />
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-benefitToPartner">
         {tr('Benefit to Partner')}
-        <Textarea value={benefitToPartner} onChange={(event) => setBenefitToPartner(event.target.value)} />
+        <HelpWithThis compact area="field:benefitToPartner" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.benefitToPartner)} />
+        <Textarea value={benefitToPartner} id="message-benefitToPartner" onChange={(event) => setBenefitToPartner(event.target.value)} />
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-expectedOutcome">
         {tr('Expected Outcome')}
-        <Textarea value={expectedOutcome} onChange={(event) => setExpectedOutcome(event.target.value)} />
+        <HelpWithThis compact area="field:expectedOutcome" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.expectedOutcome)} />
+        <Textarea value={expectedOutcome} id="message-expectedOutcome" onChange={(event) => setExpectedOutcome(event.target.value)} />
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-callToAction">
         {tr('Call to Action')}
-        <Textarea value={callToAction} onChange={(event) => setCallToAction(event.target.value)} />
+        <HelpWithThis compact area="field:callToAction" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.callToAction)} />
+        <Textarea value={callToAction} id="message-callToAction" onChange={(event) => setCallToAction(event.target.value)} />
         <span className="field-hint">
           {tr('Optional. The one specific next step you\'re asking for — replaces the generic closing line when filled in.')}
         </span>
       </label>
-      <label className="field-full">
+      <label className="field-full" htmlFor="message-messageBody">
         Message
-        <Textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
+        <HelpWithThis compact area="field:messageBody" itemId={crud.editingId} label={tr(MESSAGE_FIELD_LABELS.messageBody)} />
+        <Textarea value={messageBody} id="message-messageBody" onChange={(event) => setMessageBody(event.target.value)} />
         {aiDraftError && <Alert severity="error" sx={{ mt: 1 }}>{aiDraftError}</Alert>}
       </label>
     </>
@@ -482,8 +587,12 @@ export function CommunicationBuilderPage() {
   }
 
   return (
-    <PageSection title={tr('Communication')} subtitle={tr('Prepare support requests and follow-up messages.')}>
+    // V15 (AH-FR-01): the page assistant on the Communication page.
+    <PageAssistantProvider page="COMMUNICATION" form={formSource} current={formTopic}>
+    <PageSection title={tr('Communication')} subtitle={tr('Prepare support requests and follow-up messages.')} actions={<PageHelpButton />}>
       <CrudModalForm
+        creating={createOpen}
+        onCreatingChange={setCreateOpen}
         editing={crud.editingId !== null}
         createLabel={tr('Save message')}
         editTitle="Edit Message"
@@ -513,6 +622,8 @@ export function CommunicationBuilderPage() {
       {token && <Box sx={{ my: 2 }}><PitchCoachCard token={token} /></Box>}
       {crud.loading && <Loading variant="table" />}
       {crud.error && <ErrorMessage message={crud.error} onRetry={() => void crud.reload()} />}
+      {token && <FollowUpDueCard token={token} reloadKey={totalRows + (crud.saving ? 1 : 0)} onNewMessage={openNewMessage} />}
+      {token && <DraftPriorityCard token={token} />}
       <FilterPanel activeCount={[searchTerm, filterPartnerId, filterStatus].filter(Boolean).length}>
         <SearchBar
           value={searchTerm}
@@ -538,6 +649,7 @@ export function CommunicationBuilderPage() {
       </FilterPanel>
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Message view')} />
+        <HelpWithThis area="list" label={tr('your messages')} />
       </div>
       {viewMode === 'board' && (
         // Messages are server-paged, so the board shows the currently loaded page.
@@ -612,6 +724,7 @@ export function CommunicationBuilderPage() {
       </Card>
       )}
     </PageSection>
+    </PageAssistantProvider>
   );
 }
 

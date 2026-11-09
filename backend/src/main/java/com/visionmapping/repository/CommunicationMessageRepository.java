@@ -51,4 +51,13 @@ public interface CommunicationMessageRepository extends JpaRepository<Communicat
             @Param("status") CommunicationStatus status,
             @Param("term") String term,
             Pageable pageable);
+
+    /** V15 (AH-FR-67): earlier messages to one partner, newest first; only subjects, dates and statuses are used. */
+    List<CommunicationMessage> findTop10ByUser_IdAndPartner_IdAndArchivedFalseOrderByIdDesc(Long userId, Long partnerId);
+
+    /** V15 baselines (AHBO-04): messages in one status, across all participants. */
+    long countByArchivedFalseAndStatus(CommunicationStatus status);
+
+    /** V15 baselines (AHBO-04): Sent or Followed Up messages whose follow-up date has passed. */
+    long countByArchivedFalseAndStatusInAndFollowUpDateBefore(java.util.Collection<CommunicationStatus> statuses, java.time.LocalDate date);
 }

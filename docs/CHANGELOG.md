@@ -66,6 +66,47 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [15.0.0] — All 6 phases built; awaiting UAT, the live quality-test run and the Khmer review
+
+Implements [BRD 15.0.0](VMS_BRD_V15.0.0.md): a page assistant and helpers on the Modules, module, Assessment,
+Obstacles, Communication and Work Style pages. Two migrations: `V73__ai_use_work_style.sql` and
+`V74__ai_page_switches.sql`.
+
+### Added
+- **Phase 1, page assistant (AH-FR-01 to AH-FR-12).** One side panel on the six routes, with **Help** and
+  **Help with this** buttons, program help and rule checks that work without AI, a chat that sees the unsaved form,
+  and change cards that only fill the form. Section B of the BRD decides what each page sends to Claude.
+  `POST /api/ai/pages/assistant/check` and `/proposals`; chat through `/api/ai/chat` with `assistantPage`.
+  The Dream Coach steps aside on these pages. Admin **Page assistant quality** card with per-feature metrics and the
+  AHBO-01, 03 and 04 baselines (`GET /api/ai/pages/metrics`).
+- **Phase 2, Obstacles (AH-FR-31 to AH-FR-39, AH-FR-41, AH-FR-42).** Classify, root cause in place, solutions, next
+  task, partner matching, blocked tasks without an obstacle, which first, solved before.
+- **Phase 3, Communication (AH-FR-43 to AH-FR-50, AH-FR-52 to AH-FR-54, AH-FR-61 to AH-FR-67).** Field guide, fill from
+  a sentence, check, tone, rebuild, objections, follow-up list and draft, meeting prep, thank-you, which first, practise
+  this ask, earlier messages as context.
+- **Phase 4, Modules (AH-FR-13 to AH-FR-22).** Which module next (rule and AI), journey summary, answers in place,
+  refine with kept rows, explain, check before saving, modules done elsewhere.
+- **Phase 5, Assessment and Work Style (AH-FR-23 to AH-FR-30, AH-FR-59, AH-FR-60, AH-FR-68 to AH-FR-77, AH-FR-79).**
+  Statement explanations, richer explanation, practise this chain, 4-week retake reminder, what changed; what my result
+  means, put my style to work, balance my partners, estimate a partner's style, working with a partner, adapt to this
+  partner, and the **Let AI helpers use my work style** switch (off by default).
+- **Phase 6 (AH-FR-40, AH-FR-51, AH-FR-57, AH-FR-58, AH-NFR-08 to AH-NFR-12).** Conflict and criticism help (private
+  note only when ticked; crisis wording gets the safety response), read a reply (never stored), per-page and per-cohort
+  switches, program help editable through the interface text, the Khmer review export (`docs/km-review-v15.csv`, 447
+  strings) and the quality test set (`page-assistant-eval/cases.json`, 44 cases, with a live run gated on
+  `PAGE_EVAL_ANTHROPIC_KEY`).
+
+### Fixed
+- A page assistant proposal for an obstacle or message with linked plan items failed: linked records load lazily and
+  the proposal view was read outside a transaction. Found while building Phase 2; regression test added.
+
+### Still to do
+- UAT, a live run of the quality test set with the pilot model, and the Khmer review of the 447 drafts.
+- Lead-coach approval of the fixed practices per barrier and per work style (AH-FR-72).
+- The open questions in the BRD, in particular the $6 share of the monthly cap (measure first) and the default of the
+  work-style switch.
+- AH-FR-78 (keep the previous work-style result) stays a later improvement.
+
 ## [11.0.0] — All 8 phases built; awaiting UAT, the live sample run and the Khmer review
 
 Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improvements.

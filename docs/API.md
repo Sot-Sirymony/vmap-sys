@@ -686,6 +686,82 @@ Helps with one section of the Plan page (`surface` `PLAN`, sections `WHOLE`, `ST
 
 In Build my plan, cards are applied to the draft in the browser and counted with `POST /api/ai/plan/requests/{id}/outcome`.
 
+### V15: page assistant (Phase 1)
+
+Helps with one area of the Modules list (`page` `MODULES`), a module (`MODULE`, `itemId` = module number), the Assessment (`ASSESSMENT`), Obstacles (`OBSTACLES`), Communication (`COMMUNICATION`) or Work Style (`WORK_STYLE`) page. `area` names the part of the page, for example `page`, `list`, `item`, `form`, `message`, `field:hook`, `statement:fearScore`, `result`, `question:3` or `exercise`. `itemId` is the open obstacle or message; another user's answers 404, before AI is checked. `form` is the unsaved form as `{ "field": "text" }` (up to 60 fields), sent as data and never stored. What goes to Claude follows BRD 15 section B: never partner names or contacts on the Obstacles page, only a partner's name and role on the Communication page, never the obstacle's private reaction note, and the subjects, dates and statuses (never bodies) of earlier messages to the same partner.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/chat` and `/api/ai/chat/stream` | Add `"assistantPage"`, `"area"`, optional `"itemId"` and `"form"` to send the message to the page assistant. Usage is logged as `PAGE_ASSISTANT_CHAT`. A new conversation is tagged `PAGE:{page}` or `PAGE:{page}:{itemId}`. The Assessment and Work Style pages carry their answer guards (never suggest a score or pick a quiz answer) |
+| GET | `/api/ai/conversations?section=PAGE:OBSTACLES:12` | The page assistant's conversations for that page and item, newest first |
+| POST | `/api/ai/pages/assistant/check` | `{ "page", "area", "itemId", "form" }` → `canPropose` and `issues[]` (`field`, `problem`, `fix`). Rule checks only, never AI: obstacles without a description, root cause or solution; messages with no request, no benefit to the partner, no call to action, or a body over 250 words; empty module exercise fields. `canPropose` is false on the Modules list, Assessment and Work Style |
+| POST | `/api/ai/pages/assistant/proposals?language=en` | Same body → `changes[]` (`field`, `value`, `reason`), `note`, `requestId` (feature `PAGE_ASSISTANT`), `sources`. Only the page's own form fields are kept: obstacle `title`, `description`, `obstacleType`, `severity`, `rootCause`, `solution`, `creativeAlternatives`; the message text fields and `status`; a module's `row{n}.{fieldKey}` (n 0 to 2, ratings 1 to 5). Values outside an enum, unknown fields and empty values are dropped; at most two versions of one field and five changes. With `area` `field:{name}`, only that field. Saves nothing |
+| POST | `/api/ai/pages/assistant/requests/{id}/outcome` | `{ "added", "edited" }` → 204. Cards applied as suggested or after editing; the rest count as dismissed. Ratings use `PUT /api/ai/plan/requests/{id}/rating` |
+| GET | `/api/ai/pages/metrics?days=30` | Admin only. Per V15 feature (AH-FR-55): `requests`, `suggestedItems`, `appliedItems`, `editedItems`, `dismissedItems`, `appliedRate`, `ratings`, `thumbsUpRate`, `costUsd`, `averageCostUsd`; and `baselines` for AHBO-01 (next module within 7 days), AHBO-03 (open obstacles with a root cause, solution or task) and AHBO-04 (drafts, sent, follow-ups past their date) |
+
+The page assistant and helpers use the simple-task model (`planModel`) when the admin has set one (AH-NFR-02).
+
+### V15: obstacle helpers (Phase 2)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/obstacles/help?language=en` | `{ "mode", "obstacleId", "form", "answers" }`. Modes: `CLASSIFY` (cards for `obstacleType` and `severity`), `ROOT_CAUSE` (with up to three `answers` `{ question, answer }`: returns the next `question`, or a `rootCause` card; after three answers always the card), `SOLUTIONS` (up to three cards for `solution` or `creativeAlternatives`, each "idea First step: ..."), `NEXT_TASK` (`task`: `title`, `description`, `owner` always `Me`, `dueDate` between today and the linked step's date or null, `priority`, `stepId`, `stepTitle`, `latestDate`; the step comes from the form's or saved `relatedStepId`, else the linked task's step) and `PRIORITISE` (`ranking` in the rule order below, with a `reason` on up to the top three). Reads the obstacle exactly as the page assistant does: never partner names or contacts, never the private reaction note; resolved obstacles of the same type are included (AH-FR-38). Another user's obstacle or linked record answers 404 before AI is checked; 400 with no obstacle and no form. Logged as `OBSTACLE_HELP`; cards are counted with `POST /api/ai/pages/assistant/requests/{id}/outcome`. Saves nothing and never changes an obstacle's status |
+| GET | `/api/obstacles/partner-matches?obstacleType=KNOWLEDGE` | No AI. `suggestedSupportType` (the CLAUDE.md partner rule; `OTHER` for partner, system and other gaps) and up to five of the participant's own partners, To Contact to Waiting, whose support type or role fits: `id`, `name`, `role`, `supportType`, `status` |
+| GET | `/api/obstacles/priority` | No AI. Open and In Progress obstacles: severity first, then Blocked tasks they hold up (the task, or the step, goal or dream it sits under), then days open. `id`, `title`, `severity`, `blockedTasks`, `daysOpen`, `reason` (null) |
+| GET | `/api/tasks/blocked-without-obstacle` | No AI. Blocked tasks with a blocker reason that no unarchived obstacle names: `id`, `code`, `title`, `blockerReason`, `stepId`, `stepTitle`, `goalId`, `dreamId` |
+
+### V15: Communication helpers (Phase 3)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/communication/help?language=en` | `{ "mode", "messageId", "form", "intent", "tone" }`. Modes: `FILL` (needs `intent`, one sentence up to 300 characters: cards only for structured fields that are empty; never the body or status; `MESSAGE_FIELD_HELP`), `CHECK` (`issues[]`: `problem` and an optional `fix` card for one text field; `MESSAGE_CHECK`), `TONE` (needs `tone` `SHORTER`, `WARMER`, `FORMAL`, `KHMER` or `ENGLISH`: one `messageBody` card; `KHMER` and `ENGLISH` answer in that language; `MESSAGE_BODY`), `BODY` (the body rebuilt from the fields only, one `messageBody` card; `MESSAGE_BODY`), `OBJECTIONS` (one `objectionsAndAnswers` card; `MESSAGE_OBJECTIONS`), `FOLLOW_UP` and `THANK_YOU` (need a saved `messageId`: `message` with `partnerId`, `subject`, `request` (empty for a thank-you), `messageBody` and the same linked dream, goal and task, for a new message; `FOLLOW_UP_DRAFT`, `THANK_YOU_DRAFT`), `MEETING_PREP` (`task`: `title` "Meet {partner role}", never the name, `description` with the outcome, three questions, what to bring and the closing ask, `owner` `Me`) and `PRIORITISE` (`ranking` in the draft order below, with a `reason` on up to the top three). Reads the message exactly as the page assistant does. Another user's message, partner or linked record answers 404 before AI is checked. Saves and sends nothing, and never changes a status or follow-up date |
+| GET | `/api/communication-messages/follow-up-due` | No AI. Sent or Followed Up messages whose follow-up date has passed, longest overdue first: `id`, `subject`, `request`, `status`, `followUpDate`, `partnerId`, `partnerName`, `daysOverdue` |
+| GET | `/api/communication-messages/draft-priority` | No AI. Draft messages: a Blocked linked task first, then the linked task's due date (none last), then days waiting. `id`, `subject`, `partnerName`, `taskDueDate`, `taskBlocked`, `daysWaiting`, `reason` (null) |
+
+Help with one message field through the page assistant (`area` `field:{name}`) is logged as `MESSAGE_FIELD_HELP`. Without AI, the follow-up and thank-you open the program's templates, and Rebuild message uses Generate message.
+
+### V15: Modules helpers (Phase 4)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/modules/next?language=en` | No AI. `moduleNumber`, `title`, `reason`, `rule`, `source` `RULE`, `requestId` null. `rule` is `LOW_CHAIN` (the latest assessment scored a barrier 1 or 2 and its module (settling 1, fear 2, criticism 3, vision 4, knowing how 5, resources 6) is open; the lowest score first), `PROGRAM_ORDER` (the first open module) or `ALL_DONE` (every open module is done; number and title null) |
+| POST | `/api/ai/modules/next?language=en` | Claude picks one open (unlocked, not completed) module with a two-sentence reason from the participant's own data (`source` `AI`, `rule` `AI`). A pick outside the open modules, or with no reason, returns the rule answer with `source` `RULE`. `requestId` for rating; logged as `MODULE_NEXT`. Modules unlock one at a time, so there is usually one open module |
+| GET | `/api/modules/journey?language=en` | No AI. `done`, `total`, `stages[]` (`stage`, `done`, `total`, in program order), `assessments` (how many takes), `chains[]` (`key`, `label`, `first`, `latest`; empty with no assessment) and `nextStage` (the first stage not finished, or null) |
+| POST | `/api/ai/modules/{number}/help` | V15 adds modes and fields. `answers` (up to three `{ question, answer }` from Help me start) are used by `DRAFT` and `REFINE` and never saved. `EXPLAIN` returns `explanation`, `whyItMatters` and an `example` about a made-up person. `REFINE` needs rows in the form and `refine` (`SHORTER`, `SPECIFIC`, `MY_WORDS`, `ANOTHER`) or a `note` (up to 300 characters); rows listed in `keepRows` (0 to 2) come back exactly as sent. `CHECK` returns `checks[]` (`row` from 0, `field`, `tip`) for fields that are empty or too short. `REFINE` and `CHECK` answer 400 for a module done on another page. Nothing is saved or unlocked |
+
+### V15: Assessment and Work Style helpers (Phase 5)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/chain-assessments` | Adds `retakeAfterModule`: true when the latest take is 28 days old or more and a module was completed after it (AH-FR-28). No AI |
+| POST | `/api/ai/assessment/explain?language=en` | Adds `lowChains[]` (`key`, `label`, `score`, `note`) for each barrier scored 1 or 2 (other keys are dropped) and `trend` across every take (null with one take). Describes scores, never the person (AH-FR-25, AH-FR-30) |
+| POST | `/api/ai/assessment/practice?language=en` | `requestId`, `practices[]` (`chainKey`, `label`, `score`, `practice`, `habit`) for each barrier scored 3 or less, each tied to the program's app action for that barrier; other keys dropped. No AI request when none is 3 or less; 400 with no assessment. `ASSESSMENT_PRACTICE` |
+| POST | `/api/ai/assessment/what-changed?language=en` | `requestId`, `summary`, `modulesBetween[]` (titles of modules completed after the previous take, up to the latest). 400 with fewer than two takes. `ASSESSMENT_EXPLAIN` |
+| PUT | `/api/work-style-profile/ai-use` | `{ "enabled": true }` → the profile, with `aiUseWorkStyle`. Off by default (migration V73). While on, the step and task builders, next step, module help, the assessment practice and message adaptation get the dominant and secondary style only; while off, none of them gets the style (AH-FR-76) |
+| GET | `/api/work-style-profile/partner-balance` | No AI. `dominant`, `complementary` (FR-49.4), `counts` per style, `noStyle`, `missing` (complementary styles no active partner has) and `partners[]` (`id`, `name`, `role`, `supportType`, `workStyleType`, `primaryMotivator`) |
+| POST | `/api/ai/work-style/help?language=en` | `{ "mode", "partnerId", "partnerNotes" }`. `EXPLAIN` (`text`, from the pole counts; `WORK_STYLE_EXPLAIN`), `BALANCE` (`text`, why a missing complementary style would help; `WORK_STYLE_EXPLAIN`), `TIPS` (up to three `practices[]` with `text`, `action` `UNDATED_STEPS`, `STEPS`, `TASKS`, `PARTNERS`, `TODAY` or `PLAN` (null otherwise) and `habit`; `WORK_STYLE_TIPS`), `PARTNER` (needs a partner with a style: two or three `tips[]`; the partner's style estimate, role and support type only, and `partnerNotes` for this request only; `WORK_STYLE_PARTNER`). 400 before the quiz is taken; another user's partner answers 404 |
+| POST | `/api/ai/communication/help` | Adds mode `ADAPT` (AH-FR-59): cards for `hook`, `benefitToPartner` and `callToAction` only, fitted to the partner's work style and primary motivator (category values only; never email, phone or notes). 400 when the partner has neither. `MESSAGE_ADAPT` |
+
+The page assistant on Work Style also accepts `area` `partner:{id}` and reads that partner's style estimate, role and support type, never the name. Pre-filled links: `/today?habit=` fills the new-habit box; `/partners?edit={id}&workStyleType=` opens that partner's form with the estimate filled in.
+
+### V15: sensitive helpers and page switches (Phase 6)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/api/ai/obstacles/help` | Adds mode `CONFLICT` (AH-FR-40): cards for `criticismSubstance`, `conflictOtherPerspective` and `conflictNextAction` only. The private reaction (`conflictPrivateNote` in `form`) is sent only with `"includePrivateNote": true`, for that request. Crisis wording in the conflict or criticism text returns `mode` `CRISIS` with the safety response in `note`, raises the coach alert, logs `CRISIS_HANDLED` and never calls Claude |
+| POST | `/api/ai/communication/help` | Adds mode `REPLY` (AH-FR-51): needs `reply` (up to 4000 characters), wrapped as data. Returns `note` (two-sentence summary), `reading` (`kind` `YES`, `NO`, `QUESTION` or `LATER`, and `nextAction`), a `status` card (`REPLIED` or `CLOSED` only) and a reply draft in `message`. The reply is never stored or logged. `REPLY_HELP` |
+| PUT | `/api/admin/ai-settings` | Adds `pagesOff` (AH-FR-57): page keys where the page assistant and helpers are off for everyone. Left out keeps the list |
+| POST, PUT | `/api/admin/cohorts`, `/api/admin/cohorts/{id}` | Adds `aiPagesOff`: the same, for one cohort. Left out keeps it |
+| GET | `/api/ai/status` | Adds `pagesOff`: the pages off for this person (everyone's list plus their cohort's). Every V15 AI endpoint on such a page answers 400 "AI help is switched off on this page. The program's own help still works."; the rule checks and lists still work |
+
+Program help text (guiding questions, statement explanations, the field guide, templates, practices and tips) goes through
+the interface text, so admins can change it in English and Khmer on **Interface text** (AH-FR-58). The Khmer drafts for
+review are in `docs/km-review-v15.csv` (`node frontend/scripts/export-km-review.mjs V15`). The quality test set is
+`backend/src/test/resources/page-assistant-eval/cases.json`; run it with
+`PAGE_EVAL_ANTHROPIC_KEY=sk-ant-... mvn test -Dtest=PageAssistantEvalRunTests` (writes `target/page-assistant-eval.md`).
+
+Pre-filled forms opened from an obstacle (nothing is saved until the participant saves there): `/tasks?create=task&parent=&title=&description=&owner=&dueDate=&priority=`, `/partners?create=partner&supportType=&status=TO_CONTACT`, `/communication?create=message&partnerId=&audience=&purpose=&problem=&request=`.
+
 ### V11: session limit, finished plans, arranging (Phase 8)
 
 - **Session limit (PB-NFR-03).** While a live draft exists for a dream, it allows 15 AI requests: goal, step and task suggestions (saved or draft), clarify, helpers and risks, draft fixes, plan assistant proposals and chat with `surface` `BUILDER`, and the AI part of both plan checks. Past the limit these answer 429 "This plan session has used its 15 AI requests. ..."; the plan check and draft check return their rule issues with `aiChecked` false. A crisis chat message is still answered. `PUT` and `GET /api/ai/plan/drafts/{dreamId}` return `aiRequestsUsed` and `aiRequestLimit`. Adding or discarding the draft ends the session.

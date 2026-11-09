@@ -198,6 +198,10 @@ class AccessControlSweepTests {
         AiUsageLog planAnswer = aiUsageLogRepository.save(AiUsageLog.builder().user(owner).feature("GOAL_BUILDER")
                 .model("claude-opus-5-5").costUsd(java.math.BigDecimal.ZERO).outcome(AiOutcome.OK).suggestedItems(3).build());
         ownerIds.put("ai/plan/requests", planAnswer.getId());
+        // V15: a page assistant answer to report card outcomes on.
+        AiUsageLog pageAnswer = aiUsageLogRepository.save(AiUsageLog.builder().user(owner).feature("PAGE_ASSISTANT")
+                .model("claude-opus-5-5").costUsd(java.math.BigDecimal.ZERO).outcome(AiOutcome.OK).suggestedItems(2).build());
+        ownerIds.put("ai/pages/assistant/requests", pageAnswer.getId());
     }
 
     // ---------- 1. no token ----------
@@ -335,6 +339,18 @@ class AccessControlSweepTests {
         attempts.put("/api/ai/plan/undo", Map.of("goalIds", List.of(ownerIds.get("goals"))));
         // V11 Phase 7: a plan assistant message about another user's dream.
         attempts.put("/api/ai/chat", Map.of("message", "Hello", "dreamId", ownerIds.get("dreams"), "surface", "PLAN", "section", "GOALS"));
+        // V15 (AH-NFR-07): the page assistant on another user's obstacle or message, before any AI check.
+        attempts.put("/api/ai/pages/assistant/check", Map.of("page", "OBSTACLES", "area", "item", "itemId", ownerIds.get("obstacles")));
+        attempts.put("/api/ai/pages/assistant/proposals",
+                Map.of("page", "COMMUNICATION", "area", "message", "itemId", ownerIds.get("communication-messages")));
+        attempts.put("/api/ai/chat/stream", Map.of("message", "Hello", "assistantPage", "OBSTACLES", "area", "item",
+                "itemId", ownerIds.get("obstacles")));
+        // V15 Phase 2: an obstacle helper on another user's obstacle.
+        attempts.put("/api/ai/obstacles/help", Map.of("mode", "CLASSIFY", "obstacleId", ownerIds.get("obstacles")));
+        // V15 Phase 3: a Communication helper on another user's message.
+        attempts.put("/api/ai/communication/help", Map.of("mode", "CHECK", "messageId", ownerIds.get("communication-messages")));
+        // V15 Phase 5: Work Style tips about another user's partner.
+        attempts.put("/api/ai/work-style/help", Map.of("mode", "PARTNER", "partnerId", ownerIds.get("partners")));
 
         List<String> problems = new ArrayList<>();
         for (Map.Entry<String, Map<String, Object>> attempt : attempts.entrySet()) {

@@ -72,6 +72,18 @@ describe('CommunicationBuilderPage (CLAUDE.md page 9)', { timeout: 30000 }, () =
     expect(communicationApi.listCommunicationMessages).toHaveBeenCalledWith('token', 0, 10, false, 'id,desc', '', { partnerId: '', status: '' });
   });
 
+  it('opens a new message filled from an obstacle link (V15, AH-FR-36)', async () => {
+    renderPage(<CommunicationBuilderPage />, {
+      route: '/communication?create=message&audience=Dr%20Lina&purpose=Help%20with%3A%20No%20access&problem=My%20access%20expired&request=Renew%20it',
+    });
+    const dialog = await screen.findByRole('dialog');
+    expect(field(dialog, /^Audience/)).toHaveValue('Dr Lina');
+    expect(field(dialog, /^Purpose/)).toHaveValue('Help with: No access');
+    expect(field(dialog, /^Problem/)).toHaveValue('My access expired');
+    expect(field(dialog, /^Request/)).toHaveValue('Renew it');
+    expect(communicationApi.createCommunicationMessage).not.toHaveBeenCalled();
+  });
+
   it('builds the message from audience, purpose, request, outcome and benefit in the agreed format', async () => {
     renderPage(<CommunicationBuilderPage />);
     await screen.findByText('Request for guidance', { selector: 'td, td *' });

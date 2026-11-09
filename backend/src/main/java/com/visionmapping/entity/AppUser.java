@@ -190,4 +190,9 @@ public class AppUser extends BaseAuditableEntity {
 
     @Column(name = "work_style_focus_people_score")
     private Integer workStyleFocusPeopleScore;
+
+    // V15 (AH-FR-76): other AI helpers may use the dominant and secondary style only while this is on.
+    @Builder.Default
+    @Column(name = "ai_use_work_style", nullable = false)
+    private boolean aiUseWorkStyle = false;
 }

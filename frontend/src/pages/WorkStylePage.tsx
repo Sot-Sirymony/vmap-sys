@@ -15,6 +15,9 @@ import type { WorkStyleProfile } from '../types/vision';
 import { ARCHETYPE_GUIDANCE, QUIZ_ITEMS, scoreAssessment, workStyleArchetypeLabels } from '../utils/workStyleAssessment';
 import { PageSection } from './PageSection';
 import { currentLanguage, tr } from '../i18n/translate';
+import Box from '@mui/material/Box';
+import { HelpWithThis, PageAssistantProvider, PageHelpButton } from '../components/ai/page-assistant/PageAssistant';
+import { AiUseSwitch, PartnerBalanceCard, StyleResultHelpers } from '../components/workstyle/WorkStyleHelpers';
 
 export function WorkStylePage() {
   const { token } = useAuth();
@@ -76,14 +79,18 @@ export function WorkStylePage() {
   }
 
   return (
+    // V15 (AH-FR-68): the page assistant on the Work Style page. It never picks an answer (AH-FR-69).
+    <PageAssistantProvider page="WORK_STYLE">
     <PageSection
       title={tr('Work Style')}
       subtitle={tr('A short, retakeable self-assessment (FR-49) — diagnostic only, it never affects any other part of the system.')}
+      actions={<PageHelpButton />}
     >
       {error && <ErrorMessage message={error} />}
       {!taking && profile && profile.dominant && (
         <Card sx={{ maxWidth: 640 }}>
-          <CardHeader title={tr('Your result')} subheader={tr('Retake at any time — a new result replaces this one.')} />
+          <CardHeader title={tr('Your result')} subheader={tr('Retake at any time — a new result replaces this one.')}
+            action={<HelpWithThis area="result" label={tr('your work style')} />} />
           <CardContent>
             <Stack spacing={2}>
               <div>
@@ -100,10 +107,21 @@ export function WorkStylePage() {
                   </Typography>
                 </div>
               )}
+              {token && (
+                // V15 Phase 5 (AH-FR-70 to AH-FR-72, AH-FR-76).
+                <>
+                  <StyleResultHelpers token={token} profile={profile} />
+                  <AiUseSwitch token={token} profile={profile} onChange={setProfile} />
+                </>
+              )}
               <Button type="button" variant="secondary" onClick={startAssessment}>{tr('Retake the assessment')}</Button>
             </Stack>
           </CardContent>
         </Card>
+      )}
+      {!taking && profile?.dominant && token && (
+        // V15 (AH-FR-73 to AH-FR-75): partners by style, estimates and working-with tips.
+        <Box sx={{ mt: 2 }}><PartnerBalanceCard token={token} /></Box>
       )}
       {taking && (
         <Card sx={{ maxWidth: 640 }}>
@@ -115,6 +133,9 @@ export function WorkStylePage() {
             <Stack spacing={2}>
               {QUIZ_ITEMS.map((item, index) => (
                 <div className="diligence-row" key={item.a}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <HelpWithThis area={`question:${index + 1}`} title={tr('Question {number}', { number: index + 1 })} />
+                  </Box>
                   <ToggleButtonGroup
                     orientation="vertical"
                     exclusive
@@ -144,6 +165,7 @@ export function WorkStylePage() {
         </Card>
       )}
     </PageSection>
+    </PageAssistantProvider>
   );
 }
 

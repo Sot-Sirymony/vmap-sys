@@ -63,6 +63,13 @@ public class WorkStyleProfileService {
         return toResponse(appUserRepository.save(user));
     }
 
+    /** V15 (AH-FR-76): turns the "Let AI helpers use my work style" switch on or off. */
+    public WorkStyleProfileResponse setAiUse(boolean enabled) {
+        AppUser user = userScope.currentUser();
+        user.setAiUseWorkStyle(enabled);
+        return toResponse(appUserRepository.save(user));
+    }
+
     static WorkStyleArchetype computeDominant(int paceFast, int paceDeliberate, int focusTask, int focusPeople) {
         return archetypeOf(paceFast >= paceDeliberate, focusTask >= focusPeople);
     }
@@ -99,6 +106,7 @@ public class WorkStyleProfileService {
                 user.getWorkStylePaceFastScore(),
                 user.getWorkStylePaceDeliberateScore(),
                 user.getWorkStyleFocusTaskScore(),
-                user.getWorkStyleFocusPeopleScore());
+                user.getWorkStyleFocusPeopleScore(),
+                user.isAiUseWorkStyle());
     }
 }

@@ -1,5 +1,7 @@
 package com.visionmapping.dto.request;
 
+import java.util.List;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
@@ -20,5 +22,11 @@ public record AiSettingsRequest(
         // AI-FR-24: left out keeps the current text; blank removes it.
         @Size(max = 4000) String coachingGuidelines,
         // V11 (PB-FR-39): the model for plan building. Left out keeps it; blank uses the main model.
-        @Size(max = 100) String planModel) {
+        @Size(max = 100) String planModel,
+        // V15 (AH-FR-57): pages where the page assistant and helpers are off. Left out keeps the current list.
+        @Size(max = 6) List<@Pattern(regexp = PageAssistantRequest.PAGES) String> pagesOff) {
+
+    public AiSettingsRequest {
+        pagesOff = com.visionmapping.util.Copies.list(pagesOff);
+    }
 }

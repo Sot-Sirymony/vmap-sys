@@ -28,6 +28,9 @@ export function setCurrentLanguage(language: Language) {
 // Server text with numbers inside (PlanStatusService, ProgressMetricsService).
 // Each pattern maps to a km.ts key, with the captured numbers as its values.
 const SERVER_PATTERNS: [RegExp, string, string[]][] = [
+  // V15 (AH-FR-14): the rule's reason for which module next.
+  [/^Your latest assessment scored (.+) (\d) of 5, and this module works on it\.$/,
+    'Your latest assessment scored {chain} {score} of 5, and this module works on it.', ['chain', 'score']],
   [/^(\d+) goals? in place\.$/, '{count} goal(s) in place.', ['count']],
   [/^(\d+) steps? in place\.$/, '{count} step(s) in place.', ['count']],
   [/^(\d+) goals? still without steps\.$/, '{count} goal(s) still without steps.', ['count']],

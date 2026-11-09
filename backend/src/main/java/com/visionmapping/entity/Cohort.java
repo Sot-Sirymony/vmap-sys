@@ -51,4 +51,9 @@ public class Cohort extends BaseAuditableEntity {
     @Builder.Default
     @Column(name = "ai_enabled", nullable = false)
     private boolean aiEnabled = true;
+
+    /** V15 (AH-FR-57): page keys where the page assistant and helpers are off for this cohort, comma-separated. */
+    @Builder.Default
+    @Column(name = "ai_pages_off", nullable = false, length = 200)
+    private String aiPagesOff = "";
 }

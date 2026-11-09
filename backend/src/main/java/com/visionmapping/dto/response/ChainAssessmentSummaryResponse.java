@@ -8,7 +8,9 @@ import java.util.List;
 public record ChainAssessmentSummaryResponse(
         List<ChainAssessmentResponse> assessments,
         BigDecimal improvementPercent,
-        boolean retakeSuggested
+        boolean retakeSuggested,
+        // V15 (AH-FR-28): the latest take is 4 weeks old or more and a module was completed since.
+        boolean retakeAfterModule
 ) {
     public ChainAssessmentSummaryResponse {
         assessments = Copies.list(assessments);

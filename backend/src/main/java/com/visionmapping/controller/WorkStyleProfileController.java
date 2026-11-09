@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkStyleProfileController {
 
     private final WorkStyleProfileService service;
+    private final com.visionmapping.service.WorkStyleSupportService supportService;
 
     @GetMapping
     public WorkStyleProfileResponse get() {
@@ -31,5 +32,17 @@ public class WorkStyleProfileController {
     @PutMapping
     public WorkStyleProfileResponse submit(@Valid @RequestBody WorkStyleAssessmentRequest request) {
         return service.submitAssessment(request);
+    }
+
+    /** V15 (AH-FR-76): turns "Let AI helpers use my work style" on or off. */
+    @PutMapping("/ai-use")
+    public WorkStyleProfileResponse aiUse(@Valid @RequestBody com.visionmapping.dto.request.WorkStyleAiUseRequest request) {
+        return service.setAiUse(request.enabled());
+    }
+
+    /** V15 (AH-FR-73): partners by style and the complementary styles still missing. No AI. */
+    @GetMapping("/partner-balance")
+    public com.visionmapping.dto.response.WorkStyleBalanceResponse partnerBalance() {
+        return supportService.partnerBalance();
     }
 }

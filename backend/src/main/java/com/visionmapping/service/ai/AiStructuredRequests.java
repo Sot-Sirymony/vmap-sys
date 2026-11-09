@@ -55,9 +55,10 @@ public class AiStructuredRequests {
         com.visionmapping.entity.AiSettings settings = aiSettingsService.current();
         // V11 (PB-FR-39): plan building may use its own model; everything else uses the main one.
         // V11 Phase 7 (PB-NFR-11): the plan assistant's small changes stay on the main model.
-        String model = settings.getPlanModel() != null && AiPlanFeedbackService.PLAN_FEATURES.contains(feature)
-                && !PlanAssistantService.FEATURE.equals(feature)
-                ? settings.getPlanModel() : settings.getModel();
+        // V15 (AH-NFR-02): the page assistant and helpers use the simple-task model too, where one is set.
+        boolean simpleTask = (AiPlanFeedbackService.PLAN_FEATURES.contains(feature) && !PlanAssistantService.FEATURE.equals(feature))
+                || PageAssistantService.FEATURES.contains(feature);
+        String model = settings.getPlanModel() != null && simpleTask ? settings.getPlanModel() : settings.getModel();
         ClaudeClient.Structured<T> answer;
         try {
             answer = claudeClient.structured(apiKey, model, system, task, type);

@@ -362,6 +362,8 @@ export type WorkStyleProfile = {
   paceDeliberateScore: number | null;
   focusTaskScore: number | null;
   focusPeopleScore: number | null;
+  // V15 (AH-FR-76): whether other AI helpers may use the dominant and secondary style. Off by default.
+  aiUseWorkStyle?: boolean;
 };
 
 export type WorkStyleAssessmentRequest = {
@@ -526,6 +528,8 @@ export type ChainAssessmentSummary = {
   assessments: ChainAssessment[];
   improvementPercent?: number | null;
   retakeSuggested: boolean;
+  // V15 (AH-FR-28): the latest take is 4 weeks old or more and a module was completed since.
+  retakeAfterModule?: boolean;
 };
 
 // FR-72: the fifteen modules.
@@ -620,6 +624,8 @@ export type Cohort = {
   memberCount: number;
   // V9 (AI-FR-24): AI for this cohort's members.
   aiEnabled: boolean;
+  // V15 (AH-FR-57): pages where the page assistant and helpers are off for this cohort.
+  aiPagesOff?: AssistantPage[];
 };
 
 export type CohortMember = {
@@ -1002,6 +1008,8 @@ export type AiSettings = {
   coachingGuidelines?: string | null;
   // V11 (PB-FR-39): null when plan building uses the main model.
   planModel?: string | null;
+  // V15 (AH-FR-57): pages where the page assistant and helpers are off for everyone.
+  pagesOff?: AssistantPage[];
 };
 
 // V9 Phase 3: the Dream Coach.
@@ -1014,6 +1022,8 @@ export type AiStatus = {
   consentAt?: string | null;
   dailyLimit: number;
   messagesLeftToday: number;
+  // V15 (AH-FR-57): pages where an admin has turned the page assistant and helpers off for this person.
+  pagesOff?: AssistantPage[];
 };
 
 export type AiMessage = {
@@ -1036,6 +1046,181 @@ export type AiFocus = {
   surface?: AssistantSurface | null;
   section?: AssistantSection | null;
   itemRef?: string | null;
+  // V15 Phase 1 (AH-FR-01 to AH-FR-11): set when the message goes to the page assistant for one area of a page.
+  assistantPage?: AssistantPage | null;
+  area?: string | null;
+  itemId?: number | null;
+  form?: Record<string, string> | null;
+};
+
+// V15 (AH-FR-01): the pages that have the page assistant.
+export type AssistantPage = 'MODULES' | 'MODULE' | 'ASSESSMENT' | 'OBSTACLES' | 'COMMUNICATION' | 'WORK_STYLE';
+
+export type PageAssistantRequest = {
+  page: AssistantPage;
+  area: string;
+  itemId?: number | null;
+  form?: Record<string, string>;
+};
+
+// AH-FR-10: one rule-based problem, found without AI.
+export type PageIssue = { field: string | null; problem: string; fix: string | null };
+
+export type PageCheck = { page: AssistantPage; area: string; canPropose: boolean; issues: PageIssue[] };
+
+// AH-FR-06: one change card; Apply fills the form field, the page's Save stores it.
+export type PageChange = { field: string; value: string; reason: string };
+
+export type PageProposals = { requestId: number | null; note: string; changes: PageChange[]; sources: string[] };
+
+// AH-FR-56: per-feature metrics and the Phase 1 baselines.
+export type PageFeatureMetrics = {
+  feature: string;
+  requests: number;
+  suggestedItems: number;
+  appliedItems: number;
+  editedItems: number;
+  dismissedItems: number;
+  appliedRate: number | null;
+  ratings: number;
+  thumbsUpRate: number | null;
+  costUsd: number;
+  averageCostUsd: number;
+};
+
+export type PageBaselines = {
+  moduleCompletions: number;
+  nextModuleWithinSevenDays: number;
+  nextModuleRate: number | null;
+  openObstacles: number;
+  openObstaclesWithPlan: number;
+  openObstaclesWithPlanRate: number | null;
+  draftMessages: number;
+  sentMessages: number;
+  followUpsOverdue: number;
+};
+
+export type PageMetrics = { days: number; features: PageFeatureMetrics[]; baselines: PageBaselines };
+
+// V15 Phase 2 (AH-FR-31 to AH-FR-41): the obstacle helpers.
+export type ObstacleHelpMode = 'CLASSIFY' | 'ROOT_CAUSE' | 'SOLUTIONS' | 'NEXT_TASK' | 'PRIORITISE' | 'CONFLICT' | 'CRISIS';
+
+export type WhyAnswer = { question: string; answer: string };
+
+export type ObstacleHelpRequest = {
+  mode: ObstacleHelpMode;
+  obstacleId?: number | null;
+  form?: Record<string, string>;
+  answers?: WhyAnswer[];
+  // V15 (AH-FR-40): CONFLICT sends the private reaction only when this is true.
+  includePrivateNote?: boolean;
+};
+
+// AH-FR-35: one of the participant's own partners who fits; shown only to them.
+export type ObstaclePartnerMatch = { id: number; name: string; role: string | null; supportType: PartnerSupportType | null; status: PartnerStatus | null };
+
+export type PartnerMatches = { obstacleType: ObstacleType; suggestedSupportType: PartnerSupportType; partners: ObstaclePartnerMatch[] };
+
+// AH-FR-39: a Blocked task with a blocker reason and no obstacle.
+export type BlockedTask = {
+  id: number;
+  code: string | null;
+  title: string;
+  blockerReason: string;
+  stepId: number | null;
+  stepTitle: string | null;
+  goalId: number | null;
+  dreamId: number | null;
+};
+
+// AH-FR-41: one open obstacle in the rule order; reason is set when AI explained it.
+export type RankedObstacle = { id: number; title: string; severity: Severity | null; blockedTasks: number; daysOpen: number; reason: string | null };
+
+// AH-FR-37: the proposed next task. dueDate is null when it broke a limit; latestDate is the step's date.
+export type TaskProposal = {
+  title: string;
+  description: string;
+  owner: string;
+  dueDate: string | null;
+  priority: Priority;
+  stepId: number | null;
+  stepTitle: string | null;
+  latestDate: string | null;
+};
+
+// V15 Phase 3 (AH-FR-43 to AH-FR-67): the Communication helpers.
+export type CommunicationHelpMode = 'FILL' | 'CHECK' | 'TONE' | 'OBJECTIONS' | 'BODY' | 'FOLLOW_UP' | 'MEETING_PREP' | 'THANK_YOU' | 'PRIORITISE' | 'ADAPT' | 'REPLY';
+export type MessageToneChange = 'SHORTER' | 'WARMER' | 'FORMAL' | 'KHMER' | 'ENGLISH';
+
+export type CommunicationHelpRequest = {
+  mode: CommunicationHelpMode;
+  messageId?: number | null;
+  form?: Record<string, string>;
+  intent?: string;
+  tone?: MessageToneChange;
+  // V15 (AH-FR-51): a pasted reply, for this request only.
+  reply?: string;
+};
+
+export type MessageIssue = { problem: string; fix: PageChange | null };
+
+// AH-FR-49, AH-FR-65: a new message to the same partner, opened in the create form.
+export type NewMessageDraft = {
+  partnerId: number | null;
+  subject: string;
+  request: string;
+  messageBody: string;
+  relatedDreamId: number | null;
+  relatedGoalId: number | null;
+  relatedTaskId: number | null;
+};
+
+export type MeetingTask = { title: string; description: string; owner: string };
+
+export type FollowUpDue = {
+  id: number;
+  subject: string | null;
+  request: string | null;
+  status: CommunicationStatus;
+  followUpDate: string;
+  partnerId: number | null;
+  partnerName: string | null;
+  daysOverdue: number;
+};
+
+export type RankedMessage = {
+  id: number;
+  subject: string | null;
+  partnerName: string | null;
+  taskDueDate: string | null;
+  taskBlocked: boolean;
+  daysWaiting: number;
+  reason: string | null;
+};
+
+export type CommunicationHelpAnswer = {
+  requestId: number | null;
+  mode: CommunicationHelpMode;
+  note: string;
+  changes: PageChange[];
+  issues: MessageIssue[];
+  message: NewMessageDraft | null;
+  task: MeetingTask | null;
+  ranking: RankedMessage[];
+  sources: string[];
+  // V15 (AH-FR-51): what a pasted reply says.
+  reading?: { kind: 'YES' | 'NO' | 'QUESTION' | 'LATER' | null; nextAction: string } | null;
+};
+
+export type ObstacleHelpAnswer = {
+  requestId: number | null;
+  mode: ObstacleHelpMode;
+  note: string;
+  changes: PageChange[];
+  question: string | null;
+  task: TaskProposal | null;
+  ranking: RankedObstacle[];
+  sources: string[];
 };
 
 // V11 Phase 7 (PB-FR-41 to PB-FR-50): the plan assistant on the Plan page (PLAN) and Build my plan (BUILDER).
@@ -1457,7 +1642,12 @@ export type OutreachDraft = { subject?: string | null; message?: string | null }
 export type ResourceIdea = { kind: string; name: string; why?: string | null; checkBeforeUse: boolean; url?: string | null };
 
 // V9 Phase 7: AI help in module exercises (drafts never save or unlock anything).
-export type ModuleHelpMode = 'START' | 'DRAFT' | 'FEEDBACK';
+// V15 Phase 4 adds EXPLAIN (AH-FR-18), REFINE (AH-FR-17) and CHECK (AH-FR-20).
+export type ModuleHelpMode = 'START' | 'DRAFT' | 'FEEDBACK' | 'EXPLAIN' | 'REFINE' | 'CHECK';
+export type ModuleRefine = 'SHORTER' | 'SPECIFIC' | 'MY_WORDS' | 'ANOTHER';
+
+/** AH-FR-20: one field left empty or too short; row counts from 0. */
+export type ModuleCheck = { row: number; field: string; tip: string };
 
 export type ModuleHelp = {
   mode: ModuleHelpMode;
@@ -1466,6 +1656,37 @@ export type ModuleHelp = {
   rows: ModuleRow[];
   feedback?: string | null;
   improvements: string[];
+  explanation?: string | null;
+  whyItMatters?: string | null;
+  checks?: ModuleCheck[];
+};
+
+/** V15 Phase 4 extras for module help: answers given in place (AH-FR-16) and how to refine (AH-FR-17). */
+export type ModuleHelpExtras = {
+  answers?: { question: string; answer: string }[];
+  refine?: ModuleRefine;
+  note?: string;
+  keepRows?: number[];
+};
+
+// AH-FR-13, AH-FR-14: always an unlocked, not completed module, or nulls when every module is done.
+export type ModuleNext = {
+  moduleNumber: number | null;
+  title: string | null;
+  reason: string;
+  rule: 'LOW_CHAIN' | 'PROGRAM_ORDER' | 'ALL_DONE' | 'AI';
+  source: 'RULE' | 'AI';
+  requestId: number | null;
+};
+
+// AH-FR-15: the journey so far.
+export type ModuleJourney = {
+  done: number;
+  total: number;
+  stages: { stage: ModuleStage; done: number; total: number }[];
+  assessments: number;
+  chains: { key: ChainScoreKey; label: string; first: number; latest: number }[];
+  nextStage: ModuleStage | null;
 };
 
 export type AssessmentExplanation = {
@@ -1473,7 +1694,39 @@ export type AssessmentExplanation = {
   focusModule?: number | null;
   focusTitle?: string | null;
   reason?: string | null;
+  // V15 (AH-FR-25): one sentence for each barrier scored 1 or 2, and the trend across every take.
+  lowChains?: { key: ChainScoreKey; label: string; score: number; note: string }[];
+  trend?: string | null;
 };
+
+// V15 (AH-FR-26): one practice for a barrier scored 3 or less. The app action comes from the program.
+export type ChainPractice = { chainKey: ChainScoreKey; label: string; score: number; practice: string; habit: string };
+export type AssessmentPractice = { requestId: number | null; practices: ChainPractice[] };
+// V15 (AH-FR-29).
+export type WhatChanged = { requestId: number | null; summary: string; modulesBetween: string[] };
+
+// V15 (AH-FR-73): partners by style and the complementary styles still missing.
+export type WorkStyleBalance = {
+  dominant: WorkStyleArchetype | null;
+  complementary: WorkStyleArchetype[];
+  counts: Record<WorkStyleArchetype, number>;
+  noStyle: number;
+  missing: WorkStyleArchetype[];
+  partners: {
+    id: number;
+    name: string;
+    role: string | null;
+    supportType: PartnerSupportType | null;
+    workStyleType: WorkStyleArchetype | null;
+    primaryMotivator: PartnerMotivator | null;
+  }[];
+};
+
+// V15 (AH-FR-70, AH-FR-71, AH-FR-73, AH-FR-75).
+export type WorkStyleHelpMode = 'EXPLAIN' | 'TIPS' | 'PARTNER' | 'BALANCE';
+export type StyleAction = 'UNDATED_STEPS' | 'STEPS' | 'TASKS' | 'PARTNERS' | 'TODAY' | 'PLAN';
+export type StylePractice = { text: string; action: StyleAction | null; habit: string };
+export type WorkStyleHelpAnswer = { requestId: number | null; mode: WorkStyleHelpMode; text: string | null; tips: string[]; practices: StylePractice[] };
 
 // V9 Phase 8 (AI-FR-18 to AI-FR-21): the coach co-pilot.
 export type AiParticipantSummary = {

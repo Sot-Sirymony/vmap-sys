@@ -26,7 +26,8 @@ type Props = {
   conversationId: number | null;
   onConversationChange: (id: number) => void;
   onSent?: (turn: AiChatTurn) => void;
-  focus: AiFocus;
+  /** What is on screen. V15: a function is read when a message is sent, so the page assistant sends the form as it is then. */
+  focus: AiFocus | (() => AiFocus);
   quickActions: string[];
   /** Starts a fresh conversation; offered when this one gets long. */
   onNewConversation?: () => void;
@@ -83,7 +84,7 @@ export function DreamCoachChat({
       { id: STREAMING_ID, role: 'ASSISTANT', content: '', createdAt: now },
     ]);
     try {
-      const turn = await streamAiMessage(token, conversationId, message, language, focus, (piece) => {
+      const turn = await streamAiMessage(token, conversationId, message, language, typeof focus === 'function' ? focus() : focus, (piece) => {
         setMessages((current) => current.map((item) => (item.id === STREAMING_ID ? { ...item, content: item.content + piece } : item)));
       });
       setMessages((current) => [...current.filter((item) => item.id >= 0), turn.participantMessage, turn.reply]);

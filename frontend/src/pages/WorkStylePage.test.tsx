@@ -27,6 +27,11 @@ describe('WorkStylePage (FR-49)', () => {
     vi.clearAllMocks();
     vi.mocked(workStyleProfileApi.getWorkStyleProfile).mockResolvedValue(noProfile);
     vi.mocked(workStyleProfileApi.submitWorkStyleAssessment).mockResolvedValue(driver);
+    // V15 Phase 5: the partner balance card; no partners here.
+    vi.mocked(workStyleProfileApi.getPartnerBalance).mockResolvedValue({
+      dominant: 'DRIVER', complementary: ['PLANNER'], counts: { DRIVER: 0, CONNECTOR: 0, STEADIER: 0, PLANNER: 0 }, noStyle: 0,
+      missing: ['PLANNER'], partners: [],
+    });
   });
   afterEach(() => setCurrentLanguage('en'));
 

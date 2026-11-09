@@ -81,4 +81,8 @@ public class AiSettings extends BaseAuditableEntity {
     /** AI-NFR-09: shown with every crisis response. */
     @Column(name = "help_lines", nullable = false, length = 2000)
     private String helpLines;
+
+    /** V15 (AH-FR-57): page keys where the page assistant and helpers are off for everyone, comma-separated. */
+    @Column(name = "pages_off", nullable = false, length = 200)
+    private String pagesOff = "";
 }

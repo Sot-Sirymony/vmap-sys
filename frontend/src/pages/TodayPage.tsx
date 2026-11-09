@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Flame, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -53,6 +53,19 @@ export function TodayPage() {
   const [actionError, setActionError] = useState('');
   const [attitudeNote, setAttitudeNote] = useState('');
   const [habitName, setHabitName] = useState('');
+  // V15 (AH-FR-26, AH-FR-71): "Add as a habit" opens here with the habit name filled; nothing is added until the participant adds it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const suggested = searchParams.get('habit');
+    if (!suggested) {
+      return;
+    }
+    setHabitName(suggested.slice(0, 100));
+    const next = new URLSearchParams(searchParams);
+    next.delete('habit');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const load = useCallback(async () => {
     if (!token) {

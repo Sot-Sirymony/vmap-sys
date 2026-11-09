@@ -89,6 +89,9 @@ public class AiSettingsService {
             }
             settings.setPlanModel(planModel.isEmpty() ? null : planModel);
         }
+        if (request.pagesOff() != null) {
+            settings.setPagesOff(PageSwitches.join(request.pagesOff()));
+        }
         if (request.helpLines() != null) {
             if (request.helpLines().isBlank()) {
                 throw new BusinessRuleException("Help lines cannot be empty; they are shown to anyone in crisis.");
@@ -176,7 +179,8 @@ public class AiSettingsService {
                 settings.getLastTestAt(), settings.getLastTestOk(), settings.getLastTestMessage(),
                 settings.getDailyMessageLimit(), settings.getHelpLines(),
                 usageLogRepository.totalCostSince(monthStart()), usageLogRepository.countByCreatedAtGreaterThanEqual(monthStart()),
-                settings.isAiReminders(), settings.getCoachingGuidelines(), settings.getPlanModel());
+                settings.isAiReminders(), settings.getCoachingGuidelines(), settings.getPlanModel(),
+                PageSwitches.split(settings.getPagesOff()));
     }
 
     private Instant monthStart() {

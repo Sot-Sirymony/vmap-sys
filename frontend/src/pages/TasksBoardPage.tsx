@@ -198,11 +198,28 @@ export function TasksBoardPage() {
     if (prefillTitle) {
       setTitle(prefillTitle);
     }
+    // V15 (AH-FR-37): an obstacle's suggested next task also brings its description, owner, due date and priority.
+    const prefillDescription = searchParams.get('description');
+    if (prefillDescription) {
+      setDescription(prefillDescription);
+    }
+    const prefillOwner = searchParams.get('owner');
+    if (prefillOwner) {
+      setOwner(prefillOwner);
+    }
+    const prefillDue = searchParams.get('dueDate');
+    if (prefillDue && /^\d{4}-\d{2}-\d{2}$/.test(prefillDue)) {
+      setDueDate(prefillDue);
+    }
+    const prefillPriority = searchParams.get('priority');
+    if (prefillPriority && ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(prefillPriority)) {
+      setPriority(prefillPriority as Priority);
+    }
     setAutoOpenCreate(true);
     const next = new URLSearchParams(searchParams);
-    next.delete('create');
-    next.delete('parent');
-    next.delete('title');
+    for (const key of ['create', 'parent', 'title', 'description', 'owner', 'dueDate', 'priority']) {
+      next.delete(key);
+    }
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);

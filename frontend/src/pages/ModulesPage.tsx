@@ -18,6 +18,8 @@ import { useAuth } from '../context/AuthContext';
 import type { LearningModuleSummary, ModuleStage, ModuleStatus } from '../types/vision';
 import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
+import { HelpWithThis, PageAssistantProvider, PageHelpButton } from '../components/ai/page-assistant/PageAssistant';
+import { JourneyCard, ModuleNextCard } from '../components/modules/ModulesListHelpers';
 
 const STAGE_LABELS: Record<ModuleStage, string> = {
   BREAK_CHAINS: 'Break barriers',
@@ -62,10 +64,17 @@ export function ModulesPage() {
   const total = modules?.length ?? 0;
 
   return (
+    // V15 (AH-FR-01): the page assistant on the Modules list.
+    <PageAssistantProvider page="MODULES">
     <PageSection
       title={t('Modules')}
       subtitle={t('Fifteen short lessons, each with an exercise that moves your plan forward')}
-      actions={user?.role === 'ADMIN' ? <Button variant="secondary" onClick={() => navigate('/settings/module-content')}>{t('Edit content')}</Button> : undefined}
+      actions={(
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <PageHelpButton />
+          {user?.role === 'ADMIN' && <Button variant="secondary" onClick={() => navigate('/settings/module-content')}>{t('Edit content')}</Button>}
+        </Box>
+      )}
     >
       {error && <ErrorMessage message={error} onRetry={() => void load()} />}
       {!modules && !error && <Loading />}
@@ -76,7 +85,15 @@ export function ModulesPage() {
               {t('Take the assessment first, so you can measure how far you come.')}
             </Alert>
           )}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {token && (
+            // V15 Phase 4 (AH-FR-13 to AH-FR-15): which module next, and the journey so far.
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <Box sx={{ flex: '1 1 280px' }}><ModuleNextCard token={token} /></Box>
+              <Box sx={{ flex: '1 1 280px' }}><JourneyCard token={token} /></Box>
+            </Box>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <HelpWithThis area="list" label={t('the Modules list')} />
             <ProgressBar value={total === 0 ? 0 : Math.round((completed / total) * 100)} />
             <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{t('{done} of {total} done', { done: completed, total })}</Typography>
           </Box>
@@ -105,5 +122,6 @@ export function ModulesPage() {
         </Stack>
       )}
     </PageSection>
+    </PageAssistantProvider>
   );
 }

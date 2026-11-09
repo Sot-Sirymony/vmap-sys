@@ -115,6 +115,19 @@ describe('TasksBoardPage (CLAUDE.md page 7)', () => {
     await waitFor(() => expect(currentLocation()).toBe('/tasks'));
   });
 
+  it('opens a task filled from an obstacle\'s suggested next task (V15, AH-FR-37)', async () => {
+    renderPage(<TasksBoardPage />, {
+      auth: { user: ME },
+      route: '/tasks?create=task&parent=2&title=Email%20the%20librarian&owner=Me&priority=CRITICAL&dueDate=2027-03-01&description=Ask%20to%20renew',
+    });
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('textbox', { name: /^Title/ })).toHaveValue('Email the librarian');
+    expect(within(dialog).getByRole('textbox', { name: /^Owner/ })).toHaveValue('Me');
+    expect(within(dialog).getByLabelText(/^Due Date/)).toHaveValue('2027-03-01');
+    expect(within(dialog).getByRole('textbox', { name: /^Description/ })).toHaveValue('Ask to renew');
+    await waitFor(() => expect(currentLocation()).toBe('/tasks'));
+  });
+
   it('quick-adds a task owned by me with a due date (FR-22.1)', async () => {
     renderPage(<TasksBoardPage />, { auth: { user: ME } });
     await screen.findByText('Search PubMed', { selector: 'td *, td' });

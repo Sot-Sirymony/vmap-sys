@@ -289,7 +289,40 @@ public final class AiDrafts {
     public record AssessmentExplanationDraft(
             @JsonPropertyDescription("Three to five plain sentences on what the scores say, strongest and weakest first") String explanation,
             @JsonPropertyDescription("The number of the one module to focus on next, 1 to 15") int focusModule,
-            @JsonPropertyDescription("Why that module, in one sentence") String reason) {
+            @JsonPropertyDescription("Why that module, in one sentence") String reason,
+            @JsonPropertyDescription("One sentence for each barrier scored 1 or 2, by its key; empty when none") List<ChainNoteDraft> chainNotes,
+            @JsonPropertyDescription("One or two sentences on the trend across every take; empty with only one take") String trend) {
+        public AssessmentExplanationDraft {
+            chainNotes = Copies.list(chainNotes);
+        }
+
+        /** The V9 shape, with no chain notes or trend. */
+        public AssessmentExplanationDraft(String explanation, int focusModule, String reason) {
+            this(explanation, focusModule, reason, List.of(), null);
+        }
+    }
+
+    /** V15 (AH-FR-25): one sentence on one low barrier. */
+    public record ChainNoteDraft(
+            @JsonPropertyDescription("The barrier's key, such as fearScore") String key,
+            @JsonPropertyDescription("One plain sentence about this score, describing the score, never the person") String note) {
+    }
+
+    /** V15 (AH-FR-26): one small practice for the next seven days. */
+    public record PracticeDraft(
+            @JsonPropertyDescription("The barrier's key, such as fearScore") String chainKey,
+            @JsonPropertyDescription("One small practice for the next seven days, tied to the app action given for this barrier") String practice,
+            @JsonPropertyDescription("A short habit name for it, under 60 characters") String habit) {
+    }
+
+    public record PracticeDrafts(@JsonPropertyDescription("One practice per barrier listed") List<PracticeDraft> practices) {
+        public PracticeDrafts {
+            practices = Copies.list(practices);
+        }
+    }
+
+    /** V15 (AH-FR-29): what changed since the previous take. */
+    public record WhatChangedDraft(@JsonPropertyDescription("Three or four short, encouraging sentences") String summary) {
     }
 
     // Phase 8: coach co-pilot.
@@ -363,5 +396,162 @@ public final class AiDrafts {
             changes = Copies.list(changes);
         }
     
+    }
+
+    /** V15 (AH-FR-06): one proposed change to a form field on the page assistant's page. */
+    public record PageChangeDraft(
+            @JsonPropertyDescription("The form field to change, exactly as listed under allowed fields") String field,
+            @JsonPropertyDescription("The proposed value for that field, in the participant's voice where it is their text") String value,
+            @JsonPropertyDescription("One short sentence on why this change helps") String reason) {
+    }
+
+    /** V15 (AH-FR-06): the page assistant's proposals for the area on screen. */
+    public record PageAssistantDraft(
+            @JsonPropertyDescription("One or two sentences for the participant; empty when the changes speak for themselves") String note,
+            @JsonPropertyDescription("Up to five changes, most useful first; empty when nothing should change") List<PageChangeDraft> changes) {
+        public PageAssistantDraft {
+            changes = Copies.list(changes);
+        }
+    }
+
+    /** V15 (AH-FR-31): a proposed type and severity for one obstacle. */
+    public record ObstacleClassifyDraft(
+            @JsonPropertyDescription("KNOWLEDGE, SKILL, TIME, MONEY, MOTIVATION, PARTNER, SYSTEM, DECISION or OTHER") String obstacleType,
+            @JsonPropertyDescription("One line on why this type fits") String typeReason,
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String severity,
+            @JsonPropertyDescription("One line on why this severity fits") String severityReason) {
+    }
+
+    /** V15 (AH-FR-32): the next "why" question, or the root cause once it is clear. */
+    public record RootCauseDraft(
+            @JsonPropertyDescription("The next short 'why' question; empty when you give the root cause") String question,
+            @JsonPropertyDescription("The root cause in one or two sentences in the participant's voice; empty while you still ask") String rootCause,
+            @JsonPropertyDescription("One line on how the answers point to this cause; empty while you still ask") String reason) {
+    }
+
+    /** V15 (AH-FR-33): one idea with its first small step. */
+    public record SolutionDraft(
+            @JsonPropertyDescription("The idea in one sentence") String idea,
+            @JsonPropertyDescription("The first small step, doable this week") String firstStep,
+            @JsonPropertyDescription("solution for the main idea, creativeAlternatives for another option") String field) {
+    }
+
+    public record SolutionDrafts(@JsonPropertyDescription("Up to three ideas, most useful first") List<SolutionDraft> solutions) {
+        public SolutionDrafts {
+            solutions = Copies.list(solutions);
+        }
+    }
+
+    /** V15 (AH-FR-37): one next task that moves the obstacle forward. */
+    public record NextTaskDraft(
+            @JsonPropertyDescription("A short task title starting with a verb") String title,
+            @JsonPropertyDescription("One or two sentences on what to do") String description,
+            @JsonPropertyDescription("Due date as YYYY-MM-DD, on or before the latest date given") String dueDate,
+            @JsonPropertyDescription("LOW, MEDIUM, HIGH or CRITICAL") String priority,
+            @JsonPropertyDescription("One line on why this task comes next") String reason) {
+    }
+
+    /** V15 (AH-FR-41): why one obstacle ranks where it does. */
+    public record PriorityReason(
+            @JsonPropertyDescription("The obstacle's number in the list given, 1 to 3") Integer rank,
+            @JsonPropertyDescription("One sentence on why to tackle it at this point") String reason) {
+    }
+
+    public record PriorityReasons(@JsonPropertyDescription("A reason for each of the top three") List<PriorityReason> reasons) {
+        public PriorityReasons {
+            reasons = Copies.list(reasons);
+        }
+    }
+
+    /** V15 (AH-FR-45): one problem Claude found in a message, with an optional fix to one field. */
+    public record MessageIssueDraft(
+            @JsonPropertyDescription("The problem in one short sentence") String problem,
+            @JsonPropertyDescription("The field the fix changes, from the allowed fields; empty when there is no single fix") String field,
+            @JsonPropertyDescription("The fixed value for that field; empty when there is no fix") String value) {
+    }
+
+    public record MessageCheckDraft(@JsonPropertyDescription("Up to six problems, most important first; empty when the message is good")
+                                    List<MessageIssueDraft> issues) {
+        public MessageCheckDraft {
+            issues = Copies.list(issues);
+        }
+    }
+
+    /** V15 (AH-FR-49, AH-FR-65): a new message draft. */
+    public record NewMessageDraft(
+            @JsonPropertyDescription("A short subject line") String subject,
+            @JsonPropertyDescription("The full message body, ready to edit") String messageBody,
+            @JsonPropertyDescription("The one request in this message, in a sentence; empty for a thank-you") String request) {
+    }
+
+    /** V15 (AH-FR-64): a short plan for a meeting a partner agreed to. */
+    public record MeetingPlanDraft(
+            @JsonPropertyDescription("The one outcome wanted from the meeting") String outcome,
+            @JsonPropertyDescription("Exactly three questions to ask") List<String> questions,
+            @JsonPropertyDescription("What to bring or send before") String bring,
+            @JsonPropertyDescription("The closing ask") String closingAsk) {
+        public MeetingPlanDraft {
+            questions = Copies.list(questions);
+        }
+    }
+
+    /** V15 (AH-FR-18): a module explained in plain words. */
+    public record ModuleExplainDraft(
+            @JsonPropertyDescription("The module's idea in two or three plain sentences") String explanation,
+            @JsonPropertyDescription("One or two sentences on why it matters in the method") String whyItMatters,
+            @JsonPropertyDescription("One short example about a made-up person, never the participant") String example) {
+    }
+
+    /** V15 (AH-FR-20): one exercise field that is empty or too short. */
+    public record ModuleCheckItemDraft(
+            @JsonPropertyDescription("The row number, counting from 1") Integer row,
+            @JsonPropertyDescription("The field key, from the listed fields") String field,
+            @JsonPropertyDescription("One line on how to make this answer more useful") String tip) {
+    }
+
+    public record ModuleCheckDraft(@JsonPropertyDescription("Fields that are empty or too short; empty when the answer is ready")
+                                   List<ModuleCheckItemDraft> items) {
+        public ModuleCheckDraft {
+            items = Copies.list(items);
+        }
+    }
+
+    /** V15 (AH-FR-13): the one module to do next. */
+    public record ModuleNextDraft(
+            @JsonPropertyDescription("The number of one module from the open list") Integer moduleNumber,
+            @JsonPropertyDescription("Two sentences on why, naming the participant's own data") String reason) {
+    }
+
+    /** V15 (AH-FR-70, AH-FR-73): a short explanation. */
+    public record StyleTextDraft(@JsonPropertyDescription("A few short, plain sentences") String text) {
+    }
+
+    /** V15 (AH-FR-71): one practice that uses the style's strength or covers its blind spot. */
+    public record StylePracticeDraft(
+            @JsonPropertyDescription("One small practice in a sentence") String text,
+            @JsonPropertyDescription("UNDATED_STEPS, STEPS, TASKS, PARTNERS, TODAY or PLAN: the page where it is done") String action,
+            @JsonPropertyDescription("A short habit name for it, under 60 characters") String habit) {
+    }
+
+    public record StylePracticeDrafts(@JsonPropertyDescription("Up to three practices") List<StylePracticeDraft> practices) {
+        public StylePracticeDrafts {
+            practices = Copies.list(practices);
+        }
+    }
+
+    /** V15 (AH-FR-75): tips for working with one partner. */
+    public record StyleTipsDraft(@JsonPropertyDescription("Two or three short tips") List<String> tips) {
+        public StyleTipsDraft {
+            tips = Copies.list(tips);
+        }
+    }
+
+    /** V15 (AH-FR-51): a partner's reply, read. */
+    public record ReplyDraft(
+            @JsonPropertyDescription("Two sentences summarising the reply") String summary,
+            @JsonPropertyDescription("YES, NO, QUESTION or LATER") String kind,
+            @JsonPropertyDescription("REPLIED or CLOSED: the status the message should now have") String nextStatus,
+            @JsonPropertyDescription("The one next action for the participant, in a sentence") String nextAction,
+            @JsonPropertyDescription("A short, polite reply for the participant to edit") String replyBody) {
     }
 }

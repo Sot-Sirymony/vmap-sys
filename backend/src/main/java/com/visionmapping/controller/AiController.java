@@ -14,6 +14,7 @@ import com.visionmapping.exception.AiUnavailableException;
 import com.visionmapping.service.ai.AiAccessService;
 import com.visionmapping.service.ai.AiSafetyAlertService;
 import com.visionmapping.service.ai.DreamCoachService;
+import com.visionmapping.service.ai.PageAssistantService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
@@ -56,10 +57,14 @@ public class AiController {
         return accessService.setConsent(request.consent());
     }
 
-    /** V11 (PB-FR-50): with dreamId and section, only the plan assistant's conversations for that section. */
+    /** V11 (PB-FR-50): with dreamId and section, only the plan assistant's conversations for that section. V15: a PAGE: section lists the page assistant's. */
     @GetMapping("/api/ai/conversations")
     public List<AiConversationResponse> conversations(@RequestParam(required = false) Long dreamId,
-                                                      @RequestParam(required = false) @Pattern(regexp = PlanAssistantRequest.SECTIONS) String section) {
+                                                      @RequestParam(required = false) @Pattern(regexp = PlanAssistantRequest.SECTIONS + "|PAGE:[A-Z_]{1,20}(:\\d{1,12})?") String section) {
+        if (dreamId == null && section != null && section.startsWith(PageAssistantService.SECTION_PREFIX)) {
+            // V15 (AH-FR-11): the page assistant's conversations for one page and item.
+            return dreamCoachService.pageConversations(section);
+        }
         return dreamId != null && section != null ? dreamCoachService.conversations(dreamId, section) : dreamCoachService.conversations();
     }
 

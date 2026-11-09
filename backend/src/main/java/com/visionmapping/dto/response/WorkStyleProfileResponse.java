@@ -13,6 +13,8 @@ public record WorkStyleProfileResponse(
         Integer paceFastScore,
         Integer paceDeliberateScore,
         Integer focusTaskScore,
-        Integer focusPeopleScore
+        Integer focusPeopleScore,
+        // V15 (AH-FR-76): whether other AI helpers may use the dominant and secondary style.
+        boolean aiUseWorkStyle
 ) {
 }

@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { AiSettings } from '../types/vision';
+import type { AssistantPage, AiSettings } from '../types/vision';
 
 // V9 (AI-FR-24): admin-only AI settings. The key goes to the server once and never comes back.
 
@@ -13,6 +13,8 @@ export type AiSettingsInput = {
   coachingGuidelines?: string;
   // V11 (PB-FR-39): blank uses the main model for plan building too.
   planModel?: string;
+  // V15 (AH-FR-57): pages where the page assistant and helpers are off for everyone.
+  pagesOff?: AssistantPage[];
 };
 
 export function getAiSettings(token: string) {

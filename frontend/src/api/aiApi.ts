@@ -12,8 +12,14 @@ export function setAiConsent(token: string, consent: boolean) {
 }
 
 /** With a dream and section (V11, PB-FR-50), only the plan assistant's conversations for that section. */
-export function listAiConversations(token: string, filter?: { dreamId: number; section: AssistantSection }) {
-  const query = filter ? `?dreamId=${filter.dreamId}&section=${filter.section}` : '';
+export function listAiConversations(token: string, filter?: { dreamId: number; section: AssistantSection } | { pageSection: string }) {
+  let query = '';
+  if (filter && typeof filter === 'object' && 'pageSection' in filter) {
+    // V15 (AH-FR-11): the page assistant's conversations for one page and item.
+    query = `?section=${encodeURIComponent(filter.pageSection)}`;
+  } else if (filter) {
+    query = `?dreamId=${filter.dreamId}&section=${filter.section}`;
+  }
   return apiClient<AiConversation[]>(`/ai/conversations${query}`, { token });
 }
 

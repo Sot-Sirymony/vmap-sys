@@ -1,4 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { HelpWithThis, PageAssistantProvider, PageHelpButton, type PageFormSource } from '../components/ai/page-assistant/PageAssistant';
+import { ObstacleHelpers } from '../components/obstacles/ObstacleHelpers';
+import { ConflictHelp } from '../components/obstacles/ConflictHelp';
+import { BlockedTasksCard, ObstaclePriorityCard } from '../components/obstacles/ObstacleListHelpers';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import {
@@ -37,7 +41,7 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type {
-  Dream, ExpectationAgreement, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity,
+  BlockedTask, Dream, ExpectationAgreement, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity,
   TaskItem, VisionStep,
 } from '../types/vision';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
@@ -375,6 +379,8 @@ export function ObstaclesPage() {
   // the same row actions.
   function renderObstacleActions(obstacle: Obstacle) {
     return (
+      <>
+      <HelpWithThis compact area="item" itemId={obstacle.id} title={obstacle.title} />
       <RowActionsMenu
         onEdit={() => startEdit(obstacle)}
         onArchive={() => void crud.archive(obstacle.id)}
@@ -383,6 +389,7 @@ export function ObstaclesPage() {
         archived={obstacle.archived}
         label={tr('Obstacle actions')}
       />
+      </>
     );
   }
 
@@ -468,8 +475,61 @@ export function ObstaclesPage() {
   // FR-32.4/BR-26: live count for the "at least three" hint, one per line.
   const alternativeCount = creativeAlternatives.split('\n').filter((line) => line.trim().length > 0).length;
 
+  // V15 (AH-FR-05, AH-FR-06): while the form is open, the assistant reads it as typed and a card fills one field.
+  // The private "your own reaction" note is never read here (section B, AH-FR-40).
+  const formOpen = createOpen || crud.editingId !== null;
+  const readForm = () => ({
+    title, description, obstacleType, severity, status, solution, rootCause, creativeAlternatives,
+    conflictIncident, conflictCost, conflictOtherPerspective, conflictLesson, conflictNextAction, conflictExpectation,
+    criticismOverstated, criticismDelivery, criticismSubstance,
+    relatedDreamId, relatedGoalId, relatedStepId, relatedTaskId, requiredPartnerId,
+  });
+  const applyField = (field: string, value: string) => {
+    const setters: Record<string, (next: string) => void> = {
+      title: setTitle, description: setDescription, solution: setSolution, rootCause: setRootCause,
+      creativeAlternatives: setCreativeAlternatives, criticismSubstance: setCriticismSubstance,
+      conflictOtherPerspective: setConflictOtherPerspective, conflictNextAction: setConflictNextAction,
+    };
+    if (field === 'obstacleType' && (obstacleTypes as string[]).includes(value)) {
+      setObstacleType(value as ObstacleType);
+    } else if (field === 'severity' && (severities as string[]).includes(value)) {
+      setSeverity(value as Severity);
+    } else {
+      setters[field]?.(value);
+    }
+  };
+  const formSource: PageFormSource | null = formOpen ? {
+    itemId: crud.editingId,
+    read: readForm,
+    apply: applyField,
+  } : null;
+  // V15 (AH-FR-39): opens the normal create form filled from a Blocked task and its blocker reason.
+  function makeObstacleFromTask(task: BlockedTask) {
+    cancelEdit();
+    setTitle(task.title);
+    setDescription(task.blockerReason);
+    setRelatedTaskId(String(task.id));
+    setRelatedStepId(task.stepId ? String(task.stepId) : '');
+    setRelatedGoalId(task.goalId ? String(task.goalId) : '');
+    setRelatedDreamId(task.dreamId ? String(task.dreamId) : '');
+    setStatus('OPEN');
+    setCreateOpen(true);
+  }
+
+  const formTopic = formOpen ? { area: 'form', itemId: crud.editingId, title: title || tr('New obstacle') } : null;
+
   const formFields = (
     <>
+      <div className="field-full">
+        <HelpWithThis area="form" itemId={crud.editingId} title={title || tr('New obstacle')} />
+      </div>
+      {token && (
+        // V15 Phase 2 (AH-FR-31 to AH-FR-37): helpers that fill this form or open another normal form.
+        <ObstacleHelpers token={token} obstacleId={crud.editingId} obstacleType={obstacleType} title={title}
+          description={description} solution={solution} requiredPartnerId={requiredPartnerId} read={readForm} apply={applyField}
+          onSetRequiredPartner={setRequiredPartnerId}
+          partnerName={partners.find((partner) => String(partner.id) === requiredPartnerId)?.name ?? null} />
+      )}
       <label>
         {tr('Title')}
         <Input value={title} onChange={(event) => setTitle(event.target.value)} required autoFocus />
@@ -629,6 +689,10 @@ export function ObstaclesPage() {
             {tr('One concrete next action')}
             <Textarea value={conflictNextAction} onChange={(event) => setConflictNextAction(event.target.value)} />
           </label>
+          {token && (
+            // V15 (AH-FR-40): help with the worksheet; the private reaction only when ticked.
+            <ConflictHelp token={token} obstacleId={crud.editingId} read={readForm} privateNote={conflictPrivateNote} apply={applyField} />
+          )}
           <label className="field-full">
             {tr('What did you expect to happen — spoken or not?')}
             <Textarea value={conflictExpectation} onChange={(event) => setConflictExpectation(event.target.value)} />
@@ -715,16 +779,27 @@ export function ObstaclesPage() {
               {tr('Turn this into a task')}
             </Button>
           </label>
+          {token && (
+            // V15 (AH-FR-40): help with the worksheet; the private reaction only when ticked.
+            <ConflictHelp token={token} obstacleId={crud.editingId} read={readForm} privateNote={conflictPrivateNote} apply={applyField} />
+          )}
         </div>
       )}
     </>
   );
 
   return (
+    // V15 (AH-FR-01): the page assistant on the Obstacles page.
+    <PageAssistantProvider page="OBSTACLES" form={formSource} current={formTopic}>
     <PageSection
       title={tr('Obstacles')}
       subtitle={tr('Track blockers and the support needed to resolve them.')}
-      actions={<Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create obstacle')}</Button>}
+      actions={(
+        <>
+          <PageHelpButton />
+          <Button type="button" onClick={() => setCreateOpen(true)}>{tr('Create obstacle')}</Button>
+        </>
+      )}
     >
       <CrudModalForm
         editing={crud.editingId !== null}
@@ -785,8 +860,11 @@ export function ObstaclesPage() {
         />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
+      {token && <BlockedTasksCard token={token} reloadKey={crud.items.length} onMakeObstacle={makeObstacleFromTask} />}
+      {token && <ObstaclePriorityCard token={token} />}
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Obstacle view')} />
+        <HelpWithThis area="list" label={tr('your obstacles')} />
       </div>
       {viewMode === 'board' && (
         <StatusBoard
@@ -847,6 +925,7 @@ export function ObstaclesPage() {
       </Card>
       )}
     </PageSection>
+    </PageAssistantProvider>
   );
 }
 

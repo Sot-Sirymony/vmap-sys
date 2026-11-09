@@ -29,6 +29,25 @@ describe('AssessmentPage (FR-71)', () => {
     vi.mocked(aiApi.getAiStatus).mockResolvedValue({ reason: 'OFF' } as never);
   });
 
+  it('explains each statement with a low and a high example, with no AI (V15, AH-FR-23)', async () => {
+    renderPage(<AssessmentPage />);
+    const links = await screen.findAllByRole('button', { name: 'What does this mean?' });
+    expect(links).toHaveLength(6);
+    await userEvent.click(links[1]);
+    expect(screen.getByText('Whether you still act when something might fail, or wait until you are sure.')).toBeInTheDocument();
+    expect(screen.getByText(/^Low: Sokha has a business idea/)).toBeInTheDocument();
+    expect(screen.getByText(/^High: Rith sells ten samples/)).toBeInTheDocument();
+    expect(screen.getByText('The score is your own judgement.')).toBeInTheDocument();
+  });
+
+  it('suggests a retake 4 weeks after the last take once a module is done (V15, AH-FR-28)', async () => {
+    vi.mocked(chainAssessmentApi.getChainAssessments).mockResolvedValue({
+      assessments: [take({})], improvementPercent: null, retakeSuggested: false, retakeAfterModule: true,
+    });
+    renderPage(<AssessmentPage />);
+    expect(await screen.findByText(/you have finished a module since/)).toBeInTheDocument();
+  });
+
   it('asks for a baseline, and saves only when all six barriers are scored', async () => {
     renderPage(<AssessmentPage />);
     expect(await screen.findByText('Take your baseline')).toBeInTheDocument();

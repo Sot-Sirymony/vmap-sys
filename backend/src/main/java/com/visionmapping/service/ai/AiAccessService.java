@@ -19,6 +19,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +60,8 @@ public class AiAccessService {
         AiSettings settings = aiSettingsService.current();
         int left = Math.max(0, settings.getDailyMessageLimit() - (int) sentToday(user));
         return new AiStatusResponse(reason(user, settings) == null, statusReason(user, settings),
-                user.getAiConsentAt() != null, user.getAiConsentAt(), settings.getDailyMessageLimit(), left);
+                user.getAiConsentAt() != null, user.getAiConsentAt(), settings.getDailyMessageLimit(), left,
+                List.copyOf(pagesOff(user, settings)));
     }
 
     public AiStatusResponse setConsent(boolean consent) {
@@ -89,6 +91,24 @@ public class AiAccessService {
                     secondsUntilTomorrow());
             default -> throw new AiUnavailableException();
         }
+    }
+
+    /**
+     * V15 (AH-FR-57): the same checks for one of the page assistant's pages,
+     * after the page's own switch for everyone and for the person's cohort.
+     */
+    @Transactional(readOnly = true)
+    public String requireAvailable(AppUser user, String page) {
+        if (pagesOff(user, aiSettingsService.current()).contains(page)) {
+            throw new BusinessRuleException("AI help is switched off on this page. The program's own help still works.");
+        }
+        return requireAvailable(user);
+    }
+
+    private java.util.Set<String> pagesOff(AppUser user, AiSettings settings) {
+        java.util.Set<String> off = new java.util.TreeSet<>(com.visionmapping.service.PageSwitches.split(settings.getPagesOff()));
+        appUserRepository.findCohortPagesOff(user.getId()).ifPresent(stored -> off.addAll(com.visionmapping.service.PageSwitches.split(stored)));
+        return off;
     }
 
     /** V10 (SEC-06-02): the Retry-After for the daily limit. */

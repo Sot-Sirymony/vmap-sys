@@ -19,4 +19,10 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     /** FR-77: who the reminder job has to consider. */
     java.util.List<AppUser> findByRemindersEnabledTrueAndStatus(com.visionmapping.entity.enums.UserStatus status);
+
+    /** V15 (AH-FR-57): the page switches of the person's cohort, when they are in one that is not archived. */
+    @org.springframework.data.jpa.repository.Query("""
+            select c.aiPagesOff from AppUser u join u.cohort c where u.id = :userId and c.archived = false
+            """)
+    java.util.Optional<String> findCohortPagesOff(@org.springframework.data.repository.query.Param("userId") Long userId);
 }

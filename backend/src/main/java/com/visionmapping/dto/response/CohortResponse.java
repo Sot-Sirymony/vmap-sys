@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import java.util.List;
 import java.time.LocalDate;
 
 public record CohortResponse(
@@ -12,5 +13,11 @@ public record CohortResponse(
         LocalDate startDate,
         boolean archived,
         long memberCount,
-        boolean aiEnabled) {
+        boolean aiEnabled,
+        // V15 (AH-FR-57).
+        List<String> aiPagesOff) {
+
+    public CohortResponse {
+        aiPagesOff = com.visionmapping.util.Copies.list(aiPagesOff);
+    }
 }

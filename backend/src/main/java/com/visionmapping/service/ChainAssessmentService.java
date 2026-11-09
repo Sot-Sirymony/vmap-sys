@@ -28,9 +28,11 @@ public class ChainAssessmentService {
 
     private static final int CHAIN_COUNT = 6;
     private static final int RETAKE_AFTER_DAYS = 84;
+    private static final int RETAKE_AFTER_MODULE_DAYS = 28;
 
     private final EntityLookup lookup;
     private final ChainAssessmentRepository chainAssessmentRepository;
+    private final com.visionmapping.repository.ModuleCompletionRepository completionRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -46,14 +48,21 @@ public class ChainAssessmentService {
                 .toList();
         BigDecimal improvement = null;
         boolean retakeSuggested = false;
+        boolean retakeAfterModule = false;
         if (!assessments.isEmpty()) {
             ChainAssessmentResponse latest = assessments.get(assessments.size() - 1);
             retakeSuggested = !latest.takenOn().plusDays(RETAKE_AFTER_DAYS).isAfter(LocalDate.now(clock));
+            // V15 (AH-FR-28): a rule, no AI.
+            LocalDate takenOn = latest.takenOn();
+            retakeAfterModule = !takenOn.plusDays(RETAKE_AFTER_MODULE_DAYS).isAfter(LocalDate.now(clock))
+                    && completionRepository.findByUser_Id(userId).stream()
+                    .anyMatch(completion -> completion.getCompletedAt() != null
+                            && completion.getCompletedAt().atZone(clock.getZone()).toLocalDate().isAfter(takenOn));
             if (assessments.size() > 1) {
                 improvement = improvementPercent(assessments.get(0).averageScore(), latest.averageScore());
             }
         }
-        return new ChainAssessmentSummaryResponse(assessments, improvement, retakeSuggested);
+        return new ChainAssessmentSummaryResponse(assessments, improvement, retakeSuggested, retakeAfterModule);
     }
 
     public ChainAssessmentResponse save(ChainAssessmentRequest request) {

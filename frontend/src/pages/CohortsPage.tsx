@@ -20,6 +20,7 @@ import {
   updateCohort,
   type CohortInput,
 } from '../api/cohortApi';
+import { PageSwitchesField } from '../components/ai/page-assistant/PageSwitchesField';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
@@ -201,6 +202,18 @@ function CohortRow({ token, cohort, onChanged, onReload }: CohortRowProps) {
             )}
             label={cohort.aiEnabled ? tr('AI help is on for this cohort') : tr('AI help is off for this cohort')}
           />
+          {cohort.aiEnabled && (
+            // V15 (AH-FR-57): the page assistant and helpers, page by page, for this cohort.
+            <PageSwitchesField legend={tr('Page assistant and helpers are on for this cohort on')} disabled={busy}
+              pagesOff={cohort.aiPagesOff ?? []}
+              onChange={(next) => void run(async () => {
+                if (token) {
+                  onChanged(await updateCohort(token, cohort.id, {
+                    name: cohort.name, coachEmail: cohort.coachEmail ?? '', startDate: cohort.startDate ?? null, aiPagesOff: next,
+                  }));
+                }
+              })} />
+          )}
           <Typography variant="body2">
             {tr('Join code')}: <strong style={{ letterSpacing: '0.1em' }}>{cohort.joinCode}</strong>
           </Typography>

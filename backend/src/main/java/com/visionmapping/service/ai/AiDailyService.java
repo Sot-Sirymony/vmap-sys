@@ -81,6 +81,8 @@ public class AiDailyService {
         String apiKey = accessService.requireAvailable(user);
         StringBuilder records = new StringBuilder("Today is " + today + ". Open work, most urgent first:\n");
         candidates.forEach(candidate -> records.append(candidate.line()).append('\n'));
+        // V15 (AH-FR-76): the work style only when the participant allows it.
+        records.append(WorkStyleContext.line(user));
         String task = "The participant has " + minutes + " minutes now. Pick up to " + MAX_PICKS + " items from the list, best "
                 + "first, that fit that time and matter most: overdue and blocking work first, unless it cannot fit. If an item is "
                 + "too big for the time, pick it only if a useful part fits, and say which part. Use the ids in brackets.";

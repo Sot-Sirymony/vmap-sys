@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listIdealPartnerProfiles } from '../api/idealPartnerProfileApi';
 import { listGoals } from '../api/goalApi';
-import { archivePartner, permanentlyDeletePartner, createPartner, listPartners, restorePartner, updatePartner } from '../api/partnerApi';
+import { archivePartner, permanentlyDeletePartner, createPartner, getPartner, listPartners, restorePartner, updatePartner } from '../api/partnerApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
 import { listVisionAreas } from '../api/visionAreaApi';
@@ -58,6 +58,8 @@ const EMPTY_INTEGRITY_FLAGS: Record<IntegrityFlagKey, boolean> = {
   flagGossip: false,
   flagDisregardBoundaries: false,
 };
+
+const SUPPORT_TYPES: PartnerSupportType[] = ['MENTOR', 'EXPERT', 'ADVISOR', 'COLLEAGUE', 'FINANCIAL', 'TECHNICAL', 'EMOTIONAL', 'OTHER'];
 
 export function PartnersPage() {
   const { token } = useAuth();
@@ -122,14 +124,44 @@ export function PartnersPage() {
     if (goalId) {
       setRelatedGoalId(goalId);
     }
+    // V15 (AH-FR-35): "Add a partner" from an obstacle suggests the support type, with status To Contact.
+    const prefillSupport = searchParams.get('supportType');
+    if (prefillSupport && SUPPORT_TYPES.includes(prefillSupport as PartnerSupportType)) {
+      setSupportType(prefillSupport as PartnerSupportType);
+    }
+    const prefillStatus = searchParams.get('status');
+    if (prefillStatus === 'TO_CONTACT') {
+      setStatus('TO_CONTACT');
+    }
     setCreateOpen(true);
     const next = new URLSearchParams(searchParams);
-    next.delete('create');
-    next.delete('relatedDreamId');
-    next.delete('relatedGoalId');
+    for (const key of ['create', 'relatedDreamId', 'relatedGoalId', 'supportType', 'status']) {
+      next.delete(key);
+    }
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // V15 (AH-FR-74): "Open the partner form" from a style estimate opens that partner's edit form with the estimate filled in.
+  // Nothing changes until the participant saves the form.
+  useEffect(() => {
+    const editId = Number(searchParams.get('edit'));
+    if (!token || !editId) {
+      return;
+    }
+    const estimate = searchParams.get('workStyleType');
+    getPartner(token, editId).then((partner) => {
+      startEdit(partner);
+      if (estimate && ['DRIVER', 'CONNECTOR', 'STEADIER', 'PLANNER'].includes(estimate)) {
+        setWorkStyleType(estimate as WorkStyleArchetype);
+      }
+    }).catch(() => undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    next.delete('workStyleType');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, token]);
 
   const [name, setName] = useState('');
   const [role, setRole] = useState('');

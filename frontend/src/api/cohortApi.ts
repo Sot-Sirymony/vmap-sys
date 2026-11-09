@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type {
+import type { AssistantPage,
   CoachComment,
   CoachCommentTarget,
   CoachParticipant,
@@ -65,7 +65,7 @@ export function ratePitch(token: string, userId: number, rating: number, feedbac
 
 // V9: cohort management (admin only).
 
-export type CohortInput = { name: string; coachEmail: string; startDate: string | null; aiEnabled?: boolean };
+export type CohortInput = { name: string; coachEmail: string; startDate: string | null; aiEnabled?: boolean; aiPagesOff?: AssistantPage[] };
 
 export function listCohorts(token: string) {
   return apiClient<Cohort[]>('/admin/cohorts', { token });

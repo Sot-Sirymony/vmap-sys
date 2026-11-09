@@ -113,6 +113,52 @@ Use the status select on a task card to move it between columns.
 
 If a task is blocked, enter a blocker reason.
 
+## Page assistant and helpers (V15)
+
+The **Modules**, module, **Assessment**, **Obstacles**, **Communication** and **Work Style** pages have a page assistant.
+Use the **Help** button at the top of the page, or a **Help with this** button next to a part of the page (a question,
+a form, a message field, a row, a partner). The round button at the bottom right opens the same panel; on these pages it
+takes the place of the Dream Coach.
+
+- The panel says what it is helping with, what that part needs, questions to think about, and any problems the
+  program's own checks found. This works even when AI is off, over budget or not consented.
+- With AI on, ask one of three ready questions or type your own. The assistant sees what you have typed but not saved.
+- **Suggest changes** gives change cards. A card only fills the form; nothing is saved until you press the page's own
+  **Save**. **Dismiss** drops it.
+- On the Assessment and Work Style pages, the assistant never suggests a score or picks a quiz answer for you.
+
+**Obstacles.** In the obstacle form: **Who could help** and **Match my partners** (your own partners who fit), **Draft a
+message to them** for the required partner, and with AI: **Suggest type and severity**, **Find the root cause** (up to
+three "why" questions you answer in place), **What could I try?** and **Turn this into a task** (opens the task form,
+filled, owned by you, dated within the step). On the conflict worksheet and criticism mining, **Help me think this
+through** separates the useful point from the emotion; your private reaction is sent only if you tick it, for that one
+request. Above the list: **Blocked tasks without an obstacle** (**Make this an obstacle**) and **Which obstacle should I
+tackle first?**
+
+**Communication.** **Help with this** on any field explains what it is for, with an example. In the message form:
+**Check my message**, **Rebuild message**, and for a sent or replied message **Draft a follow-up** or **Thank and report
+back** (both open a new message to the same partner). With AI: fill the empty fields from one sentence, change the tone
+or language, **Prepare for objections**, **Practise this ask**, **Adapt to this partner** (uses the partner's work style
+and motivator, never their contact details), **Read a reply** (paste a reply; it is never saved) and, after a reply
+agreeing to meet, **Prepare for the meeting**. Above the list: **Messages to follow up** and **Which message should I send
+first?**
+
+**Modules.** **Which module should I do next?** and **How far have I come?** on the list. On a module: **Explain this
+module**, answer boxes under the **Help me start** questions (used by **Draft my answer**), **Refine the draft** (rows you
+changed are kept), **Check before I save**, and for modules done on another page, what to do there and whether it is done.
+
+**Assessment.** **What does this mean?** under each statement, **What should I practise this week?** (one practice per
+barrier scored 3 or less, with **Do it now** and **Add as a habit**), a reminder to retake 4 weeks after your last take
+once you finish a module, and **What changed since last time?**
+
+**Work Style.** **What does my result mean?**, **Put my style to work**, **Balance my partners** (with **Estimate their
+style** for partners with none, **Working with them** and **Adapt my message**), and the switch **Let AI helpers use my
+work style** (off until you turn it on; when on, only your main and second style are used).
+
+Admins turn the page assistant and helpers off per page on **AI settings**, or for one cohort on **Cohorts**. A page that
+is off still shows the program's own help. The admin **AI settings** page also shows **Page assistant quality**: requests,
+cost, ratings, and how many suggestions were applied, edited or dismissed, per feature.
+
 ## Add Partners
 
 Open `Partners` to create mentors, experts, advisors, colleagues, or resources. Partners can be linked to a Vision Area, Dream, Goal, Step, or Task.

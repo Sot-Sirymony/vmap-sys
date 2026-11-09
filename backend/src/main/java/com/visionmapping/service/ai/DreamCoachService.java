@@ -61,6 +61,7 @@ public class DreamCoachService {
     private final ClaudeClient claudeClient;
     private final AiContextBuilder contextBuilder;
     private final PlanAssistantService planAssistant;
+    private final PageAssistantService pageAssistant;
     private final PlanSessionGuard sessionGuard;
     private final Clock clock;
     private final TransactionTemplate transactions;
@@ -70,6 +71,20 @@ public class DreamCoachService {
         return conversationRepository.findByUser_IdOrderByUpdatedAtDesc(lookup.userId()).stream()
                 .map(conversation -> toResponse(conversation, null))
                 .toList();
+    }
+
+    /** V15 (AH-FR-11): the page assistant's conversations for one page tag, such as PAGE:OBSTACLES:12. */
+    @Transactional(readOnly = true)
+    public List<AiConversationResponse> pageConversations(String section) {
+        return conversationRepository.findByUser_IdAndDreamIdIsNullAndSectionKeyOrderByUpdatedAtDesc(lookup.userId(), section)
+                .stream()
+                .map(conversation -> toResponse(conversation, null))
+                .toList();
+    }
+
+    /** V15 (AH-FR-11): the conversation tag for a page assistant request: the page, and the open item if any. */
+    static String pageSection(com.visionmapping.dto.request.PageAssistantRequest request) {
+        return PageAssistantService.SECTION_PREFIX + request.page() + (request.itemId() == null ? "" : ":" + request.itemId());
     }
 
     /** V11 (PB-FR-50): the plan assistant's conversations for one of the participant's dreams and one section. */
@@ -141,6 +156,12 @@ public class DreamCoachService {
         AppUser user = lookup.currentUser();
         // V11 Phase 7: a plan assistant message is about one section of one of the participant's dreams.
         boolean assistant = request.section() != null;
+        // V15 Phase 1: a page assistant message is about one area of one of the five pages.
+        com.visionmapping.dto.request.PageAssistantRequest pageRequest = assistant ? null : request.pageRequest();
+        if (pageRequest != null) {
+            // AH-NFR-07: ownership first, so another user's obstacle or message answers 404 whether or not AI is available.
+            pageAssistant.checkOwnership(pageRequest);
+        }
         if (assistant) {
             if (request.surface() == null || request.dreamId() == null) {
                 throw new BusinessRuleException("Open a dream to use the plan assistant.");
@@ -148,10 +169,11 @@ public class DreamCoachService {
             // V10 (SEC-01-02): ownership first, so another user's dream answers 404 whether or not AI is available.
             lookup.dream(request.dreamId());
         }
-        String feature = assistant ? PlanAssistantService.CHAT_FEATURE : FEATURE;
+        String feature = assistant ? PlanAssistantService.CHAT_FEATURE : pageRequest != null ? PageAssistantService.CHAT_FEATURE : FEATURE;
         Long dreamId = assistant ? request.dreamId() : null;
-        String section = assistant ? request.section() : null;
-        String apiKey = accessService.requireAvailable(user);
+        String section = assistant ? request.section() : pageRequest != null ? pageSection(pageRequest) : null;
+        // V15 (AH-FR-57): a page assistant message also needs its page switched on.
+        String apiKey = pageRequest != null ? accessService.requireAvailable(user, pageRequest.page()) : accessService.requireAvailable(user);
         String language = request.language() == null ? "en" : request.language();
         String text = request.message().trim();
         AiSettings settings = aiSettingsService.current();
@@ -166,7 +188,12 @@ public class DreamCoachService {
             // PB-NFR-03: after the crisis check, so a crisis message is never held back by the limit.
             sessionGuard.use(user.getId(), request.dreamId());
         }
-        if (assistant) {
+        if (pageRequest != null) {
+            // Section B of BRD 15: only what the page may read, with the page's own guard rules.
+            PageAssistantService.ChatContext context = pageAssistant.chatContext(user, pageRequest);
+            contextText = context.text();
+            sources = context.sources();
+        } else if (assistant) {
             // PB-NFR-12: only the section's items, never the wider records the Dream Coach reads.
             PlanAssistantService.ChatContext context = planAssistant.chatContext(user, request.dreamId(), request.surface(),
                     request.section(), request.itemRef());
@@ -182,7 +209,9 @@ public class DreamCoachService {
         turns.add(new ClaudeClient.Turn(true, text));
         String system = CoachingGuidelines.system(language, firstName(user.getFullName()), settings.getCoachingGuidelines())
                 + "\n\n" + contextText;
-        return new Prepared(user, apiKey, settings.getModel(), settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
+        // V15 (AH-NFR-02): page assistant answers use the simple-task model where the admin has set one.
+        String model = pageRequest != null && settings.getPlanModel() != null ? settings.getPlanModel() : settings.getModel();
+        return new Prepared(user, apiKey, model, settings.getMonthlyBudgetUsd(), settings.getHelpLines(),
                 conversationId, text, language, system, List.copyOf(turns), sources, false, feature, dreamId, section,
                 PlanSessionContext.current());
     }

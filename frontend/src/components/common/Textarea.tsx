@@ -8,6 +8,8 @@ type TextareaProps = {
   placeholder?: string;
   disabled?: boolean;
   name?: string;
+  /** Lets a <label htmlFor> name the box when the label also holds a button (V15 Help with this). */
+  id?: string;
   autoFocus?: boolean;
   /** Names the text box for screen readers when no visible label wraps it. */
   'aria-label'?: string;

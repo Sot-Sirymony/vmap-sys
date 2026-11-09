@@ -19,8 +19,10 @@ import { Loading } from '../components/common/Loading';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../i18n/formatDate';
 import { tr } from '../i18n/translate';
-import type { AiSettings } from '../types/vision';
+import type { AiSettings, AssistantPage } from '../types/vision';
 import { ApprovedResourcesCard } from '../components/ai/ApprovedResourcesCard';
+import { PageMetricsCard } from '../components/ai/PageMetricsCard';
+import { PageSwitchesField } from '../components/ai/page-assistant/PageSwitchesField';
 import { PlanMetricsCard } from '../components/ai/PlanMetricsCard';
 import { PageSection } from './PageSection';
 
@@ -67,6 +69,7 @@ export function AiSettingsPage() {
           <ApiKeyCard settings={settings} token={token} onChanged={setSettings} />
           <ApprovedResourcesCard token={token} />
           <PlanMetricsCard token={token} />
+          <PageMetricsCard token={token} />
           <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
@@ -183,6 +186,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [helpLines, setHelpLines] = useState(settings.helpLines);
   const [aiReminders, setAiReminders] = useState(settings.aiReminders);
   const [guidelines, setGuidelines] = useState(settings.coachingGuidelines ?? '');
+  const [pagesOff, setPagesOff] = useState<AssistantPage[]>(settings.pagesOff ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -202,6 +206,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         aiReminders,
         coachingGuidelines: guidelines,
         planModel,
+        pagesOff,
       }));
       setSaved(true);
     } catch (saveError) {
@@ -265,6 +270,8 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
             onChange={(event) => setDailyLimit(event.target.value)}
             slotProps={{ htmlInput: { min: 1, max: 500 } }}
           />
+          {/* V15 (AH-FR-57): the page assistant and helpers, page by page, for everyone. */}
+          <PageSwitchesField legend={tr('Page assistant and helpers are on for')} pagesOff={pagesOff} onChange={setPagesOff} />
           <FormControlLabel
             control={<Switch checked={aiReminders} onChange={(event) => setAiReminders(event.target.checked)} />}
             label={tr('Add an AI encouragement to reminder emails')}

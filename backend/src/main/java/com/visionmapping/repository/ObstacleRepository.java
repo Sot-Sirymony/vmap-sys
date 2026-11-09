@@ -21,4 +21,16 @@ public interface ObstacleRepository extends JpaRepository<Obstacle, Long>, UserS
                    or sg.dream.id = :dreamId or tg.dream.id = :dreamId)
             """)
     boolean existsForDreamTree(@Param("userId") Long userId, @Param("dreamId") Long dreamId);
+
+    /** V15 baselines (AHBO-03): obstacles in one status, across all participants. */
+    long countByArchivedFalseAndStatus(com.visionmapping.entity.enums.ObstacleStatus status);
+
+    /** V15 baselines (AHBO-03): open obstacles with a root cause, a solution or a linked task. */
+    @Query("""
+            select count(o) from Obstacle o
+            where o.archived = false and o.status = :status
+              and ((o.rootCause is not null and o.rootCause <> '') or (o.solution is not null and o.solution <> '')
+                   or o.relatedTask is not null)
+            """)
+    long countWithPlan(@Param("status") com.visionmapping.entity.enums.ObstacleStatus status);
 }

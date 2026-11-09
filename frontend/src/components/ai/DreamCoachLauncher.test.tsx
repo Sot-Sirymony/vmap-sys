@@ -31,10 +31,10 @@ describe('DreamCoachLauncher (AI-FR-01)', () => {
 
   it('opens a panel with three questions for the page on screen', async () => {
     vi.mocked(getAiStatus).mockResolvedValue(ready);
-    at('/modules/3');
+    at('/goals');
     await userEvent.click(await screen.findByRole('button', { name: 'Open the Dream Coach' }));
-    expect(await screen.findByText('Help me start this exercise')).toBeInTheDocument();
-    expect(screen.getByText('Improve my answer')).toBeInTheDocument();
+    expect(await screen.findByText('Is my goal specific enough?')).toBeInTheDocument();
+    expect(screen.getByText('Which goal should come first?')).toBeInTheDocument();
     expect(screen.getByText('5 AI requests left today')).toBeInTheDocument();
   });
 });
@@ -47,6 +47,16 @@ describe('DreamCoachLauncher on plan pages (V11, PB-FR-50)', () => {
     at('/plan');
     await vi.waitFor(() => expect(getAiStatus).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: 'Open the Dream Coach' })).not.toBeInTheDocument();
+  });
+
+  it('steps aside on the five pages that have the page assistant (V15, AH-FR-11)', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue(ready);
+    for (const path of ['/modules', '/modules/3', '/assessment', '/obstacles', '/communication', '/work-style']) {
+      const { unmount } = at(path);
+      await vi.waitFor(() => expect(getAiStatus).toHaveBeenCalled());
+      expect(screen.queryByRole('button', { name: 'Open the Dream Coach' }), path).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('is still there on a dream\'s own page', async () => {

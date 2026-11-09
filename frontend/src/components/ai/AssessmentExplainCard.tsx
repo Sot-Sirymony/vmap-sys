@@ -25,7 +25,7 @@ export function AssessmentExplainCard({ token }: { token: string }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getAiStatus(token).then((status) => setVisible(status.reason !== 'OFF')).catch(() => setVisible(false));
+    getAiStatus(token).then((status) => setVisible(status.reason !== 'OFF' && !(status.pagesOff ?? []).includes('ASSESSMENT'))).catch(() => setVisible(false));
   }, [token]);
 
   if (!visible) {
@@ -55,6 +55,17 @@ export function AssessmentExplainCard({ token }: { token: string }) {
             <Stack spacing={1}>
               <Chip size="small" label={tr('AI suggestion')} sx={{ alignSelf: 'flex-start' }} />
               {answer.explanation && <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{answer.explanation}</Typography>}
+              {/* V15 (AH-FR-25): a sentence for each barrier scored 1 or 2, and the trend across every take. */}
+              {(answer.lowChains ?? []).length > 0 && (
+                <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {(answer.lowChains ?? []).map((chain) => (
+                    <li key={chain.key}>
+                      <Typography variant="body2"><strong>{tr(chain.label)} ({chain.score}):</strong> {chain.note}</Typography>
+                    </li>
+                  ))}
+                </Box>
+              )}
+              {answer.trend && <Typography variant="body2"><strong>{tr('Over time:')}</strong> {answer.trend}</Typography>}
               {answer.focusModule && (
                 <Alert severity="info">
                   {tr('Focus next:')}{' '}

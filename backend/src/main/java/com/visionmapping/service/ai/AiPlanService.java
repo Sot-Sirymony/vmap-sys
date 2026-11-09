@@ -274,8 +274,9 @@ public class AiPlanService {
                 + "For each step give a priority, a realistic effort in hours, whether it is complex (needs several "
                 + "separate tasks), and the earlier step it must wait for, if any; a step is not due before that one. "
                 + questionRule(ask, "the goal", "steps");
+        // V15 (AH-FR-76, completing PB-FR-17): the work style only when the participant allows it.
         AiStructuredRequests.Tracked<AiDrafts.StepDrafts> answer = requests.askTracked(user, apiKey, "PLAN_BUILDER", language,
-                plan, prompt, AiDrafts.StepDrafts.class);
+                plan + WorkStyleContext.line(user), prompt, AiDrafts.StepDrafts.class);
         AiDrafts.StepDrafts drafts = answer.value();
         List<StepSuggestion> steps = new ArrayList<>();
         // V11 (PB-FR-12): "starts after" names a position in Claude's list; blank items are dropped,
@@ -359,7 +360,7 @@ public class AiPlanService {
                 + "be after " + today + " and, when the step has a date, not after it. Give each a priority and a realistic "
                 + "effort in hours. " + questionRule(ask, "the step", "tasks");
         AiStructuredRequests.Tracked<AiDrafts.TaskDrafts> answer = requests.askTracked(user, apiKey, "TASK_BUILDER", language,
-                plan, prompt, AiDrafts.TaskDrafts.class);
+                plan + WorkStyleContext.line(user), prompt, AiDrafts.TaskDrafts.class);
         AiDrafts.TaskDrafts drafts = answer.value();
         List<TaskSuggestion> tasks = new ArrayList<>();
         for (AiDrafts.TaskDraft draft : Optional.ofNullable(drafts.tasks()).orElse(List.of())) {

@@ -280,12 +280,13 @@ public class AiPlanFeedbackService {
         return value == null ? BigDecimal.ZERO : BigDecimal.valueOf(((Number) value).doubleValue());
     }
 
-    /** The caller's own plan builder answer; anything else answers 404, the same as one that does not exist. */
+    /** The caller's own plan builder or page assistant answer; anything else answers 404, the same as one that does not exist. */
     private AiUsageLog ownPlanRequest(Long requestId) {
         Long userId = lookup.userId();
         return usageLogRepository.findById(requestId)
                 .filter(usage -> usage.getUser() != null && Objects.equals(usage.getUser().getId(), userId))
-                .filter(usage -> PLAN_FEATURES.contains(usage.getFeature()))
+                // V15 (AH-FR-09): page assistant and helper answers are rated and counted the same way.
+                .filter(usage -> PLAN_FEATURES.contains(usage.getFeature()) || PageAssistantService.FEATURES.contains(usage.getFeature()))
                 .orElseThrow(() -> new ResourceNotFoundException("AI suggestion not found: " + requestId));
     }
 

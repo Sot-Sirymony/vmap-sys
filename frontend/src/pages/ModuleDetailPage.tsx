@@ -21,6 +21,9 @@ import { useI18n } from '../i18n/I18nContext';
 import { PitchCoachCard } from '../components/ai/PitchCoachCard';
 import { ModuleHelpCard } from '../components/ai/ModuleHelpCard';
 import { PageSection } from './PageSection';
+import { HelpWithThis, PageAssistantProvider, PageHelpButton, type PageFormSource } from '../components/ai/page-assistant/PageAssistant';
+import { ModuleElsewhereCard } from '../components/modules/ModuleElsewhereCard';
+import { ModuleReadinessCheck } from '../components/modules/ModuleReadinessCheck';
 
 /** v0.1 FR-11: module 11, Make a Clear Ask, holds the pitch (AI-FR-16 practises it). */
 const PITCH_MODULE = 11;
@@ -88,8 +91,39 @@ export function ModuleDetailPage() {
     }
   }
 
+  // V15 (AH-FR-05, AH-FR-06): the assistant reads the exercise rows as typed, and a card fills one field.
+  const formSource: PageFormSource | null = module && module.fields.length > 0 ? {
+    itemId: module.number,
+    read: () => Object.fromEntries(rows.slice(0, 3).flatMap((row, index) =>
+      module.fields.map((field) => [`row${index}.${field.key}`, row[field.key] ?? '']))),
+    apply: (key, value) => {
+      const match = /^row(\d)\.(.+)$/.exec(key);
+      if (!match) {
+        return;
+      }
+      const index = Number(match[1]);
+      setJustSaved(false);
+      setRows((current) => {
+        const next = [...current];
+        while (next.length <= index) {
+          next.push(emptyRow(module.fields));
+        }
+        next[index] = { ...next[index], [match[2]]: value };
+        return next;
+      });
+    },
+    fieldLabel: (key) => {
+      const match = /^row(\d)\.(.+)$/.exec(key);
+      const field = match ? module.fields.find((item) => item.key === match[2]) : undefined;
+      return field ? (rows.length > 1 ? `${field.label} (${t('row {number}', { number: Number(match?.[1]) + 1 })})` : field.label) : undefined;
+    },
+  } : null;
+
   return (
-    <PageSection title={module?.title ?? t('Module')} subtitle={module?.summary ?? ''}>
+    // V15 (AH-FR-01, AH-FR-22): the page assistant on a module page.
+    <PageAssistantProvider page="MODULE" itemId={Number.isFinite(number) ? number : null} form={formSource}
+      current={module ? { area: 'exercise', itemId: module.number, title: module.title } : null}>
+    <PageSection title={module?.title ?? t('Module')} subtitle={module?.summary ?? ''} actions={<PageHelpButton />}>
       <Breadcrumbs crumbs={[{ label: t('Modules'), to: '/modules' }, { label: module?.title ?? t('Module') }]} />
       {loadError && <ErrorMessage message={t(loadError)} />}
       {!module && !loadError && <Loading />}
@@ -101,6 +135,9 @@ export function ModuleDetailPage() {
               <Typography variant="body1">{module.guidance}</Typography>
             </CardContent>
           </Card>
+
+          {/* V15 (AH-FR-19): a module done on another page says what to do there and whether it is done. */}
+          <ModuleElsewhereCard module={module} />
 
           {module.coachRating != null && (
             <Alert severity="info">
@@ -128,7 +165,8 @@ export function ModuleDetailPage() {
           )}
 
           <Card>
-            <CardHeader title={t('Your exercise')} subheader={module.exerciseInstructions} />
+            <CardHeader title={t('Your exercise')} subheader={module.exerciseInstructions}
+              action={<HelpWithThis area="exercise" itemId={module.number} title={module.title} />} />
             <CardContent>
               <Box component="form" onSubmit={(event) => void handleSubmit(event)} sx={{ display: 'grid', gap: 2 }}>
                 {module.fields.length > 0 && rows.map((row, index) => (
@@ -163,6 +201,7 @@ export function ModuleDetailPage() {
                 {module.fields.length === 0 && module.requirementMessage && (
                   <Alert severity="info">{t(module.requirementMessage)}</Alert>
                 )}
+                {token && module.fields.length > 0 && <ModuleReadinessCheck token={token} module={module} rows={rows} />}
                 {saveError && <Alert severity="error">{t(saveError)}</Alert>}
                 {justSaved && <Alert severity="success">{t('Saved. The next module is unlocked if this was your first time through.')}</Alert>}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -185,5 +224,6 @@ export function ModuleDetailPage() {
         </Stack>
       )}
     </PageSection>
+    </PageAssistantProvider>
   );
 }

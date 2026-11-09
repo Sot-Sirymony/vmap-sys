@@ -15,7 +15,7 @@ import { AiConsentCard } from '../common/AiConsentCard';
 import { Button } from '../common/Button';
 import { AiStatusNotice } from './AiStatusNotice';
 import { DreamCoachChat } from './DreamCoachChat';
-import { focusFor, quickActionsFor } from './aiFocus';
+import { assistantPageFor, focusFor, quickActionsFor } from './aiFocus';
 
 /**
  * V9 (AI-FR-01, AI-FR-02): the Dream Coach on every screen. The button opens a
@@ -50,7 +50,8 @@ export function DreamCoachLauncher() {
   }
 
   // V11 Phase 7 (PB-FR-50): the Plan page and Build my plan have the plan assistant instead, so only one assistant is on screen.
-  const planAssistantPage = pathname === '/plan' || /^\/dreams\/\d+\/build/.test(pathname);
+  // V15 (AH-FR-11): the same on the five pages that have the page assistant.
+  const planAssistantPage = pathname === '/plan' || /^\/dreams\/\d+\/build/.test(pathname) || assistantPageFor(pathname) !== null;
   if (!token || !status || status.reason === 'OFF' || pathname.startsWith('/dream-coach') || planAssistantPage) {
     return null;
   }
