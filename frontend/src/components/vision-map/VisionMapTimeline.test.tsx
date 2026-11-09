@@ -184,5 +184,49 @@ describe('VisionMapTimeline (BRD 16.0.0 phase 4)', () => {
       expect(screen.queryByRole('switch', { name: 'Edit dates' })).not.toBeInTheDocument();
     });
   });
-});
 
+  describe('row actions: add, edit, archive and restore', () => {
+    function renderWithActions(rowTasks = tasks) {
+      const handlers = { onOpen: vi.fn(), onQuickAdd: vi.fn(), onArchive: vi.fn(), onRestore: vi.fn(), onAddDream: vi.fn() };
+      renderPage(<VisionMapTimeline dream={dream} goals={goals} steps={steps} tasks={rowTasks} today={TODAY} {...handlers} />);
+      return { ...handlers, region: within(screen.getByRole('region', { name: 'Timeline of Become a researcher' })) };
+    }
+
+    it('offers Add, Edit and Archive on every live level, and no Add on a task', async () => {
+      const { onQuickAdd, onOpen, onArchive, region } = renderWithActions();
+
+      await userEvent.click(region.getByRole('button', { name: 'Actions for Become a researcher' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Add goal' }));
+      expect(onQuickAdd).toHaveBeenCalledWith(expect.objectContaining({ kind: 'dream', id: 1, title: 'Become a researcher' }));
+
+      await userEvent.click(region.getByRole('button', { name: 'Actions for Prepare a concept note' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+      expect(onOpen).toHaveBeenCalledWith('goal', 10);
+
+      await userEvent.click(region.getByRole('button', { name: 'Actions for Search literature' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
+      expect(onArchive).toHaveBeenCalledWith(expect.objectContaining({ kind: 'step', id: 20 }));
+
+      await userEvent.click(region.getByRole('button', { name: 'Expand Search literature' }));
+      await userEvent.click(region.getByRole('button', { name: 'Actions for Summarise findings' }));
+      expect(screen.queryByRole('menuitem', { name: /^Add/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument();
+    });
+
+    it('offers only Restore on an archived row', async () => {
+      const archivedTasks = [tasks[0], { ...tasks[1], archived: true }];
+      const { onRestore, region } = renderWithActions(archivedTasks);
+      await userEvent.click(region.getByRole('button', { name: 'Expand Search literature' }));
+      await userEvent.click(region.getByRole('button', { name: 'Actions for Summarise findings' }));
+      expect(screen.queryByRole('menuitem', { name: 'Edit' })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Restore' }));
+      expect(onRestore).toHaveBeenCalledWith(expect.objectContaining({ kind: 'task', id: 31 }));
+    });
+
+    it('offers New dream in the toolbar', async () => {
+      const { onAddDream } = renderWithActions();
+      await userEvent.click(screen.getByRole('button', { name: 'New dream' }));
+      expect(onAddDream).toHaveBeenCalled();
+    });
+  });
+});

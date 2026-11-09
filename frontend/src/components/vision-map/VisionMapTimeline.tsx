@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { Ban, ChevronDown, ChevronRight, CircleCheck, Plus, ClipboardCheck, Diamond, Flag, Mail, Printer, type LucideIcon } from 'lucide-react';
+import { Ban, ChevronDown, ChevronRight, CircleCheck, Plus, ClipboardCheck, Diamond, Flag, Mail, MoreVertical, Printer, type LucideIcon } from 'lucide-react';
 import { Link as RouterLink } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Collapse from '@mui/material/Collapse';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -124,7 +127,13 @@ type TimelineViewProps = {
   /** TL-FR-39 to TL-FR-43: when given, an Edit dates switch lets task and step bars be dragged. */
   onReschedule?: (change: DateChange) => Promise<void>;
   /** TL-FR-31: when given, dream, goal and step rows offer to add a child. */
-  onQuickAdd?: (target: TimelineTarget) => void;
+  onQuickAdd?: (target: TimelineRow) => void;
+  /** When given, each live row's menu offers Archive. */
+  onArchive?: (target: TimelineRow) => void;
+  /** When given, each archived row's menu offers Restore. */
+  onRestore?: (target: TimelineRow) => void;
+  /** When given, the toolbar offers New dream. */
+  onAddDream?: () => void;
   /** TL-FR-48: a view-only timeline (the shared plan page): nothing opens or changes. */
   readOnly?: boolean;
   /** For tests: the day treated as today. */
@@ -180,6 +189,52 @@ function headerCells(rangeStart: number, rangeEnd: number, zoom: TimelineZoom, l
   return { top, bottom };
 }
 
+const ROW_ADD_LABEL: Record<Exclude<TimelineKind, 'task'>, string> = {
+  dream: tr('Add goal'),
+  goal: tr('Add step'),
+  step: tr('Add task'),
+};
+
+type TimelineRowMenuProps = {
+  row: TimelineRow;
+  onAdd?: () => void;
+  onEdit: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
+};
+
+/** A row's actions: add a child, edit, archive, or restore once archived. */
+function TimelineRowMenu({ row, onAdd, onEdit, onArchive, onRestore }: TimelineRowMenuProps) {
+  const { t } = useI18n();
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const run = (action: () => void) => () => { setAnchor(null); action(); };
+  const items = row.archived
+    ? [onRestore && <MenuItem key="restore" onClick={run(onRestore)}>{t('Restore')}</MenuItem>]
+    : [
+        onAdd && row.kind !== 'task' && <MenuItem key="add" onClick={run(onAdd)}>{t(ROW_ADD_LABEL[row.kind])}</MenuItem>,
+        <MenuItem key="edit" onClick={run(onEdit)}>{t('Edit')}</MenuItem>,
+        onArchive && <MenuItem key="archive" onClick={run(onArchive)}>{t('Archive')}</MenuItem>,
+      ];
+  if (!items.some(Boolean)) return null;
+  return (
+    <>
+      <IconButton
+        size="small"
+        className="vm-timeline__menu"
+        aria-label={t('Actions for {title}', { title: row.title })}
+        aria-haspopup="menu"
+        onClick={(event) => { event.stopPropagation(); setAnchor(event.currentTarget); }}
+        sx={{ flex: 'none', p: 0.25 }}
+      >
+        <MoreVertical size={14} aria-hidden="true" />
+      </IconButton>
+      <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
+        {items.filter(Boolean)}
+      </Menu>
+    </>
+  );
+}
+
 type ListItem = { type: 'group'; key: string; label: string } | { type: 'row'; key: string; row: TimelineRow };
 
 /**
@@ -190,7 +245,7 @@ type ListItem = { type: 'group'; key: string; label: string } | { type: 'row'; k
 export function TimelineView({
   timeline, label, priorityFilter = '', statusFilter = '', initialExpanded, expanded: expandedProp, onExpandedChange,
   zoom: zoomProp, onZoomChange, showCompleted: showCompletedProp, onShowCompletedChange, initialCentre, onCentreChange,
-  focusKey, onOpen, markers = [], hiddenMarkers: hiddenMarkersProp, onHiddenMarkersChange, printable = false, onReschedule, onQuickAdd, readOnly = false, today: todayOverride,
+  focusKey, onOpen, markers = [], hiddenMarkers: hiddenMarkersProp, onHiddenMarkersChange, printable = false, onReschedule, onQuickAdd, onArchive, onRestore, onAddDream, readOnly = false, today: todayOverride,
 }: TimelineViewProps) {
   const { t, language } = useI18n();
   const { settings: themeSettings, resolvedMode } = useThemeSettings();
@@ -214,6 +269,17 @@ export function TimelineView({
   // TL-FR-42: dragging is off until asked for, and never offered on touch screens.
   const coarsePointer = useMediaQuery('(pointer: coarse)');
   const canEditDates = Boolean(onReschedule) && !readOnly && !coarsePointer;
+  const hasRowActions = !readOnly && Boolean(onQuickAdd || onArchive || onRestore);
+  /** Add, edit, archive and restore for one row, in a ⋮ menu. */
+  const rowMenu = (row: TimelineRow) => (hasRowActions ? (
+    <TimelineRowMenu
+      row={row}
+      onAdd={onQuickAdd && row.kind !== 'task' ? () => onQuickAdd(row) : undefined}
+      onEdit={() => onOpen(row)}
+      onArchive={onArchive ? () => onArchive(row) : undefined}
+      onRestore={onRestore ? () => onRestore(row) : undefined}
+    />
+  ) : null);
   const [editDates, setEditDates] = useState(false);
   type Shift = { key: string; mode: 'move' | 'start' | 'end'; delta: number; moved: boolean };
   const [shift, setShift] = useState<Shift | null>(null);
@@ -645,6 +711,12 @@ export function TimelineView({
         {t('Printed on {date}', { date: formatDay(todayDay()) })}
       </Typography>
       <Box className="vm-timeline__toolbar" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+        {onAddDream && !readOnly && (
+          <Button onClick={onAddDream}>
+            <Plus size={16} aria-hidden="true" style={{ marginRight: 6 }} />
+            {t('New dream')}
+          </Button>
+        )}
         {!isPhone && !asTable && (
         <>
         <ToggleButtonGroup
@@ -762,6 +834,7 @@ export function TimelineView({
           statusLabel={statusLabel}
           formatDay={formatDay}
           onOpen={onOpen}
+          renderActions={hasRowActions ? rowMenu : undefined}
           locale={locale}
         />
       )}
@@ -773,6 +846,7 @@ export function TimelineView({
           statusLabel={statusLabel}
           formatDay={formatDay}
           onOpen={onOpen}
+          renderActions={hasRowActions ? rowMenu : undefined}
         />
       )}
       {timeline.rows.length > 0 && !isPhone && !asTable && (
@@ -893,6 +967,7 @@ export function TimelineView({
                         <Plus size={14} aria-hidden="true" />
                       </button>
                     )}
+                    {rowMenu(row)}
                     {row.blocked && <Ban size={14} aria-label={t('Blocked')} style={{ flex: 'none', color: statusHue('BLOCKED') }} />}
                     {row.overdueDays > 0 && (
                       <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600, flex: 'none' }}>{t('Overdue')}</Typography>
@@ -1028,13 +1103,16 @@ type VisionMapTimelineProps = {
   statusFilter?: string;
   onOpen: (kind: TimelineKind, id: number) => void;
   onReschedule?: (change: DateChange) => Promise<void>;
-  onQuickAdd?: (target: TimelineTarget) => void;
+  onQuickAdd?: (target: TimelineRow) => void;
+  onArchive?: (target: TimelineRow) => void;
+  onRestore?: (target: TimelineRow) => void;
+  onAddDream?: () => void;
   today?: number;
 };
 
 /** TL-FR-01: one dream's goals, steps and tasks (phase 1). */
 export function VisionMapTimeline({
-  dream, goals, steps, tasks, markers, priorityFilter, statusFilter, onOpen, onReschedule, onQuickAdd, today,
+  dream, goals, steps, tasks, markers, priorityFilter, statusFilter, onOpen, onReschedule, onQuickAdd, onArchive, onRestore, onAddDream, today,
 }: VisionMapTimelineProps) {
   const { t } = useI18n();
   const timeline = useMemo(() => buildDreamTimeline(dream, goals, steps, tasks, today), [dream, goals, steps, tasks, today]);
@@ -1050,6 +1128,9 @@ export function VisionMapTimeline({
       onOpen={(target) => onOpen(target.kind, target.id)}
       onReschedule={onReschedule}
       onQuickAdd={onQuickAdd}
+      onArchive={onArchive}
+      onRestore={onRestore}
+      onAddDream={onAddDream}
       today={today}
     />
   );

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Ban } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -20,13 +20,15 @@ type SharedProps = {
   statusLabel: (row: TimelineRow) => string;
   formatDay: (day: number) => string;
   onOpen: (row: TimelineRow) => void;
+  /** Optional per-row actions (add, edit, archive, restore). */
+  renderActions?: (row: TimelineRow) => ReactNode;
 };
 
 /**
  * TL-FR-47: the same rows as a plain table, for screen readers and for
  * copying. Every row is listed whether or not its branch is folded.
  */
-export function TimelineTable({ rows, kindLabel, statusLabel, formatDay, onOpen, caption }: SharedProps & { caption: string }) {
+export function TimelineTable({ rows, kindLabel, statusLabel, formatDay, onOpen, renderActions, caption }: SharedProps & { caption: string }) {
   const { t } = useI18n();
   const workedOut = (why: unknown) => (why ? ` (${t('worked out')})` : '');
   return (
@@ -43,6 +45,7 @@ export function TimelineTable({ rows, kindLabel, statusLabel, formatDay, onOpen,
             <TableCell>{t('Status')}</TableCell>
             <TableCell align="right">{t('Progress')}</TableCell>
             <TableCell>{t('Owner')}</TableCell>
+            {renderActions && <TableCell aria-label={t('Actions')} />}
           </TableRow>
         </TableHead>
         <TableBody>
@@ -63,6 +66,7 @@ export function TimelineTable({ rows, kindLabel, statusLabel, formatDay, onOpen,
               </TableCell>
               <TableCell align="right">{row.progress}%</TableCell>
               <TableCell>{row.owner ?? ''}</TableCell>
+              {renderActions && <TableCell padding="none">{renderActions(row)}</TableCell>}
             </TableRow>
           ))}
         </TableBody>
@@ -83,7 +87,7 @@ function monthKey(day: number) {
  * it. Past months are folded behind one button so the list opens on now.
  */
 export function TimelineAgenda({
-  rows, markers, markerText, today, kindLabel, statusLabel, formatDay, onOpen, locale,
+  rows, markers, markerText, today, kindLabel, statusLabel, formatDay, onOpen, renderActions, locale,
 }: SharedProps & { markers: TimelineMarker[]; markerText: (marker: TimelineMarker) => string; today: number; locale: string }) {
   const { t } = useI18n();
   const [showPast, setShowPast] = useState(false);
@@ -158,6 +162,7 @@ export function TimelineAgenda({
                 ) : (
                   <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{entry.marker ? markerText(entry.marker) : ''}</Typography>
                 )}
+                {entry.row && renderActions && <Box sx={{ ml: 'auto', flex: 'none' }}>{renderActions(entry.row)}</Box>}
               </Box>
             ))}
           </Box>

@@ -31,6 +31,7 @@ import { VisionMapTree } from '../components/vision-map/VisionMapTree';
 import { useAuth } from '../context/AuthContext';
 import { useStoredState } from '../hooks/useStoredState';
 import { useTimelineMarkers } from '../hooks/useTimelineMarkers';
+import { useTimelineActions } from '../hooks/useTimelineActions';
 import { useTimelineReschedule } from '../hooks/useTimelineReschedule';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
@@ -41,7 +42,7 @@ import { AiPlanAssistant } from '../components/ai/AiPlanAssistant';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 import { progressTone } from '../utils/progressTone';
-import { addLinkFor, editLinkFor, parseEditTarget, type TimelineKind } from '../utils/timeline';
+import { editLinkFor, parseEditTarget, type TimelineKind } from '../utils/timeline';
 
 /** V16 (TL-FR-01): how one dream is shown. */
 type DreamView = 'tree' | 'timeline';
@@ -204,6 +205,13 @@ export function DreamDetailPage() {
   const dreamMarkers = useTimelineMarkers(token, singleDreamList, goals, steps, tasks, Boolean(selectedDream) && dreamView === 'timeline');
   // TL-FR-39 to TL-FR-41: dragged dates save like a form, then reload the map.
   const reschedule = useTimelineReschedule(token, steps, tasks, load);
+  // Add, archive and restore right on the timeline; Edit opens the tree's forms.
+  const timelineActions = useTimelineActions({
+    token,
+    steps,
+    onChanged: load,
+    onDreamArchived: (dreamId) => { if (selectedDream?.id === dreamId) navigate('/vision-map'); },
+  });
   const overviewMarkers = useTimelineMarkers(token, areaDreams, goals, steps, tasks, overviewMode && overviewView === 'timeline');
 
   // Open the form named in ?edit= once the dream's records are loaded, then
@@ -378,7 +386,10 @@ export function DreamDetailPage() {
           markers={overviewMarkers}
           onOpen={(target) => navigate(editLinkFor(target))}
           onReschedule={reschedule}
-          onQuickAdd={(target) => navigate(addLinkFor(target))}
+          onQuickAdd={timelineActions.addChild}
+          onArchive={timelineActions.archive}
+          onRestore={timelineActions.restore}
+          onAddDream={() => navigate(filterVisionAreaId ? `/dreams?create=dream&parent=${filterVisionAreaId}` : '/dreams?create=dream')}
         />
       )}
       {overviewMode && !loading && areaDreams.length > 0 && overviewView === 'cards' && (
@@ -461,7 +472,10 @@ export function DreamDetailPage() {
             tasks={tasks}
             markers={dreamMarkers}
             onReschedule={reschedule}
-            onQuickAdd={(target) => quickAdd(target.kind, target.id)}
+            onQuickAdd={timelineActions.addChild}
+            onArchive={timelineActions.archive}
+            onRestore={timelineActions.restore}
+            onAddDream={() => navigate(`/dreams?create=dream&parent=${selectedDream.visionAreaId}`)}
             priorityFilter={filterPriority}
             statusFilter={filterStatus}
             onOpen={(kind, id) => setEditRequest((current) => ({ kind, id, nonce: (current?.nonce ?? 0) + 1 }))}
@@ -488,6 +502,7 @@ export function DreamDetailPage() {
         {isPhone && <Box sx={{ mt: 2 }}>{supportCards}</Box>}
         </>
       )}
+      {timelineActions.dialogs}
     </PageSection>
   );
 }

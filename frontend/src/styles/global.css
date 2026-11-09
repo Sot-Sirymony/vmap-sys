@@ -3628,3 +3628,19 @@ button:focus-visible,
     display: none !important;
   }
 }
+
+/* Timeline row actions (add, edit, archive, restore). */
+.vm-timeline__menu {
+  opacity: 0.6;
+}
+
+.vm-timeline__menu:hover,
+.vm-timeline__menu:focus-visible {
+  opacity: 1;
+}
+
+@media print {
+  .vm-timeline__menu {
+    display: none !important;
+  }
+}

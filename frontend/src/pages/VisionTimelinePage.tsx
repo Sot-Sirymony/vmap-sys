@@ -17,11 +17,12 @@ import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { PlanTimeline, type TimelineZoom } from '../components/vision-map/VisionMapTimeline';
 import { useAuth } from '../context/AuthContext';
 import { useTimelineMarkers } from '../hooks/useTimelineMarkers';
+import { useTimelineActions } from '../hooks/useTimelineActions';
 import { useTimelineReschedule } from '../hooks/useTimelineReschedule';
 import { tr } from '../i18n/translate';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
-import { MARKER_TYPES, addLinkFor, buildPlanTimeline, editLinkFor, expandedForDream, fromDay, toDay, type TimelineMarkerType } from '../utils/timeline';
+import { MARKER_TYPES, buildPlanTimeline, editLinkFor, expandedForDream, fromDay, toDay, type TimelineMarkerType } from '../utils/timeline';
 import { PageSection } from './PageSection';
 
 const ZOOMS: TimelineZoom[] = ['week', 'month', 'quarter', 'year'];
@@ -124,6 +125,7 @@ export function VisionTimelinePage() {
 
   const markers = useTimelineMarkers(token, shownDreams, goals, steps, tasks);
   const reschedule = useTimelineReschedule(token, steps, tasks, load);
+  const timelineActions = useTimelineActions({ token, steps, onChanged: load });
   const hasDreams = dreams.length > 0;
 
   return (
@@ -194,9 +196,13 @@ export function VisionTimelinePage() {
           printable
           onOpen={(target) => navigate(editLinkFor(target))}
           onReschedule={reschedule}
-          onQuickAdd={(target) => navigate(addLinkFor(target))}
+          onQuickAdd={timelineActions.addChild}
+          onArchive={timelineActions.archive}
+          onRestore={timelineActions.restore}
+          onAddDream={() => navigate(visionAreaId ? `/dreams?create=dream&parent=${visionAreaId}` : '/dreams?create=dream')}
         />
       )}
+      {timelineActions.dialogs}
     </PageSection>
   );
 }

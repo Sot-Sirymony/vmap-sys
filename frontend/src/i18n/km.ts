@@ -2919,4 +2919,14 @@ export const km: Record<string, string> = {
   'Put a draft in the form first, then refine it.': 'សូមដាក់សេចក្តីព្រាងក្នុងទម្រង់ជាមុនសិន រួចកែលម្អវា។',
   'Choose how to refine the draft, or write a short note.': 'សូមជ្រើសរើសរបៀបកែលម្អសេចក្តីព្រាង ឬសរសេរកំណត់ចំណាំខ្លី។',
   'This module is done elsewhere in the app, so there is no answer to refine or check.': 'មេរៀននេះធ្វើនៅកន្លែងផ្សេងក្នុងកម្មវិធី ដូច្នេះគ្មានចម្លើយដែលត្រូវកែលម្អ ឬពិនិត្យទេ។',
+  // V16: timeline row actions (add, edit, archive, restore).
+  'Actions': 'សកម្មភាព',
+  'Actions for {title}': 'សកម្មភាពសម្រាប់ {title}',
+  'Added "{title}".': 'បានបន្ថែម "{title}"។',
+  'Archived "{title}".': 'បានទុកក្នុងបណ្ណសារ "{title}"។',
+  'Restored "{title}".': 'បានស្តារ "{title}"។',
+  'Archive "{title}"? You can bring it back later with "Show archived".': 'ទុក "{title}" ក្នុងបណ្ណសារ? អ្នកអាចយកវាមកវិញពេលក្រោយដោយប្រើ "បង្ហាញបណ្ណសារ"។',
+  'Unable to add.': 'មិនអាចបន្ថែមបានទេ។',
+  'Unable to archive.': 'មិនអាចទុកក្នុងបណ្ណសារបានទេ។',
+  'Unable to restore.': 'មិនអាចស្តារបានទេ។',
 };
