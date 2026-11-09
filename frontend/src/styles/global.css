@@ -3459,7 +3459,12 @@ button:focus-visible,
   width: 16px;
   height: 16px;
   border-radius: var(--radius-pill);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
   background: var(--card);
+  font: inherit;
   cursor: default;
 }
 

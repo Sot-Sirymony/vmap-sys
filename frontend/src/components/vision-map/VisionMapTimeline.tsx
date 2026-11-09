@@ -947,29 +947,27 @@ export function TimelineView({
                       const text = markerText(marker);
                       return (
                         <Tooltip key={marker.key} title={text} placement="top" arrow>
-                          <span
+                          <button
+                            type="button"
                             className="vm-timeline__marker"
-                            role="img"
-                            tabIndex={0}
                             aria-label={text}
                             style={{ left: (marker.day - rangeStart) * pxPerDay + pxPerDay / 2 - 8, top: lane === 0 ? 2 : 18, color: info.colour }}
                           >
                             <Icon size={16} aria-hidden="true" />
-                          </span>
+                          </button>
                         </Tooltip>
                       );
                     })}
                     {row.completedOn !== null && row.completedOn !== row.end && (
                       <Tooltip title={completedText(row)} placement="top" arrow>
-                        <span
+                        <button
+                          type="button"
                           className="vm-timeline__marker"
-                          role="img"
-                          tabIndex={0}
                           aria-label={completedText(row)}
                           style={{ left: (row.completedOn - rangeStart) * pxPerDay + pxPerDay / 2 - 8, color: 'var(--progress-done)' }}
                         >
                           <CircleCheck size={16} aria-hidden="true" />
-                        </span>
+                        </button>
                       </Tooltip>
                     )}
                   </Box>

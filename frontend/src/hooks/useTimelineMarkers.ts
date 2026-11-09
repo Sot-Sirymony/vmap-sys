@@ -41,7 +41,7 @@ export function useTimelineMarkers(
   useEffect(() => {
     if (!token || !enabled || !dreamKey) return undefined;
     let active = true;
-    Promise.all(dreamKey.split(',').map((id) => listMilestones(token, Number(id)).catch(() => [] as Milestone[])))
+    void Promise.all(dreamKey.split(',').map((id) => listMilestones(token, Number(id)).catch(() => [] as Milestone[])))
       .then((lists) => { if (active) setMilestones(lists.flat()); });
     return () => {
       active = false;

@@ -108,14 +108,14 @@ describe('VisionTimelinePage (BRD 16.0.0: the full timeline)', () => {
   it('marks milestones, reviews and follow-ups on the dream, and can hide each kind (TL-FR-13)', async () => {
     renderTimeline();
     const timeline = within(await screen.findByRole('region', { name: 'Timeline of all dreams' }));
-    expect(await timeline.findByRole('img', { name: /^Milestone on 1 Dec 2026: First draft done/ })).toBeInTheDocument();
-    expect(timeline.getByRole('img', { name: /^Weekly review on 20 Nov 2026/ })).toBeInTheDocument();
-    expect(timeline.getByRole('img', { name: /^Follow up on 25 Nov 2026: Ask for data/ })).toBeInTheDocument();
+    expect(await timeline.findByRole('button', { name: /^Milestone on 1 Dec 2026: First draft done/ })).toBeInTheDocument();
+    expect(timeline.getByRole('button', { name: /^Weekly review on 20 Nov 2026/ })).toBeInTheDocument();
+    expect(timeline.getByRole('button', { name: /^Follow up on 25 Nov 2026: Ask for data/ })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Reviews' }));
     expect(currentLocation()).toContain('hide=review');
-    expect(timeline.queryByRole('img', { name: /review on/ })).not.toBeInTheDocument();
-    expect(timeline.getByRole('img', { name: /^Milestone on/ })).toBeInTheDocument();
+    expect(timeline.queryByRole('button', { name: /review on/ })).not.toBeInTheDocument();
+    expect(timeline.getByRole('button', { name: /^Milestone on/ })).toBeInTheDocument();
   });
 
   it('explains the colours and marks in a legend (TL-FR-22)', async () => {
