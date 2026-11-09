@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as chainAssessmentApi from '../api/chainAssessmentApi';
+import * as clientErrorApi from '../api/clientErrorApi';
 import * as dreamApi from '../api/dreamApi';
 import * as goalApi from '../api/goalApi';
 import * as strengthsApi from '../api/strengthsApi';
@@ -12,6 +13,7 @@ import type { SelfAssessmentItem, StrengthsProfile } from '../types/vision';
 import { StrengthsPage } from './StrengthsPage';
 
 vi.mock('../api/chainAssessmentApi');
+vi.mock('../api/clientErrorApi');
 vi.mock('../api/dreamApi');
 vi.mock('../api/goalApi');
 vi.mock('../api/strengthsApi');
@@ -38,6 +40,8 @@ const gap = anItem({ id: 7, kind: 'WEAKNESS', description: 'Bookkeeping', eviden
 describe('StrengthsPage (V8.1 Strengths and Gaps)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(clientErrorApi.listClientErrors).mockResolvedValue([]);
+    vi.mocked(clientErrorApi.recordClientError).mockResolvedValue(true);
     vi.mocked(dreamApi.listDreams).mockResolvedValue([
       aDream({ id: 1, title: 'Run a marathon' }),
       aDream({ id: 2, title: 'Start a business', letterRank: 'A' }),

@@ -2361,4 +2361,14 @@ export const km: Record<string, string> = {
   'Too many join code attempts. Try again later.': 'ការសាកល្បងលេខកូដចូលរួមច្រើនដងពេក។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។',
   'Too many requests for shared plans from this network. Try again in a minute.': 'មានសំណើសម្រាប់ផែនការដែលបានចែករំលែកច្រើនពេកពីបណ្តាញនេះ។ សូមព្យាយាមម្តងទៀតក្នុងរយៈពេលមួយនាទី។',
   'Too many imports in a short time. Try again later.': 'មានការនាំចូលច្រើនពេកក្នុងរយៈពេលខ្លី។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។',
+  // Diagnostics: problems on a page
+  'Problems on this page': 'បញ្ហានៅលើទំព័រនេះ',
+  'Requests on this page that failed. Admins can see these too, so they can fix the cause.': 'សំណើនៅលើទំព័រនេះដែលបរាជ័យ។ អ្នកគ្រប់គ្រងក៏អាចមើលឃើញដែរ ដើម្បីជួសជុលមូលហេតុ។',
+  'Some problems could not be sent to the server. They are kept here until you close the app.': 'បញ្ហាខ្លះមិនអាចផ្ញើទៅម៉ាស៊ីនមេបានទេ។ វានឹងរក្សាទុកនៅទីនេះរហូតដល់អ្នកបិទកម្មវិធី។',
+  'The server could not be reached. Check your connection, or the server may be restarting.': 'មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានទេ។ សូមពិនិត្យការតភ្ជាប់របស់អ្នក ឬម៉ាស៊ីនមេប្រហែលជាកំពុងចាប់ផ្តើមឡើងវិញ។',
+  'The server is older than this page. A server update has probably not finished deploying.': 'ម៉ាស៊ីនមេចាស់ជាងទំព័រនេះ។ ការធ្វើបច្ចុប្បន្នភាពម៉ាស៊ីនមេប្រហែលជាមិនទាន់ដាក់ឱ្យប្រើរួចរាល់ទេ។',
+  'The server ran into a problem. Quote the reference when you report it.': 'ម៉ាស៊ីនមេជួបបញ្ហា។ សូមបញ្ជាក់លេខយោងនៅពេលអ្នករាយការណ៍។',
+  'No connection': 'គ្មានការតភ្ជាប់',
+  'Not sent': 'មិនបានផ្ញើ',
+  'Reference: {reference}': 'លេខយោង៖ {reference}',
 };

@@ -34,9 +34,11 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { Modal } from '../components/common/Modal';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
+import { PageProblemsPanel } from '../components/diagnostics/PageProblemsPanel';
 import { GapCoverDialog } from '../components/strengths/GapCoverDialog';
 import { EMPTY_STRENGTH_FORM, StrengthFormValues, StrengthItemForm } from '../components/strengths/StrengthItemForm';
 import { useAuth } from '../context/AuthContext';
+import { useClientErrorLog } from '../hooks/useClientErrorLog';
 import { useI18n } from '../i18n/I18nContext';
 import { tr } from '../i18n/translate';
 import type {
@@ -73,6 +75,9 @@ function byRank(dreams: Dream[]) {
   });
 }
 
+/** The API paths this page calls, so only its own failures are logged under it. */
+const PAGE_API_PATHS = ['/strengths-profiles', '/self-assessment-items', '/dreams', '/goals', '/work-style-profile', '/chain-assessments'] as const;
+
 type PendingRemoval = { item: SelfAssessmentItem; action: 'archive' | 'uncover' };
 
 /**
@@ -101,6 +106,7 @@ export function StrengthsPage() {
   const [coverError, setCoverError] = useState('');
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const { failures } = useClientErrorLog(token, 'strengths', PAGE_API_PATHS);
 
   const ranked = useMemo(() => (dreams ? byRank(dreams) : null), [dreams]);
   const requestedId = Number(searchParams.get('dreamId'));
@@ -474,6 +480,12 @@ export function StrengthsPage() {
             </>
           )}
         </Stack>
+      )}
+
+      {failures.length > 0 && (
+        <Box sx={{ mt: 2 }}>
+          <PageProblemsPanel failures={failures} />
+        </Box>
       )}
 
       {covering && profile && (

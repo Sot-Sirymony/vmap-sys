@@ -63,6 +63,7 @@ public class AccountService {
     /** Children before parents. A test fails if a table with a user_id is missing here. */
     static final List<String> USER_TABLES_IN_DELETE_ORDER = List.of(
             "plan_builder_drafts",
+            "client_error_logs",
             "self_assessment_snapshots",
             "self_assessment_items",
             "ai_messages",

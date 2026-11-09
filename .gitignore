@@ -68,3 +68,6 @@ production_env.md
 frontend/test-results/
 frontend/coverage/
 frontend/playwright-report/
+
+# Local production login details: never commit
+scripts/pd_user.md

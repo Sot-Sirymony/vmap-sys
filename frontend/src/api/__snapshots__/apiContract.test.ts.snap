@@ -83,6 +83,8 @@ exports[`API contract (BRD 12 COV-FR-25) > sends the expected method, path and b
   "authApi.resetPassword(request) -> POST /auth/reset-password {"sample":"value"}",
   "chainAssessmentApi.getChainAssessments(token) -> GET /chain-assessments [auth]",
   "chainAssessmentApi.saveChainAssessment(token, request) -> PUT /chain-assessments [auth] {"sample":"value"}",
+  "clientErrorApi.listClientErrors(token, pageKey) -> GET /client-errors?page=text [auth]",
+  "clientErrorApi.recordClientError(token, request) -> POST /client-errors [auth] {"sample":"value"}",
   "cohortApi.addCoachComment(token, userId, targetType, targetId, body) -> POST /coach/participants/11/comments [auth] {"targetType":"text","targetId":13,"body":{"sample":"value"}}",
   "cohortApi.addCohortMember(token, id, email) -> POST /admin/cohorts/11/members [auth] {"email":"text"}",
   "cohortApi.createCohort(token, input) -> POST /admin/cohorts [auth] {"sample":"value"}",

@@ -148,6 +148,42 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
   }
 }
 
+/** A request that failed: status 0 when the server could not be reached. */
+export type ApiFailure = {
+  method: string;
+  /** The API path as called, without API_BASE_URL. */
+  path: string;
+  status: number;
+  message: string;
+  reference?: string;
+};
+
+type ApiFailureListener = (failure: ApiFailure) => void;
+
+const apiFailureListeners = new Set<ApiFailureListener>();
+
+/**
+ * Diagnostics: told about every failed apiClient request, so a page can record
+ * the failures of its own calls (see useClientErrorLog). Returns a function
+ * that stops listening. A listener that throws never breaks the request.
+ */
+export function onApiFailure(listener: ApiFailureListener) {
+  apiFailureListeners.add(listener);
+  return () => {
+    apiFailureListeners.delete(listener);
+  };
+}
+
+function reportFailure(failure: ApiFailure) {
+  apiFailureListeners.forEach((listener) => {
+    try {
+      listener(failure);
+    } catch {
+      // A diagnostics listener must never change what the caller sees.
+    }
+  });
+}
+
 type SessionEndedListener = () => void;
 
 const sessionEndedListeners = new Set<SessionEndedListener>();
@@ -188,7 +224,14 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
     return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   };
 
-  let response = await send(options.token);
+  const method = (options.method ?? 'GET').toUpperCase();
+  let response: Response;
+  try {
+    response = await send(options.token);
+  } catch (networkError) {
+    reportFailure({ method, path, status: 0, message: networkError instanceof Error ? networkError.message : String(networkError) });
+    throw networkError;
+  }
   // V10 (SEC-07-04): the access token is short-lived. A 401 on a signed-in
   // request is first answered by renewing it and trying once more; only if
   // that fails too is the session over.
@@ -199,7 +242,9 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     reportSessionEnded(response, retryToken ?? options.token);
-    throw new ApiError(await readErrorMessage(response), response.status);
+    const { message, reference } = await readError(response);
+    reportFailure({ method, path, status: response.status, message, reference });
+    throw new ApiError(message, response.status);
   }
 
   if (response.status === 204) {
@@ -209,11 +254,12 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
   return response.json() as Promise<T>;
 }
 
-async function readErrorMessage(response: Response) {
+/** The message to show, and the server's reference for this error when it sent one. */
+async function readError(response: Response): Promise<{ message: string; reference?: string }> {
   const fallback = `Request failed with status ${response.status}`;
   const text = await response.text();
   if (!text) {
-    return fallback;
+    return { message: fallback };
   }
 
   try {
@@ -222,8 +268,11 @@ async function readErrorMessage(response: Response) {
     // A server fault has nothing the user can fix, so give them the reference
     // to quote when they report it. Other errors keep their message as is, so
     // it can still be translated.
-    return response.status >= 500 && error.reference ? tr('{message} (Reference: {reference})', { message: tr(message), reference: error.reference }) : message;
+    return {
+      message: response.status >= 500 && error.reference ? tr('{message} (Reference: {reference})', { message: tr(message), reference: error.reference }) : message,
+      reference: error.reference,
+    };
   } catch {
-    return text;
+    return { message: text };
   }
 }

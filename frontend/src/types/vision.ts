@@ -1595,3 +1595,28 @@ export type StrengthsProfile = {
   retakeSuggested: boolean;
   changes: StrengthsProfileChange[];
 };
+
+/** Diagnostics: one request that failed in the browser. status 0 = server not reached. */
+export type ClientErrorLogRequest = {
+  page: string;
+  method: string;
+  path: string;
+  status: number;
+  message?: string;
+  reference?: string;
+  appVersion?: string;
+};
+
+export type ClientErrorLogEntry = {
+  id: number;
+  occurredAt: string;
+  /** Set only in the admin view. */
+  userId: number | null;
+  page: string;
+  method: string;
+  path: string;
+  status: number;
+  message: string | null;
+  reference: string | null;
+  appVersion: string | null;
+};
