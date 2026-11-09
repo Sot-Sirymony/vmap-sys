@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChartGantt, ListTree, MoonStar, Rocket, SlidersHorizontal } from 'lucide-react';
+import { ChartGantt, LayoutGrid, ListTree, MoonStar, Rocket, SlidersHorizontal } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
@@ -26,10 +26,12 @@ import { Loading } from '../components/common/Loading';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { VisionMapTimeline } from '../components/vision-map/VisionMapTimeline';
+import { PlanTimeline, VisionMapTimeline } from '../components/vision-map/VisionMapTimeline';
 import { VisionMapTree } from '../components/vision-map/VisionMapTree';
 import { useAuth } from '../context/AuthContext';
 import { useStoredState } from '../hooks/useStoredState';
+import { useTimelineMarkers } from '../hooks/useTimelineMarkers';
+import { useTimelineReschedule } from '../hooks/useTimelineReschedule';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
@@ -39,6 +41,7 @@ import { AiPlanAssistant } from '../components/ai/AiPlanAssistant';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 import { progressTone } from '../utils/progressTone';
+import { addLinkFor, editLinkFor, parseEditTarget, type TimelineKind } from '../utils/timeline';
 
 /** V16 (TL-FR-01): how one dream is shown. */
 type DreamView = 'tree' | 'timeline';
@@ -81,6 +84,27 @@ export function DreamDetailPage() {
   const [storedView, setStoredView] = useStoredState<DreamView>('vision-map:dream-view', 'tree');
   const dreamView: DreamView = urlView === 'timeline' || urlView === 'tree' ? urlView : storedView;
   const [editRequest, setEditRequest] = useState<{ kind: 'dream' | 'goal' | 'step' | 'task'; id: number; nonce: number } | null>(null);
+  // TL-FR-02: the overview as cards or as one timeline of every dream.
+  const [storedOverviewView, setStoredOverviewView] = useStoredState<DreamView | 'cards'>('vision-map:overview-view', 'cards');
+  const overviewView = urlView === 'timeline' || urlView === 'cards' ? urlView : storedOverviewView === 'timeline' ? 'timeline' : 'cards';
+  // A bar on the overview or full timeline arrives here as ?edit=goal-10 (TL-FR-27),
+  // and its "+" as ?add=goal-10 (TL-FR-31).
+  const [editParam, setEditParam] = useUrlFilter('edit');
+  const [addParam, setAddParam] = useUrlFilter('add');
+  const [addRequest, setAddRequest] = useState<{ kind: 'dream' | 'goal' | 'step'; id: number; nonce: number } | null>(null);
+
+  /** TL-FR-31: adding happens in the tree's own add field, so show the tree and focus it. */
+  function quickAdd(kind: TimelineKind, id: number) {
+    if (kind === 'task') return;
+    changeDreamView('tree');
+    setAddRequest((current) => ({ kind, id, nonce: (current?.nonce ?? 0) + 1 }));
+  }
+
+  function changeOverviewView(next: 'cards' | 'timeline' | null) {
+    if (!next) return;
+    setStoredOverviewView(next);
+    setUrlView(next === 'timeline' ? 'timeline' : '');
+  }
 
   function changeDreamView(next: DreamView | null) {
     if (!next) return;
@@ -174,6 +198,31 @@ export function DreamDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterVisionAreaId, dreamId, dreams]);
+
+  // V16 (TL-FR-13): marks for whichever timeline is showing; nothing is fetched otherwise.
+  const singleDreamList = useMemo(() => (selectedDream ? [selectedDream] : []), [selectedDream]);
+  const dreamMarkers = useTimelineMarkers(token, singleDreamList, goals, steps, tasks, Boolean(selectedDream) && dreamView === 'timeline');
+  // TL-FR-39 to TL-FR-41: dragged dates save like a form, then reload the map.
+  const reschedule = useTimelineReschedule(token, steps, tasks, load);
+  const overviewMarkers = useTimelineMarkers(token, areaDreams, goals, steps, tasks, overviewMode && overviewView === 'timeline');
+
+  // Open the form named in ?edit= once the dream's records are loaded, then
+  // drop it from the URL so a reload does not reopen it.
+  useEffect(() => {
+    const target = parseEditTarget(editParam || null);
+    if (!target || loading || !selectedDream) return;
+    setEditRequest((current) => ({ ...target, nonce: (current?.nonce ?? 0) + 1 }));
+    setEditParam('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParam, loading, selectedDream?.id]);
+
+  useEffect(() => {
+    const target = parseEditTarget(addParam || null);
+    if (!target || loading || !selectedDream) return;
+    quickAdd(target.kind, target.id);
+    setAddParam('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addParam, loading, selectedDream?.id]);
 
   const selectedArea = visionAreas.find((area) => area.id === selectedDream?.visionAreaId);
   const areaHasNoDreams = Boolean(filterVisionAreaId) && areaDreams.length === 0 && !loading;
@@ -299,7 +348,40 @@ export function DreamDetailPage() {
         </EmptyState>
       )}
       {overviewMode && areaHasNoDreams && <EmptyState>{tr('No dreams in this vision area yet.')}</EmptyState>}
-      {overviewMode && !loading && areaDreams.length > 0 && (
+      {overviewMode && !loading && dreams.length > 0 && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2, mt: 2 }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={overviewView}
+            onChange={(_, next: 'cards' | 'timeline' | null) => changeOverviewView(next)}
+            aria-label={tr('How to show your dreams')}
+          >
+            <ToggleButton value="cards"><LayoutGrid size={16} aria-hidden="true" style={{ marginRight: 6 }} />{tr('Cards')}</ToggleButton>
+            <ToggleButton value="timeline"><ChartGantt size={16} aria-hidden="true" style={{ marginRight: 6 }} />{tr('Timeline')}</ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            variant="secondary"
+            onClick={() => navigate(`/vision-map/timeline${filterVisionAreaId ? `?visionAreaId=${filterVisionAreaId}` : ''}`)}
+          >
+            {tr('View full timeline')}
+          </Button>
+        </Box>
+      )}
+      {overviewMode && !loading && areaDreams.length > 0 && overviewView === 'timeline' && (
+        <PlanTimeline
+          areas={visionAreas}
+          dreams={areaDreams}
+          goals={goals}
+          steps={steps}
+          tasks={tasks}
+          markers={overviewMarkers}
+          onOpen={(target) => navigate(editLinkFor(target))}
+          onReschedule={reschedule}
+          onQuickAdd={(target) => navigate(addLinkFor(target))}
+        />
+      )}
+      {overviewMode && !loading && areaDreams.length > 0 && overviewView === 'cards' && (
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
           {areaDreams.map((dream) => {
             const stats = dreamStats.get(dream.id) ?? { goals: 0, steps: 0, tasks: 0, progress: 0 };
@@ -368,6 +450,7 @@ export function DreamDetailPage() {
             <ToggleButton value="tree"><ListTree size={16} aria-hidden="true" style={{ marginRight: 6 }} />{tr('Tree')}</ToggleButton>
             <ToggleButton value="timeline"><ChartGantt size={16} aria-hidden="true" style={{ marginRight: 6 }} />{tr('Timeline')}</ToggleButton>
           </ToggleButtonGroup>
+          <Button variant="secondary" onClick={() => navigate(`/vision-map/timeline?focus=${selectedDream.id}`)}>{tr('View full timeline')}</Button>
         </Box>
         {dreamView === 'timeline' && (
           <VisionMapTimeline
@@ -376,6 +459,9 @@ export function DreamDetailPage() {
             goals={goals}
             steps={steps}
             tasks={tasks}
+            markers={dreamMarkers}
+            onReschedule={reschedule}
+            onQuickAdd={(target) => quickAdd(target.kind, target.id)}
             priorityFilter={filterPriority}
             statusFilter={filterStatus}
             onOpen={(kind, id) => setEditRequest((current) => ({ kind, id, nonce: (current?.nonce ?? 0) + 1 }))}
@@ -386,6 +472,7 @@ export function DreamDetailPage() {
         <Box sx={{ display: dreamView === 'timeline' ? 'none' : 'block' }}>
         <VisionMapTree
           editRequest={editRequest}
+          addRequest={addRequest}
           dream={selectedDream}
           visionAreaName={selectedArea?.name ?? tr('Unassigned')}
           goals={goals}

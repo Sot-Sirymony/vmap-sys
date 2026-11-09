@@ -3,10 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as aiApi from '../api/aiApi';
 import * as aiPlanApi from '../api/aiPlanApi';
+import * as communicationApi from '../api/communicationApi';
 import * as dreamApi from '../api/dreamApi';
 import * as goalApi from '../api/goalApi';
 import * as partnerApi from '../api/partnerApi';
+import * as planApi from '../api/planApi';
 import * as planShareApi from '../api/planShareApi';
+import * as reviewApi from '../api/reviewApi';
 import * as stepApi from '../api/stepApi';
 import * as taskApi from '../api/taskApi';
 import * as visionAreaApi from '../api/visionAreaApi';
@@ -17,6 +20,9 @@ import { DreamDetailPage } from './DreamDetailPage';
 
 vi.mock('../api/aiApi');
 vi.mock('../api/aiPlanApi');
+vi.mock('../api/communicationApi');
+vi.mock('../api/planApi');
+vi.mock('../api/reviewApi');
 vi.mock('../api/dreamApi');
 vi.mock('../api/goalApi');
 vi.mock('../api/partnerApi');
@@ -26,8 +32,8 @@ vi.mock('../api/taskApi');
 vi.mock('../api/visionAreaApi');
 
 const areas = [aVisionArea({ id: 1, name: 'Career' }), aVisionArea({ id: 2, name: 'Health' })];
-const researcher = aDream({ id: 1, visionAreaId: 1, title: 'Become a researcher', whyImportant: 'Help my community' });
-const marathon = aDream({ id: 2, visionAreaId: 2, title: 'Run a marathon', moonshot: true });
+const researcher = aDream({ id: 1, visionAreaId: 1, title: 'Become a researcher', whyImportant: 'Help my community', createdAt: '2026-10-01T00:00:00Z' });
+const marathon = aDream({ id: 2, visionAreaId: 2, title: 'Run a marathon', moonshot: true, createdAt: '2026-10-01T00:00:00Z' });
 
 function renderMap(route: string) {
   return renderPage(<DreamDetailPage />, { route, path: route.startsWith('/dreams/') ? '/dreams/:dreamId' : '/vision-map' });
@@ -37,7 +43,7 @@ describe('DreamDetailPage (CLAUDE.md page 4: the Vision Map)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    answerEmptyLists([aiPlanApi, dreamApi, goalApi, partnerApi, planShareApi, stepApi, taskApi, visionAreaApi], ['listPartners']);
+    answerEmptyLists([aiPlanApi, communicationApi, dreamApi, goalApi, partnerApi, planApi, planShareApi, reviewApi, stepApi, taskApi, visionAreaApi], ['listPartners', 'listCommunicationMessages']);
     vi.mocked(aiApi.getAiStatus).mockResolvedValue({ available: false, reason: 'OFF', consentGiven: false, dailyLimit: 0, messagesLeftToday: 0 });
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue(areas);
     vi.mocked(dreamApi.listDreams).mockResolvedValue([researcher, marathon]);
@@ -141,4 +147,36 @@ describe('DreamDetailPage (CLAUDE.md page 4: the Vision Map)', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Edit Goal' });
     expect(within(dialog).getByDisplayValue('Prepare one concept note')).toBeInTheDocument();
   });
+
+  it('shows every dream on one timeline from the overview, grouped by vision area (TL-FR-02)', async () => {
+    renderMap('/vision-map');
+    await screen.findByText('Become a researcher');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Timeline' }));
+    expect(currentLocation()).toBe('/vision-map?view=timeline');
+    const timeline = within(await screen.findByRole('region', { name: 'Timeline of all dreams' }));
+    expect(timeline.getByRole('heading', { name: 'Career' })).toBeInTheDocument();
+    expect(timeline.getByRole('heading', { name: 'Health' })).toBeInTheDocument();
+    expect(timeline.getByRole('button', { name: /^Dream D-001 Become a researcher/ })).toBeInTheDocument();
+    // Each dream starts as one bar; its goals are folded away.
+    expect(timeline.queryByRole('button', { name: /^Goal G-001/ })).not.toBeInTheDocument();
+
+    await userEvent.click(timeline.getByRole('button', { name: /^Dream D-001 Become a researcher/ }));
+    expect(currentLocation()).toBe('/dreams/1?view=timeline&edit=dream-1');
+  });
+
+  it('opens the full timeline from a dream, focused on that dream (TL-FR-03)', async () => {
+    renderMap('/dreams/1');
+    await screen.findByRole('tree');
+    await userEvent.click(screen.getByRole('button', { name: 'View full timeline' }));
+    expect(currentLocation()).toBe('/vision-map/timeline?focus=1');
+  });
+
+  it('opens the record named in the link from a timeline bar, then forgets it (TL-FR-27)', async () => {
+    renderMap('/dreams/1?view=timeline&edit=goal-10');
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Goal' });
+    expect(within(dialog).getByDisplayValue('Prepare one concept note')).toBeInTheDocument();
+    await waitFor(() => expect(currentLocation()).toBe('/dreams/1?view=timeline'));
+  });
 });
+

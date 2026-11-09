@@ -3449,3 +3449,177 @@ button:focus-visible,
     scroll-behavior: auto;
   }
 }
+
+/* V16 phase 3: marks on dream rows (TL-FR-13) and completed checks (TL-FR-15). */
+.vm-timeline__marker {
+  position: absolute;
+  top: 2px;
+  z-index: 1;
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  cursor: default;
+}
+
+.vm-timeline__marker:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Legend swatches (TL-FR-22): small samples of each bar treatment. */
+.vm-legend__swatch {
+  display: inline-block;
+  width: 24px;
+  height: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.vm-legend__swatch--dashed {
+  border-left-style: dashed;
+  border-right-style: dashed;
+  border-color: var(--foreground);
+}
+
+.vm-legend__swatch--hatched {
+  background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--foreground) 45%, transparent) 4px 6px);
+}
+
+.vm-legend__swatch--overdue {
+  border-right: 4px solid var(--progress-low);
+}
+
+.vm-legend__swatch--today {
+  width: 2px;
+  height: 16px;
+  border: 0;
+  background: var(--progress-low);
+}
+
+.vm-legend__swatch--busy {
+  background: color-mix(in srgb, var(--progress-mid) 50%, transparent);
+}
+
+.vm-timeline__print-only {
+  display: none;
+}
+
+/* TL-FR-38: a landscape page with every row, the legend and the print date;
+   toolbars and filters stay off paper. */
+@media print {
+  @page {
+    size: landscape;
+  }
+
+  .vm-timeline__toolbar,
+  .vm-timeline-filters,
+  .vm-timeline__toggle,
+  .dream-coach-fab {
+    display: none !important;
+  }
+
+  .vm-timeline__print-only {
+    display: block;
+  }
+
+  .vm-timeline__scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vm-timeline__bar,
+  .vm-timeline__fill,
+  .vm-legend__swatch {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* TL-NFR-01: date header and busy cells share one class each; only their
+   position is set per cell, so hundreds of them cost no extra styling. */
+.vm-timeline__date,
+.vm-timeline__busy {
+  position: absolute;
+  overflow: hidden;
+  white-space: nowrap;
+  border-left: 1px solid var(--border);
+}
+
+.vm-timeline__date {
+  height: 24px;
+  padding: 0 4px;
+  line-height: 24px;
+}
+
+.vm-timeline__date--top {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.vm-timeline__date--bottom {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.vm-timeline__busy {
+  top: 48px;
+  height: 22px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* V16 phase 5: Edit dates (TL-FR-39 to TL-FR-43) and quick add (TL-FR-31). */
+.vm-timeline__bar--movable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.vm-timeline__bar--movable:active {
+  cursor: grabbing;
+}
+
+.vm-timeline__bar--shifted {
+  outline: 2px dashed var(--ring);
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+.vm-timeline__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.vm-timeline__handle--start {
+  left: 0;
+}
+
+.vm-timeline__handle--end {
+  right: 0;
+}
+
+.vm-timeline__add {
+  width: 20px;
+  height: 20px;
+  opacity: 0.6;
+}
+
+.vm-timeline__add:hover,
+.vm-timeline__add:focus-visible {
+  opacity: 1;
+}
+
+@media print {
+  .vm-timeline__handle,
+  .vm-timeline__add {
+    display: none !important;
+  }
+}

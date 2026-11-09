@@ -48,6 +48,12 @@ describe('AppLayout: sidebar, header and shortcuts', () => {
     expect(nav.getByRole('link', { name: 'Tasks' })).not.toHaveAttribute('aria-current');
   });
 
+  it('highlights Timeline, not Vision Map, on the full timeline (TL-FR-05)', () => {
+    renderLayout('/vision-map/timeline');
+    expect(within(sidebar()).getByRole('link', { name: 'Timeline' })).toHaveClass('Mui-selected');
+    expect(within(sidebar()).getByRole('link', { name: 'Vision Map' })).not.toHaveClass('Mui-selected');
+  });
+
   it('keeps the Vision Map highlighted while a dream tree is open', () => {
     renderLayout('/dreams/4');
     // Highlighted on screen. Screen readers are not told (no aria-current): noted as a gap in BRD 12.

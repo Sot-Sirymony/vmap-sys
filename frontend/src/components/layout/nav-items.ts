@@ -3,6 +3,7 @@ import {
   Bot,
   Bug,
   CalendarCheck,
+  ChartGantt,
   CheckSquare,
   ClipboardList,
   Compass,
@@ -51,6 +52,21 @@ export type NavGroup = {
  * the highlighted destination — /dreams itself is still the Dreams list.
  * Shared by the sidebar and the mobile bottom nav so they can never disagree.
  */
+/**
+ * The one destination to highlight: the longest item path the current path
+ * starts with, so /vision-map/timeline lights Timeline, not Vision Map too.
+ */
+export function activeNavTo(pathname: string, items: NavItem[]): string | null {
+  let best: string | null = null;
+  for (const item of items) {
+    const matches = item.to === '/' ? pathname === '/' : pathname.startsWith(item.to);
+    if (matches && (best === null || item.to.length > best.length)) {
+      best = item.to;
+    }
+  }
+  return best;
+}
+
 export function navPathname(pathname: string): string {
   if (/^\/modules\/\d+/.test(pathname)) {
     return '/modules';
@@ -68,6 +84,8 @@ export const navGroups: NavGroup[] = [
       { to: '/vision-areas', label: tr('Vision Areas'), icon: Compass },
       { to: '/dreams', label: tr('Dreams'), icon: MoonStar },
       { to: '/vision-map', label: tr('Vision Map'), icon: Network },
+      // V16 (TL-FR-05): every dream on one calendar.
+      { to: '/vision-map/timeline', label: tr('Timeline'), icon: ChartGantt },
       { to: '/plan', label: tr('Plan'), icon: ListChecks },
       { to: '/modules', label: tr('Modules'), icon: GraduationCap },
       { to: '/assessment', label: tr('Assessment'), icon: Gauge },

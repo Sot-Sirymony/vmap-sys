@@ -20,7 +20,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeSettings } from '@/context/ThemeModeContext';
 import { useI18n } from '@/i18n/I18nContext';
-import { navGroupsFor, navPathname } from './nav-items';
+import { activeNavTo, navGroupsFor, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
 import { tr } from '../../i18n/translate';
@@ -223,6 +223,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
   const location = useLocation();
   const { user } = useAuth();
   const pathname = navPathname(location.pathname);
+  const activeTo = activeNavTo(pathname, navGroupsFor(user?.role).flatMap((group) => group.items));
 
   // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
   // flat list of eleven entries. Collapsed mode drops the labels and keeps a
@@ -245,7 +246,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
             )}
           <List disablePadding>
       {group.items.map((item) => {
-        const isActive = item.to === '/' ? pathname === '/' : pathname.startsWith(item.to);
+        const isActive = item.to === activeTo;
         const button = (
           <ListItemButton
             component={NavLink}

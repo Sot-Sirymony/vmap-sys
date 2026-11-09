@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { aDream, aGoal, aStep, aTask } from '../test/builders';
-import { buildDreamTimeline, defaultExpanded, filterTimelineRows, fromDay, toDay, visibleRows } from './timeline';
+import { aDream, aGoal, aStep, aTask, aVisionArea } from '../test/builders';
+import {
+  buildDreamTimeline, buildMarkers, buildPlanTimeline, busyCounts, defaultExpanded, editLinkFor, expandedForDream, filterTimelineRows, fromDay, parseEditTarget,
+  toDay, visibleRows,
+} from './timeline';
 
 const TODAY = toDay('2026-12-15');
 
@@ -137,3 +140,96 @@ describe('timeline filters and folding', () => {
     expect(keys).toEqual(['dream-1', 'goal-10', 'step-20', 'goal-11', 'step-21']);
   });
 });
+
+describe('every dream on one timeline (TL-FR-32 to TL-FR-34)', () => {
+  const areas = [
+    aVisionArea({ id: 1, name: 'Health', priority: 'LOW' }),
+    aVisionArea({ id: 2, name: 'Career', priority: 'HIGH' }),
+  ];
+  const dreams = [
+    aDream({ id: 1, code: 'D-001', visionAreaId: 1, title: 'Run a marathon', createdAt: '2026-10-01T00:00:00Z' }),
+    aDream({ id: 2, code: 'D-002', visionAreaId: 2, title: 'Write a book', createdAt: '2026-10-01T00:00:00Z' }),
+    aDream({ id: 3, code: 'D-003', visionAreaId: 2, title: 'Lead a team', letterRank: 'A', createdAt: '2026-10-01T00:00:00Z' }),
+    aDream({ id: 4, code: 'D-004', visionAreaId: 99, title: 'Learn to sail', createdAt: '2026-10-01T00:00:00Z' }),
+  ];
+  const goals = [aGoal({ id: 10, dreamId: 3 })];
+
+  it('groups dreams by vision area: areas by priority, dreams by letter rank, unknown areas last', () => {
+    const { rows } = buildPlanTimeline(areas, dreams, goals, [], [], TODAY, 'Unassigned');
+    const dreamRows = rows.filter((row) => row.kind === 'dream');
+    expect(dreamRows.map((row) => [row.groupLabel, row.title])).toEqual([
+      ['Career', 'Lead a team'],
+      ['Career', 'Write a book'],
+      ['Health', 'Run a marathon'],
+      ['Unassigned', 'Learn to sail'],
+    ]);
+    expect(rows.find((row) => row.key === 'goal-10')).toMatchObject({ dreamId: 3, groupKey: 'area-2' });
+  });
+
+  it('opens on one dream with its goals showing and every other dream folded', () => {
+    const { rows } = buildPlanTimeline(areas, dreams, goals, [aStep({ id: 20, goalId: 10 })], [], TODAY);
+    const expanded = expandedForDream(rows, 3);
+    expect([...expanded].sort()).toEqual(['dream-3', 'goal-10']);
+    expect(visibleRows(rows, expanded).map((row) => row.key)).toEqual(['dream-3', 'goal-10', 'step-20', 'dream-2', 'dream-1', 'dream-4']);
+  });
+
+  it('links a bar to its dream map with the record to edit, and reads that back', () => {
+    const link = editLinkFor({ kind: 'step', id: 20, dreamId: 3 });
+    expect(link).toBe('/dreams/3?view=timeline&edit=step-20');
+    expect(parseEditTarget('step-20')).toEqual({ kind: 'step', id: 20 });
+    expect(parseEditTarget('area-2')).toBeNull();
+    expect(parseEditTarget(null)).toBeNull();
+  });
+});
+
+describe('marks and busy periods (TL-FR-13, TL-FR-15, TL-FR-35)', () => {
+  const dream = aDream({ id: 1, commitmentStartDate: '2026-11-01' });
+  const other = aDream({ id: 2 });
+  const goals = [aGoal({ id: 10, dreamId: 1 })];
+  const steps = [aStep({ id: 20, goalId: 10 })];
+  const tasks = [aTask({ id: 30, stepId: 20 })];
+
+  it('collects commitment, milestones, dream reviews and open follow-ups for the dreams shown', () => {
+    const markers = buildMarkers([dream], goals, steps, tasks,
+      [
+        { id: 1, dreamId: 1, title: 'First draft done', achievedOn: '2026-12-01' } as never,
+        { id: 2, dreamId: 2, title: 'Another dream', achievedOn: '2026-12-02' } as never,
+      ],
+      [
+        { id: 5, reviewType: 'WEEKLY', reviewDate: '2026-11-20T09:00:00', relatedDreamId: 1, archived: false } as never,
+        { id: 6, reviewType: 'DAILY', reviewDate: '2026-11-21T09:00:00', archived: false } as never,
+      ],
+      [
+        { id: 7, relatedTaskId: 30, subject: 'Ask for data', status: 'SENT', followUpDate: '2026-11-25', archived: false } as never,
+        { id: 8, relatedGoalId: 10, subject: 'Thanks', status: 'REPLIED', followUpDate: '2026-11-26', archived: false } as never,
+      ]);
+    expect(markers.map((marker) => [marker.type, fromDay(marker.day), marker.label])).toEqual([
+      ['commitment', '2026-11-01', 'Commitment start'],
+      ['review', '2026-11-20', 'WEEKLY'],
+      ['follow-up', '2026-11-25', 'Ask for data'],
+      ['milestone', '2026-12-01', 'First draft done'],
+    ]);
+    expect(buildMarkers([other], goals, steps, tasks, [], [], []).length).toBe(0);
+  });
+
+  it('keeps the day a task was really completed (TL-FR-15)', () => {
+    const { rows } = buildDreamTimeline(dream, goals, steps, [
+      aTask({ id: 30, stepId: 20, dueDate: '2026-12-10', status: 'COMPLETED', completedAt: '2026-12-07T10:00:00Z' }),
+      aTask({ id: 31, stepId: 20, dueDate: '2026-12-10', status: 'IN_PROGRESS', completedAt: null }),
+    ], TODAY);
+    expect(fromDay(rows.find((row) => row.key === 'task-30')!.completedOn!)).toBe('2026-12-07');
+    expect(rows.find((row) => row.key === 'task-31')!.completedOn).toBeNull();
+  });
+
+  it('counts unfinished goals, steps and tasks in every period their bar touches', () => {
+    const { rows } = buildDreamTimeline(dream, goals, steps, [
+      aTask({ id: 30, stepId: 20, startDate: '2026-11-05', dueDate: '2026-12-05' }),
+      aTask({ id: 31, stepId: 20, startDate: '2026-11-10', dueDate: '2026-11-12', status: 'COMPLETED' }),
+    ], TODAY);
+    const november = { start: toDay('2026-11-01'), days: 30 };
+    const december = { start: toDay('2026-12-01'), days: 31 };
+    const counts = busyCounts(rows.filter((row) => row.kind === 'task'), [november, december]);
+    expect(counts).toEqual([1, 1]);
+  });
+});
+

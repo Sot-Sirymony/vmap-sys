@@ -1,4 +1,4 @@
-import type { Dream, Goal, TaskItem, VisionStep } from '../types/vision';
+import type { CommunicationMessage, Dream, Goal, Milestone, Priority, Review, TaskItem, VisionArea, VisionStep } from '../types/vision';
 
 /**
  * V16 (BRD 16.0.0, TL-FR-07 to TL-FR-20): one dream's goals, steps and tasks
@@ -20,6 +20,7 @@ export type WorkedOutReason =
   | 'from-dream'
   | 'from-first-goal'
   | 'from-created'
+  | 'from-today'
   | 'from-last-task'
   | 'from-last-step'
   | 'from-last-goal'
@@ -29,6 +30,11 @@ export type TimelineRow = {
   key: string;
   kind: TimelineKind;
   id: number;
+  /** The dream this row belongs to (its own id for a dream row). */
+  dreamId: number;
+  /** Set on every row of a multi-dream timeline: the vision area it is grouped under (TL-FR-33). */
+  groupKey?: string;
+  groupLabel?: string;
   depth: number;
   parentKey: string | null;
   code: string;
@@ -52,10 +58,12 @@ export type TimelineRow = {
   overrunDetail: string | null;
   archived: boolean;
   hasChildren: boolean;
+  /** Tasks only: the local day it was marked Completed (TL-FR-15). */
+  completedOn: number | null;
 };
 
 /** A record with no usable date: listed, never guessed onto the calendar (TL-FR-14). */
-export type UndatedRow = { key: string; kind: TimelineKind; id: number; code: string; title: string };
+export type UndatedRow = { key: string; kind: TimelineKind; id: number; dreamId: number; code: string; title: string };
 
 export type DreamTimeline = { rows: TimelineRow[]; undated: UndatedRow[] };
 
@@ -193,8 +201,10 @@ export function buildDreamTimeline(
     dreamStart = localDayOf(dream.createdAt);
     dreamStartWhy = 'from-created';
   } else {
-    dreamStart = null;
-    dreamStartWhy = null;
+    // Nothing says when it began (for example a shared plan, which carries
+    // only target dates): it is drawn from today, and says so.
+    dreamStart = today;
+    dreamStartWhy = 'from-today';
   }
   const lastGoal = maxOf(dreamGoals.map((goal) => goalEnd.get(goal.id)?.day ?? null));
   const dreamEnd = dream.targetDate ? toDay(dream.targetDate) : lastGoal;
@@ -204,10 +214,12 @@ export function buildDreamTimeline(
   const rows: TimelineRow[] = [];
   const undated: UndatedRow[] = [];
 
-  function push(row: Omit<TimelineRow, 'start' | 'end' | 'startWorkedOut' | 'endWorkedOut' | 'overdueDays' | 'overrunFrom'>,
+  function push(fields: Omit<TimelineRow, 'start' | 'end' | 'startWorkedOut' | 'endWorkedOut' | 'overdueDays' | 'overrunFrom' | 'dreamId' | 'completedOn'>
+                  & { completedOn?: number | null },
                 span: Span, storedEnd: boolean, parentEnd: number | null) {
+    const row = { ...fields, completedOn: fields.completedOn ?? null, dreamId: dream.id };
     if (span.start === null || span.end === null) {
-      undated.push({ key: row.key, kind: row.kind, id: row.id, code: row.code, title: row.title });
+      undated.push({ key: row.key, kind: row.kind, id: row.id, dreamId: dream.id, code: row.code, title: row.title });
       return false;
     }
     let { start, startWhy } = span;
@@ -218,7 +230,8 @@ export function buildDreamTimeline(
     }
     const overdueDays = storedEnd && span.end < today && !isCompleted(row.status) ? today - span.end : 0;
     const overrunFrom = parentEnd !== null && span.end > parentEnd ? parentEnd + 1 : null;
-    rows.push({ ...row, start, end: span.end, startWorkedOut: startWhy, endWorkedOut: span.endWhy, overdueDays, overrunFrom });
+    // Rolled-up progress arrives with decimals (e.g. 4.17); a bar shows whole percents.
+    rows.push({ ...row, progress: Math.round(row.progress), start, end: span.end, startWorkedOut: startWhy, endWorkedOut: span.endWhy, overdueDays, overrunFrom });
     return true;
   }
 
@@ -274,6 +287,7 @@ export function buildDreamTimeline(
           status: task.status, priority: task.priority, progress: task.progressPercent, owner: task.owner,
           blocked: task.status === 'BLOCKED', blockerReason: task.blockerReason ?? null, overrunDetail: null,
           archived: task.archived, hasChildren: false,
+          completedOn: task.status === 'COMPLETED' && task.completedAt ? localDayOf(task.completedAt) : null,
         }, span, true, stepEndInfo.day);
       }
     }
@@ -331,3 +345,150 @@ export function visibleRows(rows: TimelineRow[], expanded: ReadonlySet<string>):
 export function defaultExpanded(rows: TimelineRow[]): Set<string> {
   return new Set(rows.filter((row) => row.kind === 'dream' || row.kind === 'goal').map((row) => row.key));
 }
+
+const PRIORITY_RANK: Record<Priority, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+/** The top dream first: lettered dreams by letter, then the rest in their usual order. */
+function byLetterRank(dreams: Dream[]) {
+  return dreams
+    .map((dream, index) => ({ dream, index }))
+    .sort((a, b) => {
+      const left = a.dream.letterRank;
+      const right = b.dream.letterRank;
+      if (left && right) return left.localeCompare(right) || a.index - b.index;
+      if (left) return -1;
+      if (right) return 1;
+      return a.index - b.index;
+    })
+    .map(({ dream }) => dream);
+}
+
+/**
+ * TL-FR-32 to TL-FR-34: every dream on one timeline, grouped under its vision
+ * area. Areas go by priority, then name, with dreams that have no known area
+ * last; inside an area, dreams go by letter rank and then their usual order.
+ */
+export function buildPlanTimeline(
+  areas: VisionArea[],
+  dreams: Dream[],
+  goals: Goal[],
+  steps: VisionStep[],
+  tasks: TaskItem[],
+  today: number = todayDay(),
+  unassignedLabel = 'Unassigned',
+): DreamTimeline {
+  const orderedAreas = [...areas].sort((a, b) =>
+    (PRIORITY_RANK[a.priority as Priority] ?? 9) - (PRIORITY_RANK[b.priority as Priority] ?? 9) || a.name.localeCompare(b.name));
+  const groups: { key: string; label: string; dreams: Dream[] }[] = orderedAreas.map((area) => ({
+    key: `area-${area.id}`,
+    label: area.name,
+    dreams: byLetterRank(dreams.filter((dream) => dream.visionAreaId === area.id)),
+  }));
+  const known = new Set(areas.map((area) => area.id));
+  groups.push({ key: 'area-none', label: unassignedLabel, dreams: byLetterRank(dreams.filter((dream) => !known.has(dream.visionAreaId))) });
+
+  const rows: TimelineRow[] = [];
+  const undated: UndatedRow[] = [];
+  for (const group of groups) {
+    for (const dream of group.dreams) {
+      const one = buildDreamTimeline(dream, goals, steps, tasks, today);
+      rows.push(...one.rows.map((row) => ({ ...row, groupKey: group.key, groupLabel: group.label })));
+      undated.push(...one.undated);
+    }
+  }
+  return { rows, undated };
+}
+
+/** TL-FR-34: open on one dream with its goals and steps showing, the rest folded. */
+export function expandedForDream(rows: TimelineRow[], dreamId: number): Set<string> {
+  return new Set(rows
+    .filter((row) => row.dreamId === dreamId && (row.kind === 'dream' || row.kind === 'goal'))
+    .map((row) => row.key));
+}
+
+/**
+ * Where a bar on the overview or full timeline opens: the dream's map, which
+ * opens that record's edit form from the `edit` value (TL-FR-27).
+ */
+export function editLinkFor(target: { kind: TimelineKind; id: number; dreamId: number }) {
+  return `/dreams/${target.dreamId}?view=timeline&edit=${target.kind}-${target.id}`;
+}
+
+/** TL-FR-31: where "+" on the overview or full timeline opens: the dream's tree, on that row's add field. */
+export function addLinkFor(target: { kind: TimelineKind; id: number; dreamId: number }) {
+  return `/dreams/${target.dreamId}?add=${target.kind}-${target.id}`;
+}
+
+/** Reads an `edit` value ("goal-10") back; null when it is not one. */
+export function parseEditTarget(value: string | null): { kind: TimelineKind; id: number } | null {
+  const match = value?.match(/^(dream|goal|step|task)-(\d+)$/);
+  return match ? { kind: match[1] as TimelineKind, id: Number(match[2]) } : null;
+}
+
+/** TL-FR-13: dated things that belong on a dream's row, drawn as small marks. */
+export type TimelineMarkerType = 'commitment' | 'milestone' | 'review' | 'follow-up';
+
+export type TimelineMarker = { key: string; type: TimelineMarkerType; dreamId: number; day: number; label: string };
+
+export const MARKER_TYPES: TimelineMarkerType[] = ['commitment', 'milestone', 'review', 'follow-up'];
+
+/**
+ * The marks for these dreams: commitment start, milestones, reviews linked to
+ * a dream, and follow-up dates of messages still waiting on an answer. A
+ * message counts for a dream when it is linked to the dream, one of its goals,
+ * or a task under one of its goals.
+ */
+export function buildMarkers(
+  dreams: Dream[],
+  goals: Goal[],
+  steps: VisionStep[],
+  tasks: TaskItem[],
+  milestones: Milestone[],
+  reviews: Review[],
+  messages: CommunicationMessage[],
+): TimelineMarker[] {
+  const dreamIds = new Set(dreams.map((dream) => dream.id));
+  const goalDream = new Map(goals.map((goal) => [goal.id, goal.dreamId]));
+  const stepGoal = new Map(steps.map((step) => [step.id, step.goalId]));
+  const taskDream = new Map(tasks.map((task) => [task.id, goalDream.get(stepGoal.get(task.stepId) ?? -1)]));
+  const markers: TimelineMarker[] = [];
+
+  for (const dream of dreams) {
+    if (dream.commitmentStartDate) {
+      markers.push({ key: `commitment-${dream.id}`, type: 'commitment', dreamId: dream.id, day: toDay(dream.commitmentStartDate), label: 'Commitment start' });
+    }
+  }
+  for (const milestone of milestones) {
+    if (dreamIds.has(milestone.dreamId) && milestone.achievedOn) {
+      markers.push({ key: `milestone-${milestone.id}`, type: 'milestone', dreamId: milestone.dreamId, day: toDay(milestone.achievedOn), label: milestone.title });
+    }
+  }
+  for (const review of reviews) {
+    if (!review.archived && review.relatedDreamId && dreamIds.has(review.relatedDreamId) && review.reviewDate) {
+      markers.push({ key: `review-${review.id}`, type: 'review', dreamId: review.relatedDreamId, day: localDayOf(review.reviewDate), label: review.reviewType });
+    }
+  }
+  for (const message of messages) {
+    if (message.archived || !message.followUpDate || message.status === 'CLOSED' || message.status === 'REPLIED') continue;
+    const dreamId = message.relatedDreamId
+      ?? (message.relatedGoalId ? goalDream.get(message.relatedGoalId) : undefined)
+      ?? (message.relatedTaskId ? taskDream.get(message.relatedTaskId) : undefined);
+    if (dreamId !== undefined && dreamIds.has(dreamId)) {
+      markers.push({ key: `follow-up-${message.id}`, type: 'follow-up', dreamId, day: toDay(message.followUpDate), label: message.subject ?? '' });
+    }
+  }
+  return markers.sort((a, b) => a.day - b.day);
+}
+
+/**
+ * TL-FR-35: how many unfinished goals, steps and tasks are under way in each
+ * period, for the busy band. A row counts in every period its bar touches.
+ */
+export function busyCounts(rows: TimelineRow[], periods: { start: number; days: number }[]): number[] {
+  const work = rows.filter((row) => row.kind !== 'dream' && row.status !== 'COMPLETED');
+  return periods.map((period) => {
+    const periodEnd = period.start + period.days - 1;
+    return work.filter((row) => row.start <= periodEnd && row.end >= period.start).length;
+  });
+}
+

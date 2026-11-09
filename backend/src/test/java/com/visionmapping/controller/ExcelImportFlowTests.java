@@ -82,6 +82,44 @@ class ExcelImportFlowTests {
                 .andExpect(jsonPath("$[0].title").value("Search PubMed"));
     }
 
+    /** V16 (TL-FR-49): the export adds a week-by-week Timeline sheet after Tasks; import ignores it. */
+    @Test
+    void exportIncludesATimelineSheetWithWeekBarsAfterTasks() throws Exception {
+        String author = registerAndToken("timeline-export");
+        buildSampleHierarchy(author);
+
+        byte[] workbook = mockMvc.perform(post("/api/excel/export").header("Authorization", "Bearer " + author))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+
+        try (XSSFWorkbook book = new XSSFWorkbook(new ByteArrayInputStream(workbook))) {
+            assertThat(book.getSheetIndex("Timeline")).isEqualTo(book.getSheetIndex("Tasks") + 1);
+            Sheet timeline = book.getSheet("Timeline");
+            Row header = timeline.getRow(0);
+            assertThat(header.getCell(0).getStringCellValue()).isEqualTo("Level");
+            assertThat(header.getCell(4).getStringCellValue()).isEqualTo("End");
+            // Week columns start on a Monday and hold real dates.
+            LocalDate firstWeek = header.getCell(5).getLocalDateTimeCellValue().toLocalDate();
+            assertThat(firstWeek.getDayOfWeek()).isEqualTo(java.time.DayOfWeek.MONDAY);
+
+            assertThat(timeline.getRow(1).getCell(0).getStringCellValue()).isEqualTo("Dream");
+            assertThat(timeline.getRow(2).getCell(0).getStringCellValue()).isEqualTo("Goal");
+            assertThat(timeline.getRow(3).getCell(0).getStringCellValue()).isEqualTo("Step");
+            Row task = timeline.getRow(4);
+            assertThat(task.getCell(0).getStringCellValue()).isEqualTo("Task");
+            assertThat(task.getCell(2).getStringCellValue()).isEqualTo("      Search PubMed");
+            // No start date: the task starts on its due date.
+            LocalDate due = LocalDate.now().plusDays(10);
+            assertThat(task.getCell(3).getLocalDateTimeCellValue().toLocalDate()).isEqualTo(due);
+            assertThat(task.getCell(4).getLocalDateTimeCellValue().toLocalDate()).isEqualTo(due);
+            // The step starts with its first task; its end is its own target date.
+            assertThat(timeline.getRow(3).getCell(3).getLocalDateTimeCellValue().toLocalDate()).isEqualTo(due);
+
+            // One rule shades the weeks, one marks the current week.
+            assertThat(timeline.getSheetConditionalFormatting().getNumConditionalFormattings()).isEqualTo(2);
+        }
+    }
+
     /**
      * FR-54.2 / BR-43: the conflict worksheet's private note must never
      * appear in an exported workbook, in any sheet — checked across every

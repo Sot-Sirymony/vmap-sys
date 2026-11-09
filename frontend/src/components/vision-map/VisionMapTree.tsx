@@ -73,6 +73,8 @@ type VisionMapTreeProps = {
    * timeline uses the same forms. A new `nonce` repeats the same request.
    */
   editRequest?: { kind: 'dream' | 'goal' | 'step' | 'task'; id: number; nonce: number } | null;
+  /** V16 (TL-FR-31): unfold a dream, goal or step and focus its "add" field. */
+  addRequest?: { kind: 'dream' | 'goal' | 'step'; id: number; nonce: number } | null;
 };
 
 const WORK_STATUSES: { value: WorkStatus; label: string }[] = [
@@ -125,7 +127,7 @@ type RowInfo = {
  */
 export function VisionMapTree({
   dream, visionAreaName, goals, steps, tasks, token, onDataChange, onDreamPermanentlyDeleted,
-  priorityFilter = '', statusFilter = '', editRequest = null,
+  priorityFilter = '', statusFilter = '', editRequest = null, addRequest = null,
 }: VisionMapTreeProps) {
   const { user } = useAuth();
   const { settings: themeSettings, resolvedMode } = useThemeSettings();
@@ -776,6 +778,18 @@ export function VisionMapTree({
   function cancelTaskEdit() {
     setEditingTaskId(null);
   }
+
+  // V16 (TL-FR-31): the timeline's "+" lands here, on the row's own add field.
+  useEffect(() => {
+    if (!addRequest) {
+      return;
+    }
+    // Row keys: 'dream' for the dream itself, then g12 / s34 for goals and steps.
+    const key = addRequest.kind === 'dream' ? 'dream' : `${addRequest.kind[0]}${addRequest.id}`;
+    expand(key);
+    setTimeout(() => addRefs.current.get(key)?.focus(), 60);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addRequest?.nonce]);
 
   // V16 (TL-FR-27): a bar on the timeline opens the same form as the tree.
   useEffect(() => {

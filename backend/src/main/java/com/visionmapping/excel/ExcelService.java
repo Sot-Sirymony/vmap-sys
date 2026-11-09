@@ -147,25 +147,33 @@ public class ExcelService {
                             .map(item -> List.of(item.id(), item.code(), item.name(), value(item.description()), item.priority(), item.status()))
                             .toList(), headerStyle);
 
+            List<DreamResponse> dreams = dreamService.listDreams(ArchiveFilter.ACTIVE_ONLY);
+            List<GoalResponse> goals = goalService.listGoals(ArchiveFilter.ACTIVE_ONLY);
+            List<VisionStepResponse> steps = visionStepService.listSteps(ArchiveFilter.ACTIVE_ONLY);
+            List<TaskItemResponse> tasks = taskItemService.listTasks(ArchiveFilter.ACTIVE_ONLY);
+
             writeRows(workbook, DREAMS, List.of("ID", CODE, "Vision Area ID", TITLE, "Why Important", "Success Definition", TYPE, PRIORITY, "Target Date", STATUS),
-                    dreamService.listDreams(ArchiveFilter.ACTIVE_ONLY).stream()
+                    dreams.stream()
                             .map(item -> List.of(item.id(), item.code(), item.visionAreaId(), item.title(), value(item.whyImportant()), value(item.successDefinition()), item.dreamType(), item.priority(), value(item.targetDate()), item.status()))
                             .toList(), headerStyle);
 
             writeRows(workbook, GOALS, List.of("ID", CODE, "Dream ID", TITLE, "Success Criteria", PRIORITY, "Target Date", STATUS, "Progress"),
-                    goalService.listGoals(ArchiveFilter.ACTIVE_ONLY).stream()
+                    goals.stream()
                             .map(item -> List.of(item.id(), item.code(), item.dreamId(), item.title(), value(item.successCriteria()), item.priority(), value(item.targetDate()), item.status(), item.progressPercent()))
                             .toList(), headerStyle);
 
             writeRows(workbook, STEPS, List.of("ID", CODE, "Goal ID", TITLE, "Sequence", "Complex", PRIORITY, "Target Date", STATUS, "Progress", "Owner"),
-                    visionStepService.listSteps(ArchiveFilter.ACTIVE_ONLY).stream()
+                    steps.stream()
                             .map(item -> List.of(item.id(), item.code(), item.goalId(), item.title(), item.sequenceNumber(), item.complex(), item.priority(), value(item.targetDate()), item.status(), item.progressPercent(), value(item.owner())))
                             .toList(), headerStyle);
 
             writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action", "Energy"),
-                    taskItemService.listTasks(ArchiveFilter.ACTIVE_ONLY).stream()
+                    tasks.stream()
                             .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction()), value(item.energyDemand())))
                             .toList(), headerStyle);
+
+            // V16 (TL-FR-49): the same plan as weeks, for reading and printing in Excel. Not imported.
+            TimelineSheet.write(workbook, headerStyle, TimelineSheet.lines(dreams, goals, steps, tasks));
 
             writeRows(workbook, "Partners", List.of("ID", CODE, "Name", "Role", "Organization", "Email", "Support Type", "Offer Type", STATUS, "Notes"),
                     partnerService.listPartners(Pageable.unpaged(), ArchiveFilter.ACTIVE_ONLY, null).stream()
@@ -196,7 +204,8 @@ public class ExcelService {
                     List.of("Import", "Use this workbook as a clean template. Keep required sheet names and header rows."),
                     List.of("Export", "Export creates a new workbook and does not overwrite the original workbook."),
                     List.of(STATUS, "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
-                    List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL.")
+                    List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL."),
+                    List.of(TimelineSheet.NAME, "A read-only picture of the plan by week. Shaded weeks follow the Start and End dates; the current week is marked. Import ignores this sheet.")
             ), headerStyle);
 
             addDropdown(workbook.getSheet(VISION_AREAS), 4, "LOW,MEDIUM,HIGH,CRITICAL");
