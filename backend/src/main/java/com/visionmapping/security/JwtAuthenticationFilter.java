@@ -1,5 +1,9 @@
 package com.visionmapping.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.visionmapping.exception.ErrorResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import java.util.Optional;
 import io.jsonwebtoken.ExpiredJwtException;
 import com.visionmapping.security.audit.SecurityOutcome;
@@ -43,6 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(
@@ -81,9 +86,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             log.debug("Rejecting request with invalid JWT: {}", exception.getMessage());
             securityEvents.record(SecurityEventType.INVALID_TOKEN, SecurityOutcome.DENIED, null, null,
                     exception.getClass().getSimpleName());
+        } catch (RuntimeException checkFailed) {
+            // V10 (SEC-10-01): the session could not be checked (database down,
+            // timeout). Fail closed: refuse the request here rather than let it
+            // continue, even to an endpoint that would have allowed anonymous use.
+            refuseUnchecked(request, response, checkFailed);
+            return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void refuseUnchecked(HttpServletRequest request, HttpServletResponse response, RuntimeException cause)
+            throws IOException {
+        ErrorResponse body = ErrorResponse.of(HttpStatus.SERVICE_UNAVAILABLE,
+                "We could not check your sign-in just now. Try again in a moment.", request.getRequestURI());
+        log.error("Could not check the session on {} {} [ref {}]", request.getMethod(), request.getRequestURI(),
+                body.reference(), cause);
+        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        objectMapper.writeValue(response.getOutputStream(), body);
     }
 
     private static boolean belongsTo(AuthSession session, String email) {

@@ -8,7 +8,6 @@ import com.visionmapping.exception.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -45,12 +44,6 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
                 request.getMethod() + " " + request.getRequestURI());
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getOutputStream(), new ErrorResponse(
-                Instant.now(),
-                HttpStatus.FORBIDDEN.value(),
-                HttpStatus.FORBIDDEN.getReasonPhrase(),
-                "You do not have permission to perform this action.",
-                request.getRequestURI()
-        ));
+        objectMapper.writeValue(response.getOutputStream(), ErrorResponse.of(HttpStatus.FORBIDDEN, "You do not have permission to perform this action.", request.getRequestURI()));
     }
 }

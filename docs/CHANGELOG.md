@@ -230,7 +230,7 @@ Implements [`VMS_BRD_V11.0.0.md`](VMS_BRD_V11.0.0.md): AI plan builder improveme
   assistant links to Build my plan for each.
 - 15 more Khmer drafts.
 
-## [10.0.0] — In progress (phases 1 to 6 of 7 built)
+## [10.0.0] — In progress (phases 1 to 6 built; phase 7 in part)
 
 Implements [VMS_BRD_V10.0.0](VMS_BRD_V10.0.0.md): security hardening to the OWASP Top 10:2025.
 No new user features.
@@ -415,6 +415,31 @@ which tells a caller an email has an account. Fixing it properly needs email ver
   frontend: 446.
 - **Not done:** an AI budget-spike alert (SEC-09-04 lists it); the V9 80% budget warning still
   applies.
+
+### Phase 7, part A: error handling, rate limits and passwords
+
+- **Added** a 12-character `reference` to every error response (SEC-10-02). A 500 or 503
+  logs its real cause under the same reference; the client sees only a safe message, and
+  the frontend shows the reference for server faults so the user can report it.
+- **Fixed** a failed session check (database down or timing out) let the exception escape
+  the token filter. It is now refused with 503 before any endpoint runs, public ones
+  included (SEC-10-01, SAC-14). Database failures elsewhere answer 503 instead of 500.
+- **Added** timeouts for the mail server (10 s) and the database (connection 5 s, query
+  30 s); Claude (60 s) and Redis (0.5 s) already had them (SEC-10-04).
+- **Added** `RequestRateLimiter` (SEC-06-02): registration per network, join codes per
+  account and per network, share link openings per network and Excel imports per account,
+  each answering 429 with `Retry-After`. The AI daily limit now sends `Retry-After` too.
+  Join codes already met SEC-06-03 (about 40 bits, replaceable, dead when archived).
+- **Added** `PasswordPolicy` (SEC-07-06): common and breached passwords, the account's own
+  email and the app's name are refused at registration, password change and reset.
+  Tests now use an uncommon password instead of `Password123`.
+- Checked, no change needed: cache keys always name the user and fail without one
+  (SEC-10-05, now with a unit test); imports, cascades and account deletion already run in
+  one transaction (SEC-10-03); failed Claude calls return only a generic message.
+- Tests: `ErrorHandlingFlowTests`, `RateLimitFlowTests`, `RequestRateLimiterTest`,
+  `PasswordPolicyTest`, `UserScopedKeyGeneratorTest` (SEC-10-06).
+- Not yet done in Phase 7: two-factor sign-in (SEC-07-07), the threat model (SEC-06-01),
+  abuse cases in acceptance criteria (SEC-06-04) and the final ASVS Level 2 check.
 
 ### Phase 6: supply chain
 

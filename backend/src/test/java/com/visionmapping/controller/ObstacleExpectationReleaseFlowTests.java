@@ -123,7 +123,7 @@ class ObstacleExpectationReleaseFlowTests {
                         .content(json(Map.of(
                                 "fullName", "FR-61 Test User",
                                 "email", uniqueEmail(prefix),
-                                "password", "Password123"
+                                "password", "Steady-Harbor-Lamp-42"
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn();

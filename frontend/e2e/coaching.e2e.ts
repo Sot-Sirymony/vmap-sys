@@ -37,11 +37,11 @@ test('admin, coach and participant run a cohort end to end', async ({ browser })
     await expect(page.getByLabel('Cohort join code (optional)')).toHaveValue(code);
     await page.getByLabel('Full name').fill('Pat Participant');
     await page.getByLabel('Email', { exact: true }).fill(participantEmail);
-    await page.locator('input[name=password]').fill('Password123');
-    await page.locator('input[name=confirmPassword]').fill('Password123');
+    await page.locator('input[name=password]').fill('Steady-Harbor-Lamp-42');
+    await page.locator('input[name=confirmPassword]').fill('Steady-Harbor-Lamp-42');
     await page.getByRole('button', { name: 'Create account' }).click();
     await page.waitForURL(/login/);
-    const { token } = await api<{ token: string }>(null, '/auth/login', 'POST', { email: participantEmail, password: 'Password123' });
+    const { token } = await api<{ token: string }>(null, '/auth/login', 'POST', { email: participantEmail, password: 'Steady-Harbor-Lamp-42' });
     participant = { email: participantEmail, token } as Seed;
     await api(token, '/fear-entries', 'POST', { fear: 'Secret fear', worstCase: 'x', likelihood: 'LOW', firstTest: 'y' });
 
@@ -87,7 +87,7 @@ test('admin, coach and participant run a cohort end to end', async ({ browser })
     await expectNoAccessibilityViolations(coachPage);
   } finally {
     if (participant) {
-      await api(participant.token, '/account/delete', 'POST', { password: 'Password123' });
+      await api(participant.token, '/account/delete', 'POST', { password: 'Steady-Harbor-Lamp-42' });
     }
     await deleteSeedAccount(coach);
     await deleteSeedAccount(admin);

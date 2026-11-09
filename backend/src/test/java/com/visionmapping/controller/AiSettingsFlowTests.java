@@ -136,7 +136,7 @@ class AiSettingsFlowTests {
     private String register(String prefix) throws Exception {
         String email = prefix.contains("@") ? prefix : prefix + "-" + System.nanoTime() + "@example.com";
         String content = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "AI Admin", "email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("fullName", "AI Admin", "email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

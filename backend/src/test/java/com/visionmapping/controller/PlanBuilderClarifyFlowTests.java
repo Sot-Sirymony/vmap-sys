@@ -266,7 +266,7 @@ class PlanBuilderClarifyFlowTests {
 
     private String register(String email) throws Exception {
         String content = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Clarify Tester", "email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Clarify Tester", "email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

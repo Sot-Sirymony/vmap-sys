@@ -27,6 +27,12 @@ them emailed as well.
 | Area | Control |
 | --- | --- |
 | Sign-in | BCrypt passwords; 5 wrong passwords lock an email for 15 minutes; disabled accounts refused |
+| Passwords | At least 8 characters; common and breached passwords, the account's own email and the app's name are refused (NIST 800-63B, no other composition rules) |
+| Rate limits | 429 with `Retry-After` for sign-in, password reset, registration, join codes, share link openings, Excel import and AI requests (daily limit; the monthly budget cap stays) |
+| Join codes | 8 characters from a 31-letter alphabet (about 40 bits); an admin can replace one; they stop working when the cohort is archived |
+| Errors | Clients get a safe message and a 12-character reference; the cause, SQL and stack traces go only to the server log under the same reference |
+| Failing closed | If a session cannot be checked (database down or timing out), the request is refused with 503, even on a public endpoint; a cache failure only slows the app, and cache keys always name the user |
+| Timeouts | Claude 60 s; mail 10 s; database connection 5 s and query 30 s; Redis 0.5 s |
 | Sessions | 30-minute access tokens in memory; rotating refresh tokens; reuse ends the session; logout, password change and reset end sessions on the server |
 | Access control | Every record checked against its owner (another user's record answers 404); admin and coach routes refused by role; automatic sweep test over every route |
 | Headers | CSP, HSTS, frame protection, nosniff, Referrer-Policy and Permissions-Policy on the API and the frontend |

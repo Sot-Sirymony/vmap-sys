@@ -324,7 +324,7 @@ class SupportingResourceFlowTests {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("fullName", "Support Test User", "email", email,
-                                "password", "Password123"))))
+                                "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn();
         return read(result).get("token").asText();

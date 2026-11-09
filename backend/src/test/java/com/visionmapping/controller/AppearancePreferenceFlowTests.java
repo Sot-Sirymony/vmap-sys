@@ -128,7 +128,7 @@ class AppearancePreferenceFlowTests {
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appearance.themeAccent").value("STEEL"))
                 .andExpect(jsonPath("$.appearance.themeMode").value("DARK"));
@@ -205,7 +205,7 @@ class AppearancePreferenceFlowTests {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "fullName", "Appearance Test User",
                                 "email", email,
-                                "password", "Password123"
+                                "password", "Steady-Harbor-Lamp-42"
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn();

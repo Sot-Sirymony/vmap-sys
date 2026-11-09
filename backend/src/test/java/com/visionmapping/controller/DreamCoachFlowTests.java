@@ -213,7 +213,7 @@ class DreamCoachFlowTests {
                 .andReturn().getResponse().getContentAsString();
         assertThat(export).contains("aiMessages").contains("Hello").contains("GIVEN");
 
-        send(post("/api/account/delete"), user, Map.of("password", "Password123")).andExpect(status().is2xxSuccessful());
+        send(post("/api/account/delete"), user, Map.of("password", "Steady-Harbor-Lamp-42")).andExpect(status().is2xxSuccessful());
         assertThat(jdbcTemplate.queryForObject("select count(*) from ai_messages where user_id = ?", Integer.class, userId)).isZero();
         assertThat(jdbcTemplate.queryForObject("select user_id from ai_usage_logs where id = ?", Long.class, logId)).isNull();
     }
@@ -334,7 +334,7 @@ class DreamCoachFlowTests {
     }
 
     private String consented(String email, String joinCode) throws Exception {
-        Map<String, Object> body = new HashMap<>(Map.of("fullName", "AI Tester", "email", email, "password", "Password123"));
+        Map<String, Object> body = new HashMap<>(Map.of("fullName", "AI Tester", "email", email, "password", "Steady-Harbor-Lamp-42"));
         if (joinCode != null) {
             body.put("joinCode", joinCode);
         }
@@ -360,7 +360,7 @@ class DreamCoachFlowTests {
 
     private String register(String email) throws Exception {
         String content = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "AI Tester", "email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("fullName", "AI Tester", "email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();
@@ -368,7 +368,7 @@ class DreamCoachFlowTests {
 
     private String login(String email) throws Exception {
         String content = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

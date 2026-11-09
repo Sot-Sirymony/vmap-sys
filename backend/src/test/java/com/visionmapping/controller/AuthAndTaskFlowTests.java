@@ -70,7 +70,7 @@ class AuthAndTaskFlowTests {
                         .content(json(Map.of(
                                 "fullName", "Test User",
                                 "email", uniqueEmail("register"),
-                                "password", "Password123"
+                                "password", "Steady-Harbor-Lamp-42"
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
@@ -143,7 +143,7 @@ class AuthAndTaskFlowTests {
                         .content(json(Map.of(
                                 "fullName", "Flow Test User",
                                 "email", uniqueEmail(prefix),
-                                "password", "Password123"
+                                "password", "Steady-Harbor-Lamp-42"
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn();

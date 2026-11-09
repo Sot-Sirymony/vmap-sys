@@ -49,7 +49,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class AccountAndProgressFlowTests {
 
     private static final LocalDate TODAY = LocalDate.now();
-    private static final String PASSWORD = "Password123";
+    private static final String PASSWORD = "Steady-Harbor-Lamp-42";
 
     @Autowired
     private MockMvc mockMvc;

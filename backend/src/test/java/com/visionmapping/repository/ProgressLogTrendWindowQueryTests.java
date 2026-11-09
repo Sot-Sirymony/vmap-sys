@@ -80,7 +80,7 @@ class ProgressLogTrendWindowQueryTests {
     private String registerAndToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("fullName", "Window Test",
-                                "email", "window-" + System.nanoTime() + "@example.com", "password", "Password123"))))
+                                "email", "window-" + System.nanoTime() + "@example.com", "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("token").asText();
     }

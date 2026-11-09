@@ -57,11 +57,10 @@ class EffectiveJavaRulesTest {
      * (Items 5 and 59). These files may keep doing it for good: JPA callbacks
      * cannot take a bean, and error bodies only stamp the moment they are sent.
      */
+    // An error answer's timestamp is set in one place, ErrorResponse.of (V10 SEC-10-02).
     private static final Set<String> CLOCK_ALLOWED = Set.of(
             "entity/BaseAuditableEntity.java",
-            "exception/GlobalExceptionHandler.java",
-            "security/RestAccessDeniedHandler.java",
-            "security/RestAuthenticationEntryPoint.java");
+            "exception/ErrorResponse.java");
 
     /** Emptied in Phase 5 (8 Nov 2026); kept as a ratchet so none come back. */
     private static final Set<String> KNOWN_DIRECT_CLOCK_READS = Set.of();

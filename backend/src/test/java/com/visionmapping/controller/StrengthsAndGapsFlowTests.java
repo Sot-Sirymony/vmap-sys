@@ -283,7 +283,7 @@ class StrengthsAndGapsFlowTests {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "fullName", "V8.1 Test User",
                                 "email", prefix + "-" + System.nanoTime() + "@example.com",
-                                "password", "Password123"))))
+                                "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

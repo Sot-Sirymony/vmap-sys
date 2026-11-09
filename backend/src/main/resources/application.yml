@@ -29,6 +29,19 @@ spring:
           auth: true
           starttls:
             enable: true
+          # V10 (SEC-10-04): JavaMail waits forever by default. A slow or dead
+          # mail server must not hold a request thread or the reminder job.
+          connectiontimeout: ${MAIL_CONNECT_TIMEOUT_MS:10000}
+          timeout: ${MAIL_READ_TIMEOUT_MS:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT_MS:10000}
+  # V10 (SEC-10-04): waiting for a database connection or a query has a limit,
+  # so an unreachable database answers 503 instead of hanging the request.
+  datasource:
+    hikari:
+      connection-timeout: ${DB_CONNECT_TIMEOUT_MS:5000}
+  jpa:
+    properties:
+      jakarta.persistence.query.timeout: ${DB_QUERY_TIMEOUT_MS:30000}
 
 server:
   port: ${PORT:8080}
@@ -96,6 +109,18 @@ app:
       failed-logins-per-account: ${SECURITY_ALERT_FAILED_LOGINS_PER_ACCOUNT:10}
       failed-logins-per-ip: ${SECURITY_ALERT_FAILED_LOGINS_PER_IP:50}
       refusals-per-user: ${SECURITY_ALERT_REFUSALS_PER_USER:20}
+    # V10 (SEC-06-02): repetition limits. Registration and share links count
+    # per network address, join codes per address and per account, imports
+    # per account. Over a limit the API answers 429 with Retry-After.
+    rate-limit:
+      registration-per-ip: ${RATE_LIMIT_REGISTRATION_PER_IP:10}
+      registration-window-minutes: ${RATE_LIMIT_REGISTRATION_WINDOW:60}
+      join-code-per-key: ${RATE_LIMIT_JOIN_CODE:10}
+      join-code-window-minutes: ${RATE_LIMIT_JOIN_CODE_WINDOW:15}
+      shared-plan-per-ip: ${RATE_LIMIT_SHARED_PLAN_PER_IP:30}
+      shared-plan-window-minutes: ${RATE_LIMIT_SHARED_PLAN_WINDOW:1}
+      excel-import-per-user: ${RATE_LIMIT_EXCEL_IMPORT:10}
+      excel-import-window-minutes: ${RATE_LIMIT_EXCEL_IMPORT_WINDOW:60}
     login:
       max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
       max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}
@@ -291,3 +316,12 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+# V10 (SEC-06-02): the suite registers hundreds of users from one address.
+# RequestRateLimiterTest and RateLimitFlowTests check the limits themselves.
+app:
+  security:
+    rate-limit:
+      registration-per-ip: 1000000
+      join-code-per-key: 1000000
+      shared-plan-per-ip: 1000000
+      excel-import-per-user: 1000000

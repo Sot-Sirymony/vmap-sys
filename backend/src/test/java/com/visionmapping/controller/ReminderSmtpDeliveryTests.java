@@ -63,7 +63,7 @@ class ReminderSmtpDeliveryTests {
         String email = "smtp-" + System.nanoTime() + "@example.com";
         String token = objectMapper.readTree(mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Smtp User", "email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Smtp User", "email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString()).get("token").asText();
         mockMvc.perform(put("/api/account/reminders")

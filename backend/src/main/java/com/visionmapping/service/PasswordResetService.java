@@ -12,6 +12,7 @@ import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.PasswordResetTokenRepository;
 import com.visionmapping.service.mail.PasswordResetMailer;
 import com.visionmapping.service.support.LoginAttemptLimiter;
+import com.visionmapping.service.support.PasswordPolicy;
 import com.visionmapping.service.support.PasswordResetRateLimiter;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -66,6 +67,7 @@ public class PasswordResetService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
+    private final PasswordPolicy passwordPolicy;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -151,6 +153,7 @@ public class PasswordResetService {
         }
 
         AppUser user = token.getUser();
+        passwordPolicy.check(request.newPassword(), user.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         appUserRepository.save(user);
 

@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @ActiveProfiles("test")
 class CoachingFlowTests {
 
-    private static final String PASSWORD = "Password123";
+    private static final String PASSWORD = "Steady-Harbor-Lamp-42";
 
     @Autowired
     private MockMvc mockMvc;

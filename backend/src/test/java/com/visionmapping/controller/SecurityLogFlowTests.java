@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @ActiveProfiles("test")
 class SecurityLogFlowTests {
 
-    private static final String PASSWORD = "Password123";
+    private static final String PASSWORD = "Steady-Harbor-Lamp-42";
     private static final AtomicInteger NEXT_IP = new AtomicInteger();
 
     @Autowired

@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.service.support.PasswordPolicy;
 import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.service.support.LoginAttemptLimiter;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,7 +61,7 @@ class AuthServicePasswordChangeTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, userScope, cohortService, loginAttemptLimiter, authSessionService, securityEvents);
+        authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, userScope, cohortService, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy());
         user = AppUser.builder()
                 .id(7L)
                 .fullName("Pat Owner")

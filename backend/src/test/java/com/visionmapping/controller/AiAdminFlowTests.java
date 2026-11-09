@@ -224,7 +224,7 @@ class AiAdminFlowTests {
     }
 
     private String register(String email, String joinCode) throws Exception {
-        Map<String, Object> body = new HashMap<>(Map.of("fullName", "Admin Tester", "email", email, "password", "Password123"));
+        Map<String, Object> body = new HashMap<>(Map.of("fullName", "Admin Tester", "email", email, "password", "Steady-Harbor-Lamp-42"));
         if (joinCode != null) {
             body.put("joinCode", joinCode);
         }
@@ -237,7 +237,7 @@ class AiAdminFlowTests {
 
     private String login(String email) throws Exception {
         String content = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

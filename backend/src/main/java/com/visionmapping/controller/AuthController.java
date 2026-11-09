@@ -1,5 +1,6 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.dto.request.ChangePasswordRequest;
 import com.visionmapping.dto.request.ForgotPasswordRequest;
 import com.visionmapping.dto.request.LoginRequest;
@@ -27,10 +28,17 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final RequestRateLimiter rateLimiter;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
+    public AuthResponse register(@Valid @RequestBody RegisterRequest request, HttpServletRequest http) {
+        // V10 (SEC-06-02): new accounts and join codes are both limited per network address.
+        String clientIp = ClientIp.of(http);
+        rateLimiter.check(RequestRateLimiter.Action.REGISTRATION, clientIp);
+        if (request.joinCode() != null && !request.joinCode().isBlank()) {
+            rateLimiter.check(RequestRateLimiter.Action.JOIN_CODE, "ip:" + clientIp);
+        }
         return authService.register(request);
     }
 

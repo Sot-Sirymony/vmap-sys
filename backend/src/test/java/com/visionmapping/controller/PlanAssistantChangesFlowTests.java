@@ -296,7 +296,7 @@ class PlanAssistantChangesFlowTests {
     private String register(String prefix) throws Exception {
         String content = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("fullName", "Changes Tester",
-                                "email", prefix + "-" + System.nanoTime() + "@example.com", "password", "Password123"))))
+                                "email", prefix + "-" + System.nanoTime() + "@example.com", "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

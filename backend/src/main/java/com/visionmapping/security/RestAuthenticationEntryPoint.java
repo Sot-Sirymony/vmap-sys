@@ -5,7 +5,6 @@ import com.visionmapping.exception.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -49,12 +48,6 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
         // Deliberately generic: the underlying exception distinguishes "no token"
         // from "expired" from "bad signature", and echoing that back tells an
         // attacker which of their guesses was closer.
-        objectMapper.writeValue(response.getOutputStream(), new ErrorResponse(
-                Instant.now(),
-                HttpStatus.UNAUTHORIZED.value(),
-                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                "Authentication required.",
-                request.getRequestURI()
-        ));
+        objectMapper.writeValue(response.getOutputStream(), ErrorResponse.of(HttpStatus.UNAUTHORIZED, "Authentication required.", request.getRequestURI()));
     }
 }

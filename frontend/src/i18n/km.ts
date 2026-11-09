@@ -2349,4 +2349,16 @@ export const km: Record<string, string> = {
   'This profile is too long to save. Remove a few items that are recorded only.': 'ប្រវត្តិរូបនេះវែងពេកក្នុងការរក្សាទុក។ សូមដកធាតុខ្លះដែលកត់ត្រាតែប៉ុណ្ណោះចេញ។',
   'That module\'s exercise is full. Remove a row there first.': 'លំហាត់របស់មេរៀននោះពេញហើយ។ សូមដកជួរមួយនៅទីនោះចេញជាមុនសិន។',
   'Give a real example as evidence.': 'សូមផ្តល់ឧទាហរណ៍ពិតមួយជាភស្តុតាង។',
+  // V10 Phase 7: error references, rate limits and the password check.
+  '{message} (Reference: {reference})': '{message} (លេខយោង៖ {reference})',
+  'Something went wrong on our side. If it keeps happening, report it with the reference.': 'មានបញ្ហានៅខាងយើង។ ប្រសិនបើវាកើតឡើងម្តងទៀត សូមរាយការណ៍ជាមួយលេខយោង។',
+  'The service is busy or briefly unavailable. Try again in a moment.': 'សេវាកម្មកំពុងរវល់ ឬមិនអាចប្រើបានមួយរយៈ។ សូមព្យាយាមម្តងទៀតបន្តិចទៀត។',
+  'We could not check your sign-in just now. Try again in a moment.': 'យើងមិនអាចពិនិត្យការចូលរបស់អ្នកនៅពេលនេះបានទេ។ សូមព្យាយាមម្តងទៀតបន្តិចទៀត។',
+  'That password is too common and easy to guess. Choose a longer or less usual one.': 'ពាក្យសម្ងាត់នោះសាមញ្ញពេក ហើយងាយទាយ។ សូមជ្រើសរើសពាក្យសម្ងាត់ដែលវែងជាង ឬមិនសូវធម្មតា។',
+  'Do not use the app\'s name in your password.': 'កុំប្រើឈ្មោះកម្មវិធីក្នុងពាក្យសម្ងាត់របស់អ្នក។',
+  'Do not use your email address in your password.': 'កុំប្រើអាសយដ្ឋានអ៊ីមែលរបស់អ្នកក្នុងពាក្យសម្ងាត់។',
+  'Too many new accounts from this network. Try again later.': 'មានគណនីថ្មីច្រើនពេកពីបណ្តាញនេះ។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។',
+  'Too many join code attempts. Try again later.': 'ការសាកល្បងលេខកូដចូលរួមច្រើនដងពេក។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។',
+  'Too many requests for shared plans from this network. Try again in a minute.': 'មានសំណើសម្រាប់ផែនការដែលបានចែករំលែកច្រើនពេកពីបណ្តាញនេះ។ សូមព្យាយាមម្តងទៀតក្នុងរយៈពេលមួយនាទី។',
+  'Too many imports in a short time. Try again later.': 'មានការនាំចូលច្រើនពេកក្នុងរយៈពេលខ្លី។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។',
 };

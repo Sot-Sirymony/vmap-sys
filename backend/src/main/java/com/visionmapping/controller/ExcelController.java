@@ -1,5 +1,7 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.util.UserScope;
+import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.dto.response.ExcelImportSummaryResponse;
 import com.visionmapping.excel.ExcelService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class ExcelController {
 
     private final ExcelService excelService;
+    private final RequestRateLimiter rateLimiter;
+    private final UserScope userScope;
 
     @PostMapping("/export")
     public ResponseEntity<ByteArrayResource> exportWorkbook() {
@@ -38,6 +42,8 @@ public class ExcelController {
 
     @PostMapping("/import")
     public ExcelImportSummaryResponse importWorkbook(@RequestParam("file") MultipartFile file) {
+        // V10 (SEC-06-02): each import parses a whole workbook, so it is limited per account.
+        rateLimiter.check(RequestRateLimiter.Action.EXCEL_IMPORT, "user:" + userScope.currentUser().getId());
         return excelService.importWorkbook(file);
     }
 }

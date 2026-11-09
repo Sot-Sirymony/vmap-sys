@@ -1,3 +1,4 @@
+import { tr } from '../i18n/translate';
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
 
 type RequestOptions = RequestInit & {
@@ -7,6 +8,8 @@ type RequestOptions = RequestInit & {
 type ApiErrorResponse = {
   message?: string;
   error?: string;
+  // V10 (SEC-10-02): matches the server log line for this error.
+  reference?: string;
 };
 
 /** A request the server refused. `status` lets callers tell 401, 409 and the rest apart. */
@@ -215,7 +218,11 @@ async function readErrorMessage(response: Response) {
 
   try {
     const error = JSON.parse(text) as ApiErrorResponse;
-    return error.message || error.error || fallback;
+    const message = error.message || error.error || fallback;
+    // A server fault has nothing the user can fix, so give them the reference
+    // to quote when they report it. Other errors keep their message as is, so
+    // it can still be translated.
+    return response.status >= 500 && error.reference ? tr('{message} (Reference: {reference})', { message: tr(message), reference: error.reference }) : message;
   } catch {
     return text;
   }

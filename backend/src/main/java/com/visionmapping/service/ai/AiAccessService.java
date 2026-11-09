@@ -85,9 +85,16 @@ public class AiAccessService {
         }
         switch (reason) {
             case NO_CONSENT -> throw new BusinessRuleException("Turn on AI consent in Account settings to use the Dream Coach.");
-            case DAILY_LIMIT -> throw new TooManyRequestsException("You have used today's AI requests. They reset tomorrow.");
+            case DAILY_LIMIT -> throw new TooManyRequestsException("You have used today's AI requests. They reset tomorrow.",
+                    secondsUntilTomorrow());
             default -> throw new AiUnavailableException();
         }
+    }
+
+    /** V10 (SEC-06-02): the Retry-After for the daily limit. */
+    private long secondsUntilTomorrow() {
+        Instant tomorrow = LocalDate.now(clock).plusDays(1).atStartOfDay(clock.getZone()).toInstant();
+        return Math.max(1, java.time.Duration.between(Instant.now(clock), tomorrow).toSeconds());
     }
 
     public BigDecimal spendThisMonth() {

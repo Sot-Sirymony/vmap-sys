@@ -113,7 +113,7 @@ class ProgressRollupFlowTests {
     private String registerAndToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("fullName", "Rollup Test",
-                                "email", "rollup-" + System.nanoTime() + "@example.com", "password", "Password123"))))
+                                "email", "rollup-" + System.nanoTime() + "@example.com", "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated()).andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("token").asText();
     }

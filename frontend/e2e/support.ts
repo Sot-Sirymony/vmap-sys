@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:8080/api';
-const PASSWORD = 'Password123';
+const PASSWORD = 'Steady-Harbor-Lamp-42';
 
 export const today = (() => {
   const now = new Date();

@@ -123,7 +123,7 @@ class PartnerFilterFlowTests {
                         .content(json(Map.of(
                                 "fullName", "Filter Test User",
                                 "email", prefix + "-" + System.nanoTime() + "@example.com",
-                                "password", "Password123"
+                                "password", "Steady-Harbor-Lamp-42"
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn();

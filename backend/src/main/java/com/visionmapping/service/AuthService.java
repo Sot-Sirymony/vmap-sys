@@ -18,6 +18,7 @@ import com.visionmapping.exception.SessionEndedException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.security.AppUserPrincipal;
 import com.visionmapping.service.support.LoginAttemptLimiter;
+import com.visionmapping.service.support.PasswordPolicy;
 import com.visionmapping.util.UserScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,9 +48,11 @@ public class AuthService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
+    private final PasswordPolicy passwordPolicy;
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
+        passwordPolicy.check(request.password(), email);
         if (appUserRepository.existsByEmail(email)) {
             throw new BusinessRuleException("Email is already registered.");
         }
@@ -144,6 +147,7 @@ public class AuthService {
         if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
             throw new BusinessRuleException("New password must be different from the current password.");
         }
+        passwordPolicy.check(request.newPassword(), user.getEmail());
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         appUserRepository.save(user);

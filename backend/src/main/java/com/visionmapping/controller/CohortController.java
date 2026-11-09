@@ -1,5 +1,9 @@
 package com.visionmapping.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import com.visionmapping.util.ClientIp;
+import com.visionmapping.util.UserScope;
+import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.dto.request.JoinCohortRequest;
 import com.visionmapping.dto.request.JournalSharingRequest;
 import com.visionmapping.dto.response.CoachCommentResponse;
@@ -23,6 +27,8 @@ public class CohortController {
 
     private final CohortService cohortService;
     private final CoachCommentService coachCommentService;
+    private final RequestRateLimiter rateLimiter;
+    private final UserScope userScope;
 
     @GetMapping("/api/cohort")
     public MyCohortResponse mine() {
@@ -30,7 +36,11 @@ public class CohortController {
     }
 
     @PostMapping("/api/cohort/join")
-    public MyCohortResponse join(@Valid @RequestBody JoinCohortRequest request) {
+    public MyCohortResponse join(@Valid @RequestBody JoinCohortRequest request, HttpServletRequest http) {
+        // V10 (SEC-06-02, SEC-06-03): join codes cannot be guessed by repetition,
+        // whether from one account or one network address.
+        rateLimiter.check(RequestRateLimiter.Action.JOIN_CODE, "user:" + userScope.currentUser().getId());
+        rateLimiter.check(RequestRateLimiter.Action.JOIN_CODE, "ip:" + ClientIp.of(http));
         return cohortService.join(request);
     }
 

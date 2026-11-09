@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.service.support.PasswordPolicy;
 import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.service.support.LoginAttemptLimiter;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,7 +77,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, Clock.systemUTC());
+        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy(), Clock.systemUTC());
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
@@ -270,7 +271,7 @@ class PasswordResetServiceTest {
     void usesTheInjectedClock() {
         Instant now = Instant.parse("2026-11-01T09:00:00Z");
         PasswordResetService fixed = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer,
-                rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, Clock.fixed(now, ZoneOffset.UTC));
+                rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy(), Clock.fixed(now, ZoneOffset.UTC));
         PasswordResetToken expiresNow = storedTokenFor("the-token", now);
         PasswordResetToken expiresLater = storedTokenFor("other-token", now.plusSeconds(1));
         when(tokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(expiresNow))

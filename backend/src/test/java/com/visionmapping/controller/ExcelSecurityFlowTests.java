@@ -167,7 +167,7 @@ class ExcelSecurityFlowTests {
     private String register() throws Exception {
         String body = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("fullName", "Excel User",
-                                "email", "excel-" + UUID.randomUUID() + "@example.com", "password", "Password123"))))
+                                "email", "excel-" + UUID.randomUUID() + "@example.com", "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).get("token").asText();
     }

@@ -85,6 +85,22 @@ describe('apiClient GET caching', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('adds the reference to a server fault so the user can report it (SEC-10-02)', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      text: () => Promise.resolve(JSON.stringify({ message: 'Try again in a moment.', reference: 'a1b2c3d4e5f6' })),
+    } as unknown as Response);
+    await expect(apiClient('/dreams', { token: 'token-a' })).rejects.toThrow('Try again in a moment. (Reference: a1b2c3d4e5f6)');
+
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve(JSON.stringify({ message: 'Fill in every field.', reference: 'a1b2c3d4e5f6' })),
+    } as unknown as Response);
+    await expect(apiClient('/dreams', { token: 'token-a' })).rejects.toThrow(/^Fill in every field\.$/);
+  });
+
   it('does not leave a failed GET cached', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,

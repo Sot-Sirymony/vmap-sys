@@ -43,7 +43,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @ActiveProfiles("test")
 class SecurityHardeningFlowTests {
 
-    private static final String PASSWORD = "Password123";
+    private static final String PASSWORD = "Steady-Harbor-Lamp-42";
     private static final AtomicInteger NEXT_IP = new AtomicInteger();
 
     @Autowired

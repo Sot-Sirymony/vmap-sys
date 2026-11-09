@@ -1,12 +1,15 @@
 package com.visionmapping.exception;
 
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.dao.TransientDataAccessException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import lombok.RequiredArgsConstructor;
 import com.visionmapping.security.audit.SecurityOutcome;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityEventService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
-import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -249,8 +252,27 @@ public class GlobalExceptionHandler {
         // Log the real cause: the client only ever sees a generic message, so
         // without this the actual exception (a failed query, a missing table)
         // would be invisible and impossible to diagnose.
-        log.error("Unhandled exception on {} {}", request.getMethod(), request.getRequestURI(), exception);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request);
+        ResponseEntity<ErrorResponse> response = buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Something went wrong on our side. If it keeps happening, report it with the reference.", request);
+        log.error("Unhandled exception on {} {} [ref {}]", request.getMethod(), request.getRequestURI(),
+                response.getBody().reference(), exception);
+        return response;
+    }
+
+    /**
+     * V10 (SEC-10-01, SEC-10-02): the database could not be reached or timed
+     * out. The request is refused, never let through, and the client gets a
+     * safe message and a reference; the real cause, which may name tables or
+     * SQL, goes only to the server log.
+     */
+    @ExceptionHandler({DataAccessResourceFailureException.class, QueryTimeoutException.class,
+            CannotCreateTransactionException.class, TransientDataAccessException.class})
+    public ResponseEntity<ErrorResponse> handleDataUnavailable(Exception exception, HttpServletRequest request) {
+        ResponseEntity<ErrorResponse> response = buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
+                "The service is busy or briefly unavailable. Try again in a moment.", request);
+        log.error("Data store unavailable on {} {} [ref {}]", request.getMethod(), request.getRequestURI(),
+                response.getBody().reference(), exception);
+        return response;
     }
 
     private ResponseEntity<ErrorResponse> buildResponse(
@@ -258,14 +280,6 @@ public class GlobalExceptionHandler {
             String message,
             HttpServletRequest request
     ) {
-        ErrorResponse response = new ErrorResponse(
-                Instant.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                request.getRequestURI()
-        );
-
-        return ResponseEntity.status(status).body(response);
+        return ResponseEntity.status(status).body(ErrorResponse.of(status, message, request.getRequestURI()));
     }
 }

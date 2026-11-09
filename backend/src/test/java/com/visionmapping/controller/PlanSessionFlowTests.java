@@ -160,7 +160,7 @@ class PlanSessionFlowTests {
 
         // A deleted account only loses its link to the row.
         send(post("/api/account/delete"), user,
-                Map.of("password", "Password123")).andExpect(status().is2xxSuccessful());
+                Map.of("password", "Steady-Harbor-Lamp-42")).andExpect(status().is2xxSuccessful());
         assertThat(jdbcTemplate.queryForObject("select count(*) from plan_builder_finished_plans where user_id is null and ai_requests = 2",
                 Integer.class)).isPositive();
     }
@@ -225,7 +225,7 @@ class PlanSessionFlowTests {
 
     private String register(String email) throws Exception {
         String content = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Session Tester", "email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Session Tester", "email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(content).get("token").asText();

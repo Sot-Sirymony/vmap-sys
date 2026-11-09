@@ -42,7 +42,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @ActiveProfiles("test")
 class SessionFlowTests {
 
-    private static final String PASSWORD = "Password123";
+    private static final String PASSWORD = "Steady-Harbor-Lamp-42";
 
     @Autowired
     private MockMvc mockMvc;

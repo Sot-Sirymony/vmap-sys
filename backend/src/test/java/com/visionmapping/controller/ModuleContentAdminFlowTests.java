@@ -146,7 +146,7 @@ class ModuleContentAdminFlowTests {
     private String register(String prefix, boolean admin) throws Exception {
         String email = prefix + "-" + System.nanoTime() + "@example.com";
         String content = mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "V8 Test User", "email", email, "password", "Password123"))))
+                        .content(objectMapper.writeValueAsString(Map.of("fullName", "V8 Test User", "email", email, "password", "Steady-Harbor-Lamp-42"))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         if (admin) {

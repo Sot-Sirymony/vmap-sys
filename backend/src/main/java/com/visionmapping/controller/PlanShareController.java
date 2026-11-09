@@ -1,5 +1,8 @@
 package com.visionmapping.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import com.visionmapping.util.ClientIp;
+import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.dto.request.PlanShareRequest;
 import com.visionmapping.dto.response.PlanShareResponse;
 import com.visionmapping.dto.response.SharedPlanResponse;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlanShareController {
 
     private final PlanShareService service;
+    private final RequestRateLimiter rateLimiter;
 
     @GetMapping("/api/plan-shares")
     public List<PlanShareResponse> list(@RequestParam(required = false) Long dreamId) {
@@ -43,7 +47,9 @@ public class PlanShareController {
     }
 
     @GetMapping("/api/shared-plans/{token}")
-    public SharedPlanResponse view(@PathVariable String token) {
+    public SharedPlanResponse view(@PathVariable String token, HttpServletRequest http) {
+        // V10 (SEC-06-02): opening share links is limited per network address.
+        rateLimiter.check(RequestRateLimiter.Action.SHARED_PLAN, ClientIp.of(http));
         return service.view(token);
     }
 }
