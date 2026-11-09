@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MoonStar, Rocket, SlidersHorizontal } from 'lucide-react';
+import { ChartGantt, ListTree, MoonStar, Rocket, SlidersHorizontal } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
@@ -13,6 +13,8 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
@@ -24,8 +26,10 @@ import { Loading } from '../components/common/Loading';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { VisionMapTimeline } from '../components/vision-map/VisionMapTimeline';
 import { VisionMapTree } from '../components/vision-map/VisionMapTree';
 import { useAuth } from '../context/AuthContext';
+import { useStoredState } from '../hooks/useStoredState';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vision';
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
@@ -35,6 +39,9 @@ import { AiPlanAssistant } from '../components/ai/AiPlanAssistant';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 import { progressTone } from '../utils/progressTone';
+
+/** V16 (TL-FR-01): how one dream is shown. */
+type DreamView = 'tree' | 'timeline';
 
 /** Per-dream rollup for the overview cards. */
 type DreamStats = { goals: number; steps: number; tasks: number; progress: number };
@@ -68,6 +75,18 @@ export function DreamDetailPage() {
   // picker stays out; the rest sit behind a "Filters" button.
   const isPhone = useMediaQuery('(max-width:600px)');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // V16 (TL-FR-01, TL-FR-04): Tree or Timeline. The URL wins, so a link opens
+  // the view it names; otherwise the view last used in this browser.
+  const [urlView, setUrlView] = useUrlFilter('view');
+  const [storedView, setStoredView] = useStoredState<DreamView>('vision-map:dream-view', 'tree');
+  const dreamView: DreamView = urlView === 'timeline' || urlView === 'tree' ? urlView : storedView;
+  const [editRequest, setEditRequest] = useState<{ kind: 'dream' | 'goal' | 'step' | 'task'; id: number; nonce: number } | null>(null);
+
+  function changeDreamView(next: DreamView | null) {
+    if (!next) return;
+    setStoredView(next);
+    setUrlView(next === 'timeline' ? 'timeline' : '');
+  }
 
   async function load() {
     if (!token) {
@@ -338,7 +357,35 @@ export function DreamDetailPage() {
         {/* On a phone the map itself comes first; the supporting cards
             follow it, so the tree isn't several screens down. */}
         {!isPhone && supportCards}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={dreamView}
+            onChange={(_, next: DreamView | null) => changeDreamView(next)}
+            aria-label={tr('How to show this dream')}
+          >
+            <ToggleButton value="tree"><ListTree size={16} aria-hidden="true" style={{ marginRight: 6 }} />{tr('Tree')}</ToggleButton>
+            <ToggleButton value="timeline"><ChartGantt size={16} aria-hidden="true" style={{ marginRight: 6 }} />{tr('Timeline')}</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+        {dreamView === 'timeline' && (
+          <VisionMapTimeline
+            key={selectedDream.id}
+            dream={selectedDream}
+            goals={goals}
+            steps={steps}
+            tasks={tasks}
+            priorityFilter={filterPriority}
+            statusFilter={filterStatus}
+            onOpen={(kind, id) => setEditRequest((current) => ({ kind, id, nonce: (current?.nonce ?? 0) + 1 }))}
+          />
+        )}
+        {/* The tree stays mounted under the timeline: its edit forms are the
+            ones the timeline opens (TL-FR-27), so dates change in one place. */}
+        <Box sx={{ display: dreamView === 'timeline' ? 'none' : 'block' }}>
         <VisionMapTree
+          editRequest={editRequest}
           dream={selectedDream}
           visionAreaName={selectedArea?.name ?? tr('Unassigned')}
           goals={goals}
@@ -350,6 +397,7 @@ export function DreamDetailPage() {
           priorityFilter={filterPriority}
           statusFilter={filterStatus}
         />
+        </Box>
         {isPhone && <Box sx={{ mt: 2 }}>{supportCards}</Box>}
         </>
       )}

@@ -3371,3 +3371,81 @@ button:focus-visible,
     background: #ffffff;
   }
 }
+
+/* V16 (BRD 16.0.0): Vision Map timeline bars. Position and colours come from
+   the component; these rules give the shared shape. */
+.vm-timeline__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vm-timeline__toggle:focus-visible,
+.vm-timeline__bar:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.vm-timeline__bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-style: solid;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  font: inherit;
+  color: var(--foreground);
+}
+
+.vm-timeline__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* BR-40 overrun: the part past the parent's end is hatched (TL-FR-20). */
+.vm-timeline__overrun {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--foreground) 45%, transparent) 4px 6px);
+  pointer-events: none;
+}
+
+/* Overdue: a red cap on the end (TL-FR-18); the row label also says "Overdue". */
+.vm-timeline__overdue {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--progress-low);
+  pointer-events: none;
+}
+
+.vm-timeline__label {
+  position: relative;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-timeline * {
+    scroll-behavior: auto;
+  }
+}

@@ -1,4 +1,4 @@
-import { DragEvent, FormEvent, useRef, useState } from 'react';
+import { DragEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Lightbulb, Rocket } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
@@ -68,6 +68,11 @@ type VisionMapTreeProps = {
    */
   priorityFilter?: string;
   statusFilter?: string;
+  /**
+   * V16 (TL-FR-27): asks the tree to open one record's edit form, so the
+   * timeline uses the same forms. A new `nonce` repeats the same request.
+   */
+  editRequest?: { kind: 'dream' | 'goal' | 'step' | 'task'; id: number; nonce: number } | null;
 };
 
 const WORK_STATUSES: { value: WorkStatus; label: string }[] = [
@@ -120,7 +125,7 @@ type RowInfo = {
  */
 export function VisionMapTree({
   dream, visionAreaName, goals, steps, tasks, token, onDataChange, onDreamPermanentlyDeleted,
-  priorityFilter = '', statusFilter = '',
+  priorityFilter = '', statusFilter = '', editRequest = null,
 }: VisionMapTreeProps) {
   const { user } = useAuth();
   const { settings: themeSettings, resolvedMode } = useThemeSettings();
@@ -771,6 +776,27 @@ export function VisionMapTree({
   function cancelTaskEdit() {
     setEditingTaskId(null);
   }
+
+  // V16 (TL-FR-27): a bar on the timeline opens the same form as the tree.
+  useEffect(() => {
+    if (!editRequest) {
+      return;
+    }
+    if (editRequest.kind === 'dream') {
+      openDreamEdit();
+    } else if (editRequest.kind === 'goal') {
+      const goal = goals.find((item) => item.id === editRequest.id);
+      if (goal) openGoalEdit(goal);
+    } else if (editRequest.kind === 'step') {
+      const step = steps.find((item) => item.id === editRequest.id);
+      if (step) openStepEdit(step);
+    } else {
+      const task = tasks.find((item) => item.id === editRequest.id);
+      if (task) openTaskEdit(task);
+    }
+    // Only a new request opens a form; later data changes must not reopen it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editRequest?.nonce]);
 
   async function submitTaskEdit(event: FormEvent) {
     event.preventDefault();

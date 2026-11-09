@@ -124,6 +124,8 @@ export type Dream = {
   // set only through the commitment endpoint.
   commitmentSignedName?: string | null;
   commitmentStartDate?: string | null;
+  /** When the dream was created (ISO instant). The timeline's last-resort start date. */
+  createdAt?: string;
   commitmentFirstAction?: string | null;
   committedAt?: string | null;
   // Display order among this vision area's dreams, for drag-and-drop
@@ -251,6 +253,8 @@ export type TaskItem = {
   letterRank?: string | null;
   startDate?: string;
   dueDate: string;
+  /** When the task was marked Completed (ISO instant), if it is. */
+  completedAt?: string | null;
   status: WorkStatus;
   progressPercent: number;
   estimatedHours?: number;

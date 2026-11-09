@@ -36,6 +36,7 @@ function renderMap(route: string) {
 describe('DreamDetailPage (CLAUDE.md page 4: the Vision Map)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     answerEmptyLists([aiPlanApi, dreamApi, goalApi, partnerApi, planShareApi, stepApi, taskApi, visionAreaApi], ['listPartners']);
     vi.mocked(aiApi.getAiStatus).mockResolvedValue({ available: false, reason: 'OFF', consentGiven: false, dailyLimit: 0, messagesLeftToday: 0 });
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue(areas);
@@ -108,5 +109,36 @@ describe('DreamDetailPage (CLAUDE.md page 4: the Vision Map)', () => {
     renderMap('/dreams/1?status=COMPLETED');
     expect(await screen.findByRole('tree')).toBeInTheDocument();
     expect(within(screen.getByRole('tree')).queryByText('Search PubMed')).not.toBeInTheDocument();
+  });
+
+  it('switches a dream to the timeline and back, and remembers the choice (TL-FR-01, TL-FR-04)', async () => {
+    renderMap('/dreams/1');
+    await screen.findByRole('tree');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Timeline' }));
+    expect(currentLocation()).toBe('/dreams/1?view=timeline');
+    const timeline = within(await screen.findByRole('region', { name: 'Timeline of Become a researcher' }));
+    expect(timeline.getByRole('button', { name: /^Goal G-001 Prepare one concept note/ })).toBeInTheDocument();
+    expect(timeline.getByRole('button', { name: /^Step S-001 Search literature/ })).toBeInTheDocument();
+    // Tasks start folded under their step.
+    expect(timeline.queryByRole('button', { name: /^Task T-001/ })).not.toBeInTheDocument();
+    await userEvent.click(timeline.getByRole('button', { name: 'Expand Search literature' }));
+    expect(timeline.getByRole('button', { name: /^Task T-001 Search PubMed/ })).toBeInTheDocument();
+    expect(localStorage.getItem('vision-map:dream-view')).toBe('"timeline"');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tree' }));
+    expect(currentLocation()).toBe('/dreams/1');
+    expect(screen.getByRole('tree')).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Timeline of Become a researcher' })).not.toBeInTheDocument();
+  });
+
+  it('opens the same edit form as the tree when a timeline bar is chosen (TL-FR-27)', async () => {
+    renderMap('/dreams/1?view=timeline');
+    const timeline = within(await screen.findByRole('region', { name: 'Timeline of Become a researcher' }));
+
+    await userEvent.click(timeline.getByRole('button', { name: /^Goal G-001 Prepare one concept note/ }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Goal' });
+    expect(within(dialog).getByDisplayValue('Prepare one concept note')).toBeInTheDocument();
   });
 });
