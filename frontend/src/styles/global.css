@@ -2383,6 +2383,17 @@ button:focus-visible,
   flex-shrink: 0;
 }
 
+/* A coloured dot before each status in the dropdown list, the same hue as
+   the status badge, so the colour can be matched before choosing. */
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
 .map-status .MuiSelect-select {
   font-size: var(--font-meta);
   padding-top: 4px;
@@ -3037,8 +3048,9 @@ button:focus-visible,
     align-self: center;
   }
 
+  /* Wide enough for the status dot plus "Not Started" / "In Progress" in bold. */
   .map-status {
-    flex: 0 0 132px;
+    flex: 0 0 158px;
     width: auto;
   }
 

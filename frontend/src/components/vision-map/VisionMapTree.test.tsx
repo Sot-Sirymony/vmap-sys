@@ -59,4 +59,13 @@ describe('VisionMapTree', () => {
     expect(screen.getByLabelText('Progress 0%')).toHaveClass('progress-bar--low');
     expect(screen.getByText('0%', { selector: '.map-rail-value' })).toHaveClass('progress-text--low');
   });
+
+  it('colours each status in the dropdown with the same hue as its status badge', async () => {
+    renderTree();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Status of Own a home' }));
+    const dot = (name: string) => screen.getByRole('option', { name }).querySelector('.status-dot') as HTMLElement;
+    // theme.ts statusColors: Active is blue (#0078d4), Completed is green (#107c10).
+    expect(dot('Active').style.backgroundColor).toBe('rgb(0, 120, 212)');
+    expect(dot('Completed').style.backgroundColor).toBe('rgb(16, 124, 16)');
+  });
 });

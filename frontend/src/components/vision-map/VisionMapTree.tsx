@@ -23,7 +23,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useStoredState } from '../../hooks/useStoredState';
 import { useEnergyOvercommitNudge } from '../../hooks/useEnergyOvercommitNudge';
-import { moonshotTint, moonshotViolet, moonshotVioletDeep, visionAreaDotColor } from '../../theme';
+import { moonshotTint, moonshotViolet, moonshotVioletDeep, statusColor, visionAreaDotColor, type StatusToken } from '../../theme';
+import { useThemeSettings } from '../../context/ThemeModeContext';
+import { tintColors } from '../common/TintedChip';
 import type {
   Dream, DreamRequest, DreamStatus, DreamType, EnergyDemand, Goal, GoalRequest, ObstacleType, Priority,
   ScheduleMode, TaskItem, TaskItemRequest, VisionStep, VisionStepRequest, WorkStatus,
@@ -121,6 +123,7 @@ export function VisionMapTree({
   priorityFilter = '', statusFilter = '',
 }: VisionMapTreeProps) {
   const { user } = useAuth();
+  const { settings: themeSettings, resolvedMode } = useThemeSettings();
   const { showToast } = useToast();
   const energyNudge = useEnergyOvercommitNudge();
   const filtering = Boolean(priorityFilter || statusFilter);
@@ -1023,12 +1026,36 @@ export function VisionMapTree({
     return titleOrEdit(row, title);
   }
 
+  // The status hue in effect, the same one the status badges use (dark mode
+  // and high contrast included), so a Blocked dropdown looks like a Blocked badge.
+  function statusHue(status: string) {
+    return statusColor(status as StatusToken, resolvedMode, themeSettings.highContrast);
+  }
+
   function statusSelect(row: RowInfo, value: string) {
     const options = row.kind === 'dream' ? DREAM_STATUSES : WORK_STATUSES;
+    const tint = tintColors(statusHue(value));
     return (
       <FormControl size="small" className="map-status">
-        <Select value={value} onChange={(event) => void changeStatus(row, event.target.value)} SelectDisplayProps={{ 'aria-label': tr('Status of {title}', { title: entityTitle(row) }) }}>
-          {options.map((option) => <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>)}
+        <Select
+          value={value}
+          onChange={(event) => void changeStatus(row, event.target.value)}
+          SelectDisplayProps={{ 'aria-label': tr('Status of {title}', { title: entityTitle(row) }) }}
+          sx={{
+            bgcolor: tint.background,
+            color: tint.text,
+            fontWeight: 600,
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: tint.border },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: tint.text },
+            '& .MuiSelect-icon': { color: tint.text },
+          }}
+        >
+          {options.map((option) => (
+            <MenuItem value={option.value} key={option.value}>
+              <span className="status-dot" style={{ backgroundColor: statusHue(option.value) }} aria-hidden="true" />
+              {option.label}
+            </MenuItem>
+          ))}
         </Select>
       </FormControl>
     );
