@@ -146,4 +146,96 @@ describe('StrengthsPage (V8.1 Strengths and Gaps)', () => {
     expect(screen.getByText('Changed: Bookkeeping (Not covered → Accept it)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save a retake' })).toBeEnabled();
   });
+
+  it('edits an item in the form and saves the change', async () => {
+    vi.mocked(strengthsApi.getStrengthsProfile).mockResolvedValue(aProfile({ whatIBring: [anItem()] }));
+    vi.mocked(strengthsApi.updateSelfAssessmentItem).mockResolvedValue(anItem({ description: 'Builds trust quickly' }));
+    renderPage(<StrengthsPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit Builds trust fast' }));
+    expect(screen.getByText('Edit this item')).toBeInTheDocument();
+    const description = screen.getByRole('textbox', { name: /What do you bring/ });
+    await userEvent.clear(description);
+    await userEvent.type(description, 'Builds trust quickly');
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(strengthsApi.updateSelfAssessmentItem).toHaveBeenCalledWith('token', 1,
+      expect.objectContaining({ description: 'Builds trust quickly', evidence: 'Kept 9 of 10 clients' })));
+  });
+
+  it('removes an item with nothing linked straight away, and shows a refusal from the server', async () => {
+    vi.mocked(strengthsApi.getStrengthsProfile).mockResolvedValue(aProfile({ recordedOnly: [anItem({ relevance: 'LOW' })] }));
+    vi.mocked(strengthsApi.archiveSelfAssessmentItem).mockRejectedValue(new Error('Strength or gap not found: 1'));
+    renderPage(<StrengthsPage />);
+
+    expect(await screen.findByText('Recorded only')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove Builds trust fast' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(strengthsApi.archiveSelfAssessmentItem).toHaveBeenCalledWith('token', 1, false);
+    expect(await screen.findByText('Strength or gap not found: 1')).toBeInTheDocument();
+  });
+
+  it('changes how a gap is covered, removing what it added and showing why something was kept', async () => {
+    const covered = { ...gap, coverMethod: 'RESOURCE' as const, coverNote: 'A grant', linkedModuleNumber: 6 };
+    vi.mocked(strengthsApi.getStrengthsProfile).mockResolvedValue(aProfile({ whatILack: [covered] }));
+    vi.mocked(strengthsApi.removeGapCover).mockResolvedValue({
+      linkedItemRemoved: false,
+      note: 'The exercise row was kept because it is the only one in that module. Edit it on the module page.',
+    });
+    renderPage(<StrengthsPage />);
+
+    expect(await screen.findByText('Resource: A grant')).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('Change how Bookkeeping is covered'));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Do you also want to remove the resource gap row it added?')).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Remove it too' }));
+    await waitFor(() => expect(strengthsApi.removeGapCover).toHaveBeenCalledWith('token', 7, true));
+    expect(await screen.findByText(/The exercise row was kept/)).toBeInTheDocument();
+  });
+
+  it('saves the profile, flags a differing outside view and suggests a retake', async () => {
+    vi.mocked(strengthsApi.getStrengthsProfile).mockResolvedValue(aProfile({
+      whatIBring: [anItem({ outsideBy: 'My manager', outsideView: 'You rush', outsideMismatch: true })],
+      complete: true, retakeSuggested: true, lastSavedOn: '2026-08-01',
+    }));
+    vi.mocked(strengthsApi.saveStrengthsProfile).mockResolvedValue(aProfile());
+    renderPage(<StrengthsPage />);
+
+    expect(await screen.findByText(/It has been 12 weeks or more since you saved this profile/)).toBeInTheDocument();
+    expect(screen.getByText('Complete. Every gap that matters a lot has a way to cover it.')).toBeInTheDocument();
+    expect(screen.getByText('My manager said: You rush')).toBeInTheDocument();
+    expect(screen.getByText('Outside view differs')).toBeInTheDocument();
+    expect(screen.getByText('Last saved 2026-08-01')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save a retake' }));
+    await waitFor(() => expect(strengthsApi.saveStrengthsProfile).toHaveBeenCalledWith('token', 2));
+  });
+
+  it('lists removed items when asked and restores one', async () => {
+    vi.mocked(strengthsApi.listSelfAssessmentItems).mockResolvedValue([anItem({ id: 9, description: 'Old habit', archived: true })]);
+    vi.mocked(strengthsApi.restoreSelfAssessmentItem).mockResolvedValue(undefined);
+    renderPage(<StrengthsPage />);
+
+    await screen.findByText('Your profile');
+    await userEvent.click(screen.getByRole('checkbox', { name: /archived/i }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Restore Old habit' }));
+    await waitFor(() => expect(strengthsApi.restoreSelfAssessmentItem).toHaveBeenCalledWith('token', 9));
+  });
+
+  it('switches to another dream', async () => {
+    renderPage(<StrengthsPage />);
+    await screen.findByText('Your profile');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Dream' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Run a marathon' }));
+    await waitFor(() => expect(strengthsApi.getStrengthsProfile).toHaveBeenCalledWith('token', 1));
+  });
+
+  it('starts from a dream when there is none, and says when the profile cannot load', async () => {
+    vi.mocked(dreamApi.listDreams).mockResolvedValueOnce([]);
+    const first = renderPage(<StrengthsPage />);
+    expect(await screen.findByText('Strengths and gaps are judged against a dream.')).toBeInTheDocument();
+    first.unmount();
+
+    vi.mocked(strengthsApi.getStrengthsProfile).mockRejectedValue(new Error('Network down'));
+    renderPage(<StrengthsPage />);
+    expect(await screen.findByText('Network down')).toBeInTheDocument();
+  });
 });
