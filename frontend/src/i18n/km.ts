@@ -2929,4 +2929,8 @@ export const km: Record<string, string> = {
   'Unable to add.': 'មិនអាចបន្ថែមបានទេ។',
   'Unable to archive.': 'មិនអាចទុកក្នុងបណ្ណសារបានទេ។',
   'Unable to restore.': 'មិនអាចស្តារបានទេ។',
+  'Previous period': 'រយៈពេលមុន',
+  'Next period': 'រយៈពេលបន្ទាប់',
+  'Resize title column': 'ប្តូរទំហំជួរឈរចំណងជើង',
+  'Drag to resize title column (double-click to reset)': 'អូសដើម្បីប្តូរទំហំជួរឈរចំណងជើង (ចុចពីរដងដើម្បីកំណត់ឡើងវិញ)',
 };

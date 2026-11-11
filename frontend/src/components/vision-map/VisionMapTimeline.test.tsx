@@ -229,4 +229,105 @@ describe('VisionMapTimeline (BRD 16.0.0 phase 4)', () => {
       expect(onAddDream).toHaveBeenCalled();
     });
   });
+
+  describe('full-width calendar across zoom levels', () => {
+    const shortDream = aDream({
+      id: 2,
+      code: 'D-002',
+      title: 'One-month sprint',
+      commitmentStartDate: '2026-11-01',
+      targetDate: '2026-11-30',
+    });
+    const shortGoal = aGoal({ id: 11, dreamId: 2, code: 'G-002', title: 'Ship draft', targetDate: '2026-11-30' });
+
+    function mockTimelineWidth(width = 1200) {
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.classList?.contains('vm-timeline__scroll') ? width : 0;
+      });
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      localStorage.removeItem('vision-map:timeline-label-width');
+    });
+
+    it('extends month, quarter and year calendars to fill the full container width', async () => {
+      mockTimelineWidth(1200);
+      const shortStep = aStep({ id: 21, goalId: 11, code: 'S-002', title: 'Outline', targetDate: '2026-11-20' });
+      const shortTask = aTask({ id: 32, stepId: 21, code: 'T-003', title: 'Write bullets', startDate: '2026-11-10', dueDate: '2026-11-20' });
+
+      renderPage(<VisionMapTimeline dream={shortDream} goals={[shortGoal]} steps={[shortStep]} tasks={[shortTask]} onOpen={vi.fn()} today={TODAY} />);
+      const region = screen.getByRole('region', { name: 'Timeline of One-month sprint' });
+      const canvas = region.firstElementChild as HTMLElement;
+
+      // Month zoom (6 px/day): extends past Dec 14 to fill at least 1200 px and completes February 2027.
+      expect(Number.parseFloat(getComputedStyle(canvas).width)).toBeGreaterThanOrEqual(1200);
+      expect(within(region).getByText('October 2026')).toBeInTheDocument();
+      expect(within(region).getByText('February 2027')).toBeInTheDocument();
+      const februaryCell = within(region).getByText('February 2027');
+      expect(februaryCell.style.width).toBe(`${28 * 6}px`);
+      expect(within(region).getByText('One-month sprint · 0%')).toBeInTheDocument();
+      expect(within(region).getAllByText('Ship draft')).toHaveLength(2);
+
+      // Quarter and Year zoom also fill at least 1200 px of the scroll viewport.
+      await userEvent.click(screen.getByRole('button', { name: 'Quarter' }));
+      expect(Number.parseFloat(getComputedStyle(canvas).width)).toBeGreaterThanOrEqual(1200);
+      expect(within(region).getByText('Q4 2026')).toBeInTheDocument();
+      expect(within(region).getByText('Q1 2027')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Year' }));
+      expect(Number.parseFloat(getComputedStyle(canvas).width)).toBeGreaterThanOrEqual(1200);
+      expect(within(region).getByText('2026')).toBeInTheDocument();
+      expect(within(region).getAllByText('Q4').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('keeps a short schedule centred instead of jumping into trailing empty months when switching to Week', async () => {
+      mockTimelineWidth(1200);
+      renderPage(<VisionMapTimeline dream={shortDream} goals={[shortGoal]} steps={[]} tasks={[]} onOpen={vi.fn()} today={TODAY} />);
+      const region = screen.getByRole('region', { name: 'Timeline of One-month sprint' });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Week' }));
+      // Today is Nov 15 (45 days from Oct 1); at 34 px/day and visibleTrack 900 px, scrollLeft centres on Nov 15.
+      expect(region.scrollLeft).toBe(45 * 34 - 900 / 2);
+      // Week view shades weekends and steps left/right via period navigation buttons.
+      expect(region.querySelectorAll('.vm-timeline__grid-tick--weekend').length).toBeGreaterThan(0);
+
+      const before = region.scrollLeft;
+      await userEvent.click(screen.getByRole('button', { name: 'Next period' }));
+      expect(region.scrollLeft).toBeGreaterThan(before);
+      await userEvent.click(screen.getByRole('button', { name: 'Previous period' }));
+      expect(region.scrollLeft).toBe(before);
+    });
+
+    it('lets the user drag or arrow-resize the middle divider to see full row titles', async () => {
+      localStorage.removeItem('vision-map:timeline-label-width');
+      mockTimelineWidth(1200);
+      vi.stubGlobal('PointerEvent', class extends MouseEvent {
+        pointerId: number;
+        constructor(type: string, init: PointerEventInit = {}) {
+          super(type, init);
+          this.pointerId = init.pointerId ?? 1;
+        }
+      });
+      renderPage(<VisionMapTimeline dream={shortDream} goals={[shortGoal]} steps={[]} tasks={[]} onOpen={vi.fn()} today={TODAY} />);
+      const region = screen.getByRole('region', { name: 'Timeline of One-month sprint' });
+      const resizer = within(region).getByRole('button', { name: 'Resize title column' });
+      const stickyFrame = resizer.parentElement as HTMLElement;
+      expect(Number.parseFloat(getComputedStyle(stickyFrame).width)).toBe(300);
+
+      // Drag right by 180 px to reveal longer titles.
+      fireEvent.pointerDown(resizer, { button: 0, clientX: 300 });
+      fireEvent.pointerMove(window, { clientX: 480 });
+      fireEvent.pointerUp(window);
+      expect(Number.parseFloat(getComputedStyle(stickyFrame).width)).toBe(480);
+
+      // Keyboard arrows adjust width; double-clicking resets to default 300 px.
+      resizer.focus();
+      await userEvent.keyboard('{ArrowLeft}');
+      expect(Number.parseFloat(getComputedStyle(stickyFrame).width)).toBe(460);
+
+      fireEvent.doubleClick(resizer);
+      expect(Number.parseFloat(getComputedStyle(stickyFrame).width)).toBe(300);
+    });
+  });
 });

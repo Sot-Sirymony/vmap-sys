@@ -3403,6 +3403,7 @@ button:focus-visible,
   border-style: solid;
   border-radius: var(--radius-sm);
   overflow: hidden;
+  overflow: clip;
   cursor: pointer;
   font: inherit;
   color: var(--foreground);
@@ -3437,9 +3438,29 @@ button:focus-visible,
 
 .vm-timeline__label {
   position: relative;
+  min-width: 0;
   padding: 0 6px;
   font-size: 11px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.vm-timeline__label--sticky {
+  position: sticky;
+}
+
+.vm-timeline__bar-text {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 220px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -3641,6 +3662,97 @@ button:focus-visible,
 
 @media print {
   .vm-timeline__menu {
+    display: none !important;
+  }
+}
+
+/* Vertical column gridlines, weekend shading, dream row tint and row hover. */
+.vm-timeline__grid-tick,
+.vm-timeline__grid-major {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.vm-timeline__grid-tick {
+  border-left: 1px solid var(--border-soft);
+}
+
+.vm-timeline__grid-tick--weekend {
+  background: color-mix(in srgb, var(--muted) 65%, transparent);
+}
+
+.vm-timeline__grid-tick--major,
+.vm-timeline__grid-major {
+  border-left: 1px solid var(--border);
+}
+
+.vm-timeline__row {
+  position: relative;
+  z-index: 1;
+}
+
+.vm-timeline__row--dream {
+  background: color-mix(in srgb, var(--muted) 38%, transparent);
+}
+
+.vm-timeline__row--dream .vm-timeline__sticky-label {
+  background: color-mix(in srgb, var(--muted) 38%, var(--card));
+}
+
+.vm-timeline__row:hover {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.vm-timeline__row:hover .vm-timeline__sticky-label {
+  background: color-mix(in srgb, var(--accent) 28%, var(--card));
+}
+
+/* Draggable vertical divider between the title panel and schedule track. */
+.vm-timeline--resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+
+.vm-timeline__resizer {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  bottom: 0;
+  width: 9px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+  pointer-events: auto;
+}
+
+.vm-timeline__resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: var(--ring);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.vm-timeline__resizer:hover::after,
+.vm-timeline__resizer:focus-visible::after,
+.vm-timeline--resizing .vm-timeline__resizer::after {
+  opacity: 0.85;
+}
+
+.vm-timeline__resizer:focus-visible {
+  outline: none;
+}
+
+@media print {
+  .vm-timeline__resizer {
     display: none !important;
   }
 }

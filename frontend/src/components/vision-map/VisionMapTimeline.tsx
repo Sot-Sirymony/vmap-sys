@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { Ban, ChevronDown, ChevronRight, CircleCheck, Plus, ClipboardCheck, Diamond, Flag, Mail, MoreVertical, Printer, type LucideIcon } from 'lucide-react';
+import { Ban, ChevronDown, ChevronLeft, ChevronRight, CircleCheck, Plus, ClipboardCheck, Diamond, Flag, Mail, MoreVertical, Printer, type LucideIcon } from 'lucide-react';
 import { Link as RouterLink } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
@@ -21,6 +21,7 @@ import { Button } from '../common/Button';
 import { tintColors } from '../common/TintedChip';
 import { useThemeSettings } from '../../context/ThemeModeContext';
 import type { DateChange } from '../../hooks/useTimelineReschedule';
+import { useStoredState } from '../../hooks/useStoredState';
 import { useI18n } from '../../i18n/I18nContext';
 import { tr } from '../../i18n/translate';
 import { statusColor, type StatusToken } from '../../theme';
@@ -48,11 +49,14 @@ import {
 export type TimelineZoom = 'week' | 'month' | 'quarter' | 'year';
 
 /** Pixels per day at each zoom (TL-FR-23). */
-const PX_PER_DAY: Record<TimelineZoom, number> = { week: 28, month: 6, quarter: 2.2, year: 0.75 };
+const PX_PER_DAY: Record<TimelineZoom, number> = { week: 34, month: 6, quarter: 3.2, year: 1.2 };
 /** Empty days kept before the first bar and after the last one. */
 const PADDING_DAYS: Record<TimelineZoom, number> = { week: 7, month: 14, quarter: 31, year: 62 };
 const ROW_HEIGHT = 36;
 const BAR_HEIGHT = 20;
+const DEFAULT_LABEL_WIDTH = 300;
+const MIN_LABEL_WIDTH = 200;
+const MAX_LABEL_WIDTH = 720;
 
 const WORKED_OUT_TEXT: Record<WorkedOutReason, string> = {
   'task-no-start': tr('No start date, so shown on its due date'),
@@ -146,9 +150,22 @@ function dayToDate(day: number) {
   return new Date(year, month - 1, date);
 }
 
-function startOfMonth(day: number) {
+function startOfZoomUnit(day: number, zoom: TimelineZoom) {
   const date = dayToDate(day);
-  return Math.round((Date.UTC(date.getFullYear(), date.getMonth(), 1)) / 86_400_000);
+  if (zoom === 'week' || zoom === 'month') {
+    return Math.round(Date.UTC(date.getFullYear(), date.getMonth(), 1) / 86_400_000);
+  }
+  return Math.round(Date.UTC(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1) / 86_400_000);
+}
+
+/** Completes the trailing month or quarter so the final header column is never cut off mid-unit. */
+function endOfZoomUnit(day: number, zoom: TimelineZoom) {
+  const date = dayToDate(day);
+  if (zoom === 'week') return day;
+  if (zoom === 'month' || zoom === 'quarter') {
+    return Math.round(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0) / 86_400_000);
+  }
+  return Math.round(Date.UTC(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3 + 3, 0) / 86_400_000);
 }
 
 type HeaderCell = { key: string; start: number; days: number; label: string };
@@ -158,7 +175,7 @@ function headerCells(rangeStart: number, rangeEnd: number, zoom: TimelineZoom, l
   const top: HeaderCell[] = [];
   const bottom: HeaderCell[] = [];
   const format = (day: number, options: Intl.DateTimeFormatOptions) => dayToDate(day).toLocaleDateString(locale, options);
-  const pushUnits = (target: HeaderCell[], unit: 'day' | 'week' | 'month' | 'quarter' | 'year', label: (day: number) => string) => {
+  const pushUnits = (target: HeaderCell[], unit: 'day' | 'week' | 'month' | 'quarter' | 'year', label: (day: number, days: number) => string) => {
     let cursor = rangeStart;
     while (cursor <= rangeEnd) {
       const date = dayToDate(cursor);
@@ -169,18 +186,25 @@ function headerCells(rangeStart: number, rangeEnd: number, zoom: TimelineZoom, l
       else if (unit === 'quarter') next = Math.round(Date.UTC(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3 + 3, 1) / 86_400_000);
       else next = Math.round(Date.UTC(date.getFullYear() + 1, 0, 1) / 86_400_000);
       const end = Math.min(next, rangeEnd + 1);
-      target.push({ key: `${unit}-${cursor}`, start: cursor, days: end - cursor, label: label(cursor) });
+      const spanDays = end - cursor;
+      target.push({ key: `${unit}-${cursor}`, start: cursor, days: spanDays, label: label(cursor, spanDays) });
       cursor = next;
     }
   };
   if (zoom === 'week') {
     pushUnits(top, 'month', (day) => format(day, { month: 'long', year: 'numeric' }));
-    pushUnits(bottom, 'day', (day) => format(day, { day: 'numeric' }));
+    pushUnits(bottom, 'day', (day) => `${format(day, { weekday: 'narrow' })} ${dayToDate(day).getDate()}`);
   } else if (zoom === 'month') {
     pushUnits(top, 'month', (day) => format(day, { month: 'long', year: 'numeric' }));
-    pushUnits(bottom, 'week', (day) => format(day, { day: 'numeric' }));
+    pushUnits(bottom, 'week', (day, days) => {
+      const startDate = dayToDate(day).getDate();
+      return days >= 5 ? `${startDate}–${dayToDate(day + days - 1).getDate()}` : String(startDate);
+    });
   } else if (zoom === 'quarter') {
-    pushUnits(top, 'year', (day) => format(day, { year: 'numeric' }));
+    pushUnits(top, 'quarter', (day) => {
+      const date = dayToDate(day);
+      return `Q${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`;
+    });
     pushUnits(bottom, 'month', (day) => format(day, { month: 'short' }));
   } else {
     pushUnits(top, 'year', (day) => format(day, { year: 'numeric' }));
@@ -350,14 +374,88 @@ export function TimelineView({
   }, [rows]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const labelWidth = 280;
-  const pxPerDay = PX_PER_DAY[zoom];
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [storedLabelWidth, setStoredLabelWidth] = useStoredState<number>('vision-map:timeline-label-width', DEFAULT_LABEL_WIDTH);
+  const maxLabelWidth = viewportWidth > 0
+    ? Math.min(MAX_LABEL_WIDTH, Math.max(MIN_LABEL_WIDTH, viewportWidth - 240))
+    : MAX_LABEL_WIDTH;
+  const clampLabelWidth = (next: number) => Math.max(MIN_LABEL_WIDTH, Math.min(maxLabelWidth, Math.round(next)));
+  const labelWidth = clampLabelWidth(Number.isFinite(storedLabelWidth) ? storedLabelWidth : DEFAULT_LABEL_WIDTH);
+  const maxLabelWidthRef = useRef(maxLabelWidth);
+  maxLabelWidthRef.current = maxLabelWidth;
+  const [resizing, setResizing] = useState(false);
+  const resizeOrigin = useRef({ x: 0, width: DEFAULT_LABEL_WIDTH });
 
-  // The calendar always covers every bar and today, from the first of a month.
+  useEffect(() => {
+    if (!resizing) return;
+    const clamp = (next: number) => Math.max(MIN_LABEL_WIDTH, Math.min(maxLabelWidthRef.current, Math.round(next)));
+    const onMove = (event: PointerEvent) => {
+      setStoredLabelWidth(clamp(resizeOrigin.current.width + (event.clientX - resizeOrigin.current.x)));
+    };
+    const onStop = () => setResizing(false);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onStop);
+    window.addEventListener('pointercancel', onStop);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onStop);
+      window.removeEventListener('pointercancel', onStop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resizing]);
+
+  function onResizerPointerDown(event: ReactPointerEvent<HTMLElement>) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    resizeOrigin.current = { x: event.clientX, width: labelWidth };
+    setResizing(true);
+  }
+
+  function onResizerKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setStoredLabelWidth(clampLabelWidth(labelWidth - 20));
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setStoredLabelWidth(clampLabelWidth(labelWidth + 20));
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      setStoredLabelWidth(DEFAULT_LABEL_WIDTH);
+    }
+  }
+
+  const pxPerDay = PX_PER_DAY[zoom];
+  const canShowGrid = timeline.rows.length > 0 && !isPhone && !asTable;
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!element) {
+      setViewportWidth(0);
+      return;
+    }
+    const update = () => {
+      setViewportWidth((current) => (current === element.clientWidth ? current : element.clientWidth));
+    };
+    update();
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(update);
+      observer.observe(element);
+      return () => observer.disconnect();
+    }
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [canShowGrid]);
+
+  // The calendar always covers every bar, today, and at least the visible box width.
   const planStart = Math.min(...timeline.rows.map((row) => row.start), today);
   const planEnd = Math.max(...timeline.rows.map((row) => row.end), today);
-  const rangeStart = startOfMonth(planStart - PADDING_DAYS[zoom]);
-  const rangeEnd = planEnd + PADDING_DAYS[zoom];
+  const rangeStart = startOfZoomUnit(planStart - PADDING_DAYS[zoom], zoom);
+  const naturalEnd = planEnd + PADDING_DAYS[zoom];
+  const minDaysForViewport = viewportWidth > labelWidth
+    ? Math.ceil((viewportWidth - labelWidth) / pxPerDay)
+    : 0;
+  const rangeEnd = endOfZoomUnit(Math.max(naturalEnd, rangeStart + minDaysForViewport - 1), zoom);
   const trackWidth = Math.ceil((rangeEnd - rangeStart + 1) * pxPerDay);
   const header = useMemo(() => headerCells(rangeStart, rangeEnd, zoom, language === 'km' ? 'km-KH' : 'en-GB'),
     [rangeStart, rangeEnd, zoom, language]);
@@ -367,10 +465,11 @@ export function TimelineView({
   const firstBar = timeline.rows.length ? Math.min(...timeline.rows.map((row) => row.start)) : today;
   const lastBar = timeline.rows.length ? Math.max(...timeline.rows.map((row) => row.end)) : today;
   const centreDay = useRef<number>(initialCentre ?? (today >= firstBar && today <= lastBar ? today : firstBar));
+  const hasViewportWidth = viewportWidth > 0;
   useLayoutEffect(() => {
     scrollToDay(centreDay.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoom]);
+  }, [zoom, hasViewportWidth, canShowGrid]);
 
   // TL-FR-34: bring the focused dream into view once, on first open.
   useLayoutEffect(() => {
@@ -419,18 +518,41 @@ export function TimelineView({
   const lastIndex = windowed ? Math.min(items.length, firstIndex + Math.ceil(viewportHeight / ROW_HEIGHT) + 20) : items.length;
   const shownItems = items.slice(firstIndex, lastIndex);
 
-  function scrollToDay(day: number) {
+  function scrollHorizontally(targetLeft: number, smooth = false) {
+    const element = scrollRef.current;
+    if (!element) return;
+    const left = Math.max(0, targetLeft);
+    if (smooth && !reduceMotion && typeof element.scrollTo === 'function') {
+      element.scrollTo({ left, behavior: 'smooth' });
+    } else {
+      element.scrollLeft = left;
+    }
+  }
+
+  function scrollToDay(day: number, smooth = false) {
     const element = scrollRef.current;
     if (!element) return;
     const visibleTrack = Math.max(0, element.clientWidth - labelWidth);
-    element.scrollLeft = Math.max(0, (day - rangeStart) * pxPerDay - visibleTrack / 2);
+    scrollHorizontally((day - rangeStart) * pxPerDay - visibleTrack / 2, smooth);
+  }
+
+  function stepCalendar(direction: -1 | 1) {
+    const element = scrollRef.current;
+    if (!element) return;
+    scrollHorizontally(element.scrollLeft + direction * PAGE_DAYS[zoom] * pxPerDay, true);
   }
 
   function currentCentre() {
     const element = scrollRef.current;
     if (!element) return centreDay.current;
     const visibleTrack = Math.max(0, element.clientWidth - labelWidth);
-    return Math.round(rangeStart + (element.scrollLeft + visibleTrack / 2) / pxPerDay);
+    if (visibleTrack === 0) return centreDay.current;
+    const naturalWidth = Math.ceil((naturalEnd - rangeStart + 1) * pxPerDay);
+    if (element.scrollLeft === 0 && naturalWidth <= visibleTrack) {
+      return today >= firstBar && today <= lastBar ? today : Math.round((firstBar + lastBar) / 2);
+    }
+    const day = Math.round(rangeStart + (element.scrollLeft + visibleTrack / 2) / pxPerDay);
+    return Math.max(rangeStart, Math.min(rangeEnd, day));
   }
 
   function changeZoom(next: TimelineZoom | null) {
@@ -689,6 +811,29 @@ export function TimelineView({
     </div>
   ))), [header, rangeStart, pxPerDay]);
 
+  const gridCells = useMemo(() => {
+    const bottom = header.bottom.map((cell) => {
+      const dayOfWeek = zoom === 'week' ? dayToDate(cell.start).getDay() : -1;
+      const weekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const weekStart = dayOfWeek === 1;
+      return (
+        <div
+          key={`grid-${cell.key}`}
+          className={`vm-timeline__grid-tick${weekend ? ' vm-timeline__grid-tick--weekend' : ''}${weekStart ? ' vm-timeline__grid-tick--major' : ''}`}
+          style={{ left: (cell.start - rangeStart) * pxPerDay, width: cell.days * pxPerDay }}
+        />
+      );
+    });
+    const top = header.top.map((cell) => (
+      <div
+        key={`grid-top-${cell.key}`}
+        className="vm-timeline__grid-major"
+        style={{ left: (cell.start - rangeStart) * pxPerDay }}
+      />
+    ));
+    return [...bottom, ...top];
+  }, [header, rangeStart, pxPerDay, zoom]);
+
   const busyCells = useMemo(() => (showBusy ? header.bottom.map((cell, index) => (
     <div
       key={`busy-${cell.key}`}
@@ -706,7 +851,7 @@ export function TimelineView({
   const headerHeight = showBusy ? 70 : 48;
 
   return (
-    <Box className="vm-timeline" sx={{ display: 'grid', gap: 1.5 }}>
+    <Box className={`vm-timeline${resizing ? ' vm-timeline--resizing' : ''}`} sx={{ display: 'grid', gap: 1.5, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
       <Typography className="vm-timeline__print-only" variant="caption">
         {t('Printed on {date}', { date: formatDay(todayDay()) })}
       </Typography>
@@ -731,7 +876,15 @@ export function TimelineView({
           <ToggleButton value="quarter">{t('Quarter')}</ToggleButton>
           <ToggleButton value="year">{t('Year')}</ToggleButton>
         </ToggleButtonGroup>
-        <Button variant="secondary" onClick={() => scrollToDay(today)}>{t('Today')}</Button>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+          <IconButton size="small" aria-label={t('Previous period')} title={t('Previous period')} onClick={() => stepCalendar(-1)}>
+            <ChevronLeft size={16} aria-hidden="true" />
+          </IconButton>
+          <Button variant="secondary" onClick={() => scrollToDay(today, true)}>{t('Today')}</Button>
+          <IconButton size="small" aria-label={t('Next period')} title={t('Next period')} onClick={() => stepCalendar(1)}>
+            <ChevronRight size={16} aria-hidden="true" />
+          </IconButton>
+        </Box>
         <Button variant="secondary" onClick={() => setExpanded(new Set(timeline.rows.filter((row) => row.hasChildren).map((row) => row.key)))}>
           {t('Expand all')}
         </Button>
@@ -849,7 +1002,7 @@ export function TimelineView({
           renderActions={hasRowActions ? rowMenu : undefined}
         />
       )}
-      {timeline.rows.length > 0 && !isPhone && !asTable && (
+      {canShowGrid && (
         <Box
           ref={scrollRef}
           role="region"
@@ -858,7 +1011,7 @@ export function TimelineView({
           className="vm-timeline__scroll"
           sx={{ overflow: 'auto', maxHeight: '70vh', border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', position: 'relative' }}
         >
-          <Box sx={{ width: labelWidth + trackWidth, position: 'relative' }}>
+          <Box sx={{ width: labelWidth + trackWidth, minWidth: '100%', position: 'relative' }}>
             {/* Header: sticky to the top, with a sticky corner on the left. */}
             <Box sx={{ display: 'flex', position: 'sticky', top: 0, zIndex: 3, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
               <Box sx={{ width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 4, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider', height: headerHeight, display: 'grid', gridTemplateRows: showBusy ? '48px 22px' : '48px' }}>
@@ -871,15 +1024,39 @@ export function TimelineView({
                   </Typography>
                 )}
               </Box>
-              <Box sx={{ position: 'relative', width: trackWidth, height: headerHeight, flex: 'none' }}>
+              <Box sx={{ position: 'relative', minWidth: trackWidth, flexGrow: 1, height: headerHeight }}>
                 {dateCells}
                 {busyCells}
                 {today >= rangeStart && today <= rangeEnd && (
-                  <Box sx={{ position: 'absolute', top: 24, left: todayLeft + 3, zIndex: 1, fontSize: 11, fontWeight: 700, color: 'error.main', lineHeight: '24px', whiteSpace: 'nowrap', bgcolor: 'background.paper', px: 0.5, borderLeft: 2, borderColor: 'error.main' }}>
+                  <Box sx={{ position: 'absolute', top: 24, left: todayLeft + 3, zIndex: 1, fontSize: 11, fontWeight: 700, color: 'error.main', lineHeight: '24px', whiteSpace: 'nowrap', bgcolor: 'background.paper', px: 0.5, borderLeft: 2, borderColor: 'error.main', pointerEvents: 'none' }}>
                     {t('Today')}
                   </Box>
                 )}
               </Box>
+            </Box>
+
+            {/* Full-height draggable divider between the sticky title column and schedule track. */}
+            <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
+              <Box sx={{ position: 'sticky', left: 0, width: labelWidth, height: '100%', pointerEvents: 'none' }}>
+                <button
+                  type="button"
+                  aria-label={t('Resize title column')}
+                  title={t('Drag to resize title column (double-click to reset)')}
+                  className="vm-timeline__resizer"
+                  onPointerDown={onResizerPointerDown}
+                  onKeyDown={onResizerKeyDown}
+                  onDoubleClick={() => setStoredLabelWidth(DEFAULT_LABEL_WIDTH)}
+                />
+              </Box>
+            </Box>
+
+            {/* Vertical gridlines and weekend shading behind all rows. */}
+            <Box
+              aria-hidden="true"
+              className="vm-timeline__grid"
+              sx={{ position: 'absolute', top: headerHeight, bottom: 0, left: labelWidth, right: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}
+            >
+              {gridCells}
             </Box>
 
             {/* Today line across every row (TL-FR-12). */}
@@ -916,16 +1093,27 @@ export function TimelineView({
               const isShifted = shift?.key === row.key && shift.delta !== 0;
               const isDream = row.kind === 'dream';
               const isExpanded = expanded.has(row.key);
+              const showTitleInside = width >= 140;
+              const showPercentInside = !showTitleInside && width >= 34;
+              const dreamMarkers = isDream ? (markersByDream.get(row.dreamId) ?? []) : [];
+              const completedNearRight = row.completedOn !== null && row.completedOn !== row.end
+                && (row.completedOn - span.end) * pxPerDay > -12
+                && (row.completedOn - span.end) * pxPerDay < 180;
+              const showOutsideLabel = !showTitleInside && dreamMarkers.length === 0 && !completedNearRight;
               return (
                 <Box
                   key={row.key}
                   data-row-key={row.key}
+                  className={`vm-timeline__row${isDream ? ' vm-timeline__row--dream' : ''}`}
                   sx={{ display: 'flex', height: ROW_HEIGHT, borderBottom: 1, borderColor: 'divider', opacity: row.archived ? 0.55 : 1 }}
                 >
-                  <Box sx={{
-                    width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.paper',
-                    borderRight: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, pl: 0.5 + row.depth * 2, pr: 1, minWidth: 0,
-                  }}>
+                  <Box
+                    className="vm-timeline__sticky-label"
+                    sx={{
+                      width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.paper',
+                      borderRight: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, pl: 0.5 + row.depth * 1.5, pr: 1, minWidth: 0,
+                    }}
+                  >
                     {row.hasChildren ? (
                       <button
                         type="button"
@@ -973,7 +1161,7 @@ export function TimelineView({
                       <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600, flex: 'none' }}>{t('Overdue')}</Typography>
                     )}
                   </Box>
-                  <Box sx={{ position: 'relative', width: trackWidth, flex: 'none' }}>
+                  <Box sx={{ position: 'relative', minWidth: trackWidth, flexGrow: 1 }}>
                     <Tooltip title={tooltip(row)} placement="top" arrow describeChild>
                       <BarElement
                         {...(readOnly ? { role: 'img', tabIndex: 0 } : { type: 'button' as const })}
@@ -1011,11 +1199,25 @@ export function TimelineView({
                           />
                         )}
                         {row.overdueDays > 0 && <span className="vm-timeline__overdue" aria-hidden="true" />}
-                        {width >= 44 && <span className="vm-timeline__label">{row.progress}%</span>}
+                        {showTitleInside && (
+                          <span className="vm-timeline__label vm-timeline__label--sticky" aria-hidden="true" style={{ left: labelWidth + 8 }}>{row.title} · {row.progress}%</span>
+                        )}
+                        {showPercentInside && (
+                          <span className="vm-timeline__label" aria-hidden="true">{row.progress}%</span>
+                        )}
                         {canMove && row.kind === 'task' && <span className="vm-timeline__handle vm-timeline__handle--start" data-handle="start" aria-hidden="true" />}
                         {canMove && <span className="vm-timeline__handle vm-timeline__handle--end" data-handle="end" aria-hidden="true" />}
                       </BarElement>
                     </Tooltip>
+                    {showOutsideLabel && (
+                      <span
+                        className="vm-timeline__bar-text"
+                        aria-hidden="true"
+                        style={{ left: left + width + 6 }}
+                      >
+                        {showPercentInside ? row.title : `${row.title} · ${row.progress}%`}
+                      </span>
+                    )}
                     {isDream && staggered(markersByDream.get(row.dreamId) ?? []).map(({ marker, lane }) => {
                       const info = MARKER_INFO[marker.type];
                       const Icon = info.icon;
