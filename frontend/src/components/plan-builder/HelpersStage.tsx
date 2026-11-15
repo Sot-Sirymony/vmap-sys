@@ -84,6 +84,14 @@ export function HelpersStage({ dream, content, onChange, token, language, aiRead
     key: item.key, label: item.kind === 'GOAL' ? item.title : `— ${item.title}`,
   }))];
   const linkValue = (key?: string | null) => (key && targets.some((target) => target.key === key) ? key : '');
+  // V17 BL-FR-37: a risk sits on a step, or on a new step made for it under a goal; never on the whole dream.
+  const riskTargets: Target[] = [
+    { key: '', label: tr('Choose a step') },
+    ...items.map((item) => (item.kind === 'GOAL'
+      ? { key: `${NEW_STEP_FOR_RISK}${item.key}`, label: tr('A new step for this risk, in: {goal}', { goal: item.title }) }
+      : { key: item.key, label: `— ${item.title}` })),
+  ];
+  const riskLinkValue = (key?: string | null) => (key && riskTargets.some((target) => target.key === key) ? key : '');
 
   const suggest = () => ai.run('helpers', async () => {
     const answer = await suggestHelpersAndRisks(token, dream.id, language, {
@@ -100,7 +108,7 @@ export function HelpersStage({ dream, content, onChange, token, language, aiRead
     <Stack spacing={2}>
       <Prompts questions={[
         'Who has already done something like this?',
-        'What could block this plan?',
+        'Which step could be held up, and by what?',
         'What is missing: knowledge, skill, time, money, motivation or a decision?',
       ]} />
       {aiReady && (
@@ -130,7 +138,7 @@ export function HelpersStage({ dream, content, onChange, token, language, aiRead
       <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{tr('Risks')}</Typography>
       {risks.length === 0 && <Typography variant="body2" color="text.secondary">{tr('No risks yet.')}</Typography>}
       {risks.map((risk) => (
-        <RiskCard key={risk.key} risk={risk} helpers={helpers} targets={targets} linkValue={linkValue(risk.linkKey)}
+        <RiskCard key={risk.key} risk={risk} helpers={helpers} targets={riskTargets} linkValue={riskLinkValue(risk.linkKey)}
           onChange={(patch) => onChange((current) => updateRisk(current, risk.key, patch))}
           onRemove={() => onChange((current) => removeRisk(current, risk.key))} />
       ))}
@@ -185,6 +193,9 @@ export function HelpersStage({ dream, content, onChange, token, language, aiRead
 }
 
 type Target = { key: string; label: string };
+
+/** V17 BL-FR-37: the server reads "newstep:{goalKey}" as "make a new step for this risk under that goal". */
+export const NEW_STEP_FOR_RISK = 'newstep:';
 
 function TargetSelect({ targets, value, onChange }: { targets: Target[]; value: string; onChange: (key: string | null) => void }) {
   return (
@@ -267,6 +278,10 @@ function RiskCard({ risk, helpers, targets, linkValue, onChange, onRemove }: {
           {helpers.map((helper) => <MenuItem key={helper.key} value={helper.key}>{helper.partnerName ?? helper.role ?? tr('Helper')}</MenuItem>)}
         </TextField>
       </Box>
+      {!linkValue && (
+        // V17 BL-FR-37: the plan cannot be added until each risk names its step.
+        <Typography variant="caption" color="warning.main">{tr('Choose the step this risk holds up, or a new step for it.')}</Typography>
+      )}
       <TextField size="small" label={tr('First way to handle it')} value={risk.solution ?? ''} multiline
         onChange={(event) => onChange({ solution: event.target.value })} />
       {HELPER_FOR_GAP[risk.obstacleType] && (

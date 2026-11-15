@@ -185,8 +185,10 @@ class SupportingResourceFlowTests {
 
     @Test
     void searchesOnlyTheUsersOwnInsights() throws Exception {
+        // V17 BL-FR-01: a plan obstacle sits on a step or task.
+        long stepId = com.visionmapping.support.PlanFixture.step(mockMvc, objectMapper, owner);
         send(post("/api/obstacles"), owner, Map.of("title", "No weekday time", "obstacleType", "TIME", "severity", "HIGH",
-                "status", "RESOLVED", "rootCause", "Said yes to every meeting")).andExpect(status().isCreated());
+                "status", "RESOLVED", "rootCause", "Said yes to every meeting", "relatedStepId", stepId)).andExpect(status().isCreated());
         send(get("/api/insights?query=meeting"), owner).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].content").value("Said yes to every meeting"));
         send(get("/api/insights?query=meeting"), stranger).andExpect(jsonPath("$.length()").value(0));

@@ -1,5 +1,6 @@
 package com.visionmapping.dto.response;
 
+import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import java.math.BigDecimal;
@@ -28,6 +29,12 @@ public record VisionStepResponse(
         int overdueReschedules,
         // V11 (PB-FR-12).
         BigDecimal estimatedHours,
-        Long startsAfterStepId
+        Long startsAfterStepId,
+        // V17 BL-FR-18, BL-FR-21: the kind of gap, and what this "find help" step was created to cover.
+        ObstacleType gapKind,
+        Long coversStepId,
+        String coversStepCode,
+        Long coversObstacleId,
+        Long createdPartnerId
 ) {
 }

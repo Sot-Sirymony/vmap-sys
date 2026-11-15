@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import type { ArchiveImpact } from '../types/vision';
-import type { VisionStep, VisionStepRequest } from '../types/vision';
+import type { GapStepRequest, GapStepResult, VisionStep, VisionStepRequest } from '../types/vision';
 
 export function listSteps(token: string, includeArchived = false) {
   return apiClient<VisionStep[]>(`/steps?includeArchived=${includeArchived}`, { token });
@@ -41,8 +41,9 @@ export function reorderSteps(token: string, goalId: number, orderedIds: number[]
   });
 }
 
-export function archiveStep(token: string, id: number) {
-  return apiClient<void>(`/steps/${id}`, {
+// V17 BL-FR-21: removePartner also archives the partner a "find help" step created.
+export function archiveStep(token: string, id: number, removePartner = false) {
+  return apiClient<void>(`/steps/${id}${removePartner ? '?removePartner=true' : ''}`, {
     method: 'DELETE',
     token,
   });
@@ -63,5 +64,14 @@ export function permanentlyDeleteStep(token: string, id: number) {
   return apiClient<void>(`/steps/${id}/permanent`, {
     method: 'DELETE',
     token,
+  });
+}
+
+// V17 BL-FR-19: turns this step's gap into a "find help" step placed just before it.
+export function createGapStep(token: string, id: number, request: GapStepRequest) {
+  return apiClient<GapStepResult>(`/steps/${id}/gap-step`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(request),
   });
 }

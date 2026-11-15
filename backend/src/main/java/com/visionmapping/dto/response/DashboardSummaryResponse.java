@@ -105,7 +105,9 @@ public record DashboardSummaryResponse(
             List<DreamResponse> inactiveMoonshotDreams,
             // FR-37.1: areas with an active goal but no progress in the starvation
             // window while another area moved — being starved of attention.
-            List<VisionAreaResponse> starvedVisionAreas
+            List<VisionAreaResponse> starvedVisionAreas,
+            // V17 BL-FR-07: active obstacles that are not on a step yet.
+            int unplacedObstacleCount
     ) {
         public Attention {
             blockedTasksWithoutPartner = Copies.list(blockedTasksWithoutPartner);

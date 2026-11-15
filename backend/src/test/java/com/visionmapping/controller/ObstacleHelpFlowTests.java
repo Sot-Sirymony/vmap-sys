@@ -324,8 +324,17 @@ class ObstacleHelpFlowTests {
                 "supportType", supportType, "status", partnerStatus)).andExpect(status().isCreated())).get("id").asLong();
     }
 
+    /**
+     * V17 BL-FR-01: an obstacle sits on a step or task. When a test does not
+     * care where, it gets its own new step, so it never adds to the blocked
+     * tasks counted under another step.
+     */
     private long obstacle(String token, Map<String, Object> body) throws Exception {
-        return read(send(post("/api/obstacles"), token, body).andExpect(status().isCreated())).get("id").asLong();
+        Map<String, Object> placed = new HashMap<>(body);
+        if (!placed.containsKey("relatedStepId") && !placed.containsKey("relatedTaskId")) {
+            placed.put("relatedStepId", plan(token).stepId());
+        }
+        return read(send(post("/api/obstacles"), token, placed).andExpect(status().isCreated())).get("id").asLong();
     }
 
     private static <T> ClaudeClient.Structured<T> structured(T value) {

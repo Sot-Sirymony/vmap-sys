@@ -91,6 +91,9 @@ public class AiHelpersService {
         sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
         List<PlanHelpersRequest.Item> items = Optional.ofNullable(request.items()).orElse(List.of());
         Set<String> keys = items.stream().map(PlanHelpersRequest.Item::key).collect(Collectors.toSet());
+        // V17 BL-FR-37: a suggested risk may only point at a step; anything else is left for the participant to choose.
+        Set<String> stepKeys = items.stream().filter(item -> "STEP".equals(item.kind()))
+                .map(PlanHelpersRequest.Item::key).collect(Collectors.toSet());
         Map<Long, AiApprovedResource> approved = resourceIdeas.approved();
         String records = transactions.execute(status -> {
             Dream dream = lookup.dream(dreamId);
@@ -121,8 +124,9 @@ public class AiHelpersService {
         }) + AiPlanService.askRecords(request.ask());
         String prompt = "Look at this plan as a careful coach. Name up to " + MAX_HELPERS + " kinds of helpers it needs, as roles "
                 + "with a support type, never a person's name. Name up to " + MAX_RISKS + " likely obstacles, each with a type, "
-                + "a severity and a practical first way to handle it. Point each at the goal or step it belongs to, using the "
-                + "keys in brackets." + (request.useFears()
+                + "a severity and a practical first way to handle it. Point each helper at the goal or step it belongs to, "
+                + "and each obstacle at the step it would hold up (never a goal or the whole dream), using the keys in "
+                + "brackets." + (request.useFears()
                 ? " Where a fear from the journal is a real risk to this plan, include it and mark it fromFears."
                 : " Set fromFears to false.") + " " + AiResourceIdeas.instruction(MAX_RESOURCES) + " Do not repeat helpers or "
                 + "obstacles the plan already covers. Follow the participant's note when there is one.";
@@ -150,7 +154,7 @@ public class AiHelpersService {
             ObstacleType type = obstacleType(risk.obstacleType());
             PartnerSupportType helper = HELPER_FOR_GAP.getOrDefault(type, PartnerSupportType.OTHER);
             risks.add(new RiskSuggestion(limit(risk.title(), 220), limit(risk.description(), 3000), type.name(),
-                    severity(risk.severity()), limit(risk.solution(), 3000), knownKey(risk.forKey(), keys), helper.name(),
+                    severity(risk.severity()), limit(risk.solution(), 3000), knownKey(risk.forKey(), stepKeys), helper.name(),
                     HELPER_LABEL.get(type), request.useFears() && risk.fromFears()));
         }
         var resources = AiResourceIdeas.toIdeas(draft.resources(), approved, MAX_RESOURCES);

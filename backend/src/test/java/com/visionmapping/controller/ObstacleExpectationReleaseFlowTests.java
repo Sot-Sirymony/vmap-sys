@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+import com.visionmapping.support.PlanFixture;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -102,6 +103,8 @@ class ObstacleExpectationReleaseFlowTests {
     }
 
     private long createObstacle(String token) throws Exception {
+        // V17 BL-FR-01: with no worksheet answers it is not exempt, so it sits on a step.
+        long stepId = PlanFixture.step(mockMvc, objectMapper, token);
         MvcResult result = mockMvc.perform(post("/api/obstacles")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -109,7 +112,8 @@ class ObstacleExpectationReleaseFlowTests {
                                 "title", "Missed the deadline together",
                                 "obstacleType", "PARTNER",
                                 "severity", "MEDIUM",
-                                "status", "OPEN"
+                                "status", "OPEN",
+                                "relatedStepId", stepId
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn();

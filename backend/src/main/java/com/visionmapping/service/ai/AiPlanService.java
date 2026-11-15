@@ -30,6 +30,8 @@ import com.visionmapping.entity.VisionArea;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.Priority;
+import com.visionmapping.entity.enums.ObstacleStatus;
+import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.AiUnavailableException;
 import com.visionmapping.repository.DreamRepository;
@@ -103,6 +105,16 @@ public class AiPlanService {
     private final Clock clock;
     private final AiPlanFeedbackService feedback;
     private final PlanSessionGuard sessionGuard;
+    /** V17 BL-FR-25, BL-FR-29: a task breaks into 2 to 5 smaller ones. */
+    static final int MAX_SMALLER_TASKS = 5;
+    private final com.visionmapping.repository.PartnerRepository partnerRepository;
+    private final com.visionmapping.repository.ObstacleRepository obstacleRepository;
+
+    /** V17 BL-FR-22: the gap kinds that call for a helper, with how the plan check names them. */
+    private static final Map<ObstacleType, String> HELP_GAP_KINDS = Map.of(
+            ObstacleType.KNOWLEDGE, "some knowledge",
+            ObstacleType.SKILL, "a skill",
+            ObstacleType.MONEY, "money");
 
     /** Vision areas the participant does not have yet, to start a plan from. */
     public VisionAreaSuggestions suggestVisionAreas(String language) {
@@ -349,13 +361,56 @@ public class AiPlanService {
         return tasksFor(user, apiKey, plan + askRecords(step.ask()), latest, language, step.ask());
     }
 
+    /**
+     * V17 BL-FR-29: 2 to 5 smaller tasks for one task that is Blocked or
+     * overdue, read from the task, its step and the blocker reason. Only
+     * suggestions: nothing is saved until the participant approves each row.
+     * Counts toward the same limits as every AI request.
+     */
+    public TaskSuggestions suggestSmallerTasks(Long taskId, String language) {
+        AppUser user = lookup.currentUser();
+        // Ownership first, so another user's task answers 404 whether or not AI is available.
+        Long dreamId = transactions.execute(status -> lookup.task(taskId).getStep().getGoal().getDream().getId());
+        String apiKey = accessService.requireAvailable(user);
+        sessionGuard.use(user.getId(), dreamId); // PB-NFR-03
+        LocalDate[] latest = new LocalDate[1];
+        String plan = transactions.execute(status -> {
+            com.visionmapping.entity.TaskItem task = lookup.task(taskId);
+            VisionStep step = task.getStep();
+            latest[0] = task.getDueDate() != null && !task.getDueDate().isBefore(LocalDate.now(clock))
+                    ? task.getDueDate()
+                    : firstDate(step.getTargetDate(), step.getGoal().getTargetDate());
+            StringBuilder out = new StringBuilder(describeDream(user, step.getGoal().getDream()));
+            out.append("\nThe task to break down: [").append(task.getId()).append("] ").append(clip(task.getTitle()))
+                    .append(" | ").append(task.getStatus()).append(task.getDueDate() == null ? "" : ", due " + task.getDueDate())
+                    .append(" | step: ").append(clip(step.getTitle())).append('\n');
+            appendLongLine(out, "Task description", task.getDescription());
+            appendLongLine(out, "What blocks it", task.getBlockerReason());
+            appendLine(out, "Its next action", task.getNextAction());
+            appendLongLine(out, "Step resources and people", step.getResources());
+            taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(step.getId(), user.getId()).stream()
+                    .filter(other -> !other.getId().equals(task.getId()))
+                    .forEach(other -> out.append("  Other task in this step: ").append(clip(other.getTitle())).append('\n'));
+            return out.toString();
+        });
+        String instruction = "Break the task to break down into between 2 and " + MAX_SMALLER_TASKS + " smaller tasks, in order. "
+                + "The first must be small enough to start within 15 minutes. Where a blocker is named, make the early tasks "
+                + "work around it or get the missing thing. Do not repeat other tasks in this step.";
+        return tasksFor(user, apiKey, plan, latest[0], language,
+                new PlanAskRequest(null, true, null, null, null, null), instruction, MAX_SMALLER_TASKS);
+    }
+
     private TaskSuggestions tasksFor(AppUser user, String apiKey, String plan, LocalDate latest, String language, PlanAskRequest ask) {
+        return tasksFor(user, apiKey, plan, latest, language, ask,
+                "Break the step to break into tasks into between 2 and " + MAX_TASKS + " small tasks, in order, each "
+                + "doable in one sitting. Do not repeat tasks already there.", MAX_TASKS);
+    }
+
+    private TaskSuggestions tasksFor(AppUser user, String apiKey, String plan, LocalDate latest, String language,
+                                     @Nullable PlanAskRequest ask, String instruction, int limit) {
         LocalDate today = LocalDate.now(clock);
-        int max = refining(ask) ? refineMax(ask, MAX_TASKS) : MAX_TASKS;
-        String task = refining(ask)
-                ? refineTask(ask, "tasks", max)
-                : "Break the step to break into tasks into between 2 and " + MAX_TASKS + " small tasks, in order, each "
-                + "doable in one sitting. Do not repeat tasks already there.";
+        int max = refining(ask) ? refineMax(ask, limit) : limit;
+        String task = refining(ask) ? refineTask(ask, "tasks", max) : instruction;
         String prompt = task + " " + TASK_GROUNDING + " Owner is Me unless a role clearly fits better; never invent a person's name. Due dates must "
                 + "be after " + today + " and, when the step has a date, not after it. Give each a priority and a realistic "
                 + "effort in hours. " + questionRule(ask, "the step", "tasks");
@@ -520,6 +575,7 @@ public class AiPlanService {
                     titles.put(step.getId(), step.getTitle());
                     if (step.getStatus() != WorkStatus.COMPLETED) {
                         issues.addAll(ruleIssues(step, goal, today));
+                        gapNeedsHelp(step, steps).ifPresent(issues::add);
                     }
                 }
             }
@@ -573,6 +629,7 @@ public class AiPlanService {
             for (VisionStep step : steps) {
                 if (step.getStatus() != WorkStatus.COMPLETED) {
                     issues.addAll(ruleIssues(step, goal, today));
+                    gapNeedsHelp(step, steps).ifPresent(issues::add);
                 }
             }
         }
@@ -697,6 +754,31 @@ public class AiPlanService {
                     "Write the resources and people it needs: money, tools, skills or a helper."));
         }
         return issues;
+    }
+
+    /**
+     * V17 BL-FR-22: a step missing knowledge, a skill or money, with no linked
+     * partner, no "find help" step made for it and no open obstacle on it.
+     */
+    private Optional<PlanIssue> gapNeedsHelp(VisionStep step, List<VisionStep> goalSteps) {
+        ObstacleType kind = step.getGapKind();
+        // A "find help" step is itself the answer to a gap, so it is not flagged.
+        boolean isFindHelpStep = step.getCoversStep() != null || step.getCoversObstacle() != null;
+        if (kind == null || !HELP_GAP_KINDS.containsKey(kind) || isFindHelpStep) {
+            return Optional.empty();
+        }
+        boolean coveredByStep = goalSteps.stream()
+                .anyMatch(other -> other.getCoversStep() != null && other.getCoversStep().getId().equals(step.getId()));
+        boolean hasPartner = partnerRepository.existsByUser_IdAndRelatedStep_IdAndArchivedFalse(step.getUser().getId(), step.getId());
+        boolean hasOpenObstacle = obstacleRepository.findByRelatedStep_Id(step.getId()).stream()
+                .anyMatch(obstacle -> !obstacle.isArchived() && (obstacle.getStatus() == ObstacleStatus.OPEN
+                        || obstacle.getStatus() == ObstacleStatus.IN_PROGRESS));
+        if (coveredByStep || hasPartner || hasOpenObstacle) {
+            return Optional.empty();
+        }
+        return Optional.of(rule("GAP_NEEDS_HELP", "STEP", step.getId(), step.getTitle(),
+                "Step %s is missing %s. Who could help?".formatted(step.getCode(), HELP_GAP_KINDS.get(kind)),
+                "Turn this gap into a step to find a helper, or link a partner to the step."));
     }
 
     private static PlanIssue rule(String kind, String itemType, Long itemId, String itemTitle, String problem, String fix) {

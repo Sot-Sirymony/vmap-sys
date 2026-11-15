@@ -33,6 +33,16 @@ public record TaskItemRequest(
         @Size(max = 2000) String blockerReason,
         @Size(max = 2000) String nextAction,
         // FR-34.1: optional; null is accepted and read as NEUTRAL (BR-27).
-        EnergyDemand energyDemand
+        EnergyDemand energyDemand,
+        // V17 BL-FR-27: "What changed?" when the task leaves Blocked; saved as the progress-log note.
+        @Size(max = 1000) String changeNote
 ) {
+
+    /** The request without a change note, for callers that never leave Blocked with one. */
+    public TaskItemRequest(Long stepId, String title, String description, String owner, Priority priority, String letterRank,
+            LocalDate startDate, LocalDate dueDate, WorkStatus status, BigDecimal progressPercent, BigDecimal estimatedHours,
+            BigDecimal actualHours, String blockerReason, String nextAction, EnergyDemand energyDemand) {
+        this(stepId, title, description, owner, priority, letterRank, startDate, dueDate, status, progressPercent,
+                estimatedHours, actualHours, blockerReason, nextAction, energyDemand, null);
+    }
 }

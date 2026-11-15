@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
+import com.visionmapping.support.PlanFixture;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -59,6 +60,8 @@ class ObstacleCriticismTriageFlowTests {
     @Test
     void leavingAllThreeFieldsBlankHasNoEffect() throws Exception {
         String token = registerAndToken("criticism-blank");
+        // V17 BL-FR-01: with no triage answers it is not exempt, so it sits on a step.
+        long stepId = PlanFixture.step(mockMvc, objectMapper, token);
 
         mockMvc.perform(post("/api/obstacles")
                         .header("Authorization", "Bearer " + token)
@@ -67,7 +70,8 @@ class ObstacleCriticismTriageFlowTests {
                                 "title", "Harsh feedback on the proposal",
                                 "obstacleType", "PARTNER",
                                 "severity", "MEDIUM",
-                                "status", "OPEN"
+                                "status", "OPEN",
+                                "relatedStepId", stepId
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.criticismOverstated").doesNotExist())
@@ -80,6 +84,8 @@ class ObstacleCriticismTriageFlowTests {
         // FR-60.1 scopes the UI to PARTNER-type, but the backend never
         // enforces that restriction server-side, matching FR-54's precedent.
         String token = registerAndToken("criticism-non-partner");
+        // V17 BL-FR-01: only partner conflicts are exempt, so this sits on a step.
+        long stepId = PlanFixture.step(mockMvc, objectMapper, token);
 
         MvcResult result = mockMvc.perform(post("/api/obstacles")
                         .header("Authorization", "Bearer " + token)
@@ -89,7 +95,8 @@ class ObstacleCriticismTriageFlowTests {
                                 "obstacleType", "DECISION",
                                 "severity", "LOW",
                                 "status", "OPEN",
-                                "criticismSubstance", "Worth reconsidering the timeline."
+                                "criticismSubstance", "Worth reconsidering the timeline.",
+                                "relatedStepId", stepId
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn();

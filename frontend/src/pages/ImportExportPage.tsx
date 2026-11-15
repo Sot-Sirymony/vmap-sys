@@ -109,6 +109,12 @@ export function ImportExportPage() {
             {summary.createdRecords > 0 && (
               <p className="field-hint">{tr('Open Goals, Steps, or Tasks to see the imported records.')}</p>
             )}
+            {(summary.warnings ?? []).length > 0 && (
+              // V17 BL-FR-41: imported rows that need attention, e.g. obstacles not on a step yet.
+              <ul className="field-hint placement-missing-hint">
+                {(summary.warnings ?? []).map((warning) => <li key={warning}>{warning}</li>)}
+              </ul>
+            )}
             {summary.validationErrors.length > 0 && (
               <div className="stack-list">
                 {summary.validationErrors.map((validationError) => (

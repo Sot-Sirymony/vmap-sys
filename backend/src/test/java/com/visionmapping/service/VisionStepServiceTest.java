@@ -86,7 +86,8 @@ class VisionStepServiceTest {
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, gratitudeEntryRepository, idealPartnerProfileRepository);
         service = new VisionStepService(lookup, progress, archiveCascade, permanentDeleteCascade,
-                new VisionMappingMapper(), visionStepRepository, taskItemRepository, java.time.Clock.systemDefaultZone());
+                new VisionMappingMapper(), visionStepRepository, taskItemRepository, java.time.Clock.systemDefaultZone(),
+                new com.visionmapping.service.support.ObstacleAnchorSync(org.mockito.Mockito.mock(com.visionmapping.repository.ObstacleRepository.class)));
         testUser = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         lenient().when(userScope.currentUser()).thenReturn(testUser);

@@ -632,7 +632,7 @@ VisionStep 1 → many TaskItems
 Partner may link to VisionArea, Dream, Goal, VisionStep, or TaskItem.
 CommunicationMessage belongs to Partner when partner exists.
 Review may link to VisionArea or Dream.
-Obstacle may link to Dream, Goal, VisionStep, or TaskItem.
+Obstacle is anchored to a VisionStep or TaskItem; its Goal and Dream are derived from that anchor (V17, decision D-17-1 in `docs/VMS_BRD_V17.0.0.md`). Only a partner conflict may stay off the steps, with a Dream for context.
 ProgressLog belongs to TaskItem.
 ```
 
@@ -882,7 +882,7 @@ Then suggest possible goals and ask the user to approve or edit.
 Ask:
 - What steps are required?
 - What must happen first?
-- What can block this goal?
+- Which steps will need something you don't have yet? (V17, decision D-17-2: dreams and goals describe outcomes only; blockers are recorded on steps and tasks.)
 - Who can help?
 
 Then suggest 3 to 10 steps and ask the user to approve or edit.

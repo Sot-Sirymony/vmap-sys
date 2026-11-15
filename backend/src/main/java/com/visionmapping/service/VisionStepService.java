@@ -12,6 +12,7 @@ import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
@@ -20,6 +21,7 @@ import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.ObstacleAnchorSync;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import com.visionmapping.service.support.ProgressOverride;
@@ -57,6 +59,7 @@ public class VisionStepService {
     private final VisionStepRepository visionStepRepository;
     private final TaskItemRepository taskItemRepository;
     private final Clock clock;
+    private final ObstacleAnchorSync obstacleAnchorSync;
 
     @Cacheable(CacheConfig.STEP_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -85,6 +88,7 @@ public class VisionStepService {
                 .status(request.status())
                 .resources(blankToNull(request.resources()))
                 .estimatedHours(request.estimatedHours())
+                .gapKind(gapKindOf(request.gapKind()))
                 .progressPercent(ZERO)
                 .manualProgressOverride(false)
                 .build();
@@ -125,6 +129,9 @@ public class VisionStepService {
         if (request.estimatedHours() != null) {
             entity.setEstimatedHours(request.estimatedHours());
         }
+        if (request.gapKind() != null) {
+            entity.setGapKind(gapKindOf(request.gapKind()));
+        }
         if (request.startsAfterStepId() != null) {
             entity.setStartsAfter(request.startsAfterStepId() == 0 ? null
                     : startsAfter(request.startsAfterStepId(), entity.getGoal(), entity.getId()));
@@ -136,6 +143,9 @@ public class VisionStepService {
         validateScheduleCascade(entity);
         progress.recalculateGoal(oldGoal);
         progress.recalculateGoal(entity.getGoal());
+        if (!oldGoal.getId().equals(entity.getGoal().getId())) {
+            obstacleAnchorSync.afterStepMoved(entity);
+        }
         return mapper.toResponse(entity);
     }
 
@@ -168,7 +178,18 @@ public class VisionStepService {
     }
 
     public void archiveStep(Long id) {
+        archiveStep(id, false);
+    }
+
+    /**
+     * V17 BL-FR-21: archiving a "find help" step may also archive the To
+     * Contact partner it created, when the participant asks for that.
+     */
+    public void archiveStep(Long id, boolean removeCreatedPartner) {
         VisionStep entity = lookup.step(id);
+        if (removeCreatedPartner && entity.getCreatedPartner() != null && !entity.getCreatedPartner().isArchived()) {
+            entity.getCreatedPartner().setArchived(true);
+        }
         entity.archive();
         archiveCascade.archiveTasksUnder(entity.getId());
         progress.recalculateGoal(entity.getGoal());
@@ -235,6 +256,12 @@ public class VisionStepService {
                     "This step's target date (%s) is earlier than one of its tasks' due date (%s). Move the step's date later or adjust the task."
                             .formatted(step.getTargetDate(), latestTaskDueDate));
         }
+    }
+
+    /** V17 BL-FR-18: blank means no gap kind; the request pattern has checked the name. */
+    @Nullable
+    static ObstacleType gapKindOf(@Nullable String value) {
+        return value == null || value.isBlank() ? null : ObstacleType.valueOf(value);
     }
 
     @Nullable

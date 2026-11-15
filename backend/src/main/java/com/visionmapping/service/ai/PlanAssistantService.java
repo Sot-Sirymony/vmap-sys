@@ -106,6 +106,9 @@ public class PlanAssistantService {
     private final DreamService dreamService;
     private final GoalService goalService;
     private final VisionStepService stepService;
+    /** V17 BL-FR-38. */
+    static final String RISK_NEEDS_STEP = "Choose the step this risk holds up.";
+
     private final ObstacleService obstacleService;
     private final Validator validator;
     private final TransactionTemplate transactions;
@@ -238,10 +241,11 @@ public class PlanAssistantService {
                         AiPlanService.futureDate(draft.date(), today, parent.date()), null, null, null, reason);
             }
             case "ADD_RISK" -> {
-                if (blank(draft.title())) {
+                // V17 BL-FR-38: a risk is proposed on the step it would hold up, never the dream or a goal.
+                if (blank(draft.title()) || parent == null || !"STEP".equals(parent.type())) {
                     yield null;
                 }
-                Ref tied = parent != null && ("GOAL".equals(parent.type()) || "STEP".equals(parent.type())) ? parent : null;
+                Ref tied = parent;
                 yield new AssistantChange(kind, "OBSTACLE", null, null, null, null,
                         tied == null ? null : tied.ref(), tied == null ? null : tied.type(), tied == null ? null : tied.title(),
                         limit(draft.title(), 220), null, null, obstacleType(draft.obstacleType()).name(),
@@ -334,19 +338,20 @@ public class PlanAssistantService {
     }
 
     private AssistantApplied addRisk(Dream dream, PlanAssistantApplyRequest request) {
+        // V17 BL-FR-38: a risk needs the step it holds up.
         String parent = blank(request.parentRef()) ? "" : request.parentRef().trim();
-        Long goalId = null;
-        Long stepId = null;
         if (parent.startsWith("goal:")) {
-            goalId = goalOf(dream, parent).getId();
-        } else if (parent.startsWith("step:")) {
-            VisionStep step = stepOf(dream, parent);
-            stepId = step.getId();
-            goalId = step.getGoal().getId();
-        } else if (!parent.isEmpty()) {
-            throw new ResourceNotFoundException("That item is not in this plan.");
+            goalOf(dream, parent);
+            throw new BusinessRuleException(RISK_NEEDS_STEP);
         }
-        ObstacleRequest create = new ObstacleRequest(dream.getId(), goalId, stepId, null,
+        if (!parent.startsWith("step:")) {
+            if (!parent.isEmpty()) {
+                throw new ResourceNotFoundException("That item is not in this plan.");
+            }
+            throw new BusinessRuleException(RISK_NEEDS_STEP);
+        }
+        Long stepId = stepOf(dream, parent).getId();
+        ObstacleRequest create = new ObstacleRequest(null, null, stepId, null,
                 required(request.title(), "Write what could get in the way first."), null, obstacleType(request.obstacleType()),
                 severity(request.severity()), null, blank(request.solution()) ? null : request.solution().trim(), null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, ObstacleStatus.OPEN);
@@ -470,7 +475,7 @@ public class PlanAssistantService {
         Set<String> kinds = switch (section) {
             case "STEPS" -> Set.of("NO_STEPS");
             case "DATES" -> Set.of("MISSING_OWNER", "MISSING_DATE", "AFTER_GOAL_DATE", "OVERDUE");
-            case "RESOURCES" -> Set.of("MISSING_RESOURCE");
+            case "RESOURCES" -> Set.of("MISSING_RESOURCE", "GAP_NEEDS_HELP");
             case "WHOLE" -> null;
             default -> Set.of();
         };
@@ -643,7 +648,8 @@ public class PlanAssistantService {
             case "STEPS" -> "EDIT a step: TITLE (one clear action), OWNER or DATE; ADD_STEP under a goal for a missing step.";
             case "DATES" -> "EDIT a step: OWNER or DATE.";
             case "TASKS" -> "EDIT a task: TITLE, OWNER or DATE; ADD_TASK under a step, most of all a complex step without tasks.";
-            case "RESOURCES", "HELPERS" -> "ADD_RISK: something likely to get in the way, with its type, severity and a solution.";
+            case "RESOURCES", "HELPERS" -> "ADD_RISK under a step [step ref]: something likely to hold that step up, with its type, "
+                    + "severity and a solution. Put each risk on the step it affects, never on the dream or a goal.";
             case "REVIEW" -> "EDIT a step or task: TITLE, OWNER or DATE; ADD_STEP under a goal; ADD_TASK under a step.";
             default -> "";
         };

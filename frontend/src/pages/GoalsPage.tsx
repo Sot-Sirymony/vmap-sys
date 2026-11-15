@@ -1,4 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { listObstacles } from '../api/obstacleApi';
+import { listTasks } from '../api/taskApi';
+import { BlockerRollupLink, blockerRollupText } from '../components/coaching/BlockerRollupLink';
+import { computeBlockerRollup, rollupFor, type BlockerCount } from '../utils/blockerRollup';
+import { OutcomeOnlyHint } from '../components/coaching/OutcomeOnlyHint';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Rocket, Target, TriangleAlert } from 'lucide-react';
 import { listDreams } from '../api/dreamApi';
@@ -80,6 +85,7 @@ export function GoalsPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   // Count of live steps per goal, for the Steps column.
+  const [goalBlockers, setGoalBlockers] = useState<Map<number, BlockerCount>>(new Map());
   const [stepCounts, setStepCounts] = useState<Map<number, number>>(new Map());
   const [dreamId, setDreamId] = useState('');
   const [title, setTitle] = useState('');
@@ -153,6 +159,17 @@ export function GoalsPage() {
         counts.set(step.goalId, (counts.get(step.goalId) ?? 0) + 1);
       }
       setStepCounts(counts);
+      // V17 BL-FR-15: blockers and Blocked tasks under each goal's steps.
+      void (async () => {
+        try {
+          const [tasks, obstacles] = await Promise.all([listTasks(token), listObstacles(token)]);
+          if (Array.isArray(tasks) && Array.isArray(obstacles)) {
+            setGoalBlockers(computeBlockerRollup({ obstacles, tasks, steps, goals: [] }).byGoal);
+          }
+        } catch {
+          // The count is a convenience; the table works without it.
+        }
+      })();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -488,6 +505,18 @@ export function GoalsPage() {
       render: (goal) => stepCounts.get(goal.id) ?? 0,
     },
     {
+      // V17 BL-FR-15: read-only; blockers are added on steps and tasks.
+      key: 'blockers',
+      label: tr('Blockers'),
+      sortValue: (goal) => {
+        const count = rollupFor(goalBlockers, goal.id);
+        return count.blockers + count.blockedTasks;
+      },
+      render: (goal) => (blockerRollupText(rollupFor(goalBlockers, goal.id))
+        ? <BlockerRollupLink count={rollupFor(goalBlockers, goal.id)} goalId={goal.id} />
+        : '—'),
+    },
+    {
       key: 'progress',
       label: tr('Progress'),
       sortValue: (goal) => Number(goal.progressPercent),
@@ -555,6 +584,9 @@ export function GoalsPage() {
         {tr('Target Date')}
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
       </label>
+      {/* V17 BL-FR-12, BL-FR-13: the goal is the result only. */}
+      <OutcomeOnlyHint level="goal" texts={[title, description, successCriteria]}
+        recordKey={crud.editingId != null ? `goal-${crud.editingId}` : undefined} />
       <label className="field-full">
         {tr('Success Criteria')}
         <Textarea value={successCriteria} onChange={(event) => setSuccessCriteria(event.target.value)} />

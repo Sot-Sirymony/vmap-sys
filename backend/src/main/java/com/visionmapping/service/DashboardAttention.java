@@ -111,7 +111,9 @@ final class DashboardAttention {
                 goalsWithoutSteps,
                 inactiveMoonshotGoals,
                 inactiveMoonshotDreams,
-                starvedVisionAreas(data, mapper, now));
+                starvedVisionAreas(data, mapper, now),
+                // V17 BL-FR-07: blockers still waiting for a step (BL-FR-05).
+                (int) data.obstacles().stream().filter(ObstacleService::needsPlacing).count());
     }
 
     /**

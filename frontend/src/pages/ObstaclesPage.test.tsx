@@ -68,7 +68,10 @@ describe('ObstaclesPage (CLAUDE.md data model 10)', { timeout: 30000 }, () => {
     expect(within(row('No budget for the survey')).getByText('Financial partner or sponsor')).toBeInTheDocument();
     expect(within(row('No time on weekdays')).getByText('Delegate or assistant')).toBeInTheDocument();
     // No partner type is suggested for a partner conflict.
-    expect(within(row('Co-author missed the deadline')).getAllByRole('cell')[3]).toHaveTextContent(/^-$/);
+    expect(within(row('Co-author missed the deadline')).getAllByRole('cell')[4]).toHaveTextContent(/^-$/);
+    // V17 BL-FR-05: where each blocker sits.
+    expect(within(row('Co-author missed the deadline')).getByText('Step: Write the paper')).toBeInTheDocument();
+    expect(within(row('No time on weekdays')).getByText('Not on a step yet')).toBeInTheDocument();
     expect(within(row('No budget for the survey')).getByText('Apply for a grant')).toBeInTheDocument();
   });
 
@@ -103,12 +106,14 @@ describe('ObstaclesPage (CLAUDE.md data model 10)', { timeout: 30000 }, () => {
     await chooseOption(dialog, 'Type', 'Skill');
     await chooseOption(dialog, 'Severity', 'Critical');
     await userEvent.type(within(dialog).getByRole('textbox', { name: /^Rank/ }), 'b');
-    await chooseOption(dialog, 'Dream', 'Become a researcher');
+    // V17 BL-FR-03: one step picker; the server works out the goal and dream.
+    await chooseOption(dialog, 'Where is this blocker?', 'Write the paper');
     await chooseOption(dialog, 'Required Partner', 'Dr. Mentor');
     await userEvent.click(within(dialog).getAllByRole('button', { name: 'Create obstacle' }).at(-1)!);
 
     await waitFor(() => expect(obstacleApi.createObstacle).toHaveBeenCalledWith('token', expect.objectContaining({
-      title: 'Cannot read Stata output', obstacleType: 'SKILL', severity: 'CRITICAL', letterRank: 'B', relatedDreamId: 1, requiredPartnerId: 5, status: 'OPEN',
+      title: 'Cannot read Stata output', obstacleType: 'SKILL', severity: 'CRITICAL', letterRank: 'B', relatedStepId: 7,
+      relatedDreamId: undefined, relatedGoalId: undefined, requiredPartnerId: 5, status: 'OPEN',
     })));
   });
 
@@ -296,12 +301,57 @@ describe('ObstaclesPage (CLAUDE.md data model 10)', { timeout: 30000 }, () => {
     renderPage(<ObstaclesPage />);
     await screen.findByText('Co-author missed the deadline', { selector: 'td, td *' });
     const dialog = await openEdit('Co-author missed the deadline');
-    expect(within(dialog).getByRole('combobox', { name: 'Dream' })).toHaveTextContent('Become a researcher');
+    expect(within(dialog).getByRole('combobox', { name: 'Where is this blocker?' })).toHaveTextContent('Write the paper');
     expect(within(dialog).getByRole('combobox', { name: 'Required Partner' })).toHaveTextContent('Dr. Mentor');
     expect(within(dialog).getByRole('textbox', { name: /^Rank/ })).toHaveValue('C');
     expect(within(dialog).getByText('2 of 4 answered.')).toBeInTheDocument();
     expect(within(dialog).getByText(/Expectation released/)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Turn this into a task' })).toBeEnabled();
+  });
+
+  it('lists the blockers that are not on a step yet and moves one to a step (V17 BL-FR-05)', async () => {
+    renderPage(<ObstaclesPage />);
+    await screen.findByText('No time on weekdays', { selector: 'td, td *' });
+    // The resolved one and the one on a step are not counted.
+    expect(screen.getByText(/2 blockers are not on a step yet/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Show them' }));
+    expect(currentLocation()).toContain('placement=unplaced');
+    expect(screen.queryByText('Co-author missed the deadline', { selector: 'td, td *' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Evenings taken by meetings', { selector: 'td, td *' })).not.toBeInTheDocument();
+
+    await userEvent.click(within(row('No time on weekdays')).getByRole('button', { name: 'Obstacle actions' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Move to a step' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Obstacle' });
+    expect(within(dialog).getByText(/Now on: Become a researcher/)).toBeInTheDocument();
+    await chooseOption(dialog, 'Where is this blocker?', 'Write the paper');
+    await userEvent.click(within(dialog).getByRole('button', { name: /^Save/ }));
+
+    await waitFor(() => expect(obstacleApi.updateObstacle).toHaveBeenCalledWith('token', 1, expect.objectContaining({
+      relatedStepId: 7, relatedDreamId: undefined, relatedGoalId: undefined,
+    })));
+  });
+
+  it('keeps an older dream-level blocker where it is when other fields change (V17 BL-FR-06)', async () => {
+    renderPage(<ObstaclesPage />);
+    await screen.findByText('No time on weekdays', { selector: 'td, td *' });
+    const dialog = await openEdit('No time on weekdays');
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /^Title/ }), '!');
+    await userEvent.click(within(dialog).getByRole('button', { name: /^Save/ }));
+
+    await waitFor(() => expect(obstacleApi.updateObstacle).toHaveBeenCalledWith('token', 1, expect.objectContaining({
+      relatedDreamId: 1, relatedStepId: undefined, relatedTaskId: undefined,
+    })));
+  });
+
+  it('offers a dream for a partner conflict only while it is off the steps (V17 BL-FR-04)', async () => {
+    renderPage(<ObstaclesPage />);
+    await screen.findByText('No time on weekdays', { selector: 'td, td *' });
+    const dialog = await openCreate();
+    expect(within(dialog).queryByRole('combobox', { name: 'Dream (for a partner conflict)' })).not.toBeInTheDocument();
+    await chooseOption(dialog, 'Type', 'Partner');
+    expect(within(dialog).getByRole('combobox', { name: 'Dream (for a partner conflict)' })).toBeInTheDocument();
+    await chooseOption(dialog, 'Where is this blocker?', 'Write the paper');
+    expect(within(dialog).queryByRole('combobox', { name: 'Dream (for a partner conflict)' })).not.toBeInTheDocument();
   });
 
   it('opens a new obstacle from a link, then cleans the address', async () => {

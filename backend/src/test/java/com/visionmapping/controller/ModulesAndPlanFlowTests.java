@@ -176,7 +176,7 @@ class ModulesAndPlanFlowTests {
 
         long goalId = goal(token, dreamId, false);
         long stepId = step(token, goalId);
-        send(post("/api/obstacles"), token, Map.of("relatedGoalId", goalId, "title", "Need funding", "obstacleType", "MONEY", "severity", "HIGH", "status", "OPEN"))
+        send(post("/api/obstacles"), token, Map.of("relatedStepId", stepId, "title", "Need funding", "obstacleType", "MONEY", "severity", "HIGH", "status", "OPEN"))
                 .andExpect(status().isCreated());
         mockMvc.perform(get("/api/plan-status/" + dreamId).header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.planReady").value(true))

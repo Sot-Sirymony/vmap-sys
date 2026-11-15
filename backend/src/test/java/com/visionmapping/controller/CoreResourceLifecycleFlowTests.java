@@ -278,7 +278,8 @@ class CoreResourceLifecycleFlowTests {
     }
 
     private static Map<String, Object> obstacle(Plan plan) {
-        return Map.of("relatedGoalId", plan.goalId(), "title", "No weekday time", "obstacleType", "TIME",
+        // V17 BL-FR-01: a plan obstacle sits on a step or task.
+        return Map.of("relatedStepId", plan.stepId(), "title", "No weekday time", "obstacleType", "TIME",
                 "severity", "HIGH", "status", "OPEN");
     }
 

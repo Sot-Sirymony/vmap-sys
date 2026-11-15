@@ -502,6 +502,7 @@ class AccessControlSweepTests {
             case "dreamId" -> ownerIds.get("dreams");
             case "goalId" -> ownerIds.get("goals");
             case "stepId" -> ownerIds.get("steps");
+            case "taskId" -> ownerIds.get("tasks");
             case "linkId" -> ownerIds.get("goals/synergy-links");
             case "id" -> ownerIds.get(pattern.substring("/api/".length(), pattern.indexOf("/{id}")));
             default -> null;
@@ -546,6 +547,17 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/cover") && route.method() == HttpMethod.PUT) {
             return json(Map.of("method", "ACCEPT", "note", "Someone else's reason"));
+        }
+        // V17 BL-FR-25 (BLC-20): splitting another user's task.
+        if (pattern.endsWith("/split")) {
+            String due = LocalDate.now().plusDays(7).toString();
+            return json(Map.of("originalOutcome", "REPLACE", "rows", List.of(Map.of("title", "One", "dueDate", due),
+                    Map.of("title", "Two", "dueDate", due))));
+        }
+        // V17 BL-FR-19, BL-FR-20 (BLC-20): a "find help" step from another user's step or obstacle.
+        if (pattern.endsWith("/gap-step") || pattern.endsWith("/convert-to-step")) {
+            return json(Map.of("goalId", ownerIds.get("goals"), "title", "Find help", "owner", "Other", "priority", "HIGH",
+                    "targetDate", LocalDate.now().plusMonths(1).toString(), "createPartner", true));
         }
         if (pattern.endsWith("/synergy-links")) {
             return json(Map.of("relatedGoalId", ownerIds.get("goals")));

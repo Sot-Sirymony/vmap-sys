@@ -7,6 +7,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -109,7 +110,7 @@ class PlanAssistantChangesFlowTests {
     }
 
     @Test
-    void proposesRisksTiedToAGoalOrStepWithSafeDefaults() throws Exception {
+    void proposesRisksOnlyOnAStepWithSafeDefaults() throws Exception {
         answer(new AiDrafts.AssistantChangeDrafts(List.of(
                 risk("goal:" + goalId, "Prices may rise", "MONEY", "HIGH"),
                 risk("step:" + stepId, "Payslips may be late", "nonsense", null),
@@ -122,11 +123,9 @@ class PlanAssistantChangesFlowTests {
         List<String> risks = new ArrayList<>();
         proposals.get("changes").forEach(item -> risks.add(item.get("title").asText() + " | " + item.path("parentRef").asText("none")
                 + " | " + item.get("obstacleType").asText() + " | " + item.get("severity").asText()));
-        assertThat(risks).containsExactly(
-                "Prices may rise | goal:" + goalId + " | MONEY | HIGH",
-                // An unknown type becomes OTHER and a missing severity MEDIUM.
-                "Payslips may be late | step:" + stepId + " | OTHER | MEDIUM",
-                "Tied to nothing it can name | none | OTHER | LOW");
+        // V17 BL-FR-38: a risk on a goal or on nothing is dropped; only the step one is proposed.
+        // An unknown type becomes OTHER and a missing severity MEDIUM.
+        assertThat(risks).containsExactly("Payslips may be late | step:" + stepId + " | OTHER | MEDIUM");
     }
 
     @Test
@@ -178,8 +177,12 @@ class PlanAssistantChangesFlowTests {
                 change("ADD_RISK", null, null, null, null, "Not in review", null, null)), null));
         assertThat(proposeOn("BUILDER", "REVIEW").get("changes")).hasSize(2);
 
-        answer(new AiDrafts.AssistantChangeDrafts(List.of(risk("g1", "Rates may rise", "MONEY", "HIGH")), null));
-        assertThat(proposeOn("BUILDER", "HELPERS").get("changes").get(0).get("parentRef").asText()).isEqualTo("g1");
+        // V17 BL-FR-38: in Build my plan too, a risk is proposed on a draft step, never a goal.
+        answer(new AiDrafts.AssistantChangeDrafts(List.of(risk("g1", "Rates may rise", "MONEY", "HIGH"),
+                risk("s1", "Banks may be slow", "TIME", "LOW")), null));
+        JsonNode helperChanges = proposeOn("BUILDER", "HELPERS").get("changes");
+        assertThat(helperChanges).hasSize(1);
+        assertThat(helperChanges.get(0).get("parentRef").asText()).isEqualTo("s1");
 
         answer(new AiDrafts.AssistantChangeDrafts(List.of(
                 change("EDIT", "dream", "SUCCESS", "An accepted offer", null, null, null, null)), null));
@@ -227,14 +230,21 @@ class PlanAssistantChangesFlowTests {
     }
 
     @Test
-    void savesARiskTiedToAGoalOrToNothing() throws Exception {
+    void savesARiskOnlyOnAStep() throws Exception {
+        // V17 BL-FR-38: a risk needs the step it holds up.
         apply(Map.of("kind", "ADD_RISK", "parentRef", "goal:" + goalId, "title", "Prices may rise", "obstacleType", "MONEY", "severity", "HIGH"))
-                .andExpect(status().isCreated());
-        apply(Map.of("kind", "ADD_RISK", "title", "Motivation may dip")).andExpect(status().isCreated());
-        assertThat(jdbcTemplate.queryForObject("select count(*) from obstacles where related_goal_id = ? and severity = 'HIGH'", Integer.class, goalId))
-                .isEqualTo(1);
-        assertThat(jdbcTemplate.queryForMap("select obstacle_type, severity from obstacles where title = 'Motivation may dip' and related_dream_id = ?", dreamId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose the step this risk holds up."));
+        apply(Map.of("kind", "ADD_RISK", "title", "Motivation may dip")).andExpect(status().isBadRequest());
+
+        apply(Map.of("kind", "ADD_RISK", "parentRef", "step:" + stepId, "title", "Payslips may be late")).andExpect(status().isCreated());
+        // The goal and dream come from the step (BL-FR-02).
+        assertThat(jdbcTemplate.queryForMap("select obstacle_type, severity, related_goal_id, related_dream_id from obstacles where title = 'Payslips may be late'"))
                 .containsEntry("obstacle_type", "OTHER").containsEntry("severity", "MEDIUM");
+        assertThat(jdbcTemplate.queryForObject("select related_goal_id from obstacles where title = 'Payslips may be late' and related_step_id = ?",
+                Long.class, stepId)).isEqualTo(goalId);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from obstacles where related_step_id is null and related_dream_id = ?",
+                Integer.class, dreamId)).isZero();
     }
 
     @Test

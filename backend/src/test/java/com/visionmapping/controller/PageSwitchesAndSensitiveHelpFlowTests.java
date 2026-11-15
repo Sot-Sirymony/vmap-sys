@@ -82,8 +82,10 @@ class PageSwitchesAndSensitiveHelpFlowTests {
         String user = consented(email("switch-user"));
         JsonNode aiStatus = read(mockMvc.perform(get("/api/ai/status").header("Authorization", "Bearer " + user)));
         assertThat(aiStatus.get("pagesOff").get(0).asText()).isEqualTo("OBSTACLES");
+        // V17 BL-FR-01: a plan obstacle sits on a step or task.
+        long stepId = com.visionmapping.support.PlanFixture.step(mockMvc, objectMapper, user);
         long obstacleId = read(send(post("/api/obstacles"), user, Map.of("title", "No time", "obstacleType", "TIME", "severity", "LOW",
-                "status", "OPEN")).andExpect(status().isCreated())).get("id").asLong();
+                "status", "OPEN", "relatedStepId", stepId)).andExpect(status().isCreated())).get("id").asLong();
 
         send(post("/api/ai/obstacles/help"), user, Map.of("mode", "CLASSIFY", "obstacleId", obstacleId)).andExpect(status().isBadRequest());
         send(post("/api/ai/pages/assistant/proposals"), user, Map.of("page", "OBSTACLES", "area", "item", "itemId", obstacleId))

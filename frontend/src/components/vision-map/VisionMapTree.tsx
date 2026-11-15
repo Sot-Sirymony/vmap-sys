@@ -1,4 +1,14 @@
-import { DragEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import { DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { listObstacles } from '../../api/obstacleApi';
+import { BlockerRollupLink } from '../coaching/BlockerRollupLink';
+import { computeBlockerRollup, rollupFor } from '../../utils/blockerRollup';
+import type { Obstacle } from '../../types/vision';
+import { OutcomeOnlyHint } from '../coaching/OutcomeOnlyHint';
+import { GapStepDialog } from '../coaching/GapStepDialog';
+import { GAP_KINDS } from '../../utils/gapStep';
+import { canBreakDown, isRepeatedlyBlocked, leavesBlocked } from '../../utils/taskBreakdown';
+import { BreakDownDialog } from '../coaching/BreakDownDialog';
+import { WhatChangedDialog } from '../coaching/WhatChangedDialog';
 import { ChevronDown, ChevronRight, Lightbulb, Rocket } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
@@ -134,6 +144,29 @@ export function VisionMapTree({
   const { showToast } = useToast();
   const energyNudge = useEnergyOvercommitNudge();
   const filtering = Boolean(priorityFilter || statusFilter);
+  // V17 BL-FR-15: what blocks the steps and tasks under each goal and the dream.
+  // Re-read when tasks change, so marking a task Blocked updates the count.
+  const [obstacles, setObstacles] = useState<Obstacle[]>([]);
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const loaded = await listObstacles(token);
+        if (live && Array.isArray(loaded)) {
+          setObstacles(loaded);
+        }
+      } catch {
+        // The count is a convenience; the map works without it.
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [token, tasks]);
+  const blockerRollup = useMemo(
+    () => computeBlockerRollup({ obstacles, tasks, steps, goals }),
+    [obstacles, tasks, steps, goals],
+  );
   // The dream's own progress and quick-add sequencing always read the full,
   // unfiltered set — a view filter narrows what's shown, not what exists.
   // Sorted by sortOrder (drag-and-drop reorder), nulls last, id as a stable
@@ -258,6 +291,9 @@ export function VisionMapTree({
   const [stepTitle, setStepTitle] = useState('');
   const [stepDescription, setStepDescription] = useState('');
   const [stepResources, setStepResources] = useState('');
+  // V17 BL-FR-18, BL-FR-19: the kind of gap, and the step whose gap becomes a "find help" step.
+  const [stepGapKind, setStepGapKind] = useState<ObstacleType | ''>('');
+  const [gapSourceStep, setGapSourceStep] = useState<VisionStep | null>(null);
   const [stepOwner, setStepOwner] = useState('');
   const [stepSequenceNumber, setStepSequenceNumber] = useState(1);
   const [stepComplex, setStepComplex] = useState(false);
@@ -283,6 +319,10 @@ export function VisionMapTree({
   const [taskNextAction, setTaskNextAction] = useState('');
   const [taskEnergyDemand, setTaskEnergyDemand] = useState<EnergyDemand>('NEUTRAL');
   const [taskSaving, setTaskSaving] = useState(false);
+  // V17 BL-FR-24 to BL-FR-27: breaking a stuck task down, and "What changed?" when it leaves Blocked.
+  const [taskChangeNote, setTaskChangeNote] = useState('');
+  const [breakTask, setBreakTask] = useState<TaskItem | null>(null);
+  const [pendingTaskMove, setPendingTaskMove] = useState<{ task: TaskItem; status: string } | null>(null);
 
   // Flat list of visible rows in reading order — the keyboard walks this.
   const visibleRows: RowInfo[] = [{ key: 'dream', kind: 'dream', level: 0, parentKey: null, collapsible: true }];
@@ -400,6 +440,17 @@ export function VisionMapTree({
     }
     setError('');
     const id = Number(row.key.slice(1));
+    const movingTask = row.kind === 'task' ? tasks.find((item) => item.id === id) : undefined;
+    if (movingTask && leavesBlocked(movingTask.status, status)) {
+      setPendingTaskMove({ task: movingTask, status });
+      return;
+    }
+    await applyStatus(row.kind, id, status);
+  }
+
+  // V17 BL-FR-27: changeNote is sent only for a task leaving Blocked.
+  async function applyStatus(kind: RowInfo['kind'], id: number, status: string, changeNote?: string) {
+    const row = { kind };
     try {
       if (row.kind === 'dream') {
         await updateDream(token, dream.id, { ...dreamRequest(dream), status: status as DreamStatus });
@@ -408,7 +459,7 @@ export function VisionMapTree({
       } else if (row.kind === 'step') {
         await updateStepStatus(token, id, status);
       } else {
-        await updateTaskStatus(token, id, status);
+        await (changeNote ? updateTaskStatus(token, id, status, changeNote) : updateTaskStatus(token, id, status));
       }
       await onDataChange();
       if (row.kind === 'task' && status === 'COMPLETED') {
@@ -670,6 +721,7 @@ export function VisionMapTree({
     setStepTitle(step.title);
     setStepDescription(step.description ?? '');
     setStepResources(step.resources ?? '');
+    setStepGapKind(step.gapKind ?? '');
     setStepOwner(step.owner);
     setStepSequenceNumber(step.sequenceNumber);
     setStepComplex(step.complex);
@@ -702,6 +754,7 @@ export function VisionMapTree({
         targetDate: stepTargetDate,
         status: stepStatus,
         resources: stepResources,
+        gapKind: stepGapKind,
       };
       await updateStep(token, editingStepId, request);
       await onDataChange();
@@ -773,6 +826,7 @@ export function VisionMapTree({
     setTaskBlockerCategory('');
     setTaskNextAction(task.nextAction ?? '');
     setTaskEnergyDemand(task.energyDemand ?? 'NEUTRAL');
+    setTaskChangeNote('');
   }
 
   function cancelTaskEdit() {
@@ -837,6 +891,7 @@ export function VisionMapTree({
         blockerReason: taskBlockerReason || undefined,
         nextAction: taskNextAction,
         energyDemand: taskEnergyDemand,
+        changeNote: task && leavesBlocked(task.status, taskStatus) && taskChangeNote.trim() ? taskChangeNote.trim() : undefined,
       };
       await updateTask(token, editingTaskId, request);
       await onDataChange();
@@ -1252,6 +1307,8 @@ export function VisionMapTree({
               </span>
             </div>
           )}
+          {/* V17 BL-FR-11, BL-FR-13: the dream is the outcome only. */}
+          <OutcomeOnlyHint level="dream" texts={[dreamTitle, dreamDescription, dreamSuccessDefinition]} recordKey={`dream-${dream.id}`} />
           <label className="field-full">
             {tr('Why Important')}
             <Textarea value={dreamWhyImportant} onChange={(event) => setDreamWhyImportant(event.target.value)} />
@@ -1312,6 +1369,9 @@ export function VisionMapTree({
             {tr('Target Date')}
             <Input type="date" value={goalTargetDate} onChange={(event) => setGoalTargetDate(event.target.value)} />
           </label>
+          {/* V17 BL-FR-12, BL-FR-13: the goal is the result only. */}
+          <OutcomeOnlyHint level="goal" texts={[goalTitle, goalDescription, goalSuccessCriteria]}
+            recordKey={editingGoalId !== null && editingGoalId > 0 ? `goal-${editingGoalId}` : undefined} />
           <label className="field-full">
             {tr('Success Criteria')}
             <Textarea value={goalSuccessCriteria} onChange={(event) => setGoalSuccessCriteria(event.target.value)} />
@@ -1396,14 +1456,64 @@ export function VisionMapTree({
             <Textarea value={stepDescription} onChange={(event) => setStepDescription(event.target.value)} />
           </label>
           <label className="field-full">
-            {tr('Resources and people')}
+            {tr('What is missing, and who or what could supply it?')}
             <Textarea
               value={stepResources}
               placeholder={tr('Money, tools, skills, information, and who could help')}
               onChange={(event) => setStepResources(event.target.value)}
             />
+            <span className="field-hint">{tr("Skill, money, time or knowledge you don't have yet.")}</span>
+          </label>
+          <label>
+            {tr('Kind of gap')}
+            <FormControl fullWidth size="small">
+              <Select SelectDisplayProps={{ 'aria-label': tr('Kind of gap') }} value={stepGapKind} displayEmpty
+                onChange={(event) => setStepGapKind(event.target.value as ObstacleType | '')}>
+                <MenuItem value="">{tr('None')}</MenuItem>
+                {GAP_KINDS.map((kind) => <MenuItem value={kind} key={kind}>{obstacleTypeLabels[kind]}</MenuItem>)}
+              </Select>
+            </FormControl>
+            {stepGapKind && suggestPartnerFor(stepGapKind) && (
+              <span className="field-hint">{tr('Suggested helper: {helper}', { helper: suggestPartnerFor(stepGapKind)?.label ?? '' })}</span>
+            )}
           </label>
         </CrudModalForm>
+      )}
+
+      {breakTask && (
+        <BreakDownDialog
+          token={token}
+          task={breakTask}
+          onClose={() => setBreakTask(null)}
+          onSaved={() => {
+            setBreakTask(null);
+            void onDataChange();
+          }}
+        />
+      )}
+      {pendingTaskMove && (
+        <WhatChangedDialog
+          taskTitle={pendingTaskMove.task.title}
+          onCancel={() => setPendingTaskMove(null)}
+          onSubmit={(note) => {
+            const move = pendingTaskMove;
+            setPendingTaskMove(null);
+            void applyStatus('task', move.task.id, move.status, note);
+          }}
+        />
+      )}
+      {gapSourceStep && (
+        <GapStepDialog
+          token={token}
+          source={{ kind: 'step', step: gapSourceStep }}
+          goals={goals}
+          ownerName={user?.fullName ?? ''}
+          onClose={() => setGapSourceStep(null)}
+          onSaved={() => {
+            setGapSourceStep(null);
+            void onDataChange();
+          }}
+        />
       )}
 
       {editingTaskId !== null && (
@@ -1473,6 +1583,26 @@ export function VisionMapTree({
               <Textarea value={taskBlockerReason} onChange={(event) => setTaskBlockerReason(event.target.value)} required />
             </label>
           )}
+          {(() => {
+            const editing = tasks.find((item) => item.id === editingTaskId);
+            return (
+              <>
+                {editing && leavesBlocked(editing.status, taskStatus) && (
+                  <label className="field-full">
+                    {tr('What changed, or what will you do differently?')}
+                    <Input value={taskChangeNote} maxLength={1000} placeholder={tr('Optional')} onChange={(event) => setTaskChangeNote(event.target.value)} />
+                  </label>
+                )}
+                {editing && canBreakDown(editing) && (
+                  <div className="field-full">
+                    <Button type="button" variant="secondary" onClick={() => { cancelTaskEdit(); setBreakTask(editing); }}>
+                      {tr('Break into smaller tasks')}
+                    </Button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
           <label>
             {tr('Start Date')}
             <Input type="date" value={taskStartDate} onChange={(event) => setTaskStartDate(event.target.value)} />
@@ -1546,6 +1676,7 @@ export function VisionMapTree({
               <PriorityBadge priority={dream.priority} />
             </div>
             {dream.successDefinition && <p className="map-meta">{tr('Success looks like: {text}', { text: dream.successDefinition })}</p>}
+            <BlockerRollupLink count={rollupFor(blockerRollup.byDream, dream.id)} dreamId={dream.id} />
           </div>
           {statusCell(dreamRow, dream.status, dream.archived)}
           {rail(dreamProgress)}
@@ -1594,6 +1725,7 @@ export function VisionMapTree({
                         )}
                         <PriorityBadge priority={goal.priority} />
                       </div>
+                      <BlockerRollupLink count={rollupFor(blockerRollup.byGoal, goal.id)} goalId={goal.id} />
                     </div>
                     {statusCell(goalRow, goal.status, goal.archived)}
                     {rail(Number(goal.progressPercent))}
@@ -1640,6 +1772,9 @@ export function VisionMapTree({
                                 onDeletePermanently={() => void deleteStepNode(step)}
                                 archived={step.archived}
                                 confirmArchive={() => stepArchiveImpactMessage(step)}
+                                extraActions={!step.archived && step.resources?.trim()
+                                  ? [{ label: tr('Turn this gap into a step'), onClick: () => setGapSourceStep(step) }]
+                                  : []}
                                 label={tr('Step actions')}
                               />
                             </div>
@@ -1669,6 +1804,11 @@ export function VisionMapTree({
                                           </div>
                                           <p className="map-meta">{task.owner} · Due <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /></p>
                                           {task.blockerReason && <p className="map-blocker">{task.blockerReason}</p>}
+                                          {isRepeatedlyBlocked(task) && (
+                                            <p className="map-blocker">
+                                              {tr('Blocked {count} times. Break it down, or add an obstacle on this task.', { count: task.blockedCount ?? 0 })}
+                                            </p>
+                                          )}
                                         </div>
                                         {statusCell(taskRow, task.status, task.archived)}
                                         {rail(Number(task.progressPercent))}
@@ -1678,6 +1818,7 @@ export function VisionMapTree({
                                           onRestore={() => void restoreTaskNode(task)}
                                           onDeletePermanently={() => void deleteTaskNode(task)}
                                           archived={task.archived}
+                                          extraActions={canBreakDown(task) ? [{ label: tr('Break into smaller tasks'), onClick: () => setBreakTask(task) }] : []}
                                           label={tr('Task actions')}
                                         />
                                       </div>

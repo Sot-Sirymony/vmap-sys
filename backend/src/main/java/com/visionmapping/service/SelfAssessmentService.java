@@ -9,26 +9,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionmapping.dto.request.GapCoverRequest;
 import com.visionmapping.dto.request.PartnerRequest;
 import com.visionmapping.dto.request.SelfAssessmentItemRequest;
-import com.visionmapping.dto.request.VisionStepRequest;
 import com.visionmapping.dto.response.GapCoverRemovalResponse;
 import com.visionmapping.dto.response.SelfAssessmentItemResponse;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.SelfAssessmentItem;
-import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.GapCoverMethod;
 import com.visionmapping.entity.enums.PartnerStatus;
 import com.visionmapping.entity.enums.PartnerSupportType;
-import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.Relevance;
 import com.visionmapping.entity.enums.SelfAssessmentSource;
 import com.visionmapping.entity.enums.StrengthKind;
-import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.mapper.VisionMappingMapper;
 import com.visionmapping.repository.SelfAssessmentItemRepository;
-import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
 import java.util.Comparator;
@@ -70,9 +65,9 @@ public class SelfAssessmentService {
     private final VisionMappingMapper mapper;
     private final ObjectMapper objectMapper;
     private final SelfAssessmentItemRepository itemRepository;
-    private final VisionStepRepository visionStepRepository;
     private final PartnerService partnerService;
     private final VisionStepService visionStepService;
+    private final GapStepService gapStepService;
     private final LearningModuleService learningModuleService;
 
     @Transactional(readOnly = true)
@@ -219,16 +214,11 @@ public class SelfAssessmentService {
         if (!goal.getDream().getId().equals(item.getDream().getId())) {
             throw new BusinessRuleException("Choose one of this dream's goals.");
         }
-        int nextSequence = visionStepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goal.getId(), lookup.userId()).stream()
-                .map(VisionStep::getSequenceNumber)
-                .max(Integer::compare)
-                .orElse(0) + 1;
         String title = truncate("Learn: " + item.getDescription(), MAX_STEP_TITLE);
         String description = isBlank(request.note()) ? null : request.note().strip();
-        Long stepId = visionStepService.createStep(new VisionStepRequest(goal.getId(), title, description,
-                lookup.currentUser().getFullName(), nextSequence, false, Priority.MEDIUM, request.targetDate(),
-                WorkStatus.NOT_STARTED, null, null, null)).id();
-        item.setLinkedStep(lookup.step(stepId));
+        // BL-FR-23: made by the same logic as a gap step from the plan.
+        item.setLinkedStep(gapStepService.createLearningStep(goal, title, description,
+                lookup.currentUser().getFullName(), request.targetDate()));
         item.setCoverNote(description);
     }
 

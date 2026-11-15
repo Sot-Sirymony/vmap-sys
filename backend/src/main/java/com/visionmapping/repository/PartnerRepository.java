@@ -59,6 +59,9 @@ public interface PartnerRepository extends JpaRepository<Partner, Long>, CodedRe
     /** FR-59.4: a Goal only ever gets a partner linked to it directly. */
     boolean existsByUser_IdAndRelatedGoal_IdAndArchivedFalse(Long userId, Long goalId);
 
+    /** V17 BL-FR-22: whether a partner is linked to this step. */
+    boolean existsByUser_IdAndRelatedStep_IdAndArchivedFalse(Long userId, Long stepId);
+
     /**
      * One query for the partner list: free-text search plus the dropdown filters.
      * Every filter is optional — null means "don't filter on this" — so the page

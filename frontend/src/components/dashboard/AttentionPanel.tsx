@@ -7,7 +7,7 @@ import CardHeader from '@mui/material/CardHeader';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { Ban, CheckCircle2, CircleAlert, GitBranch, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
+import { Ban, CheckCircle2, CircleAlert, GitBranch, MapPinOff, MoonStar, Rocket, Target, TrendingDown } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { DashboardAttention } from '../../types/vision';
 import { tr } from '../../i18n/translate';
@@ -47,6 +47,16 @@ function buildFindings(attention: DashboardAttention, visionAreaId?: string): Fi
       why: 'Nothing is lined up to unblock these. They will stay stuck until someone helps.',
       to: scoped('/tasks?status=BLOCKED', visionAreaId),
       action: tr('Find a partner'),
+    },
+    {
+      // V17 BL-FR-07: a blocker on a dream or goal can't be acted on; it belongs on a step.
+      key: 'unplaced-obstacles',
+      icon: MapPinOff,
+      count: attention.unplacedObstacleCount ?? 0,
+      title: tr('Blockers not on a step yet'),
+      why: 'A blocker on a whole dream or goal has no clear next action. Put it on the step it holds up.',
+      to: '/obstacles?placement=unplaced',
+      action: tr('Move to a step'),
     },
     {
       key: 'complex-no-tasks',

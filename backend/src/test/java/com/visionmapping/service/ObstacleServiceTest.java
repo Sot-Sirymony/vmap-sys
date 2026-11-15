@@ -8,6 +8,11 @@ import static org.mockito.Mockito.when;
 import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.entity.AppUser;
+import com.visionmapping.entity.Dream;
+import com.visionmapping.entity.Goal;
+import com.visionmapping.entity.TaskItem;
+import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.ObstaclePlacement;
 import com.visionmapping.entity.Obstacle;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
@@ -74,10 +79,33 @@ class ObstacleServiceTest {
                 .status(UserStatus.ACTIVE)
                 .build();
         lenient().when(userScope.currentUser()).thenReturn(testUser);
+
+        // V17: a small plan. Dream 1 → goal 2 → step 5 (task 7) and step 6.
+        dream = Dream.builder().id(1L).user(testUser).build();
+        otherDream = Dream.builder().id(9L).user(testUser).build();
+        goal = Goal.builder().id(2L).user(testUser).dream(dream).build();
+        step = VisionStep.builder().id(5L).user(testUser).goal(goal).build();
+        otherStep = VisionStep.builder().id(6L).user(testUser).goal(goal).build();
+        task = TaskItem.builder().id(7L).user(testUser).step(step).build();
+        lenient().when(dreamRepository.findById(1L)).thenReturn(Optional.of(dream));
+        lenient().when(dreamRepository.findById(9L)).thenReturn(Optional.of(otherDream));
+        lenient().when(goalRepository.findById(2L)).thenReturn(Optional.of(goal));
+        lenient().when(visionStepRepository.findById(5L)).thenReturn(Optional.of(step));
+        lenient().when(visionStepRepository.findById(6L)).thenReturn(Optional.of(otherStep));
+        lenient().when(taskItemRepository.findById(7L)).thenReturn(Optional.of(task));
+        lenient().when(obstacleRepository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
+    private Dream dream;
+    private Dream otherDream;
+    private Goal goal;
+    private VisionStep step;
+    private VisionStep otherStep;
+    private TaskItem task;
+
+    /** A TIME obstacle on step 5 (V17 BL-FR-01). */
     private ObstacleRequest request(ObstacleStatus status, String rootCause, String creativeAlternatives) {
-        return new ObstacleRequest(null, null, null, null, "Stalled progress", null,
+        return new ObstacleRequest(null, null, 5L, null, "Stalled progress", null,
                 ObstacleType.TIME, Severity.MEDIUM, null, "worked around it for now", rootCause, creativeAlternatives,
                 null, null, null, null, null, null,
                 null, null,
@@ -88,7 +116,7 @@ class ObstacleServiceTest {
 
     private ObstacleRequest partnerRequest(ObstacleStatus status, String rootCause, Boolean noCharacterAttacks,
             Boolean stayedOnIncident, Boolean noThreatsOrSarcasm, Boolean definedWinWin) {
-        return new ObstacleRequest(null, null, null, null, "Disagreement with a mentor", null,
+        return new ObstacleRequest(null, null, 5L, null, "Disagreement with a mentor", null,
                 ObstacleType.PARTNER, Severity.MEDIUM, null, "worked around it for now", rootCause, null,
                 null, null, null, null, null, null,
                 null, null,
@@ -262,5 +290,153 @@ class ObstacleServiceTest {
         assertThatThrownBy(() -> service.updateObstacleStatus(11L, ObstacleStatus.RESOLVED))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("Resolved PARTNER obstacles must also complete all four conflict engagement checklist items.");
+    }
+
+    // ---------- V17 placement (BRD 17.0.0) ----------
+
+    private ObstacleRequest linked(ObstacleType type, Long dreamId, Long goalId, Long stepId, Long taskId, String conflictIncident) {
+        return new ObstacleRequest(dreamId, goalId, stepId, taskId, "No budget", null,
+                type, Severity.HIGH, null, null, null, null,
+                conflictIncident, null, null, null, null, null,
+                null, null,
+                null, null, null, null,
+                null, null, null,
+                null, ObstacleStatus.OPEN);
+    }
+
+    @Test
+    void blc01_aPlanObstacleOnlyOnADreamIsRefused() {
+        assertThatThrownBy(() -> service.createObstacle(linked(ObstacleType.KNOWLEDGE, 1L, null, null, null, null)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Put this blocker on a step or a task.");
+    }
+
+    @Test
+    void blc02_onATaskTheStepGoalAndDreamComeFromTheTaskNotTheRequest() {
+        ObstacleResponse response = service.createObstacle(linked(ObstacleType.MONEY, 9L, null, null, 7L, null));
+
+        assertThat(response.relatedTaskId()).isEqualTo(7L);
+        assertThat(response.relatedStepId()).isEqualTo(5L);
+        assertThat(response.relatedGoalId()).isEqualTo(2L);
+        assertThat(response.relatedDreamId()).isEqualTo(1L);
+        assertThat(response.placement()).isEqualTo(ObstaclePlacement.TASK);
+    }
+
+    @Test
+    void aTaskFromAnotherStepIsRefused() {
+        assertThatThrownBy(() -> service.createObstacle(linked(ObstacleType.MONEY, null, null, 6L, 7L, null)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("That task is not part of the chosen step.");
+    }
+
+    @Test
+    void blc03_aPartnerConflictMayStayUnplaced() {
+        ObstacleResponse response = service.createObstacle(
+                linked(ObstacleType.PARTNER, 1L, null, null, null, "We argued about authorship."));
+
+        assertThat(response.placement()).isEqualTo(ObstaclePlacement.NONE);
+        assertThat(response.placementExempt()).isTrue();
+        assertThat(response.relatedDreamId()).isEqualTo(1L);
+    }
+
+    @Test
+    void aPartnerObstacleWithoutAnyWorksheetAnswerIsNotExempt() {
+        assertThatThrownBy(() -> service.createObstacle(linked(ObstacleType.PARTNER, 1L, null, null, null, null)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Put this blocker on a step or a task.");
+    }
+
+    @Test
+    void theUnplacedPathKeepsAGoalAndTakesTheDreamFromIt() {
+        ObstacleResponse response = service.createObstacleAllowingUnplaced(
+                linked(ObstacleType.MONEY, 9L, 2L, null, null, null));
+
+        assertThat(response.placement()).isEqualTo(ObstaclePlacement.NONE);
+        assertThat(response.relatedGoalId()).isEqualTo(2L);
+        assertThat(response.relatedDreamId()).isEqualTo(1L);
+    }
+
+    @Test
+    void blc04_anOlderUnplacedObstacleCanStillBeEditedAndResolved() {
+        Obstacle stored = Obstacle.builder().id(20L).user(testUser).title("Funding").relatedDream(dream)
+                .obstacleType(ObstacleType.MONEY).severity(Severity.HIGH).status(ObstacleStatus.OPEN).archived(false).build();
+        when(obstacleRepository.findById(20L)).thenReturn(Optional.of(stored));
+        ObstacleRequest resolve = new ObstacleRequest(1L, null, null, null, "Funding", null,
+                ObstacleType.MONEY, Severity.HIGH, null, null, "No budget line", null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, ObstacleStatus.RESOLVED);
+
+        ObstacleResponse response = service.updateObstacle(20L, resolve);
+
+        assertThat(response.status()).isEqualTo(ObstacleStatus.RESOLVED);
+        assertThat(response.relatedDreamId()).isEqualTo(1L);
+        assertThat(response.placement()).isEqualTo(ObstaclePlacement.NONE);
+    }
+
+    @Test
+    void movingAnUnplacedObstacleToAnotherDreamNeedsAStep() {
+        Obstacle stored = Obstacle.builder().id(21L).user(testUser).title("Funding").relatedDream(dream)
+                .obstacleType(ObstacleType.MONEY).severity(Severity.HIGH).status(ObstacleStatus.OPEN).archived(false).build();
+        when(obstacleRepository.findById(21L)).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> service.updateObstacle(21L, linked(ObstacleType.MONEY, 9L, null, null, null, null)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessage("Put this blocker on a step or a task.");
+    }
+
+    @Test
+    void blc05_movingAnUnplacedObstacleToAStepDerivesItsGoalAndDream() {
+        Obstacle stored = Obstacle.builder().id(22L).user(testUser).title("Funding").relatedDream(otherDream)
+                .obstacleType(ObstacleType.MONEY).severity(Severity.HIGH).status(ObstacleStatus.OPEN).archived(false).build();
+        when(obstacleRepository.findById(22L)).thenReturn(Optional.of(stored));
+
+        ObstacleResponse response = service.updateObstacle(22L, linked(ObstacleType.MONEY, 9L, null, 5L, null, null));
+
+        assertThat(response.relatedStepId()).isEqualTo(5L);
+        assertThat(response.relatedGoalId()).isEqualTo(2L);
+        assertThat(response.relatedDreamId()).isEqualTo(1L);
+    }
+
+    @Test
+    void takingAPlacedObstacleOffItsStepIsRefused() {
+        Obstacle stored = Obstacle.builder().id(23L).user(testUser).title("Funding")
+                .obstacleType(ObstacleType.MONEY).severity(Severity.HIGH).status(ObstacleStatus.OPEN).archived(false).build();
+        stored.anchorTo(step, null);
+        when(obstacleRepository.findById(23L)).thenReturn(Optional.of(stored));
+
+        assertThatThrownBy(() -> service.updateObstacle(23L, linked(ObstacleType.MONEY, 1L, 2L, null, null, null)))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void theUnplacedListHoldsUnplacedAndArchivedAnchorsButNotExemptOnes() {
+        Obstacle unplaced = Obstacle.builder().id(30L).user(testUser).title("a").relatedDream(dream)
+                .obstacleType(ObstacleType.MONEY).severity(Severity.LOW).status(ObstacleStatus.OPEN).build();
+        Obstacle placed = Obstacle.builder().id(31L).user(testUser).title("b")
+                .obstacleType(ObstacleType.MONEY).severity(Severity.LOW).status(ObstacleStatus.OPEN).build();
+        placed.anchorTo(step, null);
+        VisionStep archivedStep = VisionStep.builder().id(8L).user(testUser).goal(goal).archived(true).build();
+        Obstacle onArchived = Obstacle.builder().id(32L).user(testUser).title("c")
+                .obstacleType(ObstacleType.MONEY).severity(Severity.LOW).status(ObstacleStatus.OPEN).build();
+        onArchived.anchorTo(archivedStep, null);
+        Obstacle exempt = Obstacle.builder().id(33L).user(testUser).title("d").conflictIncident("Argued")
+                .obstacleType(ObstacleType.PARTNER).severity(Severity.LOW).status(ObstacleStatus.OPEN).build();
+        when(obstacleRepository.findByUser_IdAndArchivedFalse(1L)).thenReturn(java.util.List.of(unplaced, placed, onArchived, exempt));
+
+        assertThat(service.listUnplacedObstacles()).extracting(ObstacleResponse::id).containsExactly(30L, 32L);
+    }
+
+    @Test
+    void blc06_syncAfterAMoveFollowsTheAnchor() {
+        Obstacle stored = Obstacle.builder().id(40L).user(testUser).title("Funding")
+                .obstacleType(ObstacleType.MONEY).severity(Severity.HIGH).status(ObstacleStatus.OPEN).build();
+        stored.anchorTo(null, task);
+        Goal newGoal = Goal.builder().id(3L).user(testUser).dream(otherDream).build();
+        step.setGoal(newGoal);
+
+        stored.syncParentsFromAnchor();
+
+        assertThat(stored.getRelatedGoal()).isSameAs(newGoal);
+        assertThat(stored.getRelatedDream()).isSameAs(otherDream);
     }
 }

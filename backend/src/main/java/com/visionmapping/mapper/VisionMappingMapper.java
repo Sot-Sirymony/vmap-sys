@@ -133,7 +133,10 @@ public class VisionMappingMapper {
                 entity.getDescription(), entity.getOwner(), entity.getSequenceNumber(), entity.isComplex(), entity.getPriority(),
                 entity.getTargetDate(), entity.getStatus(), entity.getProgressPercent(), entity.isManualProgressOverride(),
                 entity.isArchived(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getResources(),
-                entity.getOverdueReschedules(), entity.getEstimatedHours(), id(entity.getStartsAfter()));
+                entity.getOverdueReschedules(), entity.getEstimatedHours(), id(entity.getStartsAfter()),
+                entity.getGapKind(), id(entity.getCoversStep()),
+                entity.getCoversStep() == null ? null : entity.getCoversStep().getCode(),
+                id(entity.getCoversObstacle()), id(entity.getCreatedPartner()));
     }
 
     public TaskItemResponse toResponse(TaskItem entity) {
@@ -161,6 +164,7 @@ public class VisionMappingMapper {
                 .archived(entity.isArchived())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .blockedCount(entity.getBlockedCount())
                 .build();
     }
 
@@ -324,6 +328,9 @@ public class VisionMappingMapper {
                 .criticismSubstance(entity.getCriticismSubstance())
                 .requiredPartnerId(id(entity.getRequiredPartner()))
                 .status(entity.getStatus())
+                .placement(entity.placement())
+                .placementExempt(entity.isPlacementExempt())
+                .anchorArchived(entity.isAnchorArchived())
                 .archived(entity.isArchived())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
@@ -366,6 +373,11 @@ public class VisionMappingMapper {
 
     @Nullable
     private Long id(@Nullable TaskItem entity) {
+        return entity == null ? null : entity.getId();
+    }
+
+    @Nullable
+    private Long id(@Nullable Obstacle entity) {
         return entity == null ? null : entity.getId();
     }
 

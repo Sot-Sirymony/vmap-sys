@@ -148,7 +148,7 @@ public final class AiPlanResponses {
     
     }
 
-    /** kind: MISSING_OWNER, MISSING_DATE, MISSING_RESOURCE, NO_STEPS, AFTER_GOAL_DATE, OVERDUE, VAGUE_STEP, UNREALISTIC_TIMING, GAP. */
+    /** kind: MISSING_OWNER, MISSING_DATE, MISSING_RESOURCE, GAP_NEEDS_HELP (V17 BL-FR-22), NO_STEPS, AFTER_GOAL_DATE, OVERDUE, VAGUE_STEP, UNREALISTIC_TIMING, GAP. */
     public record PlanIssue(String kind, String itemType, Long itemId, String itemTitle, String problem, String fix, boolean fromAi) {
     }
 

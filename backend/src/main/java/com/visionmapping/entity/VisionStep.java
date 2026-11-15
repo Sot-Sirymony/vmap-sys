@@ -1,5 +1,6 @@
 package com.visionmapping.entity;
 
+import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.WorkStatus;
 import jakarta.persistence.Column;
@@ -110,6 +111,26 @@ public class VisionStep extends BaseAuditableEntity {
     @Builder.Default
     @Column(name = "overdue_reschedules", nullable = false)
     private int overdueReschedules = 0;
+
+    /** V17 BL-FR-18: the kind of gap its resources text describes; optional. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gap_kind", length = 20)
+    private ObstacleType gapKind;
+
+    /** V17 BL-FR-19, BL-FR-21: the step whose gap this "find help" step covers. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "covers_step_id")
+    private VisionStep coversStep;
+
+    /** V17 BL-FR-20, BL-FR-21: the obstacle this step was made from. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "covers_obstacle_id")
+    private Obstacle coversObstacle;
+
+    /** V17 BL-FR-21: the To Contact partner created together with this step. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_partner_id")
+    private Partner createdPartner;
 
     /**
      * A status the participant chose. Rules that need other records (a complex

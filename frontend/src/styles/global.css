@@ -3756,3 +3756,73 @@ button:focus-visible,
     display: none !important;
   }
 }
+
+/* V17 BL-FR-05: obstacles that are not on a step yet. Text, not only colour, says so (BL-NFR-08). */
+.placement-missing {
+  color: var(--progress-mid-text);
+  font-weight: 600;
+}
+
+.placement-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  border-left-color: var(--palette-warning-main);
+}
+
+.placement-missing-hint {
+  color: var(--progress-mid-text);
+}
+
+/* V17 BL-FR-13: the soft "this sounds like a blocker" note. */
+.outcome-only-hint .limit-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  border-left-color: var(--palette-warning-main);
+}
+
+.outcome-only-hint .limit-note p {
+  margin: 0;
+}
+
+/* V17 BL-FR-15: read-only blocker count on dreams and goals. */
+.blocker-rollup {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--progress-mid-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* V17 phase 4 (BL-FR-25): the "Break into smaller tasks" row editor. */
+.break-down-rows {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.break-down-row {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, rgba(127, 127, 127, 0.25));
+}
+
+.break-down-outcome {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.repeated-block .row-actions {
+  align-items: center;
+}

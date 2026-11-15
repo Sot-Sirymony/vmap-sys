@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { OutcomeOnlyHint } from '../components/coaching/OutcomeOnlyHint';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { archiveDream, permanentlyDeleteDream, createDream, getDreamArchiveImpact, listDreams, reorderDreams, restoreDream, updateDream } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
@@ -580,6 +581,9 @@ export function DreamsPage() {
           </ul>
         </div>
       )}
+      {/* V17 BL-FR-11, BL-FR-13: the dream is the outcome only. */}
+      <OutcomeOnlyHint level="dream" texts={[title, description, successDefinition]}
+        recordKey={crud.editingId != null ? `dream-${crud.editingId}` : undefined} />
       <label className="field-full">
         {tr('Why Important')}
         <Textarea value={whyImportant} onChange={(event) => setWhyImportant(event.target.value)} />

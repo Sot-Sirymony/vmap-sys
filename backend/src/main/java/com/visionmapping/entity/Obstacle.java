@@ -1,6 +1,7 @@
 package com.visionmapping.entity;
 
 import com.visionmapping.entity.enums.ExpectationAgreement;
+import com.visionmapping.entity.enums.ObstaclePlacement;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
@@ -21,6 +22,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.lang.Nullable;
 
 @Getter
 @Setter
@@ -30,6 +32,11 @@ import lombok.Setter;
 @Entity
 @Table(name = "obstacles")
 public class Obstacle extends BaseAuditableEntity implements PlanLinked {
+
+    // V17 D-17-1: a plan obstacle is anchored to a step or a task. The goal
+    // and dream columns are then derived from that anchor, never chosen. They
+    // stay as columns so the Obstacles page and dashboard can filter by dream
+    // or goal, and for unplaced rows (older data and exempt partner conflicts).
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -165,4 +172,82 @@ public class Obstacle extends BaseAuditableEntity implements PlanLinked {
 
     @Column(nullable = false)
     private boolean archived;
+
+    /** V17 BL-FR-01: the most specific place in the plan this obstacle sits. */
+    public ObstaclePlacement placement() {
+        if (relatedTask != null) {
+            return ObstaclePlacement.TASK;
+        }
+        return relatedStep != null ? ObstaclePlacement.STEP : ObstaclePlacement.NONE;
+    }
+
+    /**
+     * V17 BL-FR-04: a partner conflict worked through the conflict
+     * worksheet, expectation, conduct checklist or criticism triage (FR-54,
+     * FR-60 to FR-62) is about a relationship, not one step, so it may stay
+     * unplaced.
+     */
+    public boolean isPlacementExempt() {
+        if (obstacleType != ObstacleType.PARTNER) {
+            return false;
+        }
+        boolean checklistStarted = conflictNoCharacterAttacks != null || conflictStayedOnIncident != null
+                || conflictNoThreatsOrSarcasm != null || conflictDefinedWinWin != null;
+        return checklistStarted || conflictExpectationAgreed != null || anyFilled(conflictIncident, conflictCost,
+                conflictOtherPerspective, conflictLesson, conflictPrivateNote, conflictNextAction,
+                conflictExpectation, criticismOverstated, criticismDelivery, criticismSubstance);
+    }
+
+    /** V17 BL-FR-09: anchored, but the step or task it sits on was archived. */
+    public boolean isAnchorArchived() {
+        return (relatedTask != null && relatedTask.isArchived())
+                || (relatedStep != null && relatedStep.isArchived());
+    }
+
+    /**
+     * V17 BL-FR-02: puts the obstacle on a task (whose step wins) or a step,
+     * and derives the goal and dream from it. The caller has checked that a
+     * given task belongs to a given step.
+     */
+    public void anchorTo(@Nullable VisionStep step, @Nullable TaskItem task) {
+        relatedTask = task;
+        relatedStep = task != null ? task.getStep() : step;
+        syncParentsFromAnchor();
+    }
+
+    /**
+     * Leaves the obstacle off the plan's steps and tasks, keeping a goal or
+     * dream only as context (BL-FR-04, BL-FR-06). A goal brings its own dream,
+     * so the two can never disagree.
+     */
+    public void leaveUnplaced(@Nullable Dream dream, @Nullable Goal goal) {
+        relatedTask = null;
+        relatedStep = null;
+        relatedGoal = goal;
+        relatedDream = goal != null ? goal.getDream() : dream;
+    }
+
+    /**
+     * V17 BL-FR-02, BL-FR-08: re-reads the step, goal and dream from the
+     * anchor, for example after the task, step or goal moved. An unplaced
+     * obstacle is left as it is.
+     */
+    public void syncParentsFromAnchor() {
+        if (relatedTask != null) {
+            relatedStep = relatedTask.getStep();
+        }
+        if (relatedStep != null) {
+            relatedGoal = relatedStep.getGoal();
+            relatedDream = relatedGoal == null ? null : relatedGoal.getDream();
+        }
+    }
+
+    private static boolean anyFilled(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

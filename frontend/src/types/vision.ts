@@ -51,6 +51,8 @@ export type ObstacleType = 'KNOWLEDGE' | 'SKILL' | 'TIME' | 'MONEY' | 'MOTIVATIO
 export type ExpectationAgreement = 'YES' | 'NO' | 'UNSURE';
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type ObstacleStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'ACCEPTED';
+// V17 BL-FR-01: where an obstacle sits. A plan blocker belongs on a task or step.
+export type ObstaclePlacement = 'TASK' | 'STEP' | 'NONE';
 // FR-51: how a dream's or goal's target date relates to its children's dates.
 // BOTTOM_UP (default) requires the parent date to be no earlier than the
 // latest child date; TOP_DOWN_FIXED opts out for a real external deadline.
@@ -221,6 +223,12 @@ export type VisionStep = {
   // V11 Phase 4 (PB-FR-12).
   estimatedHours?: number | null;
   startsAfterStepId?: number | null;
+  // V17 BL-FR-18, BL-FR-21: the kind of gap, and what this "find help" step covers.
+  gapKind?: ObstacleType | null;
+  coversStepId?: number | null;
+  coversStepCode?: string | null;
+  coversObstacleId?: number | null;
+  createdPartnerId?: number | null;
 };
 
 export type VisionStepRequest = {
@@ -238,6 +246,28 @@ export type VisionStepRequest = {
   // V11 Phase 4: left out keeps what is saved; startsAfterStepId 0 clears it.
   estimatedHours?: number | null;
   startsAfterStepId?: number | null;
+  // V17 BL-FR-18: left out keeps what is saved; an empty string clears it.
+  gapKind?: ObstacleType | '';
+};
+
+/** V17 BL-FR-19, BL-FR-20: a "find help" step from a step's gap or an obstacle. */
+export type GapStepRequest = {
+  goalId?: number;
+  title: string;
+  description?: string;
+  owner: string;
+  priority: Priority;
+  targetDate: string;
+  gapKind?: ObstacleType | '';
+  createPartner: boolean;
+  partnerName?: string;
+  partnerSupportType?: PartnerSupportType;
+};
+
+export type GapStepResult = {
+  step: VisionStep;
+  partner: Partner | null;
+  obstacle: Obstacle | null;
 };
 
 export type TaskItem = {
@@ -269,6 +299,8 @@ export type TaskItem = {
   // ("this first, that second"). Null until the first drag; sorts last.
   listOrder?: number | null;
   archived: boolean;
+  // V17 BL-FR-28: times this task has entered Blocked.
+  blockedCount?: number;
 };
 
 export type TaskItemRequest = {
@@ -287,7 +319,18 @@ export type TaskItemRequest = {
   blockerReason?: string;
   nextAction?: string;
   energyDemand?: EnergyDemand;
+  // V17 BL-FR-27: "What changed?" when the task leaves Blocked.
+  changeNote?: string;
 };
+
+/** V17 BL-FR-25: KEEP leaves the original as a checklist parent; REPLACE archives it. */
+export type TaskSplitOutcome = 'KEEP' | 'REPLACE';
+
+export type TaskSplitRow = { title: string; dueDate: string; owner?: string; priority?: Priority };
+
+export type TaskSplitRequest = { rows: TaskSplitRow[]; originalOutcome: TaskSplitOutcome };
+
+export type TaskSplitResult = { created: TaskItem[]; original: TaskItem };
 
 export type Partner = {
   id: number;
@@ -496,10 +539,16 @@ export type Obstacle = {
   criticismSubstance?: string;
   requiredPartnerId?: number;
   status: ObstacleStatus;
+  // V17, set by the server: where it sits (BL-FR-01), whether a partner
+  // conflict may stay unplaced (BL-FR-04), and whether its step or task was
+  // archived (BL-FR-09). The dream and goal ids are derived from the step.
+  placement?: ObstaclePlacement;
+  placementExempt?: boolean;
+  anchorArchived?: boolean;
   archived: boolean;
 };
 
-export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived' | 'expectationReleasedAt'>;
+export type ObstacleRequest = Omit<Obstacle, 'id' | 'archived' | 'expectationReleasedAt' | 'placement' | 'placementExempt' | 'anchorArchived'>;
 
 export type DreamCommitmentRequest = {
   signedName: string;
@@ -896,6 +945,8 @@ export type ExcelImportSummary = {
   skippedRecords: number;
   rowsBySheet: Record<string, number>;
   validationErrors: string[];
+  // V17 BL-FR-41: rows imported but needing attention (e.g. obstacles not on a step yet).
+  warnings?: string[];
   // Path of the automatic snapshot saved before the import ran (BRD C-7);
   // null when the import aborted before starting.
   backupFile?: string | null;
@@ -982,6 +1033,8 @@ export type DashboardAttention = {
   inactiveMoonshotDreams: Dream[];
   // FR-37.1: areas with an active goal but no recent progress while others moved.
   starvedVisionAreas: VisionArea[];
+  // V17 BL-FR-07: active obstacles that are not on a step yet.
+  unplacedObstacleCount?: number;
 };
 
 // V9 (AI-FR-24): admin AI settings. The API key itself is never sent to the browser.

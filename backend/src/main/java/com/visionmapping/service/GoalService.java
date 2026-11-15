@@ -23,6 +23,7 @@ import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.ObstacleAnchorSync;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressOverride;
 import java.math.BigDecimal;
@@ -56,6 +57,7 @@ public class GoalService {
     private final GoalRepository goalRepository;
     private final VisionStepRepository visionStepRepository;
     private final PartnerRepository partnerRepository;
+    private final ObstacleAnchorSync obstacleAnchorSync;
 
     @Cacheable(CacheConfig.GOAL_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -105,6 +107,7 @@ public class GoalService {
 
     public GoalResponse updateGoal(Long id, GoalRequest request) {
         Goal entity = lookup.goal(id);
+        Long oldDreamId = entity.getDream().getId();
         entity.setDream(lookup.dream(request.dreamId()));
         entity.setTitle(request.title());
         entity.setDescription(request.description());
@@ -118,6 +121,9 @@ public class GoalService {
         entity.setScheduleMode(request.scheduleMode());
         validateGoalCompletion(entity, ProgressOverride.NONE);
         validateScheduleCascade(entity);
+        if (!oldDreamId.equals(entity.getDream().getId())) {
+            obstacleAnchorSync.afterGoalMoved(entity);
+        }
         return toResponse(entity);
     }
 

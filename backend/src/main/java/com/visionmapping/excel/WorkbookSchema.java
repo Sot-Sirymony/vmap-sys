@@ -17,6 +17,12 @@ final class WorkbookSchema {
     static final String GOALS = "Goals";
     static final String STEPS = "Steps";
     static final String TASKS = "Tasks";
+    static final String OBSTACLES = "Obstacles";
+
+    // V17 BL-FR-40: the Obstacles sheet's last column, written by export only.
+    static final String PLACED_ON = "Placed on";
+    static final int PLACED_ON_COLUMN = 10;
+    static final String NOT_PLACED = "Not placed";
 
     // Column labels reused across sheets
     static final String CODE = "Code";

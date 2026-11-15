@@ -10,6 +10,10 @@ import jakarta.validation.Validator;
 import static com.visionmapping.excel.WorkbookSchema.CODE;
 import static com.visionmapping.excel.WorkbookSchema.DREAMS;
 import static com.visionmapping.excel.WorkbookSchema.GOALS;
+import static com.visionmapping.excel.WorkbookSchema.NOT_PLACED;
+import static com.visionmapping.excel.WorkbookSchema.OBSTACLES;
+import static com.visionmapping.excel.WorkbookSchema.PLACED_ON;
+import static com.visionmapping.excel.WorkbookSchema.PLACED_ON_COLUMN;
 import static com.visionmapping.excel.WorkbookSchema.PRIORITY;
 import static com.visionmapping.excel.WorkbookSchema.STATUS;
 import static com.visionmapping.excel.WorkbookSchema.STEPS;
@@ -39,6 +43,7 @@ import com.visionmapping.service.VisionAreaService;
 import com.visionmapping.service.GoalService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.ObstacleService;
+import com.visionmapping.entity.enums.ObstaclePlacement;
 import com.visionmapping.service.ReviewService;
 import com.visionmapping.service.DashboardService;
 import java.io.ByteArrayOutputStream;
@@ -54,6 +59,11 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.ConditionalFormattingRule;
+import org.apache.poi.ss.usermodel.PatternFormatting;
+import org.apache.poi.ss.usermodel.SheetConditionalFormatting;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
@@ -190,10 +200,13 @@ public class ExcelService {
                             .map(item -> List.of(item.id(), item.reviewType(), item.reviewDate(), value(item.relatedVisionAreaId()), value(item.relatedDreamId()), value(item.summary()), value(item.nextActions())))
                             .toList(), headerStyle);
 
-            writeRows(workbook, "Obstacles", List.of("ID", "Dream ID", "Goal ID", "Step ID", "Task ID", TITLE, TYPE, "Severity", STATUS, "Solution"),
+            // V17 BL-FR-40: "Placed on" is added last, so older workbooks keep their
+            // column positions and still import. Import ignores it.
+            writeRows(workbook, OBSTACLES, List.of("ID", "Dream ID", "Goal ID", "Step ID", "Task ID", TITLE, TYPE, "Severity", STATUS, "Solution", PLACED_ON),
                     obstacleService.listObstacles(ArchiveFilter.ACTIVE_ONLY).stream()
-                            .map(item -> List.of(item.id(), value(item.relatedDreamId()), value(item.relatedGoalId()), value(item.relatedStepId()), value(item.relatedTaskId()), item.title(), item.obstacleType(), item.severity(), item.status(), value(item.solution())))
+                            .map(item -> List.of(item.id(), value(item.relatedDreamId()), value(item.relatedGoalId()), value(item.relatedStepId()), value(item.relatedTaskId()), item.title(), item.obstacleType(), item.severity(), item.status(), value(item.solution()), placedOn(item.placement())))
                             .toList(), headerStyle);
+            highlightText(workbook.getSheet(OBSTACLES), PLACED_ON_COLUMN, NOT_PLACED, IndexedColors.LIGHT_ORANGE);
 
             writeRows(workbook, "Progress Logs", List.of("ID", "Task ID", "Before", "After", "Note", "Logged At"),
                     progressLogService.listProgressLogs().stream()
@@ -205,6 +218,7 @@ public class ExcelService {
                     List.of("Export", "Export creates a new workbook and does not overwrite the original workbook."),
                     List.of(STATUS, "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
                     List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL."),
+                    List.of(OBSTACLES, "Put each blocker on a step (Step ID) or a task (Task ID). Its goal and dream are worked out from that. A row with only a Dream ID or Goal ID is imported as \"Not placed\" so you can choose its step in the app. \"Placed on\" is filled by the export and ignored by import."),
                     List.of(TimelineSheet.NAME, "A read-only picture of the plan by week. Shaded weeks follow the Start and End dates; the current week is marked. Import ignores this sheet.")
             ), headerStyle);
 
@@ -226,7 +240,8 @@ public class ExcelService {
      * transaction so a broken hierarchy is never half-imported: any row whose
      * required fields are invalid, or whose parent was itself skipped, is
      * skipped with a reported reason rather than aborting the whole import.
-     * The other sheets (Partners, Reviews, and so on) are not imported yet.
+     * V17 BL-FR-41 also imports the Obstacles sheet. The other sheets
+     * (Partners, Reviews, and so on) are not imported yet.
      */
     @Transactional
     @SecurityAudit(value = SecurityEventType.EXCEL_IMPORTED)
@@ -266,13 +281,14 @@ public class ExcelService {
 
         try (Workbook workbook = open(file)) {
             validateStructure(workbook, errors);
-            return new HierarchyImport(visionAreaService, dreamService, goalService, visionStepService, taskItemService, validator)
+            return new HierarchyImport(visionAreaService, dreamService, goalService, visionStepService, taskItemService,
+                    obstacleService, validator)
                     .run(workbook, errors)
                     .withBackupFile(backupFile);
         } catch (IOException exception) {
             log.info("Could not read an uploaded workbook: {}", exception.toString());
             errors.add("This file is not a readable .xlsx workbook.");
-            return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors, backupFile);
+            return new ExcelImportSummaryResponse(0, 0, new LinkedHashMap<>(), errors).withBackupFile(backupFile);
         }
     }
 
@@ -362,6 +378,28 @@ public class ExcelService {
         style.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         return style;
+    }
+
+    /** V17 BL-FR-40: how the Obstacles sheet names an obstacle's placement. */
+    static String placedOn(@Nullable ObstaclePlacement placement) {
+        if (placement == ObstaclePlacement.TASK) {
+            return "Task";
+        }
+        return placement == ObstaclePlacement.STEP ? "Step" : NOT_PLACED;
+    }
+
+    /** Fills a column's cell when it holds exactly this text. */
+    private void highlightText(@Nullable Sheet sheet, int columnIndex, String text, IndexedColors color) {
+        if (sheet == null) {
+            return;
+        }
+        SheetConditionalFormatting formatting = sheet.getSheetConditionalFormatting();
+        String column = CellReference.convertNumToColString(columnIndex);
+        ConditionalFormattingRule rule = formatting.createConditionalFormattingRule("$" + column + "2=\"" + text + "\"");
+        PatternFormatting fill = rule.createPatternFormatting();
+        fill.setFillBackgroundColor(color.getIndex());
+        fill.setFillPattern(PatternFormatting.SOLID_FOREGROUND);
+        formatting.addConditionalFormatting(new CellRangeAddress[] {CellRangeAddress.valueOf(column + "2:" + column + "501")}, rule);
     }
 
     private void addDropdown(@Nullable Sheet sheet, int columnIndex, String csvValues) {

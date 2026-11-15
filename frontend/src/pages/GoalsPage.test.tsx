@@ -3,15 +3,19 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as dreamApi from '../api/dreamApi';
 import * as goalApi from '../api/goalApi';
+import * as obstacleApi from '../api/obstacleApi';
+import * as taskApi from '../api/taskApi';
 import * as stepApi from '../api/stepApi';
 import * as visionAreaApi from '../api/visionAreaApi';
 import { answerEmptyLists } from '../test/apiMocks';
-import { aDream, aGoal, aStep, aVisionArea } from '../test/builders';
+import { aDream, aGoal, anObstacle, aStep, aTask, aVisionArea } from '../test/builders';
 import { currentLocation, renderPage } from '../test/render';
 import { GoalsPage } from './GoalsPage';
 
 vi.mock('../api/dreamApi');
 vi.mock('../api/goalApi');
+vi.mock('../api/obstacleApi');
+vi.mock('../api/taskApi');
 vi.mock('../api/stepApi');
 vi.mock('../api/visionAreaApi');
 
@@ -289,5 +293,16 @@ describe('GoalsPage (CLAUDE.md page 5)', () => {
     fireEvent.dragOver(row('Prepare one concept note'));
     fireEvent.drop(row('Prepare one concept note'));
     expect(await screen.findByText('Order changed elsewhere.')).toBeInTheDocument();
+  });
+
+  it('shows what blocks the steps under each goal, read-only, linking to its obstacles (V17 BL-FR-15)', async () => {
+    vi.mocked(obstacleApi.listObstacles).mockResolvedValue([
+      anObstacle({ id: 1, status: 'OPEN', placement: 'STEP', relatedStepId: 1, relatedGoalId: 10, relatedDreamId: 1 }),
+    ]);
+    vi.mocked(taskApi.listTasks).mockResolvedValue([aTask({ id: 5, stepId: 2, status: 'BLOCKED', blockerReason: 'No data' })]);
+    renderPage(<GoalsPage />);
+
+    const link = await screen.findByRole('link', { name: 'Blockers under this: 1 blocker · 1 blocked task' });
+    expect(link).toHaveAttribute('href', '/obstacles?goalId=10');
   });
 });

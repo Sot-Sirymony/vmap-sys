@@ -376,6 +376,70 @@ Review types:
 /obstacles
 ```
 
+V17 placement (BRD 17.0.0):
+- `POST` and `PUT` need `relatedStepId` or `relatedTaskId`; otherwise 400
+  "Put this blocker on a step or a task." A task from another step answers 400
+  "That task is not part of the chosen step." Another user's step or task
+  answers 404. Exception: a `PARTNER` obstacle with any conflict, expectation,
+  checklist or criticism answer may have neither (it may keep `relatedDreamId`).
+- With a step or task, `relatedGoalId` and `relatedDreamId` are worked out by
+  the server; values sent by the client are ignored.
+- An obstacle saved before V17 with only a dream or goal can still be updated
+  without a step as long as its dream and goal are sent back unchanged.
+- Responses add `placement` (`TASK`, `STEP`, `NONE`), `placementExempt` and
+  `anchorArchived`.
+- `GET /obstacles?placement=UNPLACED`: Open and In Progress obstacles that still
+  need a step (not placed and not exempt, or on an archived step or task).
+- `GET /dashboard`: `attention.unplacedObstacleCount`.
+- Excel: the Obstacles sheet ends with a **Placed on** column (`Task`, `Step`,
+  `Not placed`). Import now reads the Obstacles sheet: rows with a Task or Step
+  ID are placed there; rows with only a Dream or Goal ID are imported unplaced
+  and reported in `warnings`; Resolved and Accepted rows are skipped with a
+  reason (the sheet holds no root cause or alternatives).
+
+V17 phase 3, gaps become steps (BRD 17.0.0, BL-FR-18 to BL-FR-22):
+- Steps: `POST`/`PUT /steps` accept `gapKind` (an obstacle type name; left out
+  keeps it, `""` clears it). Step responses add `gapKind`, `coversStepId`,
+  `coversStepCode`, `coversObstacleId` and `createdPartnerId`.
+- `POST /steps/{id}/gap-step` (201): body `{ title, description?, owner,
+  priority, targetDate, gapKind?, createPartner, partnerName?,
+  partnerSupportType? }`. Needs gap text on the step (else 400 "Write what is
+  missing on this step first."). The new step goes just before the step in the
+  same goal; later steps move down one. Returns `{ step, partner, obstacle }`
+  (`obstacle` null). Without `partnerSupportType` the server suggests one from
+  the gap kind; without `partnerName` it uses "To find: {step title}".
+- `POST /obstacles/{id}/convert-to-step` (201): the same body plus `goalId`,
+  needed only when the obstacle is not on a live step (else 400 "Choose the goal
+  this step belongs to."). On a step, the new step goes just before it. The
+  obstacle is anchored to the new step and set to In Progress. Partner conflicts
+  (exempt) and Resolved or Accepted obstacles answer 400.
+- `DELETE /steps/{id}?removePartner=true` also archives the partner that step
+  created (BL-FR-21).
+- Plan check (`/ai/plan/dreams/{id}/check` and the plan assistant's Resources
+  section): new rule kind `GAP_NEEDS_HELP` for a step whose gap kind is
+  Knowledge, Skill or Money with no linked partner, no "find help" step made for
+  it and no open obstacle on it: "Step S-014 is missing a skill. Who could help?"
+
+V17 phase 4, break it down (BRD 17.0.0, BL-FR-25 to BL-FR-29):
+- `POST /tasks/{id}/split` (201): body `{ rows: [{ title, dueDate, owner?,
+  priority? }] (2 to 5), originalOutcome: KEEP | REPLACE }`. New tasks are Not
+  Started, under the same step, placed right after the original in the step's
+  order (and on the Tasks page order, once the participant has one). Owner and
+  priority default to the original's. `REPLACE` archives the original, adds
+  "Split into T-041 to T-043" to its description and to its progress log.
+  Returns `{ created, original }`. Nothing is deleted.
+- `PATCH /tasks/{id}/status` now takes `{ status, manualOverride, changeNote? }`.
+  `changeNote` (max 1000) is saved as the progress-log note when the task
+  leaves Blocked, and ignored otherwise. `PUT /tasks/{id}` accepts the same
+  `changeNote`.
+- Task responses add `blockedCount`: each move into Blocked counts once
+  (staying Blocked does not).
+- `POST /ai/plan/tasks/{taskId}/smaller-tasks?language=en`: 2 to 5 smaller
+  tasks for one task, from its title, step and blocker reason, never asking a
+  question. Suggestions only (same shape as `task-suggestions`); same consent,
+  daily limit and monthly cap as other AI calls. Another user's task answers
+  404 before AI is checked.
+
 Obstacle types:
 - KNOWLEDGE
 - SKILL
@@ -658,7 +722,7 @@ Step suggestions now also return `priority`, `complex`, `estimatedHours` and `st
 | --- | --- | --- |
 | POST | `/api/ai/plan/dreams/{dreamId}/helpers-and-risks` | `{ "items": [{ "key", "kind": "GOAL\|STEP", "title", "resources", "goalKey" }], "useFears": false, "ask": PlanAsk }` → `helpers[]` (`role`, `supportType`, `forKey`, `reason`, `matches[]` of the caller's own partners: `partnerId`, `name`, `role`, `supportType`, `status`), `risks[]` (`title`, `description`, `obstacleType`, `severity`, `solution`, `forKey`, `helperType`, `helperLabel`, `fromFears`), `resources[]` (approved ones first, others `checkBeforeUse`), `requestId`. Partners are matched on the server; their names and contact details are never sent to Claude. The fear journal (fears of this dream or of none) is read only with `useFears: true` |
 
-Drafts take `helpers` (up to 10: `key`, `role`, `supportType`, `name`, `partnerId`, `partnerName`, `linkKey`, `requestId`, `edited`) and `risks` (up to 10: `key`, `title`, `description`, `obstacleType`, `severity`, `solution`, `linkKey`, `helperKey`, `fromFears`, `requestId`, `edited`). On add, a helper with `partnerId` links that partner to its goal or step only where the partner has no link yet; one without becomes a new partner with status To Contact. Each risk becomes an Open obstacle on its goal or step, with `helperKey`'s partner as the required partner. The add result also returns `partnerIds`, `obstacleIds` (archived by Undo, which takes them too) and `linkedPartnerIds`.
+Drafts take `helpers` (up to 10: `key`, `role`, `supportType`, `name`, `partnerId`, `partnerName`, `linkKey`, `requestId`, `edited`) and `risks` (up to 10: `key`, `title`, `description`, `obstacleType`, `severity`, `solution`, `linkKey`, `helperKey`, `fromFears`, `requestId`, `edited`). V17 (BL-FR-37): a risk's `linkKey` must be a draft step's key, or `newstep:{goalKey}`, which adds a step "Deal with: {title}" under that goal (dated by the goal, else the dream); otherwise Add answers 400 "Choose the step this risk holds up: {title}" and saves nothing. Suggested risks' `forKey` is a step key or null. On add, a helper with `partnerId` links that partner to its goal or step only where the partner has no link yet; one without becomes a new partner with status To Contact. Each risk becomes an Open obstacle on its goal or step, with `helperKey`'s partner as the required partner. The add result also returns `partnerIds`, `obstacleIds` (archived by Undo, which takes them too) and `linkedPartnerIds`.
 
 ### V11: draft check, fixes, capacity and the plan model (Phase 6)
 
@@ -681,8 +745,8 @@ Helps with one section of the Plan page (`surface` `PLAN`, sections `WHOLE`, `ST
 | --- | --- | --- |
 | POST | `/api/ai/chat` and `/api/ai/chat/stream` | Add `"surface"`, `"section"`, optional `"itemRef"` and `"dreamId"` to send the message to the plan assistant. The answer's `contextSources` is `["section"]`; usage is logged as `PLAN_ASSISTANT_CHAT`. A new conversation is tagged with the dream and section |
 | POST | `/api/ai/plan/dreams/{dreamId}/assistant/section-check` | `{ "surface", "section", "itemRef" }` → `issues[]` (`kind`, `itemType`, `itemRef`, `itemTitle`, `problem`, `fix`) from the rule-based plan check for that section, and `canPropose`. Never uses AI |
-| POST | `/api/ai/plan/dreams/{dreamId}/assistant/proposals?language=en` | Same body → `changes[]`, `note`, `requestId` (feature `PLAN_ASSISTANT`, rated and counted like other plan answers). A change has `kind`: `EDIT` (`itemRef`, `itemTitle`, `field` `TITLE\|SUCCESS\|WHY\|DATE\|OWNER`, `value`), `ADD_STEP` or `ADD_TASK` (`parentRef`, `parentTitle`, `title`, `owner`, `date`, null when it broke a date limit) or `ADD_RISK` (`title`, `obstacleType`, `severity`, `solution`, optional `parentRef`); and `reason`. Up to 5. Changes outside the section, to items already in the plan (Build my plan), or with a date past the parent's are dropped. 400 for a section that only explains (`PEOPLE`, `MILESTONES`, `WHOLE`). Saves nothing |
-| POST | `/api/ai/plan/dreams/{dreamId}/assistant/apply` | Plan page only: one change as the participant left it, plus `requestId` and `edited` → 201 `itemType`, `id`. Saved through the normal dream, goal, step and obstacle rules (a new step needs a date). Every ref must be in this dream's plan; others answer 404. `ADD_TASK` answers 400 (tasks are changed in Build my plan) |
+| POST | `/api/ai/plan/dreams/{dreamId}/assistant/proposals?language=en` | Same body → `changes[]`, `note`, `requestId` (feature `PLAN_ASSISTANT`, rated and counted like other plan answers). A change has `kind`: `EDIT` (`itemRef`, `itemTitle`, `field` `TITLE\|SUCCESS\|WHY\|DATE\|OWNER`, `value`), `ADD_STEP` or `ADD_TASK` (`parentRef`, `parentTitle`, `title`, `owner`, `date`, null when it broke a date limit) or `ADD_RISK` (`title`, `obstacleType`, `severity`, `solution`, `parentRef` of a step; V17 BL-FR-38 drops risks on the dream or a goal); and `reason`. Up to 5. Changes outside the section, to items already in the plan (Build my plan), or with a date past the parent's are dropped. 400 for a section that only explains (`PEOPLE`, `MILESTONES`, `WHOLE`). Saves nothing |
+| POST | `/api/ai/plan/dreams/{dreamId}/assistant/apply` | Plan page only: one change as the participant left it, plus `requestId` and `edited` → 201 `itemType`, `id`. Saved through the normal dream, goal, step and obstacle rules (a new step needs a date; V17: `ADD_RISK` needs a `step:` parent, else 400 "Choose the step this risk holds up."). Every ref must be in this dream's plan; others answer 404. `ADD_TASK` answers 400 (tasks are changed in Build my plan) |
 
 In Build my plan, cards are applied to the draft in the browser and counted with `POST /api/ai/plan/requests/{id}/outcome`.
 
@@ -707,7 +771,7 @@ The page assistant and helpers use the simple-task model (`planModel`) when the 
 | --- | --- | --- |
 | POST | `/api/ai/obstacles/help?language=en` | `{ "mode", "obstacleId", "form", "answers" }`. Modes: `CLASSIFY` (cards for `obstacleType` and `severity`), `ROOT_CAUSE` (with up to three `answers` `{ question, answer }`: returns the next `question`, or a `rootCause` card; after three answers always the card), `SOLUTIONS` (up to three cards for `solution` or `creativeAlternatives`, each "idea First step: ..."), `NEXT_TASK` (`task`: `title`, `description`, `owner` always `Me`, `dueDate` between today and the linked step's date or null, `priority`, `stepId`, `stepTitle`, `latestDate`; the step comes from the form's or saved `relatedStepId`, else the linked task's step) and `PRIORITISE` (`ranking` in the rule order below, with a `reason` on up to the top three). Reads the obstacle exactly as the page assistant does: never partner names or contacts, never the private reaction note; resolved obstacles of the same type are included (AH-FR-38). Another user's obstacle or linked record answers 404 before AI is checked; 400 with no obstacle and no form. Logged as `OBSTACLE_HELP`; cards are counted with `POST /api/ai/pages/assistant/requests/{id}/outcome`. Saves nothing and never changes an obstacle's status |
 | GET | `/api/obstacles/partner-matches?obstacleType=KNOWLEDGE` | No AI. `suggestedSupportType` (the CLAUDE.md partner rule; `OTHER` for partner, system and other gaps) and up to five of the participant's own partners, To Contact to Waiting, whose support type or role fits: `id`, `name`, `role`, `supportType`, `status` |
-| GET | `/api/obstacles/priority` | No AI. Open and In Progress obstacles: severity first, then Blocked tasks they hold up (the task, or the step, goal or dream it sits under), then days open. `id`, `title`, `severity`, `blockedTasks`, `daysOpen`, `reason` (null) |
+| GET | `/api/obstacles/priority` | No AI. Open and In Progress obstacles: severity first, then Blocked tasks they hold up (V17: for an obstacle on a task or step, only that task or the tasks under that step; for an unplaced one, the goal or dream it names), then days open, then placed before unplaced (BL-FR-10). `id`, `title`, `severity`, `blockedTasks`, `daysOpen`, `reason` (null) |
 | GET | `/api/tasks/blocked-without-obstacle` | No AI. Blocked tasks with a blocker reason that no unarchived obstacle names: `id`, `code`, `title`, `blockerReason`, `stepId`, `stepTitle`, `goalId`, `dreamId` |
 
 ### V15: Communication helpers (Phase 3)

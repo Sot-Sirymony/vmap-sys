@@ -128,7 +128,9 @@ public class ObstacleSupportService {
 
     /**
      * AH-FR-41: open obstacles in the rule order: severity first, then how many
-     * Blocked tasks they hold up, then how long they have been open.
+     * Blocked tasks they hold up, then how long they have been open. V17
+     * BL-FR-10: when all of that ties, obstacles on a step or task come before
+     * unplaced ones.
      */
     @Transactional(readOnly = true)
     public List<RankedObstacle> priority() {
@@ -137,8 +139,14 @@ public class ObstacleSupportService {
                 .filter(task -> task.getStatus() == WorkStatus.BLOCKED)
                 .toList();
         Instant now = Instant.now(clock);
-        return obstacleRepository.findByUser_IdAndArchivedFalse(userId).stream()
+        List<Obstacle> open = obstacleRepository.findByUser_IdAndArchivedFalse(userId).stream()
                 .filter(obstacle -> STILL_OPEN.contains(obstacle.getStatus()))
+                .toList();
+        java.util.Set<Long> unplaced = open.stream()
+                .filter(obstacle -> obstacle.placement() == com.visionmapping.entity.enums.ObstaclePlacement.NONE)
+                .map(Obstacle::getId)
+                .collect(java.util.stream.Collectors.toSet());
+        return open.stream()
                 .map(obstacle -> new RankedObstacle(obstacle.getId(), obstacle.getTitle(),
                         obstacle.getSeverity() == null ? null : obstacle.getSeverity().name(),
                         (int) blocked.stream().filter(task -> holdsUp(obstacle, task)).count(),
@@ -147,14 +155,27 @@ public class ObstacleSupportService {
                 .sorted(Comparator.comparingInt((RankedObstacle ranked) -> severityRank(ranked.severity())).reversed()
                         .thenComparing(Comparator.comparingInt(RankedObstacle::blockedTasks).reversed())
                         .thenComparing(Comparator.comparingLong(RankedObstacle::daysOpen).reversed())
+                        .thenComparing((RankedObstacle ranked) -> unplaced.contains(ranked.id()))
                         .thenComparing(RankedObstacle::id))
                 .toList();
     }
 
-    /** An obstacle holds up a Blocked task when it names the task, or the step, goal or dream the task sits under. */
+    /**
+     * An obstacle holds up a Blocked task when it names the task, or the step,
+     * goal or dream the task sits under. V17 BL-FR-02: an obstacle on a task or
+     * step has its goal and dream filled in from that anchor, so for it only the
+     * anchor counts; otherwise one blocker on a task would hold up every
+     * Blocked task in the dream. Goal and dream matching is for unplaced ones.
+     */
     static boolean holdsUp(Obstacle obstacle, TaskItem task) {
         VisionStep step = task.getStep();
         Goal goal = step == null ? null : step.getGoal();
+        if (obstacle.getRelatedTask() != null) {
+            return same(obstacle.getRelatedTask(), task.getId());
+        }
+        if (obstacle.getRelatedStep() != null) {
+            return step != null && same(obstacle.getRelatedStep(), step.getId());
+        }
         return same(obstacle.getRelatedTask(), task.getId())
                 || (step != null && same(obstacle.getRelatedStep(), step.getId()))
                 || (goal != null && same(obstacle.getRelatedGoal(), goal.getId()))

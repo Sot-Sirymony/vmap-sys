@@ -92,7 +92,8 @@ class TaskItemServiceTest {
                 dreamRepository, goalRepository, visionStepRepository, taskItemRepository, partnerRepository,
                 communicationMessageRepository, reviewRepository, obstacleRepository, progressLogRepository, gratitudeEntryRepository, idealPartnerProfileRepository);
         service = new TaskItemService(lookup, progress, archiveCascade, permanentDeleteCascade,
-                new VisionMappingMapper(), taskItemRepository, progressLogRepository, Clock.systemDefaultZone());
+                new VisionMappingMapper(), taskItemRepository, progressLogRepository, Clock.systemDefaultZone(),
+                new com.visionmapping.service.support.ObstacleAnchorSync(org.mockito.Mockito.mock(com.visionmapping.repository.ObstacleRepository.class)));
         testUser = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();
         lenient().when(userScope.currentUser()).thenReturn(testUser);

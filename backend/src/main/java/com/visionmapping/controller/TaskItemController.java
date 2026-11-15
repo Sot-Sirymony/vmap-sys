@@ -2,10 +2,11 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.SimpleReorderRequest;
-import com.visionmapping.dto.request.StatusUpdateRequest;
+import com.visionmapping.dto.request.TaskSplitRequest;
+import com.visionmapping.dto.request.TaskStatusUpdateRequest;
 import com.visionmapping.dto.request.TaskItemRequest;
 import com.visionmapping.dto.response.TaskItemResponse;
-import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.dto.response.TaskSplitResponse;
 import com.visionmapping.service.TaskItemService;
 import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
@@ -53,8 +54,16 @@ public class TaskItemController {
     }
 
     @PatchMapping("/{id}/status")
-    public TaskItemResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
-        return service.updateTaskStatus(id, request.status());
+    public TaskItemResponse updateStatus(@PathVariable Long id, @Valid @RequestBody TaskStatusUpdateRequest request) {
+        // V17 BL-FR-27: changeNote is kept when the task leaves Blocked.
+        return service.updateTaskStatus(id, request.status(), request.changeNote());
+    }
+
+    /** V17 BL-FR-25: breaks this task into 2 to 5 smaller tasks under the same step. */
+    @PostMapping("/{id}/split")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TaskSplitResponse split(@PathVariable Long id, @Valid @RequestBody TaskSplitRequest request) {
+        return service.splitTask(id, request);
     }
 
     @PatchMapping("/reorder")

@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { Obstacle, ObstacleRequest } from '../types/vision';
+import type { GapStepRequest, GapStepResult, Obstacle, ObstacleRequest } from '../types/vision';
 
 export function listObstacles(token: string, includeArchived = false) {
   return apiClient<Obstacle[]>(`/obstacles?includeArchived=${includeArchived}`, { token });
@@ -54,5 +54,14 @@ export function releaseExpectation(token: string, id: number) {
   return apiClient<Obstacle>(`/obstacles/${id}/release-expectation`, {
     method: 'POST',
     token,
+  });
+}
+
+// V17 BL-FR-20: turns this obstacle into a "find help" step and anchors it there.
+export function convertObstacleToStep(token: string, id: number, request: GapStepRequest) {
+  return apiClient<GapStepResult>(`/obstacles/${id}/convert-to-step`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify(request),
   });
 }

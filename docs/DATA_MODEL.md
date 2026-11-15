@@ -144,10 +144,14 @@ Fields:
 - manualProgressOverride
 - createdAt
 - updatedAt
+- gapKind (V17, migration V76: Knowledge, Skill, Time, Money, ...; optional)
+- coversStep, coversObstacle (V76: what a "find help" step was created to cover; optional)
+- createdPartner (V76: the To Contact partner created with it; optional)
 
 ## TaskItem
 
-Executable task under a VisionStep.
+Executable task under a VisionStep. V17 (migration V77) adds `blockedCount`:
+how many times the task has entered Blocked (BL-FR-28).
 
 Fields:
 - id
@@ -205,12 +209,28 @@ Can link to:
 
 Progress blocker.
 
-Can link to:
-- Dream
-- Goal
-- VisionStep
-- TaskItem
+V17 (BRD 17.0.0, D-17-1): a plan obstacle is **anchored** to one VisionStep
+or one TaskItem. Its `relatedGoalId` and `relatedDreamId` are derived from
+that anchor on every save and when the task, step or goal moves; they are
+never chosen by hand. A task anchor also sets the step.
+
+- `placement` (response only): `TASK`, `STEP` or `NONE`.
+- `placementExempt` (response only): a Partner obstacle with conflict,
+  expectation, checklist or criticism answers may stay `NONE`, keeping a dream
+  for context (BL-FR-04).
+- `anchorArchived` (response only): its step or task was archived (BL-FR-09).
+- Obstacles saved before V17 with only a dream or goal keep those links until
+  the participant moves them (BL-FR-06). They are listed as "Not on a step
+  yet" while Open or In Progress.
+
+Links:
+- VisionStep or TaskItem (the anchor)
+- Goal and Dream (derived)
 - required Partner
+
+Migration `V75__obstacle_anchor_consistency.sql` made existing goal and dream
+ids agree with each anchored obstacle's step, and kept the old values in
+`obstacle_anchor_fix_v75` (reversal script in the migration's header).
 
 ## ProgressLog
 

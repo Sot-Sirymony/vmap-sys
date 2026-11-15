@@ -106,6 +106,13 @@ public class AiPlanController {
         return service.suggestTasks(stepId, language, ask);
     }
 
+    /** V17 BL-FR-29: smaller tasks for one Blocked or overdue task. Suggestions only. */
+    @PostMapping("/tasks/{taskId}/smaller-tasks")
+    public TaskSuggestions smallerTasks(@PathVariable Long taskId,
+                                        @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return service.suggestSmallerTasks(taskId, language);
+    }
+
     /** V11 (PB-FR-14): tasks for a complex step that exists only in the Build my plan draft. */
     @PostMapping("/dreams/{dreamId}/draft-task-suggestions")
     public TaskSuggestions draftStepTasks(@PathVariable Long dreamId, @Valid @RequestBody DraftStepTasksRequest request,

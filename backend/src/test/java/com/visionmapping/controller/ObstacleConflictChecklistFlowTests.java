@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
+import com.visionmapping.support.PlanFixture;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -81,6 +82,8 @@ class ObstacleConflictChecklistFlowTests {
         body.put("severity", "MEDIUM");
         body.put("status", "RESOLVED");
         body.put("rootCause", "Underestimated the timeline");
+        // V17 BL-FR-01: a non-partner obstacle sits on a step.
+        body.put("relatedStepId", PlanFixture.step(mockMvc, objectMapper, token));
 
         mockMvc.perform(post("/api/obstacles")
                         .header("Authorization", "Bearer " + token)
@@ -93,11 +96,14 @@ class ObstacleConflictChecklistFlowTests {
     @Test
     void updatingAnExistingObstacleToResolvedStillEnforcesTheChecklist() throws Exception {
         String token = registerAndToken("checklist-update");
+        // V17 BL-FR-01: with no worksheet answers yet it is not exempt, so it sits on a step.
+        long stepId = PlanFixture.step(mockMvc, objectMapper, token);
 
         MvcResult created = mockMvc.perform(post("/api/obstacles")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(obstacleBody("OPEN", Map.of("rootCause", "Underestimated the timeline")))))
+                        .content(json(obstacleBody("OPEN", Map.of("rootCause", "Underestimated the timeline",
+                                "relatedStepId", stepId)))))
                 .andExpect(status().isCreated())
                 .andReturn();
         long obstacleId = objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asLong();
@@ -105,8 +111,11 @@ class ObstacleConflictChecklistFlowTests {
         mockMvc.perform(put("/api/obstacles/" + obstacleId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(obstacleBody("RESOLVED", Map.of("rootCause", "Underestimated the timeline")))))
-                .andExpect(status().isBadRequest());
+                        .content(json(obstacleBody("RESOLVED", Map.of("rootCause", "Underestimated the timeline",
+                                "relatedStepId", stepId)))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        "Resolved PARTNER obstacles must also complete all four conflict engagement checklist items."));
     }
 
     private Map<String, Object> obstacleBody(String status, Map<String, Object> extra) {

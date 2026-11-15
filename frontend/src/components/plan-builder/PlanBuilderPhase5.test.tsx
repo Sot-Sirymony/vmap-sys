@@ -8,7 +8,7 @@ import { suggestHelpersAndRisks } from '../../api/aiPlanApi';
 import type { Dream, PlanDraftContent } from '../../types/vision';
 import { HelpersStage } from './HelpersStage';
 import { NewContactsOutreach } from './NewContactsOutreach';
-import { type DraftUpdate, emptyGoal, helperFromSuggestion, removeHelper, riskFromSuggestion } from './draftModel';
+import { type DraftUpdate, emptyGoal, emptyStep, helperFromSuggestion, removeHelper, riskFromSuggestion } from './draftModel';
 
 vi.mock('../../api/aiPlanApi', () => ({ suggestHelpersAndRisks: vi.fn(), ratePlanAnswer: vi.fn() }));
 vi.mock('../../api/aiDailyApi', () => ({ draftOutreach: vi.fn() }));
@@ -65,6 +65,21 @@ describe('Build my plan, phase 5', () => {
     await userEvent.click(await screen.findByRole('option', { name: 'Add as a new contact to reach' }));
     expect(draft().helpers?.[0]).toMatchObject({ partnerId: null, edited: true });
     expect(screen.getByRole('textbox', { name: 'Name, or how you will find them' })).toBeInTheDocument();
+  });
+
+  it('puts a risk on a step or a new step for it, never on the whole dream (V17 BL-FR-37)', async () => {
+    const goal = { ...emptyGoal(), key: 'g1', title: 'Save a deposit', steps: [{ ...emptyStep(), key: 's1', title: 'Compare loans' }] };
+    render(<Harness initial={{ goals: [goal] }} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add a risk' }));
+    expect(screen.getByText('Choose the step this risk holds up, or a new step for it.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'For' }));
+    const options = (await screen.findAllByRole('option')).map((option) => option.textContent);
+    expect(options).toEqual(['Choose a step', 'A new step for this risk, in: Save a deposit', '— Compare loans']);
+    await userEvent.click(screen.getByRole('option', { name: 'A new step for this risk, in: Save a deposit' }));
+
+    expect(draft().risks?.[0]).toMatchObject({ linkKey: 'newstep:g1' });
+    expect(screen.queryByText('Choose the step this risk holds up, or a new step for it.')).not.toBeInTheDocument();
   });
 
   it('works by hand without AI suggestions', async () => {

@@ -32,6 +32,8 @@ public record TaskItemResponse(
         Integer listOrder,
         boolean archived,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        // V17 BL-FR-28: times this task has entered Blocked.
+        int blockedCount
 ) {
 }

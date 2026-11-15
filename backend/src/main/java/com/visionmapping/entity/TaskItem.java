@@ -135,6 +135,12 @@ public class TaskItem extends BaseAuditableEntity {
     @Setter(AccessLevel.NONE)
     private boolean archived;
 
+    /** V17 BL-FR-28: how many times this task has entered Blocked. Set only by the status rules below. */
+    @Builder.Default
+    @Column(name = "blocked_count", nullable = false)
+    @Setter(AccessLevel.NONE)
+    private int blockedCount = 0;
+
     /**
      * Everything a participant edits on a task, already checked for format by
      * the service (progress normalised to 0–100, step owned by the user).
@@ -152,6 +158,7 @@ public class TaskItem extends BaseAuditableEntity {
     public void update(Details details, Clock clock) {
         Objects.requireNonNull(details, "details");
         requireBlockerReason(details.status(), details.blockerReason());
+        countBlock(details.status());
         step = details.step();
         title = details.title();
         description = details.description();
@@ -173,6 +180,7 @@ public class TaskItem extends BaseAuditableEntity {
     /** A status-only change, such as a move on the Tasks board. */
     public void changeStatus(WorkStatus newStatus, Clock clock) {
         requireBlockerReason(Objects.requireNonNull(newStatus, "status"), blockerReason);
+        countBlock(newStatus);
         status = newStatus;
         applyCompletionRule(clock);
     }
@@ -180,6 +188,7 @@ public class TaskItem extends BaseAuditableEntity {
     /** Applies the same rules to a task made with the builder, before its first save. */
     public void checkNewTask(Clock clock) {
         requireBlockerReason(status, blockerReason);
+        blockedCount = status == WorkStatus.BLOCKED ? 1 : 0;
         applyCompletionRule(clock);
     }
 
@@ -202,6 +211,13 @@ public class TaskItem extends BaseAuditableEntity {
 
     public void restore() {
         archived = false;
+    }
+
+    /** V17 BL-FR-28: counts a move into Blocked; staying Blocked is not a new block. */
+    private void countBlock(WorkStatus newStatus) {
+        if (newStatus == WorkStatus.BLOCKED && status != WorkStatus.BLOCKED) {
+            blockedCount++;
+        }
     }
 
     /** CLAUDE.md Core Business Rule 6: a Blocked task must say what blocks it. */

@@ -1,16 +1,20 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.TaskItemRequest;
+import com.visionmapping.dto.request.TaskSplitRequest;
 import com.visionmapping.dto.response.TaskItemResponse;
+import com.visionmapping.dto.response.TaskSplitResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.TaskSplitOutcome;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.mapper.VisionMappingMapper;
@@ -19,11 +23,13 @@ import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.service.support.ArchiveCascade;
 import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.ObstacleAnchorSync;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -32,6 +38,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +61,7 @@ public class TaskItemService {
     private final TaskItemRepository taskItemRepository;
     private final ProgressLogRepository progressLogRepository;
     private final Clock clock;
+    private final ObstacleAnchorSync obstacleAnchorSync;
 
     @Cacheable(CacheConfig.TASK_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -102,6 +110,7 @@ public class TaskItemService {
     public TaskItemResponse updateTask(Long id, TaskItemRequest request) {
         TaskItem entity = lookup.task(id);
         BigDecimal progressBefore = entity.getProgressPercent();
+        WorkStatus statusBefore = entity.getStatus();
         VisionStep oldStep = entity.getStep();
         entity.update(new TaskItem.Details(lookup.step(request.stepId()), request.title(), request.description(),
                 request.owner(), request.priority(), request.letterRank(), request.startDate(), request.dueDate(),
@@ -109,17 +118,125 @@ public class TaskItemService {
                 request.actualHours(), request.blockerReason(), request.nextAction(), request.energyDemand()), clock);
         progress.recalculateStep(oldStep);
         progress.recalculateStep(entity.getStep());
-        logProgressChange(entity, progressBefore);
+        if (!oldStep.getId().equals(entity.getStep().getId())) {
+            obstacleAnchorSync.afterTaskMoved(entity);
+        }
+        logChange(entity, progressBefore, changeNoteFor(statusBefore, entity, request.changeNote()));
         return mapper.toResponse(entity);
     }
 
     public TaskItemResponse updateTaskStatus(Long id, WorkStatus status) {
+        return updateTaskStatus(id, status, null);
+    }
+
+    /** V17 BL-FR-27: a move out of Blocked may carry a "What changed?" note for the progress log. */
+    public TaskItemResponse updateTaskStatus(Long id, WorkStatus status, @Nullable String changeNote) {
         TaskItem entity = lookup.task(id);
         BigDecimal progressBefore = entity.getProgressPercent();
+        WorkStatus statusBefore = entity.getStatus();
         entity.changeStatus(status, clock);
         progress.recalculateStep(entity.getStep());
-        logProgressChange(entity, progressBefore);
+        logChange(entity, progressBefore, changeNoteFor(statusBefore, entity, changeNote));
         return mapper.toResponse(entity);
+    }
+
+    /**
+     * V17 BL-FR-25: breaks a task into 2 to 5 smaller tasks under the same
+     * step, placed right after it in the step's order and on the Tasks page.
+     * KEEP leaves the original as a checklist parent; REPLACE archives it with
+     * the note "Split into T-041 to T-043". Nothing is deleted.
+     */
+    public TaskSplitResponse splitTask(Long id, TaskSplitRequest request) {
+        TaskItem original = lookup.task(id);
+        if (original.isArchived()) {
+            throw new BusinessRuleException("Restore this task before breaking it down.");
+        }
+        AppUser user = lookup.currentUser();
+        VisionStep step = original.getStep();
+        int count = request.rows().size();
+        int stepPosition = makeRoomInStep(original, count);
+        Integer listPosition = makeRoomInList(original, count);
+        List<String> codes = new ArrayList<>(taskItemRepository.findCodesByUserId(user.getId()));
+        List<TaskItem> created = new ArrayList<>();
+        for (int index = 0; index < count; index++) {
+            TaskSplitRequest.Row row = request.rows().get(index);
+            String code = nextCode("T", codes);
+            codes.add(code);
+            TaskItem task = TaskItem.builder()
+                    .code(code)
+                    .user(user)
+                    .step(step)
+                    .title(row.title().strip())
+                    .owner(isBlank(row.owner()) ? original.getOwner() : row.owner().strip())
+                    .priority(row.priority() != null ? row.priority() : original.getPriority())
+                    .dueDate(row.dueDate())
+                    .status(WorkStatus.NOT_STARTED)
+                    .progressPercent(progress.normalizeProgress(BigDecimal.ZERO))
+                    .energyDemand(original.getEnergyDemand())
+                    .sortOrder(stepPosition + 1 + index)
+                    .listOrder(listPosition == null ? null : listPosition + 1 + index)
+                    .build();
+            task.checkNewTask(clock);
+            created.add(taskItemRepository.save(task));
+        }
+        if (request.originalOutcome() == TaskSplitOutcome.REPLACE) {
+            String note = "Split into " + created.get(0).getCode() + " to " + created.get(count - 1).getCode();
+            original.setDescription(appendLine(original.getDescription(), note));
+            original.archive();
+            saveLog(original, original.getProgressPercent(), note);
+        }
+        progress.recalculateStep(step);
+        return new TaskSplitResponse(created.stream().map(mapper::toResponse).toList(), mapper.toResponse(original));
+    }
+
+    /**
+     * Gives every active task of the step a position (legacy rows have none,
+     * so they are numbered in their shown order: position, then id), and
+     * leaves {@code count} free places right after the original. Returns the
+     * original's position.
+     */
+    private int makeRoomInStep(TaskItem original, int count) {
+        List<TaskItem> siblings = taskItemRepository.findByStep_IdAndUser_IdAndArchivedFalse(original.getStep().getId(),
+                        original.getUser().getId()).stream()
+                .sorted(Comparator.comparing(TaskItem::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(TaskItem::getId))
+                .toList();
+        int position = 0;
+        int originalPosition = 0;
+        for (TaskItem sibling : siblings) {
+            sibling.setSortOrder(position);
+            if (sibling.getId().equals(original.getId())) {
+                originalPosition = position;
+                position += count;
+            }
+            position++;
+        }
+        return originalPosition;
+    }
+
+    /** The same on the Tasks page order, but only once the participant has ordered it (the original has a place). */
+    @Nullable
+    private Integer makeRoomInList(TaskItem original, int count) {
+        Integer place = original.getListOrder();
+        if (place == null) {
+            return null;
+        }
+        taskItemRepository.findByUser_IdAndArchivedFalse(original.getUser().getId()).stream()
+                .filter(task -> task.getListOrder() != null && task.getListOrder() > place)
+                .forEach(task -> task.setListOrder(task.getListOrder() + count));
+        return place;
+    }
+
+    /** BL-FR-27: the note is kept only when the task has just left Blocked. */
+    @Nullable
+    private static String changeNoteFor(WorkStatus statusBefore, TaskItem entity, @Nullable String changeNote) {
+        boolean leftBlocked = statusBefore == WorkStatus.BLOCKED && entity.getStatus() != WorkStatus.BLOCKED;
+        return leftBlocked && !isBlank(changeNote) ? changeNote.strip() : null;
+    }
+
+    private static String appendLine(@Nullable String text, String line) {
+        String joined = isBlank(text) ? line : text.strip() + "\n\n" + line;
+        return joined.length() <= 3000 ? joined : line;
     }
 
     // Vision Map drag-and-drop: orderedTaskIds must be exactly this step's
@@ -182,16 +299,21 @@ public class TaskItemService {
         permanentDeleteCascade.deleteTask(task);
     }
 
-    private void logProgressChange(TaskItem entity, BigDecimal progressBefore) {
-        BigDecimal progressAfter = entity.getProgressPercent();
-        if (progressBefore.compareTo(progressAfter) == 0) {
+    /** A progress-log entry when the percentage moved, or when there is a note to keep (BL-FR-27). */
+    private void logChange(TaskItem entity, BigDecimal progressBefore, @Nullable String note) {
+        if (progressBefore.compareTo(entity.getProgressPercent()) == 0 && note == null) {
             return;
         }
+        saveLog(entity, progressBefore, note);
+    }
+
+    private void saveLog(TaskItem entity, BigDecimal progressBefore, @Nullable String note) {
         ProgressLog entry = ProgressLog.builder()
                 .user(entity.getUser())
                 .relatedTask(entity)
                 .progressPercentBefore(progressBefore)
-                .progressPercentAfter(progressAfter)
+                .progressPercentAfter(entity.getProgressPercent())
+                .note(note)
                 .loggedAt(Instant.now(clock))
                 .archived(false)
                 .build();

@@ -49,6 +49,9 @@ import { isOverdue } from '../utils/overdue';
 import { suggestPartnerFor } from '../utils/partnerSuggestion';
 import { energyDemandLabels, obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { priorityRank, workStatusRank, letterRankFilterOptions } from '../utils/sortRank';
+import { canBreakDown, isRepeatedlyBlocked, leavesBlocked } from '../utils/taskBreakdown';
+import { BreakDownDialog } from '../components/coaching/BreakDownDialog';
+import { WhatChangedDialog } from '../components/coaching/WhatChangedDialog';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -112,6 +115,11 @@ export function TasksBoardPage() {
   const [nextAction, setNextAction] = useState('');
   // FR-34.1: optional energy tag; defaults to NEUTRAL for a new task.
   const [energyDemand, setEnergyDemand] = useState<EnergyDemand>('NEUTRAL');
+  // V17 BL-FR-27: "What changed?" for a task leaving Blocked, in the form or on a move.
+  const [changeNote, setChangeNote] = useState('');
+  const [pendingMove, setPendingMove] = useState<{ task: TaskItem; nextStatus: WorkStatus } | null>(null);
+  // V17 BL-FR-24, BL-FR-25: the task being broken into smaller tasks.
+  const [breakTask, setBreakTask] = useState<TaskItem | null>(null);
   // In the URL, not component state: the dashboard links straight into a
   // filtered board, and a filtered board stays shareable and bookmarkable.
   const [filterOwner, setFilterOwner] = useUrlFilter('owner');
@@ -294,8 +302,10 @@ export function TasksBoardPage() {
       blockerReason: blockerReason || undefined,
       nextAction,
       energyDemand,
+      changeNote: editingLeavesBlocked && changeNote.trim() ? changeNote.trim() : undefined,
     });
     if (success) {
+      setChangeNote('');
       if (token && crud.editingId !== null && status === 'COMPLETED') {
         nudgeAfterTaskComplete({
           token,
@@ -323,12 +333,22 @@ export function TasksBoardPage() {
     return success;
   }
 
-  async function handleMove(id: number, nextStatus: WorkStatus) {
+  // BL-FR-27: a move out of Blocked asks one optional line first.
+  function handleMove(id: number, nextStatus: WorkStatus) {
+    const task = crud.items.find((item) => item.id === id);
+    if (task && leavesBlocked(task.status, nextStatus)) {
+      setPendingMove({ task, nextStatus });
+      return;
+    }
+    void moveTask(id, nextStatus);
+  }
+
+  async function moveTask(id: number, nextStatus: WorkStatus, note?: string) {
     if (!token) {
       return;
     }
     try {
-      await updateTaskStatus(token, id, nextStatus);
+      await (note ? updateTaskStatus(token, id, nextStatus, note) : updateTaskStatus(token, id, nextStatus));
       await crud.reload();
       if (nextStatus === 'COMPLETED') {
         nudgeAfterTaskComplete({
@@ -364,6 +384,30 @@ export function TasksBoardPage() {
     setBlockerCategory('');
     setNextAction(task.nextAction ?? '');
     setEnergyDemand(task.energyDemand ?? 'NEUTRAL');
+    setChangeNote('');
+  }
+
+  // V17 BL-FR-24: "Break into smaller tasks" for a Blocked or overdue task.
+  function breakDownActions(task: TaskItem) {
+    return canBreakDown(task) ? [{ label: tr('Break into smaller tasks'), onClick: () => setBreakTask(task) }] : [];
+  }
+
+  // V17 BL-FR-28: blocked a third time, suggest breaking it down or recording an obstacle on it.
+  function repeatedBlockNote(task: TaskItem) {
+    if (!isRepeatedlyBlocked(task)) {
+      return null;
+    }
+    const obstacleLink = `/obstacles?create=obstacle&taskId=${task.id}&stepId=${task.stepId}&title=${encodeURIComponent(task.blockerReason ?? task.title)}`;
+    return (
+      <div className="coaching-panel repeated-block">
+        <strong>{tr('Blocked {count} times', { count: task.blockedCount ?? 0 })}</strong>
+        <p>{tr('This keeps getting stuck. Break it into smaller tasks, or record what is in the way as an obstacle on this task.')}</p>
+        <div className="row-actions">
+          <Button type="button" variant="secondary" onClick={() => setBreakTask(task)}>{tr('Break into smaller tasks')}</Button>
+          <Link to={obstacleLink}>{tr('Add an obstacle on this task')}</Link>
+        </div>
+      </div>
+    );
   }
 
   function cancelEdit() {
@@ -385,6 +429,8 @@ export function TasksBoardPage() {
     setEnergyDemand('NEUTRAL');
   }
 
+  const editingTask = crud.editingId === null ? undefined : crud.items.find((item) => item.id === crud.editingId);
+  const editingLeavesBlocked = !!editingTask && leavesBlocked(editingTask.status, status);
   const stepById = new Map(steps.map((step) => [step.id, step]));
   const goalById = new Map(goals.map((goal) => [goal.id, goal]));
   const profileByStepId = new Map(profiles.map((profile) => [profile.stepId, profile]));
@@ -573,6 +619,7 @@ export function TasksBoardPage() {
           onRestore={() => void crud.restore(task.id)}
           onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
           archived={task.archived}
+          extraActions={breakDownActions(task)}
           label={tr('Task actions')}
         />
       ),
@@ -601,6 +648,7 @@ export function TasksBoardPage() {
           {task.owner} · {tr('Due')} <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} />
         </p>
         {task.blockerReason && <p className="task-card-blocker">{task.blockerReason}</p>}
+        {repeatedBlockNote(task)}
         <div className="task-card-progress">
           <ProgressBar value={Number(task.progressPercent)} />
           <span>{Math.round(Number(task.progressPercent))}%</span>
@@ -697,6 +745,19 @@ export function TasksBoardPage() {
             </span>
           )}
         </label>
+      )}
+      {editingLeavesBlocked && (
+        <label className="field-full">
+          {tr('What changed, or what will you do differently?')}
+          <Input value={changeNote} maxLength={1000} placeholder={tr('Optional')} onChange={(event) => setChangeNote(event.target.value)} />
+        </label>
+      )}
+      {editingTask && canBreakDown(editingTask) && (
+        <div className="field-full">
+          <Button type="button" variant="secondary" onClick={() => { const task = editingTask; cancelEdit(); setBreakTask(task); }}>
+            {tr('Break into smaller tasks')}
+          </Button>
+        </div>
       )}
       {status === 'BLOCKED' && (
         <label className="field-full">
@@ -967,6 +1028,9 @@ export function TasksBoardPage() {
               {task.status === 'BLOCKED' && profileByStepId.has(task.stepId) && (
                 <p><Link to="/partners">{tr('Ideal partner profile defined for this step →')}</Link></p>
               )}
+              {isRepeatedlyBlocked(task) ? repeatedBlockNote(task) : canBreakDown(task) && (
+                <Button type="button" variant="secondary" onClick={() => setBreakTask(task)}>{tr('Break into smaller tasks')}</Button>
+              )}
             </>
           )}
           cardActions={(task) => (
@@ -976,11 +1040,35 @@ export function TasksBoardPage() {
               onRestore={() => void crud.restore(task.id)}
               onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
               archived={task.archived}
+              extraActions={breakDownActions(task)}
               label={tr('Task actions')}
             />
           )}
         />
       ))}
+      {breakTask && token && (
+        <BreakDownDialog
+          token={token}
+          task={breakTask}
+          onClose={() => setBreakTask(null)}
+          onSaved={(result) => {
+            setBreakTask(null);
+            showToast(tr('Added {count} smaller tasks.', { count: result.created.length }));
+            void crud.reload();
+          }}
+        />
+      )}
+      {pendingMove && (
+        <WhatChangedDialog
+          taskTitle={pendingMove.task.title}
+          onCancel={() => setPendingMove(null)}
+          onSubmit={(note) => {
+            const move = pendingMove;
+            setPendingMove(null);
+            void moveTask(move.task.id, move.nextStatus, note);
+          }}
+        />
+      )}
     </PageSection>
   );
 }

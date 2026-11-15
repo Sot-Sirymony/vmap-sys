@@ -378,6 +378,8 @@ class PageAssistantFlowTests {
     private long obstacle(String token, long partnerId, String title) throws Exception {
         Map<String, Object> body = new HashMap<>(Map.of("title", title, "obstacleType", "MOTIVATION", "severity", "HIGH",
                 "status", "OPEN", "requiredPartnerId", partnerId, "conflictPrivateNote", "Saved private reaction"));
+        // V17 BL-FR-01: a plan obstacle sits on a step or task.
+        body.put("relatedStepId", com.visionmapping.support.PlanFixture.step(mockMvc, objectMapper, token));
         return read(send(post("/api/obstacles"), token, body).andExpect(status().isCreated())).get("id").asLong();
     }
 

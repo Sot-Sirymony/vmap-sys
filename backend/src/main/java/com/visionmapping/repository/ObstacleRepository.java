@@ -33,4 +33,14 @@ public interface ObstacleRepository extends JpaRepository<Obstacle, Long>, UserS
                    or o.relatedTask is not null)
             """)
     long countWithPlan(@Param("status") com.visionmapping.entity.enums.ObstacleStatus status);
+
+    /** V17 BL-FR-08: obstacles anchored to a task, to re-derive their step, goal and dream after it moves. */
+    java.util.List<Obstacle> findByRelatedTask_Id(Long taskId);
+
+    /** V17 BL-FR-08: obstacles anchored to a step (directly or through one of its tasks). */
+    java.util.List<Obstacle> findByRelatedStep_Id(Long stepId);
+
+    /** V17 BL-FR-08: anchored obstacles under a goal, to re-derive their dream after the goal moves. */
+    @Query("select o from Obstacle o where o.relatedStep.goal.id = :goalId")
+    java.util.List<Obstacle> findAnchoredUnderGoal(@Param("goalId") Long goalId);
 }

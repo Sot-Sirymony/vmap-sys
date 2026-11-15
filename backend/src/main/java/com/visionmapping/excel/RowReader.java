@@ -25,6 +25,11 @@ class RowReader {
         this.row = row;
     }
 
+    /** The spreadsheet's own row number (the header is row 1). */
+    int rowNumber() {
+        return row.getRowNum() + 1;
+    }
+
     boolean isBlank() {
         for (int column = 0; column < row.getLastCellNum(); column++) {
             if (!text(column).isEmpty()) {

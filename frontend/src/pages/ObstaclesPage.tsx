@@ -17,6 +17,7 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import ListSubheader from '@mui/material/ListSubheader';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { BulkArchiveAction } from '../components/common/BulkArchiveAction';
@@ -38,7 +39,8 @@ import { Textarea } from '../components/common/Textarea';
 import { ViewToggle, type ViewMode } from '../components/common/ViewToggle';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router';
+import Link from '@mui/material/Link';
 import { useUrlFilter } from '../hooks/useUrlFilter';
 import type {
   BlockedTask, Dream, ExpectationAgreement, Goal, Obstacle, ObstacleRequest, ObstacleStatus, ObstacleType, Partner, Severity,
@@ -50,8 +52,10 @@ import {
   obstacleTypeLabels, priorityLabels, severityLabels, type ConflictChecklistKey,
 } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
+import { canTurnIntoStep, groupStepsForPicker, needsPlacing, placementOf, placementText, stepContext } from '../utils/obstaclePlacement';
 import { severityRank, letterRankFilterOptions } from '../utils/sortRank';
 import { PageSection } from './PageSection';
+import { GapStepDialog } from '../components/coaching/GapStepDialog';
 import { tr } from '../i18n/translate';
 
 const obstacleTypes: ObstacleType[] = ['KNOWLEDGE', 'SKILL', 'TIME', 'MONEY', 'MOTIVATION', 'PARTNER', 'SYSTEM', 'DECISION', 'OTHER'];
@@ -59,7 +63,7 @@ const severities: Severity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 const statuses: ObstacleStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'ACCEPTED'];
 
 export function ObstaclesPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const crud = useCrudEntity<Obstacle, ObstacleRequest>({
     token,
@@ -76,6 +80,8 @@ export function ObstaclesPage() {
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [steps, setSteps] = useState<VisionStep[]>([]);
+  // V17 BL-FR-20: the obstacle being turned into a "find help" step.
+  const [convertObstacle, setConvertObstacle] = useState<Obstacle | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [relatedDreamId, setRelatedDreamId] = useState('');
@@ -98,8 +104,18 @@ export function ObstaclesPage() {
       return;
     }
     setCreateOpen(true);
+    // V17 BL-FR-28: "Add an obstacle on this task" opens the form on that task,
+    // with the blocker reason as its title.
+    const fromTask = searchParams.get('taskId');
+    if (fromTask) {
+      setRelatedTaskId(fromTask);
+      setRelatedStepId(searchParams.get('stepId') ?? '');
+      setTitle(searchParams.get('title') ?? '');
+    }
     const next = new URLSearchParams(searchParams);
-    next.delete('create');
+    for (const key of ['create', 'taskId', 'stepId', 'title']) {
+      next.delete(key);
+    }
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -142,6 +158,11 @@ export function ObstaclesPage() {
   const [filterLetterRank, setFilterLetterRank] = useUrlFilter('letterRank');
   const [filterStatus, setFilterStatus] = useUrlFilter('status');
   const [filterDreamId, setFilterDreamId] = useUrlFilter('dreamId');
+  // V17 BL-FR-15: a goal's blocker count links here filtered to that goal.
+  const [filterGoalId, setFilterGoalId] = useUrlFilter('goalId');
+  // V17 BL-FR-05: "unplaced" shows the obstacles that still need a step. In the
+  // URL so the dashboard attention item (BL-FR-07) can link straight to it.
+  const [filterPlacement, setFilterPlacement] = useUrlFilter('placement');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   useEffect(() => {
@@ -163,9 +184,13 @@ export function ObstaclesPage() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    // V17 BL-FR-02: with a step or task the server works out the goal and dream.
+    // Without one (an exempt partner conflict, or an older obstacle left as it
+    // was) the stored dream and goal are sent back unchanged (BL-FR-06).
+    const anchored = Boolean(relatedStepId || relatedTaskId);
     const success = await crud.save({
-      relatedDreamId: optionalNumber(relatedDreamId),
-      relatedGoalId: optionalNumber(relatedGoalId),
+      relatedDreamId: anchored ? undefined : optionalNumber(relatedDreamId),
+      relatedGoalId: anchored ? undefined : optionalNumber(relatedGoalId),
       relatedStepId: optionalNumber(relatedStepId),
       relatedTaskId: optionalNumber(relatedTaskId),
       title,
@@ -383,6 +408,12 @@ export function ObstaclesPage() {
       <HelpWithThis compact area="item" itemId={obstacle.id} title={obstacle.title} />
       <RowActionsMenu
         onEdit={() => startEdit(obstacle)}
+        // V17 BL-FR-05: opens the form at "Where is this blocker?".
+        // V17 BL-FR-20: every open, non-exempt obstacle can become a "find help" step.
+        extraActions={[
+          ...(needsPlacing(obstacle) ? [{ label: tr('Move to a step'), onClick: () => startEdit(obstacle) }] : []),
+          ...(canTurnIntoStep(obstacle) ? [{ label: tr('Turn into a step'), onClick: () => setConvertObstacle(obstacle) }] : []),
+        ]}
         onArchive={() => void crud.archive(obstacle.id)}
         onRestore={() => void crud.restore(obstacle.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(obstacle.id)}
@@ -409,6 +440,12 @@ export function ObstaclesPage() {
     if (filterDreamId && String(obstacle.relatedDreamId ?? '') !== filterDreamId) {
       return false;
     }
+    if (filterGoalId && String(obstacle.relatedGoalId ?? '') !== filterGoalId) {
+      return false;
+    }
+    if (filterPlacement === 'unplaced' && !needsPlacing(obstacle)) {
+      return false;
+    }
     return matchesSearch(
       searchTerm,
       obstacle.title,
@@ -419,8 +456,9 @@ export function ObstaclesPage() {
   });
 
   const hasFilters = Boolean(
-    searchTerm || filterObstacleType || filterSeverity || filterLetterRank || filterStatus || filterDreamId,
+    searchTerm || filterObstacleType || filterSeverity || filterLetterRank || filterStatus || filterDreamId || filterGoalId || filterPlacement,
   );
+  const unplacedCount = crud.items.filter(needsPlacing).length;
 
   // FR-57.4-style: only letters actually in use are offered, so the dropdown
   // doesn't show 26 mostly-empty options.
@@ -433,6 +471,15 @@ export function ObstaclesPage() {
       label: tr('Type'),
       sortValue: (obstacle) => obstacleTypeLabels[obstacle.obstacleType],
       render: (obstacle) => obstacleTypeLabels[obstacle.obstacleType],
+    },
+    {
+      // V17 BL-FR-05: where the blocker sits; "Not on a step yet" stands out.
+      key: 'placement',
+      label: tr('Placed on'),
+      sortValue: (obstacle) => placementText(obstacle, steps, tasks),
+      render: (obstacle) => (needsPlacing(obstacle)
+        ? <span className="placement-missing">{obstacle.anchorArchived ? tr('Its step was archived') : tr('Not on a step yet')}</span>
+        : placementText(obstacle, steps, tasks)),
     },
     {
       key: 'suggestedPartner',
@@ -518,6 +565,23 @@ export function ObstaclesPage() {
 
   const formTopic = formOpen ? { area: 'form', itemId: crud.editingId, title: title || tr('New obstacle') } : null;
 
+  // V17 BL-FR-03: the step picker, its tasks, and what an unplaced obstacle sits on now.
+  const stepGroups = groupStepsForPicker(steps, goals, dreams, optionalNumber(relatedDreamId));
+  const stepTasks = tasks.filter((task) => !task.archived && String(task.stepId) === relatedStepId);
+  function chooseStep(stepId: string) {
+    setRelatedStepId(stepId);
+    if (relatedTaskId && !tasks.some((task) => String(task.id) === relatedTaskId && String(task.stepId) === stepId)) {
+      setRelatedTaskId('');
+    }
+  }
+  const editingObstacle = crud.editingId === null ? undefined : crud.items.find((item) => item.id === crud.editingId);
+  const editingUnplacedContext = editingObstacle && placementOf(editingObstacle) === 'NONE'
+    ? [
+      goals.find((goal) => goal.id === editingObstacle.relatedGoalId)?.title,
+      dreams.find((dream) => dream.id === editingObstacle.relatedDreamId)?.title,
+    ].filter(Boolean).join(' · ')
+    : '';
+
   const formFields = (
     <>
       <div className="field-full">
@@ -571,42 +635,59 @@ export function ObstaclesPage() {
           </Select>
         </FormControl>
       </label>
+      {/* V17 BL-FR-03: one "Where is this blocker?" picker. The goal and dream follow from the step. */}
       <label>
-        {tr('Dream')}
+        {tr('Where is this blocker?')}
         <FormControl fullWidth size="small">
-          <Select SelectDisplayProps={{ 'aria-label': "Dream" }} displayEmpty value={relatedDreamId} onChange={(event) => setRelatedDreamId(event.target.value)}>
-            <MenuItem value="">{tr('None')}</MenuItem>
-            {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
+          <Select SelectDisplayProps={{ 'aria-label': tr('Where is this blocker?') }} displayEmpty value={relatedStepId}
+            onChange={(event) => chooseStep(event.target.value)}>
+            <MenuItem value="">{tr('Choose a step')}</MenuItem>
+            {stepGroups.flatMap((group) => [
+              <ListSubheader key={`group-${group.key}`}>{group.label}</ListSubheader>,
+              ...group.steps.map((step) => <MenuItem value={String(step.id)} key={step.id}>{step.title}</MenuItem>),
+            ])}
+          </Select>
+        </FormControl>
+        <span className="field-hint">
+          {relatedStepId
+            ? stepContext(Number(relatedStepId), steps, goals, dreams)
+            : tr('Put it on the step it holds up. Dreams and goals describe the outcome; blockers live in the steps.')}
+        </span>
+        {stepGroups.length === 0 && (
+          // V17 BL-FR-16: with no steps yet, the first move is to add one.
+          <Link component={RouterLink} to="/steps?create=step" className="field-hint">{tr('Add a step first')}</Link>
+        )}
+      </label>
+      <label>
+        {tr('Task (optional)')}
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': tr('Task (optional)') }} displayEmpty value={relatedTaskId}
+            disabled={!relatedStepId} onChange={(event) => setRelatedTaskId(event.target.value)}>
+            <MenuItem value="">{tr('The whole step')}</MenuItem>
+            {stepTasks.map((task) => <MenuItem value={String(task.id)} key={task.id}>{task.title}</MenuItem>)}
           </Select>
         </FormControl>
       </label>
-      <label>
-        {tr('Goal')}
-        <FormControl fullWidth size="small">
-          <Select SelectDisplayProps={{ 'aria-label': "Goal" }} displayEmpty value={relatedGoalId} onChange={(event) => setRelatedGoalId(event.target.value)}>
-            <MenuItem value="">{tr('None')}</MenuItem>
-            {goals.map((goal) => <MenuItem value={String(goal.id)} key={goal.id}>{goal.title}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </label>
-      <label>
-        {tr('Step')}
-        <FormControl fullWidth size="small">
-          <Select SelectDisplayProps={{ 'aria-label': "Step" }} displayEmpty value={relatedStepId} onChange={(event) => setRelatedStepId(event.target.value)}>
-            <MenuItem value="">{tr('None')}</MenuItem>
-            {steps.map((step) => <MenuItem value={String(step.id)} key={step.id}>{step.title}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </label>
-      <label>
-        {tr('Task')}
-        <FormControl fullWidth size="small">
-          <Select SelectDisplayProps={{ 'aria-label': "Task" }} displayEmpty value={relatedTaskId} onChange={(event) => setRelatedTaskId(event.target.value)}>
-            <MenuItem value="">{tr('None')}</MenuItem>
-            {tasks.map((task) => <MenuItem value={String(task.id)} key={task.id}>{task.title}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </label>
+      {!relatedStepId && !relatedTaskId && editingUnplacedContext && (
+        // BL-FR-06: an older obstacle keeps its dream or goal until it is moved.
+        <p className="field-full field-hint placement-missing-hint">
+          {tr('Now on: {where}. Choose a step above to move it.', { where: editingUnplacedContext })}
+        </p>
+      )}
+      {!relatedStepId && obstacleType === 'PARTNER' && (
+        // BL-FR-04: a partner conflict may stay off the steps, with a dream for context.
+        <label>
+          {tr('Dream (for a partner conflict)')}
+          <FormControl fullWidth size="small">
+            <Select SelectDisplayProps={{ 'aria-label': tr('Dream (for a partner conflict)') }} displayEmpty value={relatedDreamId}
+              onChange={(event) => { setRelatedDreamId(event.target.value); setRelatedGoalId(''); }}>
+              <MenuItem value="">{tr('None')}</MenuItem>
+              {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <span className="field-hint">{tr('A conflict with a person can stay off the steps once you fill in the conflict or criticism questions below.')}</span>
+        </label>
+      )}
       <label>
         {tr('Required Partner')}
         <FormControl fullWidth size="small">
@@ -821,10 +902,22 @@ export function ObstaclesPage() {
           { key: 'total', label: crud.items.length === 1 ? 'obstacle' : 'obstacles', count: crud.items.length },
           { key: 'open', label: 'open', count: crud.items.filter((obstacle) => obstacle.status === 'OPEN').length, tone: 'warning', active: filterStatus === 'OPEN', onClick: () => setFilterStatus(filterStatus === 'OPEN' ? '' : 'OPEN') },
           { key: 'critical', label: 'critical', count: crud.items.filter((obstacle) => obstacle.severity === 'CRITICAL').length, tone: 'critical', active: filterSeverity === 'CRITICAL', onClick: () => setFilterSeverity(filterSeverity === 'CRITICAL' ? '' : 'CRITICAL') },
+          { key: 'unplaced', label: 'not on a step yet', count: unplacedCount, tone: 'warning', active: filterPlacement === 'unplaced', onClick: () => setFilterPlacement(filterPlacement === 'unplaced' ? '' : 'unplaced') },
           { key: 'resolved', label: 'resolved', count: crud.items.filter((obstacle) => obstacle.status === 'RESOLVED').length, tone: 'positive', active: filterStatus === 'RESOLVED', onClick: () => setFilterStatus(filterStatus === 'RESOLVED' ? '' : 'RESOLVED') },
         ]}
       />
-      <FilterPanel activeCount={[searchTerm, filterObstacleType, filterSeverity, filterLetterRank, filterStatus, filterDreamId].filter(Boolean).length}>
+      {unplacedCount > 0 && filterPlacement !== 'unplaced' && (
+        // V17 BL-FR-05: blockers belong on a step or task, where they can be acted on.
+        <div className="coaching-panel placement-banner" role="status">
+          <span>
+            {unplacedCount === 1
+              ? tr('1 blocker is not on a step yet. Put it on the step it holds up, so you can act on it.')
+              : tr('{count} blockers are not on a step yet. Put each on the step it holds up, so you can act on it.', { count: unplacedCount })}
+          </span>
+          <Button type="button" variant="secondary" onClick={() => setFilterPlacement('unplaced')}>{tr('Show them')}</Button>
+        </div>
+      )}
+      <FilterPanel activeCount={[searchTerm, filterObstacleType, filterSeverity, filterLetterRank, filterStatus, filterDreamId, filterGoalId, filterPlacement].filter(Boolean).length}>
         <SearchBar value={searchTerm} onChange={setSearchTerm} entityLabel="obstacles" />
         <FilterSelect
           label={tr('Type')}
@@ -857,6 +950,12 @@ export function ObstaclesPage() {
           value={filterDreamId}
           onChange={setFilterDreamId}
           options={optionsFromEntities(dreams, (dream) => dream.title)}
+        />
+        <FilterSelect
+          label={tr('Goal')}
+          value={filterGoalId}
+          onChange={setFilterGoalId}
+          options={optionsFromEntities(goals, (goal) => goal.title)}
         />
         <ShowArchivedToggle checked={crud.showArchived} onToggle={crud.toggleShowArchived} />
       </FilterPanel>
@@ -894,7 +993,7 @@ export function ObstaclesPage() {
           emptyMessage={hasFilters ? tr('No obstacles match these filters.') : tr('No obstacles yet.')}
           defaultSortKey="severity"
           defaultSortDirection="desc"
-          pageResetKey={`${searchTerm}|${filterObstacleType}|${filterSeverity}|${filterLetterRank}|${filterStatus}|${filterDreamId}`}
+          pageResetKey={`${searchTerm}|${filterObstacleType}|${filterSeverity}|${filterLetterRank}|${filterStatus}|${filterDreamId}|${filterGoalId}|${filterPlacement}`}
           rowClassName={(obstacle) => (obstacle.archived ? 'row-archived' : '')}
           selection={{
             selectedIds,
@@ -923,6 +1022,24 @@ export function ObstaclesPage() {
         />
         </CardContent>
       </Card>
+      )}
+      {convertObstacle && token && (
+        <GapStepDialog
+          token={token}
+          source={{
+            kind: 'obstacle',
+            obstacle: convertObstacle,
+            anchorStep: steps.find((step) => step.id === convertObstacle.relatedStepId && !step.archived),
+          }}
+          goals={goals}
+          ownerName={user?.fullName ?? ''}
+          onClose={() => setConvertObstacle(null)}
+          onSaved={() => {
+            setConvertObstacle(null);
+            void crud.reload();
+            void listSteps(token).then(setSteps);
+          }}
+        />
       )}
     </PageSection>
     </PageAssistantProvider>

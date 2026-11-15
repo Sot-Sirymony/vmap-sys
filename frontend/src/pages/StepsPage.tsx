@@ -41,8 +41,11 @@ import { useCrudEntity } from '../hooks/useCrudEntity';
 import { useStoredState } from '../hooks/useStoredState';
 import { FilterSelect, optionsFromEntities, optionsFromLabels } from '../components/common/FilterSelect';
 import { useUrlFilter, useUrlFilterBatch, useUrlFlag } from '../hooks/useUrlFilter';
-import type { Dream, Goal, IdealPartnerProfile, Priority, TaskItem, VisionArea, VisionStep, VisionStepRequest, WorkStatus, WorkStyleArchetype } from '../types/vision';
-import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
+import type { Dream, Goal, IdealPartnerProfile, ObstacleType, Priority, TaskItem, VisionArea, VisionStep, VisionStepRequest, WorkStatus, WorkStyleArchetype } from '../types/vision';
+import { obstacleTypeLabels, priorityLabels, workStatusLabels } from '../utils/enumLabels';
+import { GAP_KINDS } from '../utils/gapStep';
+import { suggestPartnerFor } from '../utils/partnerSuggestion';
+import { GapStepDialog } from '../components/coaching/GapStepDialog';
 import { isOverdue } from '../utils/overdue';
 import { matchesSearch } from '../utils/search';
 import { priorityRank, workStatusRank } from '../utils/sortRank';
@@ -78,6 +81,12 @@ export function StepsPage() {
   const [targetDate, setTargetDate] = useState('');
   const [status, setStatus] = useState<WorkStatus>('NOT_STARTED');
   const [resources, setResources] = useState('');
+  // V17 BL-FR-18: the kind of gap the resources text describes.
+  const [gapKind, setGapKind] = useState<ObstacleType | ''>('');
+  // V17 BL-FR-19: the step whose gap is being turned into a "find help" step.
+  const [gapSourceStep, setGapSourceStep] = useState<VisionStep | null>(null);
+  // V17 BL-FR-21: a "find help" step being archived, which created a partner.
+  const [archiveAsk, setArchiveAsk] = useState<VisionStep | null>(null);
   // In the URL, not component state: the dashboard links straight into a
   // filtered view, and a filtered list stays shareable and bookmarkable.
   const [filterVisionAreaId] = useUrlFilter('visionAreaId');
@@ -222,11 +231,13 @@ export function StepsPage() {
       targetDate,
       status,
       resources,
+      gapKind,
     });
     if (success) {
       setTitle('');
       setDescription('');
       setResources('');
+      setGapKind('');
       if (wasCreating) {
         setSequenceNumber(sequenceNumber + 1);
       }
@@ -246,6 +257,7 @@ export function StepsPage() {
     setTargetDate(step.targetDate ?? '');
     setStatus(step.status);
     setResources(step.resources ?? '');
+    setGapKind(step.gapKind ?? '');
   }
 
   function cancelEdit() {
@@ -257,6 +269,22 @@ export function StepsPage() {
     setTargetDate('');
     setStatus('NOT_STARTED');
     setResources('');
+    setGapKind('');
+  }
+
+  // V17 BL-FR-21: archiving a "find help" step that created a partner asks
+  // whether that partner goes too.
+  async function archiveStepAnswer(step: VisionStep, removePartner: boolean) {
+    if (!token) {
+      return;
+    }
+    setArchiveAsk(null);
+    try {
+      await archiveStep(token, step.id, removePartner);
+      await crud.reload();
+    } catch (archiveError) {
+      crud.setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive step.'));
+    }
   }
 
   // Same idea as the quick-add row below: an active goal filter is a strong
@@ -400,14 +428,17 @@ export function StepsPage() {
     return (
       <RowActionsMenu
         onEdit={() => startEdit(step)}
-        onArchive={() => void crud.archive(step.id)}
+        onArchive={() => (step.createdPartnerId ? setArchiveAsk(step) : void crud.archive(step.id))}
         onRestore={() => void crud.restore(step.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(step.id)}
         archived={step.archived}
-        confirmArchive={() => archiveImpactMessage(step)}
+        confirmArchive={step.createdPartnerId ? undefined : () => archiveImpactMessage(step)}
         extraActions={[
           { label: tr('View tasks'), onClick: () => navigate(`/tasks?stepId=${step.id}`) },
           { label: tr('Add task'), onClick: () => navigate(`/tasks?create=task&parent=${step.id}`) },
+          ...(!step.archived && step.resources?.trim()
+            ? [{ label: tr('Turn this gap into a step'), onClick: () => setGapSourceStep(step) }]
+            : []),
           ...(step.complex
             ? [{
                 label: profileByStepId.has(step.id) ? tr('Edit ideal partner profile') : tr('Define ideal partner profile'),
@@ -443,6 +474,9 @@ export function StepsPage() {
         <>
           {step.title}
           <Breadcrumbs crumbs={stepCrumbs(step)} />
+          {step.coversStepCode && (
+            <p className="field-hint">{tr('Created to cover a gap in {code}', { code: step.coversStepCode })}</p>
+          )}
           {step.complex && taskCountFor(step) === 0 && (
             <div className="coaching-panel step-needs-tasks">
               <strong>{tr('Complex step, no tasks yet')}</strong>
@@ -552,12 +586,26 @@ export function StepsPage() {
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
       </label>
       <label className="field-full">
-        {tr('Resources and people')}
+        {tr('What is missing, and who or what could supply it?')}
         <Textarea
           value={resources}
           placeholder={tr('Money, tools, skills, information, and who could help')}
           onChange={(event) => setResources(event.target.value)}
         />
+        <span className="field-hint">{tr("Skill, money, time or knowledge you don't have yet.")}</span>
+      </label>
+      <label>
+        {tr('Kind of gap')}
+        <FormControl fullWidth size="small">
+          <Select SelectDisplayProps={{ 'aria-label': tr('Kind of gap') }} value={gapKind} displayEmpty
+            onChange={(event) => setGapKind(event.target.value as ObstacleType | '')}>
+            <MenuItem value="">{tr('None')}</MenuItem>
+            {GAP_KINDS.map((kind) => <MenuItem value={kind} key={kind}>{obstacleTypeLabels[kind]}</MenuItem>)}
+          </Select>
+        </FormControl>
+        {gapKind && suggestPartnerFor(gapKind) && (
+          <span className="field-hint">{tr('Suggested helper: {helper}', { helper: suggestPartnerFor(gapKind)?.label ?? '' })}</span>
+        )}
       </label>
     </>
   );
@@ -724,6 +772,30 @@ export function StepsPage() {
           />
         </CardContent>
       </Card>
+      )}
+      {gapSourceStep && token && (
+        <GapStepDialog
+          token={token}
+          source={{ kind: 'step', step: gapSourceStep }}
+          goals={goals}
+          ownerName={user?.fullName ?? ''}
+          onClose={() => setGapSourceStep(null)}
+          onSaved={() => {
+            setGapSourceStep(null);
+            void crud.reload();
+          }}
+        />
+      )}
+      {archiveAsk && (
+        <Modal title={tr('Archive "{title}"?', { title: archiveAsk.title })} onClose={() => setArchiveAsk(null)}>
+          <div className="stack-list">
+            <p>{tr('This step created a partner to contact. Archive that partner too?')}</p>
+            <div className="row-actions">
+              <Button type="button" onClick={() => void archiveStepAnswer(archiveAsk, true)}>{tr('Archive step and partner')}</Button>
+              <Button type="button" variant="secondary" onClick={() => void archiveStepAnswer(archiveAsk, false)}>{tr('Archive the step only')}</Button>
+            </div>
+          </div>
+        </Modal>
       )}
       {profileStep && (
         <Modal title={tr('Ideal partner for: {title}', { title: profileStep.title })} onClose={() => setProfileStep(null)}>

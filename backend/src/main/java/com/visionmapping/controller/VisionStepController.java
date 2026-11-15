@@ -1,11 +1,14 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.dto.request.GapStepRequest;
 import com.visionmapping.dto.request.ReorderRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
 import com.visionmapping.dto.request.VisionStepRequest;
 import com.visionmapping.dto.response.ArchiveImpactResponse;
+import com.visionmapping.dto.response.GapStepResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.entity.enums.WorkStatus;
+import com.visionmapping.service.GapStepService;
 import com.visionmapping.service.VisionStepService;
 import com.visionmapping.service.support.ArchiveFilter;
 import com.visionmapping.service.support.ProgressOverride;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class VisionStepController {
 
     private final VisionStepService service;
+    private final GapStepService gapStepService;
 
     @GetMapping
     public List<VisionStepResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
@@ -66,8 +70,9 @@ public class VisionStepController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
-        service.archiveStep(id);
+    public void delete(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean removePartner) {
+        // V17 BL-FR-21: removePartner also archives the partner a "find help" step created.
+        service.archiveStep(id, removePartner);
     }
     @PostMapping("/{id}/restore")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -79,6 +84,13 @@ public class VisionStepController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletePermanently(@PathVariable Long id) {
         service.permanentlyDeleteStep(id);
+    }
+
+    /** V17 BL-FR-19: turns this step's gap into a "find help" step placed just before it. */
+    @PostMapping("/{id}/gap-step")
+    @ResponseStatus(HttpStatus.CREATED)
+    public GapStepResponse gapStep(@PathVariable Long id, @Valid @RequestBody GapStepRequest request) {
+        return gapStepService.createFromStep(id, request);
     }
 
     @GetMapping("/{id}/archive-impact")

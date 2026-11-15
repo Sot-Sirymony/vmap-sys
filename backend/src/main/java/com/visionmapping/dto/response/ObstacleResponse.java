@@ -1,6 +1,7 @@
 package com.visionmapping.dto.response;
 
 import com.visionmapping.entity.enums.ExpectationAgreement;
+import com.visionmapping.entity.enums.ObstaclePlacement;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Severity;
@@ -45,6 +46,11 @@ public record ObstacleResponse(
         String criticismSubstance,
         Long requiredPartnerId,
         ObstacleStatus status,
+        // V17 BL-FR-01, BL-FR-04, BL-FR-09: where it sits, whether it may stay
+        // unplaced, and whether its step or task was archived.
+        ObstaclePlacement placement,
+        boolean placementExempt,
+        boolean anchorArchived,
         boolean archived,
         Instant createdAt,
         Instant updatedAt

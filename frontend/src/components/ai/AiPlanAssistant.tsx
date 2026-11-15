@@ -47,6 +47,7 @@ const ISSUE_LABELS: Record<string, string> = {
   MISSING_OWNER: 'No owner',
   MISSING_DATE: 'No date',
   MISSING_RESOURCE: 'No resources',
+  GAP_NEEDS_HELP: 'Needs a helper',
   NO_STEPS: 'No steps',
   AFTER_GOAL_DATE: 'After the goal date',
   OVERDUE: 'Overdue',

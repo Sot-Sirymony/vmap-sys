@@ -85,6 +85,9 @@ public class PlanBuilderDraftService {
     private final ObjectMapper objectMapper;
     private final Validator validator;
     private final Clock clock;
+
+    /** V17 BL-FR-37: a risk's linkKey "newstep:{goalKey}" asks for a new step under that draft goal. */
+    static final String NEW_STEP_FOR_RISK = "newstep:";
     private final com.visionmapping.repository.PlanBuilderFinishedPlanRepository finishedPlans;
     private final com.visionmapping.repository.AiUsageLogRepository usageLogRepository;
 
@@ -144,6 +147,7 @@ public class PlanBuilderDraftService {
         if (countNew(content) == 0) {
             throw new BusinessRuleException("Your draft has nothing new to add yet.");
         }
+        requireRiskSteps(content);
 
         List<Long> goalIds = new ArrayList<>();
         List<Long> stepIds = new ArrayList<>();
@@ -240,8 +244,12 @@ public class PlanBuilderDraftService {
         // PB-FR-24, PB-FR-25: risks become Open obstacles, with the helper who could fix them.
         List<Long> obstacleIds = new ArrayList<>();
         for (DraftRisk risk : Optional.ofNullable(content.risks()).orElse(List.of())) {
-            ObstacleRequest request = new ObstacleRequest(dream.getId(), goalFor(risk.linkKey(), goalByKey, stepByKey),
-                    stepFor(risk.linkKey(), stepByKey), null, trim(risk.title()), trim(risk.description()),
+            // V17 BL-FR-37: a risk sits on a step of the plan, or on a new step made for it.
+            Long riskStepId = risk.linkKey() != null && risk.linkKey().startsWith(NEW_STEP_FOR_RISK)
+                    ? newStepForRisk(risk, goalByKey.get(risk.linkKey().substring(NEW_STEP_FOR_RISK.length())), dream, stepIds)
+                    : stepFor(risk.linkKey(), stepByKey);
+            ObstacleRequest request = new ObstacleRequest(null, null,
+                    riskStepId, null, trim(risk.title()), trim(risk.description()),
                     risk.obstacleType() == null ? ObstacleType.OTHER : risk.obstacleType(),
                     risk.severity() == null ? Severity.MEDIUM : risk.severity(), null, trim(risk.solution()), null, null, null,
                     null, null, null, null, null, null, null, null, null, null, null, null, null, null,
@@ -281,6 +289,54 @@ public class PlanBuilderDraftService {
         }
         Long[] step = stepByKey.get(key);
         return step != null ? step[0] : goalByKey.get(key);
+    }
+
+    /**
+     * V17 BL-FR-37: before anything is saved, every risk must name a step of
+     * the draft, or "a new step for this risk" under one of its goals. Saying
+     * which risk, so the participant can fix it on the Helpers stage.
+     */
+    private static void requireRiskSteps(PlanDraftContent content) {
+        java.util.Set<String> stepKeys = new java.util.HashSet<>();
+        java.util.Set<String> goalKeys = new java.util.HashSet<>();
+        for (DraftGoal goal : Optional.ofNullable(content.goals()).orElse(List.of())) {
+            if (goal.key() != null) {
+                goalKeys.add(goal.key());
+            }
+            for (DraftStep step : Optional.ofNullable(goal.steps()).orElse(List.of())) {
+                if (step.key() != null) {
+                    stepKeys.add(step.key());
+                }
+            }
+        }
+        for (DraftRisk risk : Optional.ofNullable(content.risks()).orElse(List.of())) {
+            String key = risk.linkKey();
+            boolean onStep = key != null && stepKeys.contains(key);
+            boolean onNewStep = key != null && key.startsWith(NEW_STEP_FOR_RISK)
+                    && goalKeys.contains(key.substring(NEW_STEP_FOR_RISK.length()));
+            if (!onStep && !onNewStep) {
+                throw new BusinessRuleException("Choose the step this risk holds up: " + trim(risk.title()));
+            }
+        }
+    }
+
+    /**
+     * V17 BL-FR-37: "A new step for this risk" makes a step under the chosen
+     * goal, dated by the goal (or the dream), last in the goal's order.
+     */
+    private Long newStepForRisk(DraftRisk risk, Long goalId, Dream dream, List<Long> stepIds) {
+        Goal goal = lookup.goal(goalId);
+        java.time.LocalDate date = goal.getTargetDate() != null ? goal.getTargetDate()
+                : dream.getTargetDate() != null ? dream.getTargetDate() : java.time.LocalDate.now(clock).plusWeeks(2);
+        int sequence = stepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(goalId, lookup.userId()).size() + 1;
+        String title = "Deal with: " + trim(risk.title());
+        VisionStepRequest request = new VisionStepRequest(goalId, title.length() > 220 ? title.substring(0, 220) : title,
+                trim(risk.solution()), "Me", sequence, false, com.visionmapping.entity.enums.Priority.HIGH, date,
+                WorkStatus.NOT_STARTED, null, null, null);
+        check(request, "Step", title);
+        Long stepId = stepService.createStep(request).id();
+        stepIds.add(stepId);
+        return stepId;
     }
 
     private static Long stepFor(String key, Map<String, Long[]> stepByKey) {

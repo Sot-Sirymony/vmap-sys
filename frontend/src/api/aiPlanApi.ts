@@ -131,6 +131,14 @@ export function saveClarifiedField(token: string, dreamId: number, field: Clarif
 
 // V11 Phase 4: the task builder (PB-FR-14).
 
+// V17 BL-FR-29: smaller tasks for one Blocked or overdue task. Suggestions only.
+export function suggestSmallerTasks(token: string, taskId: number, language: string) {
+  return apiClient<TaskSuggestions>(`/ai/plan/tasks/${taskId}/smaller-tasks?language=${language}`, {
+    method: 'POST',
+    token,
+  });
+}
+
 export function suggestTasks(token: string, stepId: number, language: string, ask?: PlanAsk) {
   return apiClient<TaskSuggestions>(`/ai/plan/steps/${stepId}/task-suggestions?language=${language}`, {
     method: 'POST',

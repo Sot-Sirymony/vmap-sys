@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -26,6 +27,18 @@ public record VisionStepRequest(
         // V11 (PB-FR-12): effort in hours, and the step of the same goal this one starts after.
         // Left out keeps what is saved; startsAfterStepId 0 clears it.
         @DecimalMin("0.00") @DecimalMax("999.99") BigDecimal estimatedHours,
-        Long startsAfterStepId
+        Long startsAfterStepId,
+        // V17 BL-FR-18: the kind of gap (an ObstacleType name). Left out keeps what is saved; blank clears it.
+        @Pattern(regexp = GAP_KIND_PATTERN) String gapKind
 ) {
+
+    public static final String GAP_KIND_PATTERN = "^(|KNOWLEDGE|SKILL|TIME|MONEY|MOTIVATION|PARTNER|SYSTEM|DECISION|OTHER)$";
+
+    /** The request without a gap kind, for callers that never set one. */
+    public VisionStepRequest(Long goalId, String title, String description, String owner, Integer sequenceNumber,
+            boolean complex, Priority priority, LocalDate targetDate, WorkStatus status, String resources,
+            BigDecimal estimatedHours, Long startsAfterStepId) {
+        this(goalId, title, description, owner, sequenceNumber, complex, priority, targetDate, status, resources,
+                estimatedHours, startsAfterStepId, null);
+    }
 }

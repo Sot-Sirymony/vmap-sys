@@ -34,7 +34,7 @@ const STEPS: SectionHelp = {
   label: 'Steps',
   needs: 'For each goal, the actions that get it done, in order.',
   why: 'Steps make a goal doable.',
-  questions: ['What steps are required?', 'What must happen first?', 'What can block this goal?', 'Who can help?'],
+  questions: ['What steps are required?', 'What must happen first?', 'Which steps will need something you don\'t have yet?', 'Who can help?'],
   quickActions: ['What must happen first?', 'Is this step too big?', 'What step is missing?'],
 };
 

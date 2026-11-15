@@ -141,6 +141,42 @@ class PlanBuilderHelpersFlowTests {
         assertThat(system.getAllValues().get(1)).contains("Banks will say no").doesNotContain("Moving away from family");
     }
 
+    /** V17 BL-FR-37: a risk sits on a step of the plan, or on a new step made for it; never on a goal or the dream. */
+    @Test
+    void aRiskNeedsAStepOrANewStepMadeForIt() throws Exception {
+        String user = consented(email("risk-step"));
+        long dreamId = dream(user);
+        Map<String, Object> step = new HashMap<>(Map.of("key", "s1", "title", "Compare loans", "owner", "Me",
+                "targetDate", TODAY.plusWeeks(2).toString(), "priority", "HIGH", "complex", false, "tasks", List.of()));
+        Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save a deposit", "priority", "HIGH",
+                "targetDate", TODAY.plusMonths(3).toString(), "steps", List.of(step)));
+        Map<String, Object> onGoal = Map.of("key", "r1", "title", "Prices may rise", "obstacleType", "MONEY",
+                "severity", "HIGH", "linkKey", "g1");
+        send(put("/api/ai/plan/drafts/" + dreamId), user, Map.of("stage", "REVIEW",
+                "content", Map.of("goals", List.of(goal), "risks", List.of(onGoal)))).andExpect(status().isOk());
+        mockMvc.perform(post("/api/ai/plan/drafts/" + dreamId + "/add").header("Authorization", "Bearer " + user))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose the step this risk holds up: Prices may rise"));
+        // Nothing was saved.
+        assertThat(jdbcTemplate.queryForObject("select count(*) from goals where dream_id = ?", Integer.class, dreamId)).isZero();
+
+        Map<String, Object> onNewStep = Map.of("key", "r1", "title", "Prices may rise", "obstacleType", "MONEY",
+                "severity", "HIGH", "solution", "Lock in a rate", "linkKey", "newstep:g1");
+        send(put("/api/ai/plan/drafts/" + dreamId), user, Map.of("stage", "REVIEW",
+                "content", Map.of("goals", List.of(goal), "risks", List.of(onNewStep)))).andExpect(status().isOk());
+        JsonNode added = read(mockMvc.perform(post("/api/ai/plan/drafts/" + dreamId + "/add").header("Authorization", "Bearer " + user))
+                .andExpect(status().isCreated()));
+        assertThat(added.get("stepIds")).hasSize(2);
+        long riskStep = added.get("stepIds").get(1).asLong();
+        Map<String, Object> made = jdbcTemplate.queryForMap("select title, target_date from vision_steps where id = ?", riskStep);
+        assertThat(made.get("title")).isEqualTo("Deal with: Prices may rise");
+        long obstacle = added.get("obstacleIds").get(0).asLong();
+        mockMvc.perform(get("/api/obstacles/" + obstacle).header("Authorization", "Bearer " + user))
+                .andExpect(jsonPath("$.relatedStepId").value(riskStep))
+                .andExpect(jsonPath("$.relatedDreamId").value(dreamId))
+                .andExpect(jsonPath("$.placement").value("STEP"));
+    }
+
     @Test
     void addingTheDraftLinksPartnersOnlyWhereFreeAndAddsNewOnesAndObstacles() throws Exception {
         String user = consented(email("add-helpers"));

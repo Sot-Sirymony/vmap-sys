@@ -7,7 +7,12 @@ import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 import com.visionmapping.config.CacheConfig;
 import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.response.ObstacleResponse;
+import com.visionmapping.entity.Dream;
+import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Obstacle;
+import com.visionmapping.entity.TaskItem;
+import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.ObstaclePlacement;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.exception.BusinessRuleException;
@@ -18,6 +23,7 @@ import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.Nullable;
@@ -25,10 +31,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Obstacles blocking a dream, goal, step, or task, optionally linked to the
- * partner whose help would clear them. FR-32 "creative persistence": closing
- * one out requires either a root cause (Resolved) or at least three
- * brainstormed alternatives (Accepted) — see BR-25/BR-26.
+ * Obstacles blocking a step or task, optionally linked to the partner whose
+ * help would clear them. FR-32 "creative persistence": closing one out
+ * requires either a root cause (Resolved) or at least three brainstormed
+ * alternatives (Accepted) — see BR-25/BR-26.
+ *
+ * <p>V17 placement (D-17-1): a new plan obstacle is anchored to a step or a
+ * task, and its goal and dream are derived from that anchor (BL-FR-01,
+ * BL-FR-02). Partner conflicts may stay unplaced (BL-FR-04). Obstacles from
+ * before V17 that sit only on a dream or goal are kept as they are until the
+ * participant moves them (BL-FR-06).
  */
 @Service
 @Transactional
@@ -36,6 +48,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ObstacleService {
 
     private static final int MIN_CREATIVE_ALTERNATIVES = 3;
+    static final String ANCHOR_REQUIRED = "Put this blocker on a step or a task.";
+    static final String TASK_NOT_IN_STEP = "That task is not part of the chosen step.";
+
+    /** Whether an obstacle without a step or task may be saved. */
+    private enum AnchorPolicy { REQUIRED, OPTIONAL }
 
     private final EntityLookup lookup;
     private final VisionMappingMapper mapper;
@@ -50,13 +67,49 @@ public class ObstacleService {
                 .toList();
     }
 
+    /**
+     * V17 BL-FR-05: active obstacles that still need a step: unplaced and not
+     * exempt, or placed on a step or task that was archived (BL-FR-09).
+     * Resolved and Accepted ones need no action, so they are left out.
+     */
+    @Transactional(readOnly = true)
+    public List<ObstacleResponse> listUnplacedObstacles() {
+        return obstacleRepository.findByUser_IdAndArchivedFalse(lookup.userId()).stream()
+                .filter(ObstacleService::needsPlacing)
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    static boolean needsPlacing(Obstacle obstacle) {
+        if (obstacle.isArchived() || obstacle.getStatus() == ObstacleStatus.RESOLVED
+                || obstacle.getStatus() == ObstacleStatus.ACCEPTED) {
+            return false;
+        }
+        if (obstacle.isAnchorArchived()) {
+            return true;
+        }
+        return obstacle.placement() == ObstaclePlacement.NONE && !obstacle.isPlacementExempt();
+    }
+
+    /** V17 BL-FR-01: a new obstacle must sit on a step or task, unless it is an exempt partner conflict. */
     public ObstacleResponse createObstacle(ObstacleRequest request) {
+        return create(request, AnchorPolicy.REQUIRED);
+    }
+
+    /**
+     * Creates an obstacle that may sit only on a dream or goal. Used by the
+     * Excel import (BL-FR-41: older workbooks hold dream-only rows, imported as
+     * unplaced) and, until V17 phase 2 (BL-FR-37, BL-FR-38), by the AI Plan
+     * Builder and plan assistant. Anything created here without a step shows
+     * in the "Not on a step yet" list.
+     */
+    public ObstacleResponse createObstacleAllowingUnplaced(ObstacleRequest request) {
+        return create(request, AnchorPolicy.OPTIONAL);
+    }
+
+    private ObstacleResponse create(ObstacleRequest request, AnchorPolicy policy) {
         Obstacle entity = Obstacle.builder()
                 .user(lookup.currentUser())
-                .relatedDream(lookup.optionalDream(request.relatedDreamId()))
-                .relatedGoal(lookup.optionalGoal(request.relatedGoalId()))
-                .relatedStep(lookup.optionalStep(request.relatedStepId()))
-                .relatedTask(lookup.optionalTask(request.relatedTaskId()))
                 .title(request.title())
                 .description(request.description())
                 .obstacleType(request.obstacleType())
@@ -83,6 +136,7 @@ public class ObstacleService {
                 .requiredPartner(lookup.optionalPartner(request.requiredPartnerId()))
                 .status(request.status())
                 .build();
+        applyNewLinks(entity, request, policy);
         prepareObstacle(entity);
         return mapper.toResponse(obstacleRepository.save(entity));
     }
@@ -114,10 +168,6 @@ public class ObstacleService {
 
     public ObstacleResponse updateObstacle(Long id, ObstacleRequest request) {
         Obstacle entity = lookup.obstacle(id);
-        entity.setRelatedDream(lookup.optionalDream(request.relatedDreamId()));
-        entity.setRelatedGoal(lookup.optionalGoal(request.relatedGoalId()));
-        entity.setRelatedStep(lookup.optionalStep(request.relatedStepId()));
-        entity.setRelatedTask(lookup.optionalTask(request.relatedTaskId()));
         entity.setTitle(request.title());
         entity.setDescription(request.description());
         entity.setObstacleType(request.obstacleType());
@@ -143,6 +193,7 @@ public class ObstacleService {
         entity.setCriticismSubstance(request.criticismSubstance());
         entity.setRequiredPartner(lookup.optionalPartner(request.requiredPartnerId()));
         entity.setStatus(request.status());
+        applyUpdatedLinks(entity, request);
         prepareObstacle(entity);
         return mapper.toResponse(entity);
     }
@@ -178,6 +229,64 @@ public class ObstacleService {
         Obstacle obstacle = lookup.obstacle(id);
         requireArchived(obstacle.isArchived(), "Obstacle");
         obstacleRepository.delete(obstacle);
+    }
+
+    /** BL-FR-01, BL-FR-02, BL-FR-04 for a new obstacle. */
+    private void applyNewLinks(Obstacle entity, ObstacleRequest request, AnchorPolicy policy) {
+        if (anchorRequested(request)) {
+            anchor(entity, request);
+            return;
+        }
+        if (policy == AnchorPolicy.REQUIRED && !entity.isPlacementExempt()) {
+            throw new BusinessRuleException(ANCHOR_REQUIRED);
+        }
+        entity.leaveUnplaced(lookup.optionalDream(request.relatedDreamId()), lookup.optionalGoal(request.relatedGoalId()));
+    }
+
+    /**
+     * BL-FR-06: an obstacle saved without a step or task keeps its place only
+     * if it is exempt, or it was already unplaced and its dream and goal are
+     * unchanged. Moving it or taking it off its step needs a step or task.
+     */
+    private void applyUpdatedLinks(Obstacle entity, ObstacleRequest request) {
+        if (anchorRequested(request)) {
+            anchor(entity, request);
+            return;
+        }
+        if (entity.isPlacementExempt()) {
+            entity.leaveUnplaced(lookup.optionalDream(request.relatedDreamId()), lookup.optionalGoal(request.relatedGoalId()));
+            return;
+        }
+        boolean unchangedUnplaced = entity.placement() == ObstaclePlacement.NONE
+                && Objects.equals(idOf(entity.getRelatedDream()), request.relatedDreamId())
+                && Objects.equals(idOf(entity.getRelatedGoal()), request.relatedGoalId());
+        if (!unchangedUnplaced) {
+            throw new BusinessRuleException(ANCHOR_REQUIRED);
+        }
+    }
+
+    private static boolean anchorRequested(ObstacleRequest request) {
+        return request.relatedStepId() != null || request.relatedTaskId() != null;
+    }
+
+    /** BL-FR-02: the client's dream and goal are ignored once a step or task is given. */
+    private void anchor(Obstacle entity, ObstacleRequest request) {
+        VisionStep step = lookup.optionalStep(request.relatedStepId());
+        TaskItem task = lookup.optionalTask(request.relatedTaskId());
+        if (step != null && task != null && !task.getStep().getId().equals(step.getId())) {
+            throw new BusinessRuleException(TASK_NOT_IN_STEP);
+        }
+        entity.anchorTo(step, task);
+    }
+
+    @Nullable
+    private static Long idOf(@Nullable Dream dream) {
+        return dream == null ? null : dream.getId();
+    }
+
+    @Nullable
+    private static Long idOf(@Nullable Goal goal) {
+        return goal == null ? null : goal.getId();
     }
 
     /** BR-25/BR-26: the two closing statuses each require their own proof of diligence. */

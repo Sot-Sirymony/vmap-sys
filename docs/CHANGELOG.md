@@ -66,6 +66,75 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [17.0.0] — Phases 1 to 4 of 5 built; awaiting confirmation for phase 5
+
+Implements phases 1 and 2 of [BRD 17.0.0](VMS_BRD_V17.0.0.md): blockers sit on a step or a task, not on a dream or goal,
+and dreams and goals describe only the outcome. Migrations: `V75__obstacle_anchor_consistency.sql` (phase 1), `V76__step_gap_kind_and_origin.sql` (phase 3), `V77__task_block_count.sql` (phase 4). `CLAUDE.md`
+updated for decisions D-17-1 and D-17-2.
+
+### Added in phase 4
+- **Break into smaller tasks (BL-FR-24 to BL-FR-26).** A Blocked task, or one In Progress past its due date, offers
+  **Break into smaller tasks** on the Tasks board (row menu, card, form) and the Vision Map. Two to five rows, due
+  dates spread up to the task's date, a "Could you start this in the next 15 minutes?" tick box, and a choice to keep
+  the original as a checklist parent (default) or replace it (archived). New endpoint `POST /api/tasks/{id}/split`.
+- **What changed? (BL-FR-27).** Moving a task out of Blocked asks one optional line, saved to its progress log.
+- **Repeated blocks (BL-FR-28).** The third block suggests breaking it down or adding an obstacle on the task.
+  Migration `V77__task_block_count.sql`.
+- **Suggest smaller tasks (BL-FR-29).** With AI on, Claude fills the rows; nothing is saved until the participant saves.
+
+### Added in phase 3
+- **Gap question and kind (BL-FR-17, BL-FR-18).** The step form's Resources field now asks "What is missing, and who or
+  what could supply it?", with an optional **Kind of gap** that shows the suggested helper type. Migration
+  `V76__step_gap_kind_and_origin.sql` (additive).
+- **Turn this gap into a step (BL-FR-19, BL-FR-20).** From a step with gap text (Steps page and Vision Map) or from any
+  open, non-exempt obstacle (Obstacles page), a pre-filled "Find a {helper} for {gap}" step is added before the work
+  that needs it, optionally with a To Contact partner. An obstacle moves onto the new step and to In Progress.
+- **Link back (BL-FR-21).** A "find help" step shows "Created to cover a gap in S-012"; archiving it asks whether to
+  archive the partner it created too.
+- **Plan check (BL-FR-22).** New `GAP_NEEDS_HELP` issue: "Step S-014 is missing a skill. Who could help?"
+- **FR-82 reuse (BL-FR-23).** Strengths and Gaps' learning step is created by the same logic.
+
+### Added in phase 2
+- **Outcome-only coaching (BL-FR-11 to BL-FR-13).** The dream and goal forms (Dreams page, Goals page and the Vision Map)
+  say "describe the outcome; gaps come in the steps". A soft, dismissible note appears when the text names a limit
+  ("can't afford", "if I have time"). The phrase list is in `frontend/src/utils/limitPhrases.ts`, English only.
+- **Goal coaching question (BL-FR-14).** "What can block this goal?" is now "Which steps will need something you don't
+  have yet?" in the plan assistant help and `CLAUDE.md`.
+- **Blocker counts (BL-FR-15, BL-FR-16).** Dream and goal rows on the Vision Map, and a Blockers column on the Goals
+  table, show "2 blockers · 1 blocked task", linking to the Obstacles page filtered by dream or goal (new `goalId`
+  filter). No add-obstacle action at these levels; the obstacle form offers "Add a step first" when there are no steps.
+- **Risks on steps (BL-FR-37, BL-FR-38, BL-FR-39).** Build my plan's risk card offers the plan's steps or "A new step for
+  this risk, in: {goal}" (saved as a step "Deal with: {risk}"), never "The whole dream"; Add refuses a risk without one.
+  The plan assistant only proposes and saves risks on a step. AI-suggested risks keep a step key only. The Dream Coach
+  system prompt states the outcome-only and placement rules.
+
+### Changed in phase 2
+- The phase 1 bridge is gone: the AI Plan Builder and plan assistant now create obstacles through the same placement
+  rule as the Obstacles page. Only the Excel import still saves unplaced obstacles (from older workbooks).
+
+### Added in phase 1
+
+- **Placement rule (BL-FR-01, BL-FR-02, BL-FR-04).** A new obstacle needs a step or task; its goal and dream are worked
+  out from it. Partner conflicts with worksheet answers may stay off the steps.
+- **Moves follow (BL-FR-08).** Moving a task, step or goal re-derives the goal and dream of the obstacles on it.
+- **"Not on a step yet" (BL-FR-03, BL-FR-05, BL-FR-06, BL-FR-07, BL-FR-09).** One **Where is this blocker?** picker on
+  the Obstacles page, a **Placed on** column, a count chip and banner, a **Move to a step** row action, and a dashboard
+  attention item. Older dream-level obstacles are kept as they are until moved.
+- **Which obstacle first (BL-FR-10).** Placed obstacles rank ahead of unplaced ones on a tie.
+- **Excel (BL-FR-40, BL-FR-41).** Export adds **Placed on** with "Not placed" highlighted. Import now reads the
+  Obstacles sheet and reports dream-only rows as "Imported, needs a step (N)" in a new `warnings` list.
+
+### Changed
+- `/api/obstacles/priority`: an obstacle on a task or step now holds up only that task or the tasks under that step.
+  Before, its derived dream would have counted every Blocked task in the dream.
+
+### Decisions taken during phase 1
+- Resolved and Accepted obstacles are not counted as "Not on a step yet" (they need no action).
+- Excel import skips Resolved and Accepted obstacle rows with a reason, because the sheet holds no root cause or
+  alternatives, which the app requires for those statuses.
+
+---
+
 ## [15.0.0] — All 6 phases built; awaiting UAT, the live quality-test run and the Khmer review
 
 Implements [BRD 15.0.0](VMS_BRD_V15.0.0.md): a page assistant and helpers on the Modules, module, Assessment,

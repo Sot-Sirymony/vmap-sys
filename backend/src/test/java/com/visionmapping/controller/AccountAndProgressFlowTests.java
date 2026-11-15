@@ -77,7 +77,7 @@ class AccountAndProgressFlowTests {
         long goalId = goal(token, dreamId);
         long stepId = step(token, goalId, TODAY);
         send(put("/api/steps/" + stepId), token, stepBody(goalId, TODAY, "COMPLETED")).andExpect(status().isOk());
-        send(post("/api/obstacles"), token, Map.of("relatedDreamId", dreamId, "title", "Funding", "obstacleType", "MONEY", "severity", "HIGH", "status", "OPEN")).andExpect(status().isCreated());
+        send(post("/api/obstacles"), token, Map.of("relatedStepId", stepId, "title", "Funding", "obstacleType", "MONEY", "severity", "HIGH", "status", "OPEN")).andExpect(status().isCreated());
         send(post("/api/partners"), token, Map.of("name", "P", "supportType", "MENTOR", "status", "AGREED")).andExpect(status().isCreated());
         send(post("/api/milestones"), token, Map.of("dreamId", dreamId, "title", "M", "achievedOn", TODAY.toString())).andExpect(status().isCreated());
         send(put("/api/chain-assessments"), token, assessment(TODAY.minusDays(30), 2)).andExpect(status().isOk());
@@ -216,7 +216,7 @@ class AccountAndProgressFlowTests {
         Map<String, Object> task = Map.of("stepId", stepId, "title", "T", "owner", "Me", "priority", "HIGH", "dueDate", TODAY.toString(), "status", "NOT_STARTED", "progressPercent", 0);
         send(post("/api/tasks"), token, task).andExpect(status().isCreated());
         send(post("/api/partners"), token, Map.of("name", "P", "supportType", "MENTOR", "status", "ACTIVE", "relatedDreamId", dreamId)).andExpect(status().isCreated());
-        send(post("/api/obstacles"), token, Map.of("relatedDreamId", dreamId, "title", "O", "obstacleType", "MONEY", "severity", "HIGH", "status", "OPEN")).andExpect(status().isCreated());
+        send(post("/api/obstacles"), token, Map.of("relatedStepId", stepId, "title", "O", "obstacleType", "MONEY", "severity", "HIGH", "status", "OPEN")).andExpect(status().isCreated());
         send(post("/api/reviews"), token, Map.of("reviewType", "WEEKLY", "reviewDate", TODAY.atTime(7, 0).toString(), "summary", "S", "relatedDreamId", dreamId)).andExpect(status().isCreated());
         send(post("/api/gratitude-entries"), token, Map.of("category", "OTHER", "description", "G", "relatedDreamId", dreamId)).andExpect(status().isCreated());
         send(post("/api/fear-entries"), token, Map.of("fear", "F", "worstCase", "W", "likelihood", "LOW", "firstTest", "T", "relatedDreamId", dreamId)).andExpect(status().isCreated());

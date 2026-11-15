@@ -1,9 +1,12 @@
 package com.visionmapping.controller;
 
+import com.visionmapping.dto.request.GapStepRequest;
 import com.visionmapping.dto.request.ObstacleRequest;
 import com.visionmapping.dto.request.StatusUpdateRequest;
+import com.visionmapping.dto.response.GapStepResponse;
 import com.visionmapping.dto.response.ObstacleResponse;
 import com.visionmapping.entity.enums.ObstacleStatus;
+import com.visionmapping.service.GapStepService;
 import com.visionmapping.service.ObstacleService;
 import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
@@ -28,9 +31,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class ObstacleController {
 
     private final ObstacleService service;
+    private final GapStepService gapStepService;
 
+    /** V17 BL-FR-05: {@code ?placement=UNPLACED} lists the active obstacles that still need a step. */
     @GetMapping
-    public List<ObstacleResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
+    public List<ObstacleResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived,
+                                       @RequestParam(required = false) String placement) {
+        if ("UNPLACED".equalsIgnoreCase(placement)) {
+            return service.listUnplacedObstacles();
+        }
         return service.listObstacles(ArchiveFilter.of(includeArchived));
     }
 
@@ -58,6 +67,13 @@ public class ObstacleController {
     @PatchMapping("/{id}/status")
     public ObstacleResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<ObstacleStatus> request) {
         return service.updateObstacleStatus(id, request.status());
+    }
+
+    /** V17 BL-FR-20: turns this obstacle into a "find help" step and anchors it there. */
+    @PostMapping("/{id}/convert-to-step")
+    @ResponseStatus(HttpStatus.CREATED)
+    public GapStepResponse convertToStep(@PathVariable Long id, @Valid @RequestBody GapStepRequest request) {
+        return gapStepService.createFromObstacle(id, request);
     }
 
     @PostMapping("/{id}/release-expectation")
