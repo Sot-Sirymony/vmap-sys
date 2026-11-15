@@ -10,8 +10,9 @@ public record ChainAssessmentRequest(
         @NotNull @Min(1) @Max(5) Integer settlingScore,
         @NotNull @Min(1) @Max(5) Integer fearScore,
         @NotNull @Min(1) @Max(5) Integer criticismScore,
-        @NotNull @Min(1) @Max(5) Integer visionScore,
-        @NotNull @Min(1) @Max(5) Integer knowledgeScore,
-        @NotNull @Min(1) @Max(5) Integer resourcesScore
+        // V17 BL-FR-30: the method's six chains. Knowledge and resources are no longer accepted (D-17-3).
+        @NotNull @Min(1) @Max(5) Integer prioritiesScore,
+        @NotNull @Min(1) @Max(5) Integer persistenceScore,
+        @NotNull @Min(1) @Max(5) Integer visionScore
 ) {
 }

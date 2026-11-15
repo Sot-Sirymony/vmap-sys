@@ -557,6 +557,8 @@ export type DreamCommitmentRequest = {
 };
 
 // FR-71: higher means the barrier holds the user back less.
+// V17 (BL-FR-30, BL-FR-31): priorities and persistence are set from V17 on;
+// knowledge and resources only on takes from before it (retired chains).
 export type ChainAssessment = {
   id: number;
   takenOn: string;
@@ -564,14 +566,20 @@ export type ChainAssessment = {
   fearScore: number;
   criticismScore: number;
   visionScore: number;
-  knowledgeScore: number;
-  resourcesScore: number;
+  prioritiesScore?: number | null;
+  persistenceScore?: number | null;
+  knowledgeScore?: number | null;
+  resourcesScore?: number | null;
   averageScore: number;
 };
 
-export type ChainScoreKey = 'settlingScore' | 'fearScore' | 'criticismScore' | 'visionScore' | 'knowledgeScore' | 'resourcesScore';
+/** V17 BL-FR-30: the six chains the check asks today. */
+export type ChainScoreKey = 'settlingScore' | 'fearScore' | 'criticismScore' | 'prioritiesScore' | 'persistenceScore' | 'visionScore';
 
-export type ChainAssessmentRequest = Omit<ChainAssessment, 'id' | 'averageScore'>;
+/** V17 BL-FR-31: chains measured before V17, now handled as step gaps. */
+export type RetiredChainKey = 'knowledgeScore' | 'resourcesScore';
+
+export type ChainAssessmentRequest = { takenOn: string } & Record<ChainScoreKey, number>;
 
 export type ChainAssessmentSummary = {
   assessments: ChainAssessment[];

@@ -205,21 +205,22 @@ public class AiModuleService {
         List<LearningModuleSummaryResponse> modules = learningModuleService.listModules(language);
         StringBuilder data = new StringBuilder("Six-chain self-assessment of " + latest.getTakenOn()
                 + ". Each statement scored 1 (rarely true) to 5 (almost always true); a low score is a chain holding them back.\n");
-        data.append("- Settling for average (I expect more of myself than what is comfortable): ").append(latest.getSettlingScore()).append('\n');
-        data.append("- Fear of failure (I try things even when they might not work): ").append(latest.getFearScore()).append('\n');
-        data.append("- Avoiding criticism (what others may say does not stop me): ").append(latest.getCriticismScore()).append('\n');
-        data.append("- Unclear vision (I can describe exactly what I want and when): ").append(latest.getVisionScore()).append('\n');
-        data.append("- Not knowing how (when I do not know how, I find out): ").append(latest.getKnowledgeScore()).append('\n');
-        data.append("- Lack of resources (when I lack something, I look for who could supply it): ").append(latest.getResourcesScore()).append('\n');
+        // V17 BL-FR-30: the chains the latest take measured, from the one catalog.
+        for (com.visionmapping.service.ModuleJourneyService.Chain chain : com.visionmapping.service.ModuleJourneyService.CHAINS) {
+            if (chain.measuredIn(latest)) {
+                data.append("- ").append(chain.label()).append(" (").append(chain.statement()).append("): ")
+                        .append(chain.scoreOf(latest)).append('\n');
+            }
+        }
         if (taken.size() > 1) {
-            // V15 (AH-FR-25): every take, so the trend is not only the first against the latest.
-            data.append("Every take, oldest first, in the same order (settling, fear, criticism, vision, knowing how, resources):\n");
-            taken.forEach(take -> data.append("- ").append(take.getTakenOn()).append(": ").append(take.getSettlingScore()).append(", ")
-                    .append(take.getFearScore()).append(", ").append(take.getCriticismScore()).append(", ").append(take.getVisionScore())
-                    .append(", ").append(take.getKnowledgeScore()).append(", ").append(take.getResourcesScore()).append('\n'));
+            // V15 (AH-FR-25): every take, so the trend is not only the first against the latest. V17 BL-FR-31:
+            // compare a chain only across takes that measured it; retired chains are marked.
+            data.append("Every take, oldest first:\n");
+            taken.forEach(take -> data.append("- ").append(take.getTakenOn()).append(": ")
+                    .append(com.visionmapping.service.ai.PageAssistantService.describeTake(take)).append('\n'));
         }
         List<com.visionmapping.service.ModuleJourneyService.Chain> low = com.visionmapping.service.ModuleJourneyService.CHAINS.stream()
-                .filter(chain -> chain.score().applyAsInt(latest) <= 2).toList();
+                .filter(chain -> chain.measuredIn(latest) && chain.scoreOf(latest) <= 2).toList();
         if (!low.isEmpty()) {
             data.append("Barriers scored 1 or 2 (key: label): ").append(low.stream().map(chain -> chain.key() + ": " + chain.label())
                     .collect(Collectors.joining("; "))).append('\n');
@@ -241,7 +242,7 @@ public class AiModuleService {
                     .filter(chain -> notes.stream().noneMatch(existing -> existing.key().equals(chain.key())))
                     .findFirst()
                     .ifPresent(chain -> notes.add(new com.visionmapping.dto.response.AiModuleResponses.ChainNote(chain.key(), chain.label(),
-                            chain.score().applyAsInt(latest), limit(note.note(), 300))));
+                            chain.scoreOf(latest), limit(note.note(), 300))));
         }
         return new AssessmentExplanation(limit(draft.explanation(), 2000), focus.map(LearningModuleSummaryResponse::number).orElse(null),
                 focus.map(LearningModuleSummaryResponse::title).orElse(null), limit(draft.reason(), 300), notes,
@@ -258,8 +259,9 @@ public class AiModuleService {
             "fearScore", "in the Journal, log one fear and plan the smallest safe test",
             "criticismScore", "on the Obstacles page, take one criticism and write down the useful point in it",
             "visionScore", "on the Dreams page, rewrite your top dream's success definition so you would know when it is reached",
-            "knowledgeScore", "on the Goals page, add one step to learn what you do not know yet",
-            "resourcesScore", "on the Partners page, add one partner who could supply something your plan is missing");
+            // V17 BL-FR-35. Knowledge and resources are step gaps now, not chain practices (BL-FR-32).
+            "prioritiesScore", "on the Today page, give one task the letter rank A each day and do it first",
+            "persistenceScore", "on the Today page, add one small daily habit that moves your plan forward");
 
     /**
      * V15 (AH-FR-26): one small practice for the next seven days for each
@@ -274,7 +276,7 @@ public class AiModuleService {
         }
         ChainAssessment latest = taken.get(taken.size() - 1);
         List<com.visionmapping.service.ModuleJourneyService.Chain> weak = com.visionmapping.service.ModuleJourneyService.CHAINS.stream()
-                .filter(chain -> chain.score().applyAsInt(latest) <= 3).toList();
+                .filter(chain -> chain.measuredIn(latest) && chain.scoreOf(latest) <= 3).toList();
         if (weak.isEmpty()) {
             return new com.visionmapping.dto.response.AiModuleResponses.AssessmentPractice(null, List.of());
         }
@@ -282,7 +284,7 @@ public class AiModuleService {
         StringBuilder data = new StringBuilder("The participant's latest six-chain self-assessment, scored 1 (rarely true) to 5 "
                 + "(almost always true). Barriers scored 3 or less, each with the app action its practice must use:\n");
         weak.forEach(chain -> data.append("- ").append(chain.key()).append(" (").append(chain.label()).append(", ")
-                .append(chain.score().applyAsInt(latest)).append(" of 5): ").append(PRACTICE_ACTIONS.get(chain.key())).append('\n'));
+                .append(chain.scoreOf(latest)).append(" of 5): ").append(PRACTICE_ACTIONS.get(chain.key())).append('\n'));
         data.append(WorkStyleContext.line(user));
         String task = "For each barrier listed, give one small practice for the next seven days that uses its app action, in plain, "
                 + "encouraging words, and a short habit name for it. " + NO_LABELS;
@@ -294,7 +296,7 @@ public class AiModuleService {
                     .filter(item -> item != null && chain.key().equals(item.chainKey()) && item.practice() != null && !item.practice().isBlank())
                     .findFirst()
                     .ifPresent(item -> practices.add(new com.visionmapping.dto.response.AiModuleResponses.ChainPractice(chain.key(),
-                            chain.label(), chain.score().applyAsInt(latest), limit(item.practice(), 400),
+                            chain.label(), chain.scoreOf(latest), limit(item.practice(), 400),
                             Optional.ofNullable(limit(item.habit(), 60)).orElse(""))));
         }
         return new com.visionmapping.dto.response.AiModuleResponses.AssessmentPractice(feedback.suggested(answer.usage(), practices.size()),
@@ -327,10 +329,13 @@ public class AiModuleService {
                 .toList();
         String apiKey = accessService.requireAvailable(user, "ASSESSMENT");
         StringBuilder data = new StringBuilder("Two takes of the six-chain self-assessment, 1 (rarely true) to 5 (almost always true):\n");
-        for (com.visionmapping.service.ModuleJourneyService.Chain chain : com.visionmapping.service.ModuleJourneyService.CHAINS) {
-            data.append("- ").append(chain.label()).append(": ").append(chain.score().applyAsInt(previous)).append(" on ")
-                    .append(previous.getTakenOn()).append(", ").append(chain.score().applyAsInt(latest)).append(" on ")
-                    .append(latest.getTakenOn()).append('\n');
+        // V17 BL-FR-31: only chains both takes measured are compared.
+        for (com.visionmapping.service.ModuleJourneyService.Chain chain : com.visionmapping.service.ModuleJourneyService.ALL_CHAINS) {
+            if (chain.measuredIn(previous) && chain.measuredIn(latest)) {
+                data.append("- ").append(chain.label()).append(": ").append(chain.scoreOf(previous)).append(" on ")
+                        .append(previous.getTakenOn()).append(", ").append(chain.scoreOf(latest)).append(" on ")
+                        .append(latest.getTakenOn()).append('\n');
+            }
         }
         data.append("Modules completed in between: ").append(between.isEmpty() ? "none" : String.join("; ", between)).append('\n');
         String task = "Compare the two takes in three or four short, encouraging sentences. Link a change to a module completed in "

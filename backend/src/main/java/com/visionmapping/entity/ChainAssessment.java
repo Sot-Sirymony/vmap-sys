@@ -16,7 +16,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** FR-71: how much each of the six chains holds the user back. 5 means barely. */
+/**
+ * FR-71: how much each of the six chains holds the user back. 5 means barely.
+ * V17 (BL-FR-30, D-17-3): the six are settling, fear, criticism, priorities,
+ * persistence and vision. Knowledge and resources are retired (they are step
+ * gaps now): kept on past rows, null on new ones (BL-FR-31).
+ */
 @Getter
 @Setter
 @Builder
@@ -49,9 +54,19 @@ public class ChainAssessment extends BaseAuditableEntity {
     @Column(name = "vision_score", nullable = false)
     private Integer visionScore;
 
-    @Column(name = "knowledge_score", nullable = false)
+    /** Retired in V17: null on assessments taken after it. */
+    @Column(name = "knowledge_score")
     private Integer knowledgeScore;
 
-    @Column(name = "resources_score", nullable = false)
+    /** Retired in V17: null on assessments taken after it. */
+    @Column(name = "resources_score")
     private Integer resourcesScore;
+
+    /** V17 BL-FR-30: misplaced priorities. Null on assessments taken before it. */
+    @Column(name = "priorities_score")
+    private Integer prioritiesScore;
+
+    /** V17 BL-FR-30: lack of persistence. Null on assessments taken before it. */
+    @Column(name = "persistence_score")
+    private Integer persistenceScore;
 }

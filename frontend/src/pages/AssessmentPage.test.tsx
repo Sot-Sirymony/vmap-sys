@@ -12,10 +12,11 @@ vi.mock('../api/chainAssessmentApi');
 vi.mock('../api/aiApi');
 vi.mock('../api/aiModuleApi');
 
-const BARRIERS = ['Settling for average', 'Fear of failure', 'Avoiding criticism', 'Unclear vision', 'Not knowing how', 'Lack of resources'];
+// V17 BL-FR-30: the method's six chains, in order.
+const BARRIERS = ['Settling for average', 'Fear of failure', 'Avoiding criticism', 'Misplaced priorities', 'Giving up too soon', 'Unclear vision'];
 
 const take = (overrides: Partial<ChainAssessment>): ChainAssessment => ({
-  id: 1, takenOn: '2026-08-01', settlingScore: 2, fearScore: 1, criticismScore: 2, visionScore: 3, knowledgeScore: 2, resourcesScore: 2,
+  id: 1, takenOn: '2026-08-01', settlingScore: 2, fearScore: 1, criticismScore: 2, visionScore: 3, prioritiesScore: 2, persistenceScore: 2,
   averageScore: 2, ...overrides,
 });
 
@@ -60,9 +61,31 @@ describe('AssessmentPage (FR-71)', () => {
     await userEvent.click(save);
 
     await waitFor(() => expect(chainAssessmentApi.saveChainAssessment).toHaveBeenCalledWith('token', {
-      takenOn: localDateIso(), settlingScore: 1, fearScore: 2, criticismScore: 3, visionScore: 4, knowledgeScore: 5, resourcesScore: 1,
+      takenOn: localDateIso(), settlingScore: 1, fearScore: 2, criticismScore: 3, prioritiesScore: 4, persistenceScore: 5, visionScore: 1,
     }));
     expect(chainAssessmentApi.getChainAssessments).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps an older take\'s retired chains, marked as no longer measured (V17 BL-FR-31, BLC-14)', async () => {
+    const old = take({ prioritiesScore: null, persistenceScore: null, knowledgeScore: 5, resourcesScore: 1 });
+    vi.mocked(chainAssessmentApi.getChainAssessments).mockResolvedValue({
+      assessments: [old, take({ id: 2, takenOn: '2026-11-01', fearScore: 4 })], improvementPercent: 10, retakeSuggested: false,
+    });
+    renderPage(<AssessmentPage />);
+    const knowingRow = (await screen.findByRole('cell', { name: 'Not knowing how' })).closest('tr') as HTMLElement;
+    expect(within(knowingRow).getAllByRole('cell').map((cell) => cell.textContent))
+      .toEqual(['Not knowing how', '5', 'No longer measured (moved to step gaps)']);
+    // A new chain is compared from the first take that measured it.
+    const prioritiesRow = screen.getByRole('cell', { name: 'Misplaced priorities' }).closest('tr') as HTMLElement;
+    expect(within(prioritiesRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Misplaced priorities', '2', '2']);
+  });
+
+  it('offers the fear journal when fear or criticism scores 1 or 2 (V17 BL-FR-34)', async () => {
+    vi.mocked(chainAssessmentApi.getChainAssessments).mockResolvedValue({
+      assessments: [take({ fearScore: 2, criticismScore: 4 })], improvementPercent: null, retakeSuggested: false,
+    });
+    renderPage(<AssessmentPage />);
+    expect(await screen.findByRole('button', { name: 'Write it down in the fear journal' })).toBeInTheDocument();
   });
 
   it('compares the baseline with the latest result and shows the improvement', async () => {

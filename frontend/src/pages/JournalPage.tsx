@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Pencil, RotateCcw, X } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -37,6 +37,9 @@ export function JournalPage() {
   const { t } = useI18n();
   const { token } = useAuth();
   const navigate = useNavigate();
+  // V17 BL-FR-34: the chain check's "Write it down in the fear journal" lands on a new fear, ready to type.
+  const [searchParams] = useSearchParams();
+  const newFear = searchParams.get('newFear') === '1';
   const [fears, setFears] = useState<FearEntry[] | null>(null);
   const [attitudes, setAttitudes] = useState<AttitudeCheckIn[]>([]);
   const [error, setError] = useState('');
@@ -150,7 +153,7 @@ export function JournalPage() {
               <Box component="form" onSubmit={(event) => void handleSubmit(event)} sx={{ display: 'grid', gap: 1.5 }}>
                 <label>
                   {t('What are you afraid of?')}
-                  <Input value={fear} onChange={(event) => setFear(event.target.value)} required />
+                  <Input value={fear} onChange={(event) => setFear(event.target.value)} required autoFocus={newFear} />
                 </label>
                 <label>
                   {t('What is the worst that could happen?')}

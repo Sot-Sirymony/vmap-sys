@@ -153,12 +153,8 @@ public class PageAssistantService {
     private static final Map<String, String> CHAIN_LABELS = new LinkedHashMap<>();
 
     static {
-        CHAIN_LABELS.put("settlingScore", "Settling for average");
-        CHAIN_LABELS.put("fearScore", "Fear of failure");
-        CHAIN_LABELS.put("criticismScore", "Avoiding criticism");
-        CHAIN_LABELS.put("visionScore", "Unclear vision");
-        CHAIN_LABELS.put("knowledgeScore", "Not knowing how");
-        CHAIN_LABELS.put("resourcesScore", "Lack of resources");
+        // V17 BL-FR-30: the current six chains, from the one catalog.
+        com.visionmapping.service.ModuleJourneyService.CHAINS.forEach(chain -> CHAIN_LABELS.put(chain.key(), chain.label()));
     }
 
     private final EntityLookup lookup;
@@ -618,11 +614,23 @@ public class PageAssistantService {
         List<ChainAssessment> shown = everyTake || takes.size() <= 2 ? takes : List.of(takes.get(0), takes.get(takes.size() - 1));
         out.append("\nAssessment takes (").append(everyTake ? "every take" : "first and latest").append("):\n");
         for (ChainAssessment take : shown) {
-            out.append("- ").append(take.getTakenOn()).append(": settling ").append(take.getSettlingScore())
-                    .append(", fear ").append(take.getFearScore()).append(", criticism ").append(take.getCriticismScore())
-                    .append(", vision ").append(take.getVisionScore()).append(", knowledge ").append(take.getKnowledgeScore())
-                    .append(", resources ").append(take.getResourcesScore()).append('\n');
+            out.append("- ").append(take.getTakenOn()).append(": ").append(describeTake(take)).append('\n');
         }
+    }
+
+    /**
+     * V17 BL-FR-31: the chains one take measured, by label. Retired chains on
+     * older takes are marked "no longer measured".
+     */
+    static String describeTake(ChainAssessment take) {
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        for (com.visionmapping.service.ModuleJourneyService.Chain chain : com.visionmapping.service.ModuleJourneyService.ALL_CHAINS) {
+            if (chain.measuredIn(take)) {
+                boolean retired = com.visionmapping.service.ModuleJourneyService.RETIRED_CHAINS.contains(chain);
+                parts.add(chain.label() + (retired ? " (no longer measured)" : "") + " " + chain.scoreOf(take));
+            }
+        }
+        return String.join(", ", parts);
     }
 
     /** Adds the titles and dates of the linked dream, goal, step and task. Each is looked up as the participant's own. */

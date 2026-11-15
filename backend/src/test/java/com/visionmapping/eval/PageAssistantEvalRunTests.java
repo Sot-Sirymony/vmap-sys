@@ -52,7 +52,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class PageAssistantEvalRunTests {
 
     private static final Pattern KHMER = Pattern.compile("[\\u1780-\\u17FF]");
-    private static final String[] CHAINS = {"settlingScore", "fearScore", "criticismScore", "visionScore", "knowledgeScore", "resourcesScore"};
+    private static final String[] CHAINS = {"settlingScore", "fearScore", "criticismScore", "prioritiesScore", "persistenceScore", "visionScore"};
 
     @Autowired
     private MockMvc mockMvc;

@@ -237,13 +237,13 @@ class PageAssistantFlowTests {
         send(post("/api/ai/chat"), user, Map.of("message", "Which module should I do next?", "assistantPage", "MODULES", "area", "list"))
                 .andExpect(status().isOk());
         send(put("/api/chain-assessments"), user, Map.of("takenOn", TODAY.toString(), "settlingScore", 3,
-                "fearScore", 2, "criticismScore", 3, "visionScore", 4, "knowledgeScore", 3, "resourcesScore", 2)).andExpect(status().isOk());
+                "fearScore", 2, "criticismScore", 3, "visionScore", 4, "prioritiesScore", 3, "persistenceScore", 2)).andExpect(status().isOk());
         send(post("/api/ai/chat"), user, Map.of("message", "Explain my result", "assistantPage", "ASSESSMENT", "area", "result"))
                 .andExpect(status().isOk());
         ArgumentCaptor<String> system = ArgumentCaptor.forClass(String.class);
         verify(claudeClient, org.mockito.Mockito.times(2)).send(anyString(), anyString(), system.capture(), anyList());
         assertThat(system.getAllValues().get(0)).contains("The 15 modules", "No assessment taken yet", "Plan counts: 0 dreams");
-        assertThat(system.getAllValues().get(1)).contains("Assessment takes (every take)", "fear 2", "resources 2");
+        assertThat(system.getAllValues().get(1)).contains("Assessment takes (every take)", "Fear of failure 2", "Giving up too soon 2");
 
         // Module 1 has a form: empty fields are listed, and cards may only fill its own fields. Module 4 comes first.
         completeModules("page-modules", 4);

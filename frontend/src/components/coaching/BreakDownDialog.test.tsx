@@ -70,6 +70,42 @@ describe('Break into smaller tasks (V17 BL-FR-25, BL-FR-26, BL-FR-29)', () => {
   });
 });
 
+describe('Break into smaller tasks: other paths', () => {
+  beforeEach(() => {
+    splitTask.mockReset();
+    getAiStatus.mockReset().mockResolvedValue({ available: true });
+    suggestSmallerTasks.mockReset();
+  });
+
+  it('says so when AI has too few suggestions, or fails', async () => {
+    suggestSmallerTasks.mockResolvedValueOnce({ tasks: [{ title: 'Only one', owner: 'Me', priority: 'HIGH' }] });
+    render(<BreakDownDialog token="t" task={task} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Suggest smaller tasks' }));
+    expect(await screen.findByText('No suggestions this time. Write the smaller tasks yourself.')).toBeInTheDocument();
+
+    suggestSmallerTasks.mockRejectedValueOnce(new Error('You have used today\'s AI requests.'));
+    await userEvent.click(screen.getByRole('button', { name: 'Suggest smaller tasks' }));
+    expect(await screen.findByText('You have used today\'s AI requests.')).toBeInTheDocument();
+  });
+
+  it('hides the first-action note once a row is ticked, and shows a save error', async () => {
+    splitTask.mockRejectedValueOnce(new Error('Restore this task before breaking it down.'));
+    const onClose = vi.fn();
+    render(<BreakDownDialog token="t" task={{ ...task, blockerReason: undefined }} onClose={onClose} onSaved={vi.fn()} />);
+    expect(screen.queryByText('What blocks it:')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Smaller task 1' }), 'Open the file');
+    expect(screen.getByText(/None of these feels startable yet/)).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('checkbox', { name: 'Could you start this in the next 15 minutes?' })[0]);
+    expect(screen.queryByText(/None of these feels startable yet/)).not.toBeInTheDocument();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Smaller task 2' }), 'Write the outline');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Smaller task 3' }), 'Fill one section');
+    await userEvent.click(screen.getByRole('button', { name: 'Save smaller tasks' }));
+    expect(await screen.findByText('Restore this task before breaking it down.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
 describe('What changed? (V17 BL-FR-27)', () => {
   it('sends the note, or nothing when skipped', async () => {
     const onSubmit = vi.fn();

@@ -154,6 +154,52 @@ class TaskBreakdownFlowTests {
         assertThat(blockedCount(token, taskId)).isEqualTo(3);
     }
 
+    @Test
+    void splitRowsFollowTheTasksPageOrderAndKeepTheirOwnOwnerAndPriority() throws Exception {
+        String token = register("split-list-order");
+        long step = PlanFixture.step(mockMvc, objectMapper, token);
+        long first = task(token, step, Map.of("title", "First"));
+        long parent = task(token, step, Map.of("title", "Plan the event"));
+        long last = task(token, step, Map.of("title", "Last"));
+        send(patch("/api/tasks/list-order"), token, Map.of("orderedIds", List.of(first, parent, last)))
+                .andExpect(status().isNoContent());
+
+        JsonNode result = read(send(post("/api/tasks/" + parent + "/split"), token, Map.of("originalOutcome", "KEEP", "rows",
+                List.of(Map.of("title", "Pick a date", "dueDate", DUE, "owner", "Sok", "priority", "LOW"), row("Book the room"))))
+                .andExpect(status().isCreated()));
+
+        JsonNode pick = result.get("created").get(0);
+        assertThat(pick.get("owner").asText()).isEqualTo("Sok");
+        assertThat(pick.get("priority").asText()).isEqualTo("LOW");
+        assertThat(pick.get("listOrder").asInt()).isEqualTo(2);
+        assertThat(result.get("created").get(1).get("listOrder").asInt()).isEqualTo(3);
+        assertThat(taskField(token, last, "listOrder").asInt()).isEqualTo(4);
+    }
+
+    @Test
+    void anArchivedTaskIsNotSplit() throws Exception {
+        String token = register("split-archived");
+        long step = PlanFixture.step(mockMvc, objectMapper, token);
+        long parent = task(token, step, Map.of("title", "Old task"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/tasks/" + parent)
+                .header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
+
+        send(post("/api/tasks/" + parent + "/split"), token, Map.of("originalOutcome", "KEEP",
+                "rows", List.of(row("One"), row("Two")))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void theTaskFormKeepsAChangeNoteWhenTheTaskLeavesBlocked() throws Exception {
+        String token = register("change-note-form");
+        long step = PlanFixture.step(mockMvc, objectMapper, token);
+        long stuck = task(token, step, Map.of("title", "Book a venue", "status", "BLOCKED", "blockerReason", "No reply"));
+
+        send(put("/api/tasks/" + stuck), token, taskBody(step, Map.of("title", "Book a venue", "status", "IN_PROGRESS",
+                "progressPercent", 20, "changeNote", "Called them instead of emailing"))).andExpect(status().isOk());
+
+        assertThat(notesFor(token, stuck)).contains("Called them instead of emailing");
+    }
+
     private int blockedCount(String token, long taskId) throws Exception {
         return taskField(token, taskId, "blockedCount").asInt();
     }

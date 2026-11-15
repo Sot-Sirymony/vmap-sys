@@ -160,7 +160,8 @@ public class AccountService {
                 .assessments(chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(userId).stream()
                         .map(assessment -> new AccountExportResponse.Assessment(assessment.getTakenOn(),
                                 assessment.getSettlingScore(), assessment.getFearScore(), assessment.getCriticismScore(),
-                                assessment.getVisionScore(), assessment.getKnowledgeScore(), assessment.getResourcesScore()))
+                                assessment.getVisionScore(), assessment.getKnowledgeScore(), assessment.getResourcesScore(),
+                                assessment.getPrioritiesScore(), assessment.getPersistenceScore()))
                         .toList())
                 .moduleCompletions(moduleCompletionRepository.findByUser_Id(userId).stream()
                         .map(completion -> new AccountExportResponse.ModuleCompletion(completion.getModuleNumber(),

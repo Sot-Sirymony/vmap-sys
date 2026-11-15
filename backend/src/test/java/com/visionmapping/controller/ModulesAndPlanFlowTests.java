@@ -234,7 +234,7 @@ class ModulesAndPlanFlowTests {
 
     private Map<String, Object> assessment(LocalDate takenOn, int settling, int fear, int criticism, int vision, int knowledge, int resources) {
         return Map.of("takenOn", takenOn.toString(), "settlingScore", settling, "fearScore", fear, "criticismScore", criticism,
-                "visionScore", vision, "knowledgeScore", knowledge, "resourcesScore", resources);
+                "visionScore", vision, "prioritiesScore", knowledge, "persistenceScore", resources);
     }
 
     private long dream(String token, String dreamStatus, String letterRank) throws Exception {

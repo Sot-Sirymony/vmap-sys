@@ -26,15 +26,16 @@ export const STATEMENT_GUIDE: Record<ChainScoreKey, { meaning: string; low: stri
     low: 'Low: Chenda wants "a better life" but cannot say what that would look like.',
     high: 'High: Bopha can say she wants to open a tailoring shop in her town by June next year.',
   },
-  knowledgeScore: {
-    meaning: 'Whether you find out how when you do not know, or stop at the first thing you do not understand.',
-    low: 'Low: Kosal stops his farm plan because he does not know how to get a loan.',
-    high: 'High: Sophal asks two bank officers and a cousin how loans work, then writes down the steps.',
+  // V17 BL-FR-30. Not knowing how and lack of resources are step gaps now (BL-FR-32).
+  prioritiesScore: {
+    meaning: 'Whether your days go to the few things that move your dream, or to whatever is most urgent or noisy.',
+    low: 'Low: Kosal means to work on his farm plan, but every evening goes to messages and small favours.',
+    high: 'High: Sophal does one task for her plan each morning before she answers anyone else.',
   },
-  resourcesScore: {
-    meaning: 'Whether you look for who could supply what you lack, or give up when you do not have it.',
-    low: 'Low: Nary puts her training idea aside because she has no room to teach in.',
-    high: 'High: Thida asks the village leader and finds a temple hall she can use on Sundays.',
+  persistenceScore: {
+    meaning: 'Whether you keep going when progress is slow or a step fails, or drop the plan and start something else.',
+    low: 'Low: Nary stops her English lessons after two weeks because she does not feel any better yet.',
+    high: 'High: Thida misses a week of saving, then starts again the next week instead of giving up.',
   },
 };
 
@@ -44,8 +45,8 @@ export const PRACTICE_ACTIONS: Record<ChainScoreKey, { path: string; page: strin
   fearScore: { path: '/journal', page: 'Journal' },
   criticismScore: { path: '/obstacles', page: 'Obstacles' },
   visionScore: { path: '/dreams', page: 'Dreams' },
-  knowledgeScore: { path: '/goals', page: 'Goals' },
-  resourcesScore: { path: '/partners', page: 'Partners' },
+  prioritiesScore: { path: '/today', page: 'Today' },
+  persistenceScore: { path: '/today', page: 'Today' },
 };
 
 /** V15 (AH-FR-27): the program's own practice for each barrier, used without AI. */
@@ -54,6 +55,7 @@ export const PRACTICE_PROGRAM: Record<ChainScoreKey, { practice: string; habit: 
   fearScore: { practice: 'This week, log one fear in your Journal and plan the smallest safe test of it.', habit: 'Test one fear' },
   criticismScore: { practice: 'This week, take one criticism you heard and write down the useful point in it, on the Obstacles page.', habit: 'Find the useful point' },
   visionScore: { practice: 'This week, rewrite your top dream\'s success definition so you would know when it is reached.', habit: 'Picture the finish' },
-  knowledgeScore: { practice: 'This week, add one step to a goal to learn something you do not know yet.', habit: 'Learn one thing' },
-  resourcesScore: { practice: 'This week, add one partner who could supply something your plan is missing.', habit: 'Ask one person' },
+  // V17 BL-FR-35: priorities use the letter rank on the Today page; persistence uses one small daily habit.
+  prioritiesScore: { practice: 'Each day this week, give one task the letter rank A on the Today page and do it first.', habit: 'Do my A task first' },
+  persistenceScore: { practice: 'This week, add one small daily habit on the Today page that moves your plan forward, and keep it going.', habit: 'Show up every day' },
 };

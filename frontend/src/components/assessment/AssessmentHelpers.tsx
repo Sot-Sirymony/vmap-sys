@@ -16,16 +16,9 @@ import { tr } from '../../i18n/translate';
 import type { ChainAssessment, ChainScoreKey, WhatChanged } from '../../types/vision';
 import { PRACTICE_ACTIONS, PRACTICE_PROGRAM } from '../../utils/assessmentContent';
 import { Button } from '../common/Button';
+import { CHAIN_LABELS, chainScore } from '../../utils/chains';
 import { SuggestionRating } from '../ai/SuggestionRating';
 
-const CHAIN_LABELS: Record<ChainScoreKey, string> = {
-  settlingScore: 'Settling for average',
-  fearScore: 'Fear of failure',
-  criticismScore: 'Avoiding criticism',
-  visionScore: 'Unclear vision',
-  knowledgeScore: 'Not knowing how',
-  resourcesScore: 'Lack of resources',
-};
 
 type Practice = { chainKey: ChainScoreKey; score: number; practice: string; habit: string };
 
@@ -49,11 +42,13 @@ export function PracticeCard({ token, latest }: Readonly<{ token: string; latest
     getAiStatus(token).then((status) => setAiOn(aiOnFor(status, 'ASSESSMENT'))).catch(() => setAiOn(false));
   }, [token]);
 
-  const weak = (Object.keys(CHAIN_LABELS) as ChainScoreKey[]).filter((key) => latest[key] <= 3);
+  // V17 BL-FR-30: the current six chains; a chain this take did not measure has no practice.
+  const weak = (Object.keys(CHAIN_LABELS) as ChainScoreKey[]).filter((key) => (chainScore(latest, key) ?? 6) <= 3);
   if (weak.length === 0) {
     return null;
   }
-  const fromProgram = (): Practice[] => weak.map((key) => ({ chainKey: key, score: latest[key], ...PRACTICE_PROGRAM[key] }));
+  const scoreOf = (key: ChainScoreKey) => chainScore(latest, key) ?? 0;
+  const fromProgram = (): Practice[] => weak.map((key) => ({ chainKey: key, score: scoreOf(key), ...PRACTICE_PROGRAM[key] }));
 
   async function load() {
     setBusy(true);
@@ -66,7 +61,7 @@ export function PracticeCard({ token, latest }: Readonly<{ token: string; latest
           setPractices(weak.map((key) => {
             const found = answer.practices.find((item) => item.chainKey === key);
             return found ? { chainKey: key, score: found.score, practice: found.practice, habit: found.habit || PRACTICE_PROGRAM[key].habit }
-              : { chainKey: key, score: latest[key], ...PRACTICE_PROGRAM[key] };
+              : { chainKey: key, score: scoreOf(key), ...PRACTICE_PROGRAM[key] };
           }));
           setRequestId(answer.requestId);
           return;

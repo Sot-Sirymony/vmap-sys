@@ -290,7 +290,7 @@ class AssessmentWorkStyleFlowTests {
 
     private void assessment(String token, int settling, int fear, int criticism, int vision, int knowledge, int resources) throws Exception {
         send(put("/api/chain-assessments"), token, Map.of("takenOn", TODAY.toString(), "settlingScore", settling, "fearScore", fear,
-                "criticismScore", criticism, "visionScore", vision, "knowledgeScore", knowledge, "resourcesScore", resources))
+                "criticismScore", criticism, "visionScore", vision, "prioritiesScore", knowledge, "persistenceScore", resources))
                 .andExpect(status().isOk());
     }
 

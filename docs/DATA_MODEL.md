@@ -253,7 +253,9 @@ Belongs to:
 
 ## V8 Assessment and Modules
 
-- **ChainAssessment:** `takenOn` and six scores from 1 to 5. One per user per day.
+- **ChainAssessment:** `takenOn` and six scores from 1 to 5. One per user per day. V17 (migration V78): the six are
+  settling, fear, criticism, `prioritiesScore`, `persistenceScore` and vision. `knowledgeScore` and `resourcesScore`
+  are retired (nullable, kept on past rows) because they are step gaps now.
 - **LearningModule:** `number`, `position`, `stage`, `completionRule`, `linkPath`.
   **LearningModuleContent:** text per `language`, including form fields as JSON.
   Both are seeded by migration and read-only for users.

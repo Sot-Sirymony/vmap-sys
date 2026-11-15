@@ -66,11 +66,22 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [17.0.0] — Phases 1 to 4 of 5 built; awaiting confirmation for phase 5
+## [17.0.0] — All 5 phases built; awaiting UAT, sign-off of D-17-1 to D-17-3 and Q-01, and the Khmer review
 
 Implements phases 1 and 2 of [BRD 17.0.0](VMS_BRD_V17.0.0.md): blockers sit on a step or a task, not on a dream or goal,
-and dreams and goals describe only the outcome. Migrations: `V75__obstacle_anchor_consistency.sql` (phase 1), `V76__step_gap_kind_and_origin.sql` (phase 3), `V77__task_block_count.sql` (phase 4). `CLAUDE.md`
+and dreams and goals describe only the outcome. Migrations: `V75__obstacle_anchor_consistency.sql` (phase 1), `V76__step_gap_kind_and_origin.sql` (phase 3), `V77__task_block_count.sql` (phase 4), `V78__chain_priorities_persistence.sql` (phase 5). `CLAUDE.md`
 updated for decisions D-17-1 and D-17-2.
+
+### Added in phase 5
+- **The six chains (BL-FR-30 to BL-FR-32).** The chain check asks settling, fear of failure, avoiding criticism,
+  misplaced priorities, giving up too soon and unclear vision. Not knowing how and lack of resources are step gaps now.
+  Past takes keep their scores, shown as "No longer measured (moved to step gaps)"; the trend compares only shared
+  chains. Migration `V78__chain_priorities_persistence.sql`.
+- **Before the first dream (BL-FR-33).** With no dreams and no chain check, the Dreams page and the dream guide offer
+  "Take the 2-minute check" or "Skip for now" (hidden for 30 days). Never required.
+- **Fear journal link (BL-FR-34).** A fear or criticism score of 1 or 2 offers "Write it down in the fear journal".
+- **Practices (BL-FR-35).** Priorities: one A-rank task first each day. Persistence: one small daily habit. Both on
+  the Today page.
 
 ### Added in phase 4
 - **Break into smaller tasks (BL-FR-24 to BL-FR-26).** A Blocked task, or one In Progress past its due date, offers

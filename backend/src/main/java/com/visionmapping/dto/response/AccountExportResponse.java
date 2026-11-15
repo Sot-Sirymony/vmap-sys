@@ -90,8 +90,9 @@ public record AccountExportResponse(
     }
 
     /** The six chain scores, named as the export has always named them. */
-    public record Assessment(LocalDate takenOn, int settling, int fear, int criticism, int vision, int knowledge,
-                             int resources) {
+    /** V17: knowledge and resources are set on takes before V17 only; priorities and persistence from V17 on. */
+    public record Assessment(LocalDate takenOn, int settling, int fear, int criticism, int vision, Integer knowledge,
+                             Integer resources, Integer priorities, Integer persistence) {
     }
 
     public record ModuleCompletion(Integer moduleNumber, Instant completedAt, String rowsJson, Integer coachRating,

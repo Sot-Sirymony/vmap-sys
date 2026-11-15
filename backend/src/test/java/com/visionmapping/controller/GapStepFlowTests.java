@@ -192,6 +192,67 @@ class GapStepFlowTests {
         assertThat(issueKinds(planCheck(token, plan.dreamId()))).doesNotContain("GAP_NEEDS_HELP");
     }
 
+    @Test
+    void anObstacleOnAStepBecomesAStepJustBeforeItWithANamedPartner() throws Exception {
+        String token = register("gap-obstacle-placed");
+        Branch plan = PlanFixture.branch(mockMvc, objectMapper, token);
+        long obstacleId = PlanFixture.createdId(mockMvc, objectMapper, token, "/api/obstacles", Map.of("title", "No survey tool",
+                "obstacleType", "SYSTEM", "severity", "HIGH", "status", "OPEN", "relatedStepId", plan.stepId()));
+
+        JsonNode result = read(send(post("/api/obstacles/" + obstacleId + "/convert-to-step"), token, gapBody(Map.of(
+                "gapKind", "KNOWLEDGE", "createPartner", true, "partnerName", "Dr. Chan", "description", "Ask about tools")))
+                .andExpect(status().isCreated()));
+
+        JsonNode step = result.get("step");
+        assertThat(step.get("sequenceNumber").asInt()).isEqualTo(1);
+        assertThat(step.get("coversStepId").asLong()).isEqualTo(plan.stepId());
+        assertThat(step.get("gapKind").asText()).isEqualTo("KNOWLEDGE");
+        assertThat(step.get("description").asText()).isEqualTo("Ask about tools");
+        assertThat(result.get("partner").get("name").asText()).isEqualTo("Dr. Chan");
+        assertThat(result.get("partner").get("supportType").asText()).isEqualTo("MENTOR");
+        assertThat(stepField(token, plan.stepId(), "sequenceNumber").asInt()).isEqualTo(2);
+    }
+
+    @Test
+    void closedObstaclesAndArchivedStepsAreNotTurnedIntoSteps() throws Exception {
+        String token = register("gap-refused");
+        Branch plan = PlanFixture.branch(mockMvc, objectMapper, token);
+        long resolved = PlanFixture.createdId(mockMvc, objectMapper, token, "/api/obstacles", Map.of("title", "Old worry",
+                "obstacleType", "TIME", "severity", "LOW", "status", "RESOLVED", "rootCause", "Too many meetings",
+                "relatedStepId", plan.stepId()));
+        send(post("/api/obstacles/" + resolved + "/convert-to-step"), token, gapBody(Map.of()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("This blocker is already closed, so it needs no step."));
+
+        send(put("/api/steps/" + plan.stepId()), token, stepBody(plan.goalId(), Map.of("resources", "no budget")))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete("/api/steps/" + plan.stepId()).header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+        send(post("/api/steps/" + plan.stepId() + "/gap-step"), token, gapBody(Map.of()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Restore this step before planning help for it."));
+    }
+
+    @Test
+    void archivingAFindHelpStepKeepsItsPartnerUnlessAsked() throws Exception {
+        String token = register("gap-archive-keep");
+        Branch plan = PlanFixture.branch(mockMvc, objectMapper, token);
+        long created = PlanFixture.createdId(mockMvc, objectMapper, token, "/api/steps", stepBody(plan.goalId(),
+                Map.of("title", "Second", "sequenceNumber", 2, "resources", "no data", "gapKind", "PARTNER")));
+        assertThat(stepField(token, created, "gapKind").asText()).isEqualTo("PARTNER");
+        JsonNode result = read(send(post("/api/steps/" + created + "/gap-step"), token, gapBody(Map.of("createPartner", true)))
+                .andExpect(status().isCreated()));
+        // A partner gap has no suggested helper type.
+        assertThat(result.get("partner").get("supportType").asText()).isEqualTo("OTHER");
+        assertThat(result.get("partner").get("name").asText()).startsWith("To find: ");
+
+        mockMvc.perform(delete("/api/steps/" + result.get("step").get("id").asLong()).header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+        JsonNode partner = read(mockMvc.perform(get("/api/partners/" + result.get("partner").get("id").asLong())
+                .header("Authorization", "Bearer " + token)).andExpect(status().isOk()));
+        assertThat(partner.get("archived").asBoolean()).isFalse();
+    }
+
     private JsonNode planCheck(String token, long dreamId) throws Exception {
         return read(mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/check").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk()));

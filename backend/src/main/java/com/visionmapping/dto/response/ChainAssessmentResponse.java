@@ -10,8 +10,13 @@ public record ChainAssessmentResponse(
         Integer fearScore,
         Integer criticismScore,
         Integer visionScore,
+        // Retired in V17 (BL-FR-31): set on past takes only.
         Integer knowledgeScore,
         Integer resourcesScore,
-        BigDecimal averageScore
+        // The average of the chains this take measured.
+        BigDecimal averageScore,
+        // V17 BL-FR-30: set on takes from V17 on.
+        Integer prioritiesScore,
+        Integer persistenceScore
 ) {
 }

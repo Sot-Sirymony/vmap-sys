@@ -440,6 +440,21 @@ V17 phase 4, break it down (BRD 17.0.0, BL-FR-25 to BL-FR-29):
   daily limit and monthly cap as other AI calls. Another user's task answers
   404 before AI is checked.
 
+V17 phase 5, the six chains (BRD 17.0.0, BL-FR-30 to BL-FR-35):
+- `PUT /chain-assessments` now takes `settlingScore`, `fearScore`,
+  `criticismScore`, `prioritiesScore`, `persistenceScore` and `visionScore`
+  (all required, 1 to 5). `knowledgeScore` and `resourcesScore` are no longer
+  accepted; a request without the two new scores answers 400.
+- Responses add `prioritiesScore` and `persistenceScore` (null on takes from
+  before V17); `knowledgeScore` and `resourcesScore` are null on new takes.
+  `averageScore` covers the chains that take measured. `improvementPercent`
+  compares baseline and latest over the chains both measured.
+- The account export's `assessments` rows add `priorities` and `persistence`;
+  `knowledge` and `resources` may be null.
+- Module helpers: "Which module next?" maps misplaced priorities to module 13
+  and lack of persistence to module 12. Assessment practices for them use the
+  Today page (letter rank A, one daily habit).
+
 Obstacle types:
 - KNOWLEDGE
 - SKILL

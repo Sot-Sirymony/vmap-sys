@@ -21,6 +21,7 @@ import { Button } from '../components/common/Button';
 import { CrudModalForm } from '../components/common/CrudModalForm';
 import { EmptyState } from '../components/common/EmptyState';
 import { DreamWizard } from '../components/forms/DreamWizard';
+import { PreDreamCard } from '../components/coaching/PreDreamCard';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { FilterPanel } from '../components/common/FilterPanel';
@@ -702,6 +703,7 @@ export function DreamsPage() {
           token={token ?? ''}
           visionAreas={visionAreas}
           initialVisionAreaId={visionAreaId || undefined}
+          firstDream={crud.items.length === 0}
           onClose={() => setWizardOpen(false)}
           onSkip={() => {
             setWizardOpen(false);
@@ -785,6 +787,8 @@ export function DreamsPage() {
       <div className="view-toggle-row">
         <ViewToggle value={viewMode} onChange={setViewMode} label={tr('Dream view')} />
       </div>
+      {/* V17 BL-FR-33: the chain check, offered before the first dream. */}
+      {!crud.loading && crud.items.length === 0 && !hasFilters && token && <PreDreamCard token={token} hasDreams={false} />}
       {!crud.loading && crud.items.length === 0 && !hasFilters ? (
         <EmptyState
           headline={tr('No dreams yet')}

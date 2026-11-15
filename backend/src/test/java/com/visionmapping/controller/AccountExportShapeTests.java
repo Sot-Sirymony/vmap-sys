@@ -71,7 +71,7 @@ class AccountExportShapeTests {
         secondGoalId = goal();
         send(post("/api/habits?date=" + DAY), Map.of("name", "Read")).andExpect(status().isCreated());
         send(put("/api/chain-assessments"), Map.of("takenOn", DAY.toString(), "settlingScore", 1, "fearScore", 2,
-                "criticismScore", 3, "visionScore", 4, "knowledgeScore", 5, "resourcesScore", 1)).andExpect(status().isOk());
+                "criticismScore", 3, "visionScore", 4, "prioritiesScore", 5, "persistenceScore", 1)).andExpect(status().isOk());
         send(post("/api/milestones"), Map.of("dreamId", dreamId, "title", "Saved the deposit", "achievedOn", DAY.toString(),
                 "note", "First big step")).andExpect(status().isCreated());
         jdbcTemplate.update("insert into goal_synergy_links (user_id, goal_id, related_goal_id, note, created_at, updated_at)"
@@ -111,9 +111,10 @@ class AccountExportShapeTests {
 
         assertRow(export, "habits", Map.of("name", "\"Read\"", "archived", "false"),
                 "archived", "checkedDates", "name");
+        // V17 BL-FR-30, BL-FR-31: a new take has priorities and persistence; the retired chains are null.
         assertRow(export, "assessments", Map.of("takenOn", "\"2026-10-01\"", "settling", "1", "fear", "2", "criticism", "3",
-                        "vision", "4", "knowledge", "5", "resources", "1"),
-                "criticism", "fear", "knowledge", "resources", "settling", "takenOn", "vision");
+                        "vision", "4", "priorities", "5", "persistence", "1", "knowledge", "null", "resources", "null"),
+                "criticism", "fear", "knowledge", "persistence", "priorities", "resources", "settling", "takenOn", "vision");
         assertRow(export, "moduleCompletions", Map.of("moduleNumber", "1", "rowsJson", "\"[]\"", "coachRating", "4",
                         "coachFeedback", "\"Good work\""),
                 "coachFeedback", "coachRatedAt", "coachRating", "completedAt", "moduleNumber", "rowsJson");

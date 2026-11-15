@@ -20,21 +20,13 @@ import type { ChainAssessmentSummary, ChainScoreKey } from '../types/vision';
 import { localDateIso } from '../utils/localDate';
 import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
-import { tr } from '../i18n/translate';
 import { HelpWithThis, PageAssistantProvider, PageHelpButton } from '../components/ai/page-assistant/PageAssistant';
 import { PracticeCard, WhatChangedCard } from '../components/assessment/AssessmentHelpers';
 import { STATEMENT_GUIDE } from '../utils/assessmentContent';
+import { CHAINS, chainScore, fearLinkSuggested, retiredChainsIn } from '../utils/chains';
 
 const SCORES = [1, 2, 3, 4, 5];
 
-const CHAINS: { key: ChainScoreKey; label: string; question: string }[] = [
-  { key: 'settlingScore', label: tr('Settling for average'), question: tr('I expect more of myself than what is merely comfortable.') },
-  { key: 'fearScore', label: tr('Fear of failure'), question: tr('I try things even when they might not work.') },
-  { key: 'criticismScore', label: tr('Avoiding criticism'), question: tr('What others may say does not stop me from acting.') },
-  { key: 'visionScore', label: tr('Unclear vision'), question: tr('I can describe exactly what I want and when I want it.') },
-  { key: 'knowledgeScore', label: tr('Not knowing how'), question: tr('When I do not know how, I find out instead of stopping.') },
-  { key: 'resourcesScore', label: tr('Lack of resources'), question: tr('When I lack something, I look for who could supply it.') },
-];
 
 /** FR-71: the six-chain self-assessment, its retake, and progress from the baseline. */
 export function AssessmentPage() {
@@ -75,14 +67,15 @@ export function AssessmentPage() {
     setSaving(true);
     setSaveError('');
     try {
+      // V17 BL-FR-30: the six current chains, all answered (complete is checked above).
       await saveChainAssessment(token, {
         takenOn: localDateIso(),
         settlingScore: scores.settlingScore as number,
         fearScore: scores.fearScore as number,
         criticismScore: scores.criticismScore as number,
+        prioritiesScore: scores.prioritiesScore as number,
+        persistenceScore: scores.persistenceScore as number,
         visionScore: scores.visionScore as number,
-        knowledgeScore: scores.knowledgeScore as number,
-        resourcesScore: scores.resourcesScore as number,
       });
       setScores({});
       await load();
@@ -96,6 +89,9 @@ export function AssessmentPage() {
   const assessments = summary?.assessments ?? [];
   const baseline = assessments[0];
   const latest = assessments[assessments.length - 1];
+  // V17 BL-FR-31: a chain is compared from the first take that measured it; retired chains are labelled.
+  const firstMeasured = (key: ChainScoreKey) => assessments.find((take) => chainScore(take, key) !== null);
+  const retired = retiredChainsIn(assessments);
 
   return (
     // V15 (AH-FR-01): the page assistant on the Assessment page. It never suggests a score (AH-FR-24).
@@ -153,12 +149,26 @@ export function AssessmentPage() {
                     {CHAINS.map((chain) => (
                       <tr key={chain.key}>
                         <td>{t(chain.label)}</td>
-                        <td>{baseline[chain.key]}</td>
-                        <td>{latest[chain.key]}</td>
+                        <td>{chainScore(firstMeasured(chain.key), chain.key) ?? '—'}</td>
+                        <td>{chainScore(latest, chain.key) ?? t('Not measured yet')}</td>
+                      </tr>
+                    ))}
+                    {retired.map((chain) => (
+                      <tr key={chain.key} className="chain-retired">
+                        <td>{t(chain.label)}</td>
+                        <td>{chainScore(assessments.find((take) => chainScore(take, chain.key) !== null), chain.key)}</td>
+                        <td>{t('No longer measured (moved to step gaps)')}</td>
                       </tr>
                     ))}
                   </tbody>
                 </Box>
+                {fearLinkSuggested(latest) && (
+                  // V17 BL-FR-34: a low fear or criticism score links to the fear journal.
+                  <Alert severity="info" sx={{ mt: 2 }}
+                    action={<Button variant="secondary" onClick={() => navigate('/journal?newFear=1')}>{t('Write it down in the fear journal')}</Button>}>
+                    {t('Fear of failure or criticism is holding you back right now. Writing the fear down and planning one small test makes it smaller.')}
+                  </Alert>
+                )}
               </CardContent>
             </Card>
           )}

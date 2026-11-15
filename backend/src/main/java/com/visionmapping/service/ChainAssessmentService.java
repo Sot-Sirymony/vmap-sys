@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ChainAssessmentService {
 
-    private static final int CHAIN_COUNT = 6;
     private static final int RETAKE_AFTER_DAYS = 84;
     private static final int RETAKE_AFTER_MODULE_DAYS = 28;
 
@@ -43,7 +43,8 @@ public class ChainAssessmentService {
     /** The same summary for any user; callers check they may see that user (V9 coach view). */
     @Transactional(readOnly = true)
     public ChainAssessmentSummaryResponse summary(Long userId) {
-        List<ChainAssessmentResponse> assessments = chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(userId).stream()
+        List<ChainAssessment> takes = chainAssessmentRepository.findByUser_IdOrderByTakenOnAsc(userId);
+        List<ChainAssessmentResponse> assessments = takes.stream()
                 .map(ChainAssessmentService::toResponse)
                 .toList();
         BigDecimal improvement = null;
@@ -58,8 +59,8 @@ public class ChainAssessmentService {
                     && completionRepository.findByUser_Id(userId).stream()
                     .anyMatch(completion -> completion.getCompletedAt() != null
                             && completion.getCompletedAt().atZone(clock.getZone()).toLocalDate().isAfter(takenOn));
-            if (assessments.size() > 1) {
-                improvement = improvementPercent(assessments.get(0).averageScore(), latest.averageScore());
+            if (takes.size() > 1) {
+                improvement = sharedImprovement(takes.get(0), takes.get(takes.size() - 1));
             }
         }
         return new ChainAssessmentSummaryResponse(assessments, improvement, retakeSuggested, retakeAfterModule);
@@ -72,21 +73,47 @@ public class ChainAssessmentService {
         entity.setSettlingScore(request.settlingScore());
         entity.setFearScore(request.fearScore());
         entity.setCriticismScore(request.criticismScore());
+        entity.setPrioritiesScore(request.prioritiesScore());
+        entity.setPersistenceScore(request.persistenceScore());
         entity.setVisionScore(request.visionScore());
-        entity.setKnowledgeScore(request.knowledgeScore());
-        entity.setResourcesScore(request.resourcesScore());
+        // V17 BL-FR-31: a new take measures the current six only; retaking an older same-day take drops the retired two.
+        entity.setKnowledgeScore(null);
+        entity.setResourcesScore(null);
         return toResponse(chainAssessmentRepository.save(entity));
+    }
+
+    /**
+     * V17 BL-FR-31: the change from baseline to latest over the chains both
+     * measured, so a retired or new chain never skews it. Null when they share none.
+     */
+    @Nullable
+    static BigDecimal sharedImprovement(ChainAssessment baseline, ChainAssessment latest) {
+        List<ModuleJourneyService.Chain> shared = ModuleJourneyService.ALL_CHAINS.stream()
+                .filter(chain -> chain.measuredIn(baseline) && chain.measuredIn(latest))
+                .toList();
+        if (shared.isEmpty()) {
+            return null;
+        }
+        return improvementPercent(average(shared, baseline), average(shared, latest));
+    }
+
+    private static BigDecimal average(List<ModuleJourneyService.Chain> chains, ChainAssessment take) {
+        int total = chains.stream().mapToInt(chain -> chain.scoreOf(take)).sum();
+        return BigDecimal.valueOf(total).divide(BigDecimal.valueOf(chains.size()), 2, RoundingMode.HALF_UP);
     }
 
     static BigDecimal improvementPercent(BigDecimal baseline, BigDecimal latest) {
         return latest.subtract(baseline).multiply(BigDecimal.valueOf(100)).divide(baseline, 1, RoundingMode.HALF_UP);
     }
 
+    /** The average covers the chains this take measured (six on every take, old or new). */
     private static ChainAssessmentResponse toResponse(ChainAssessment entity) {
-        int total = entity.getSettlingScore() + entity.getFearScore() + entity.getCriticismScore()
-                + entity.getVisionScore() + entity.getKnowledgeScore() + entity.getResourcesScore();
-        BigDecimal average = BigDecimal.valueOf(total).divide(BigDecimal.valueOf(CHAIN_COUNT), 2, RoundingMode.HALF_UP);
+        List<ModuleJourneyService.Chain> measured = ModuleJourneyService.ALL_CHAINS.stream()
+                .filter(chain -> chain.measuredIn(entity))
+                .toList();
+        BigDecimal average = measured.isEmpty() ? BigDecimal.ZERO.setScale(2) : average(measured, entity);
         return new ChainAssessmentResponse(entity.getId(), entity.getTakenOn(), entity.getSettlingScore(), entity.getFearScore(),
-                entity.getCriticismScore(), entity.getVisionScore(), entity.getKnowledgeScore(), entity.getResourcesScore(), average);
+                entity.getCriticismScore(), entity.getVisionScore(), entity.getKnowledgeScore(), entity.getResourcesScore(), average,
+                entity.getPrioritiesScore(), entity.getPersistenceScore());
     }
 }

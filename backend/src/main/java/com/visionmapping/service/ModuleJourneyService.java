@@ -15,7 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.ToIntFunction;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -29,18 +29,53 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ModuleJourneyService {
 
-    /** One barrier of the six-chain assessment and the Break the Chains module that works on it. */
-    public record Chain(String key, String label, int module, ToIntFunction<ChainAssessment> score) {
+    /**
+     * One barrier of the six-chain assessment, the statement it is scored on,
+     * and the module that works on it. A take may not have measured it (the
+     * chains changed in V17), so its score can be null.
+     */
+    public record Chain(String key, String label, String statement, int module, Function<ChainAssessment, Integer> score) {
+
+        @Nullable
+        public Integer scoreOf(ChainAssessment take) {
+            return score.apply(take);
+        }
+
+        public boolean measuredIn(ChainAssessment take) {
+            return scoreOf(take) != null;
+        }
     }
 
-    /** The six barriers, each with the module that works on it. */
+    /**
+     * V17 BL-FR-30 (D-17-3): the six chains, in the method's order, each with
+     * the module that works on it. Original wording (BL-NFR-05).
+     */
     public static final List<Chain> CHAINS = List.of(
-            new Chain("settlingScore", "Settling for average", 1, ChainAssessment::getSettlingScore),
-            new Chain("fearScore", "Fear of failure", 2, ChainAssessment::getFearScore),
-            new Chain("criticismScore", "Avoiding criticism", 3, ChainAssessment::getCriticismScore),
-            new Chain("visionScore", "Unclear vision", 4, ChainAssessment::getVisionScore),
-            new Chain("knowledgeScore", "Not knowing how", 5, ChainAssessment::getKnowledgeScore),
-            new Chain("resourcesScore", "Lack of resources", 6, ChainAssessment::getResourcesScore));
+            new Chain("settlingScore", "Settling for average", "I expect more of myself than what is comfortable.", 1,
+                    ChainAssessment::getSettlingScore),
+            new Chain("fearScore", "Fear of failure", "I try things even when they might not work.", 2,
+                    ChainAssessment::getFearScore),
+            new Chain("criticismScore", "Avoiding criticism", "What others may say does not stop me.", 3,
+                    ChainAssessment::getCriticismScore),
+            new Chain("prioritiesScore", "Misplaced priorities", "My time goes to what matters most, not to what is loudest.", 13,
+                    ChainAssessment::getPrioritiesScore),
+            new Chain("persistenceScore", "Giving up too soon", "When progress is slow, I keep going instead of quitting.", 12,
+                    ChainAssessment::getPersistenceScore),
+            new Chain("visionScore", "Unclear vision", "I can describe exactly what I want and when.", 4,
+                    ChainAssessment::getVisionScore));
+
+    /**
+     * V17 BL-FR-31, BL-FR-32: chains measured before V17 and now handled as
+     * step gaps. Shown on past takes as "No longer measured", never asked.
+     */
+    public static final List<Chain> RETIRED_CHAINS = List.of(
+            new Chain("knowledgeScore", "Not knowing how", "When I do not know how, I find out instead of stopping.", 5,
+                    ChainAssessment::getKnowledgeScore),
+            new Chain("resourcesScore", "Lack of resources", "When I lack something, I look for who could supply it.", 6,
+                    ChainAssessment::getResourcesScore));
+
+    /** Every chain a take may hold: the current six, then the retired ones. */
+    public static final List<Chain> ALL_CHAINS = java.util.stream.Stream.concat(CHAINS.stream(), RETIRED_CHAINS.stream()).toList();
     /** A chain scored this or lower is holding the participant back (AH-FR-14). */
     static final int LOW_SCORE = 2;
 
@@ -67,15 +102,16 @@ public class ModuleJourneyService {
         }
         Optional<ChainAssessment> latest = latest();
         if (latest.isPresent()) {
+            ChainAssessment take = latest.get();
             Optional<Chain> low = CHAINS.stream()
-                    .filter(chain -> chain.score().applyAsInt(latest.get()) <= LOW_SCORE)
+                    .filter(chain -> chain.measuredIn(take) && chain.scoreOf(take) <= LOW_SCORE)
                     .filter(chain -> available.stream().anyMatch(module -> module.number() == chain.module()))
-                    .min(Comparator.comparingInt((Chain chain) -> chain.score().applyAsInt(latest.get()))
+                    .min(Comparator.comparingInt((Chain chain) -> chain.scoreOf(take))
                             .thenComparingInt(chain -> position(available, chain.module())));
             if (low.isPresent()) {
                 LearningModuleSummaryResponse module = byNumber(available, low.get().module());
                 return new ModuleNext(module.number(), module.title(), "Your latest assessment scored " + low.get().label() + " "
-                        + low.get().score().applyAsInt(latest.get()) + " of 5, and this module works on it.", "LOW_CHAIN", "RULE", null);
+                        + low.get().scoreOf(take) + " of 5, and this module works on it.", "LOW_CHAIN", "RULE", null);
             }
         }
         LearningModuleSummaryResponse first = available.get(0);
@@ -103,10 +139,15 @@ public class ModuleJourneyService {
             }
         }
         List<ChainAssessment> takes = assessmentRepository.findByUser_IdOrderByTakenOnAsc(lookup.userId());
-        List<ChainChange> chains = takes.isEmpty() ? List.of() : CHAINS.stream()
-                .map(chain -> new ChainChange(chain.key(), chain.label(), chain.score().applyAsInt(takes.get(0)),
-                        chain.score().applyAsInt(takes.get(takes.size() - 1))))
-                .toList();
+        // V17 BL-FR-31: each chain from the first take that measured it to the latest that did.
+        List<ChainChange> chains = new ArrayList<>();
+        for (Chain chain : CHAINS) {
+            List<ChainAssessment> measured = takes.stream().filter(chain::measuredIn).toList();
+            if (!measured.isEmpty()) {
+                chains.add(new ChainChange(chain.key(), chain.label(), chain.scoreOf(measured.get(0)),
+                        chain.scoreOf(measured.get(measured.size() - 1))));
+            }
+        }
         int done = (int) modules.stream().filter(module -> module.status() == ModuleStatus.COMPLETED).count();
         return new Journey(done, modules.size(), progress, takes.size(), chains, nextStage);
     }

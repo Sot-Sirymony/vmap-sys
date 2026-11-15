@@ -5,6 +5,7 @@ import type {
   StrengthKind,
   WorkStyleProfile,
 } from '../types/vision';
+import { chainScore } from './chains';
 import { tr } from '../i18n/translate';
 import { ARCHETYPE_GUIDANCE } from './workStyleAssessment';
 
@@ -20,8 +21,8 @@ const CHAIN_GAPS: Record<ChainScoreKey, string> = {
   fearScore: tr('Fear of failing stops me from trying.'),
   criticismScore: tr('Worry about what others will say stops me from acting.'),
   visionScore: tr('I am not yet clear on exactly what I want.'),
-  knowledgeScore: tr('I stop when I do not know how.'),
-  resourcesScore: tr('I stop when I lack something instead of looking for who could supply it.'),
+  prioritiesScore: tr('My time goes to what is urgent instead of what matters most.'),
+  persistenceScore: tr('I give up when progress is slow.'),
 };
 
 const LOW_SCORE = 2;
@@ -45,7 +46,7 @@ export function strengthSuggestions(
   }
   if (latestAssessment) {
     (Object.keys(CHAIN_GAPS) as ChainScoreKey[])
-      .filter((key) => latestAssessment[key] <= LOW_SCORE)
+      .filter((key) => (chainScore(latestAssessment, key) ?? LOW_SCORE + 1) <= LOW_SCORE)
       .forEach((key) => suggestions.push({ kind: 'WEAKNESS', description: CHAIN_GAPS[key], source: 'SIX_CHAIN' }));
   }
   const existing = new Set(existingDescriptions.map(normalise));

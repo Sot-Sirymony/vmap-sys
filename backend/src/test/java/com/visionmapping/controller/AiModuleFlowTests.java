@@ -137,7 +137,7 @@ class AiModuleFlowTests {
         verify(claudeClient, never()).structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.AssessmentExplanationDraft.class));
 
         send(put("/api/chain-assessments"), user, Map.of("takenOn", LocalDate.now().toString(), "settlingScore", 4, "fearScore", 1,
-                "criticismScore", 3, "visionScore", 5, "knowledgeScore", 2, "resourcesScore", 3)).andExpect(status().is2xxSuccessful());
+                "criticismScore", 3, "visionScore", 5, "prioritiesScore", 2, "persistenceScore", 3)).andExpect(status().is2xxSuccessful());
         when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.AssessmentExplanationDraft.class)))
                 .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.AssessmentExplanationDraft("Fear holds you back most.", 2,
                         "Testing fears comes first."), "claude-opus-5-5", 10, 10, false));

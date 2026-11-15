@@ -12,6 +12,7 @@ import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { Textarea } from '../common/Textarea';
 import type { Dream, DreamType, Priority, VisionArea } from '../../types/vision';
+import { PreDreamCard } from '../coaching/PreDreamCard';
 import { tr } from '../../i18n/translate';
 
 type DreamWizardProps = {
@@ -24,6 +25,8 @@ type DreamWizardProps = {
   onSkip: () => void;
   /** Fired after the dream (and any first goals) are saved, so the page reloads. */
   onCreated: (dream: Dream) => void;
+  /** V17 BL-FR-33: no dreams yet, so the chain check is offered first (never required). */
+  firstDream?: boolean;
 };
 
 /**
@@ -34,7 +37,7 @@ type DreamWizardProps = {
  * required (the backend's rules); the rest is coaching, not validation
  * (FR-21.4).
  */
-export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, onSkip, onCreated }: DreamWizardProps) {
+export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, onSkip, onCreated, firstDream = false }: DreamWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [error, setError] = useState('');
@@ -135,6 +138,7 @@ export function DreamWizard({ token, visionAreas, initialVisionAreaId, onClose, 
     <Modal title={stepTitles[step]} onClose={handleClose}>
       {step < 3 && <p className="wizard-progress">Step {step + 1} of 3</p>}
       {error && <ErrorMessage message={error} />}
+      {step === 0 && firstDream && <PreDreamCard token={token} hasDreams={false} />}
 
       {step === 0 && (
         <form className="form-grid" onSubmit={handleStepSubmit}>

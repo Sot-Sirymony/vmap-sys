@@ -261,7 +261,7 @@ class AccountAndProgressFlowTests {
 
     private Map<String, Object> assessment(LocalDate takenOn, int score) {
         return Map.of("takenOn", takenOn.toString(), "settlingScore", score, "fearScore", score, "criticismScore", score,
-                "visionScore", score, "knowledgeScore", score, "resourcesScore", score);
+                "visionScore", score, "prioritiesScore", score, "persistenceScore", score);
     }
 
     private long dream(String token, String title) throws Exception {
