@@ -217,6 +217,8 @@ exports[`API contract (BRD 12 COV-FR-25) > sends the expected method, path and b
   "preferencesApi.getAppearancePreferences(token) -> GET /preferences/appearance [auth]",
   "preferencesApi.updateAppearancePreferences(token, changes) -> PUT /preferences/appearance [auth] "text"",
   "progressLogApi.listProgressLogs(token) -> GET /progress-logs [auth]",
+  "reportApi.downloadManagementReport(token, filter, format, language, deck) -> GET /reports/management.text?language=km [auth]",
+  "reportApi.getManagementReport(token, filter) -> GET /reports/management [auth]",
   "reviewApi.archiveReview(token, id) -> DELETE /reviews/11 [auth]",
   "reviewApi.createReview(token, request) -> POST /reviews [auth] {"sample":"value"}",
   "reviewApi.listReviews(token, includeArchived) -> GET /reviews?includeArchived=true [auth]",

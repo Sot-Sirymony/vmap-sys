@@ -277,6 +277,12 @@ export function DreamDetailPage() {
     <PageSection
       title={tr('Vision Map')}
       subtitle={overviewMode ? tr('Every dream at a glance — open one to work its tree.') : tr('View one dream from area to executable tasks.')}
+      // V18 MR-FR-01, MR-FR-06: the report for this dream, or for every dream.
+      actions={(
+        <Button variant="secondary" onClick={() => navigate(`/vision-map/report${dreamId ? `?dreamId=${dreamId}` : ''}`)}>
+          {tr('Management report')}
+        </Button>
+      )}
     >
       {dreams.length > 0 && (
         <Card>

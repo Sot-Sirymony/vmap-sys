@@ -1938,3 +1938,51 @@ export type ClientErrorLogEntry = {
   reference: string | null;
   appVersion: string | null;
 };
+
+// V18 (BRD 18.0.0): the Management Report's Summary (MR-FR-07 to MR-FR-13).
+export type ReportHealth = 'RED' | 'AMBER' | 'GREEN' | 'DONE';
+
+export type ReportScope = { kind: 'ALL' | 'AREA' | 'DREAM'; areaId?: number | null; dreamId?: number | null; label?: string | null };
+
+export type ReportAttentionKind = 'CRITICAL_BLOCKER' | 'BLOCKED_TASK' | 'OVERDUE_URGENT' | 'OVERDUE' | 'GAP_NEEDS_HELP';
+
+export type ManagementReport = {
+  scope: ReportScope;
+  asOf: string;
+  headline: {
+    overallProgress: number;
+    goalsByHealth: Record<ReportHealth, number>;
+    totalTasks: number;
+    completedTasks: number;
+    overdueTasks: number;
+    blockedTasks: number;
+    openBlockers: number;
+    dueSoonTasks: number;
+  };
+  tasksByStatus: Record<WorkStatus, number>;
+  openTasksByPriority: { priority: Priority; onTrack: number; overdue: number }[];
+  blockersByKind: Partial<Record<ObstacleType, number>>;
+  unplacedObstacles: number;
+  goals: {
+    goalId: number;
+    goalCode: string;
+    goalTitle: string;
+    dreamId: number;
+    dreamTitle: string;
+    health: ReportHealth;
+    progress: number;
+    targetDate?: string | null;
+    overdueTasks: number;
+    blockedItems: number;
+    nextAction?: string | null;
+  }[];
+  attention: {
+    kind: ReportAttentionKind;
+    itemType: 'OBSTACLE' | 'TASK' | 'STEP';
+    itemId: number;
+    title: string;
+    context: string;
+    stepId: number;
+    goalId: number;
+  }[];
+};

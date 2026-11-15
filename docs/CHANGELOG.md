@@ -66,6 +66,46 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [18.0.0] — Phases 1 to 3 of 4 built; awaiting confirmation for phase 4
+
+Implements phase 1 of [BRD 18.0.0](VMS_BRD_V18.0.0.md): a **Management Report** under the Vision Map. No migration.
+
+### Added in phase 3
+- **Export to PowerPoint (MR-FR-23 to MR-FR-31).** The Export tab downloads `Management_Report_{scope}_{date}.pptx`, a
+  16:9 deck: title, executive summary (overall progress, goals by health, three rule-based sentences), progress by
+  goal (drawn bars with health labels), priorities and deadlines (a table and what is due in 14 days), blockers and
+  management issues (where, why, who could help), overdue items, next actions (one per goal) and, when there is
+  something to ask for, decisions and support needed. Long lists stop at 6 to 8 items with "and N more (see the Excel
+  report)". Every slide has a real title, a slide number and speaker notes; all text stays editable. Optional deck
+  title and "Put my name on the title slide". English or Khmer.
+- New endpoint `GET /api/reports/management.pptx`, sharing the report download limit.
+
+### Added in phase 2
+- **Export to Excel (MR-FR-15 to MR-FR-22).** The Export tab downloads `Management_Report_{scope}_{date}.xlsx` for the
+  chosen scope, in English or Khmer. Three sheets: **Summary** (headline figures, goal health, tasks by status, open
+  tasks by priority, the goal health table), **Report** (one row per task under its goal and step, with exactly the
+  columns Goals, Steps, Tasks, Blockers / Management Issues, Progress (%), Priority, Due Date and Next Action, and a
+  Dream column first when more than one dream is in scope) and **Blockers** (every open blocker and Blocked task, with
+  who could help). Frozen header, filter, wrapped text, Completed rows green, blocked rows orange, overdue dates red,
+  High and Critical highlighted; landscape, one page wide, header repeated, page numbers. Nothing is written to disk.
+- New endpoint `GET /api/reports/management.xlsx`, limited to 30 downloads per account per 10 minutes
+  (`RATE_LIMIT_REPORT_EXPORT`, `RATE_LIMIT_REPORT_EXPORT_WINDOW`).
+
+### Added in phase 1
+- **Report page (MR-FR-01 to MR-FR-06).** `/vision-map/report`, in the sidebar after Timeline and linked from the
+  Vision Map and Timeline headers (with the dream already chosen from a dream's map). Summary and Export tabs, and a
+  scope picker (all dreams, one vision area, one dream), all kept in the URL. Every view states its scope and date.
+- **Summary tab (MR-FR-07 to MR-FR-13).** Headline tiles (overall progress, goals by health, overdue, blocked, open
+  blockers, due in 14 days), charts of progress by goal, tasks by status, open tasks by priority (on track and overdue)
+  and blocked items by kind, a goal health table (Off track, At risk, On track, Done, each with an icon and a label)
+  and a "Needs attention" list. Every chart has a text summary and a "Show as table" view.
+- **One report model.** `GET /api/reports/management` builds the report from the participant's own unarchived plan
+  with a fixed number of queries. The rules (overdue, blocked items, goal health, next action) live in
+  `service/report/ReportRules.java`, so the Excel report and deck in phases 2 and 3 use the same figures.
+- The Export tab shows the two downloads, disabled until phases 2 and 3.
+
+---
+
 ## [17.0.0] — All 5 phases built; awaiting UAT, sign-off of D-17-1 to D-17-3 and Q-01, and the Khmer review
 
 Implements phases 1 and 2 of [BRD 17.0.0](VMS_BRD_V17.0.0.md): blockers sit on a step or a task, not on a dream or goal,

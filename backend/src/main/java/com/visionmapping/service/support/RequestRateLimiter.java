@@ -29,7 +29,9 @@ public class RequestRateLimiter {
         REGISTRATION("Too many new accounts from this network. Try again later."),
         JOIN_CODE("Too many join code attempts. Try again later."),
         SHARED_PLAN("Too many requests for shared plans from this network. Try again in a minute."),
-        EXCEL_IMPORT("Too many imports in a short time. Try again later.");
+        EXCEL_IMPORT("Too many imports in a short time. Try again later."),
+        // V18 MR-NFR-05: each report download builds a whole workbook or deck.
+        REPORT_EXPORT("Too many report downloads in a short time. Try again in a few minutes.");
 
         private final String message;
 
@@ -53,13 +55,16 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.shared-plan-per-ip:30}") int sharedPlanLimit,
             @Value("${app.security.rate-limit.shared-plan-window-minutes:1}") long sharedPlanWindow,
             @Value("${app.security.rate-limit.excel-import-per-user:10}") int importLimit,
-            @Value("${app.security.rate-limit.excel-import-window-minutes:60}") long importWindow) {
+            @Value("${app.security.rate-limit.excel-import-window-minutes:60}") long importWindow,
+            @Value("${app.security.rate-limit.report-export-per-user:30}") int reportLimit,
+            @Value("${app.security.rate-limit.report-export-window-minutes:10}") long reportWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.limits = Map.of(
                 Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow)),
                 Action.JOIN_CODE, new Limit(joinCodeLimit, Duration.ofMinutes(joinCodeWindow)),
                 Action.SHARED_PLAN, new Limit(sharedPlanLimit, Duration.ofMinutes(sharedPlanWindow)),
-                Action.EXCEL_IMPORT, new Limit(importLimit, Duration.ofMinutes(importWindow)));
+                Action.EXCEL_IMPORT, new Limit(importLimit, Duration.ofMinutes(importWindow)),
+                Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow)));
     }
 
     /**

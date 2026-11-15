@@ -440,6 +440,33 @@ V17 phase 4, break it down (BRD 17.0.0, BL-FR-25 to BL-FR-29):
   daily limit and monthly cap as other AI calls. Another user's task answers
   404 before AI is checked.
 
+V18 phase 1, the Management Report (BRD 18.0.0, MR-FR-03 to MR-FR-13):
+- `GET /reports/management?areaId=` or `?dreamId=` (neither = all dreams; both
+  = 400 "Choose either a vision area or a dream, not both."; another user's id =
+  404). Read-only, no AI. Returns `scope` (`kind` ALL, AREA or DREAM, `label`),
+  `asOf`, `headline` (`overallProgress`, `goalsByHealth` RED/AMBER/GREEN/DONE,
+  `totalTasks`, `completedTasks`, `overdueTasks`, `blockedTasks`,
+  `openBlockers`, `dueSoonTasks`), `tasksByStatus` (all six statuses),
+  `openTasksByPriority` (`priority`, `onTrack`, `overdue`), `blockersByKind`,
+  `unplacedObstacles`, `goals` (health rows, most urgent first) and
+  `attention` (up to 10: `kind`, `itemType`, `itemId`, `title`, `context`,
+  `stepId`, `goalId`).
+- Definitions follow BRD 18.0.0 "Definitions": only unarchived goals, steps
+  and tasks; blockers are Open or In Progress obstacles on a step or task in
+  scope.
+- `GET /reports/management.xlsx?areaId=|dreamId=&language=en|km` (V18 phase 2):
+  the Excel report, same scope rules and 404s. `language` other than `en` or
+  `km` answers 400. Sheets Summary, Report and Blockers (MR-FR-16 to MR-FR-21).
+  Over 10,000 rows answers 400 asking to narrow the filter. Limited per account
+  (429 with Retry-After): `app.security.rate-limit.report-export-per-user`
+  (30) per `report-export-window-minutes` (10). File name
+  `Management_Report_{All_dreams|Area_{id}|Dream_{id}}_{yyyy-MM-dd}.xlsx`.
+- `GET /reports/management.pptx?areaId=|dreamId=&language=en|km&title=&includeName=true|false`
+  (V18 phase 3): the deck, same scope rules, 404s and download limit. `title`
+  is at most 80 characters (400 otherwise; default "Progress report");
+  `includeName=false` leaves the participant's name off the title slide. 8
+  slides, or 7 when nothing needs a decision or support (MR-FR-24, MR-FR-26).
+
 V17 phase 5, the six chains (BRD 17.0.0, BL-FR-30 to BL-FR-35):
 - `PUT /chain-assessments` now takes `settlingScore`, `fearScore`,
   `criticismScore`, `prioritiesScore`, `persistenceScore` and `visionScore`

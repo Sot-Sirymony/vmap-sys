@@ -16,7 +16,7 @@ class RequestRateLimiterTest {
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-11-09T09:00:00Z"));
     // 2 registrations an hour, 3 join codes in 15 minutes, 2 share views a minute, 1 import an hour.
-    private final RequestRateLimiter limiter = new RequestRateLimiter(clock, 2, 60, 3, 15, 2, 1, 1, 60);
+    private final RequestRateLimiter limiter = new RequestRateLimiter(clock, 2, 60, 3, 15, 2, 1, 1, 60, 2, 10);
 
     @Test
     void refusesOverTheLimitWithTheSecondsLeftInTheWindow() {

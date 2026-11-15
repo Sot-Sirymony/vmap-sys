@@ -132,7 +132,12 @@ export function VisionTimelinePage() {
     <PageSection
       title={tr('Timeline')}
       subtitle={tr('Every dream on one calendar, grouped by vision area. Open a dream to see its goals, steps and tasks.')}
-      actions={<Button variant="secondary" onClick={() => navigate('/vision-map')}>{tr('Back to the Vision Map')}</Button>}
+      actions={(
+        <>
+          <Button variant="secondary" onClick={() => navigate('/vision-map/report')}>{tr('Management report')}</Button>
+          <Button variant="secondary" onClick={() => navigate('/vision-map')}>{tr('Back to the Vision Map')}</Button>
+        </>
+      )}
     >
       {hasDreams && (
         <Card className="vm-timeline-filters" sx={{ mb: 2 }}>

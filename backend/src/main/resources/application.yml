@@ -121,6 +121,9 @@ app:
       shared-plan-window-minutes: ${RATE_LIMIT_SHARED_PLAN_WINDOW:1}
       excel-import-per-user: ${RATE_LIMIT_EXCEL_IMPORT:10}
       excel-import-window-minutes: ${RATE_LIMIT_EXCEL_IMPORT_WINDOW:60}
+      # V18 MR-NFR-05: Management Report downloads (Excel and PowerPoint) per account.
+      report-export-per-user: ${RATE_LIMIT_REPORT_EXPORT:30}
+      report-export-window-minutes: ${RATE_LIMIT_REPORT_EXPORT_WINDOW:10}
     login:
       max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
       max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}

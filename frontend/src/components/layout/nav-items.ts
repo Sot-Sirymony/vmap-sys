@@ -4,6 +4,7 @@ import {
   Bug,
   CalendarCheck,
   ChartGantt,
+  FileBarChart,
   CheckSquare,
   ClipboardList,
   Compass,
@@ -86,6 +87,8 @@ export const navGroups: NavGroup[] = [
       { to: '/vision-map', label: tr('Vision Map'), icon: Network },
       // V16 (TL-FR-05): every dream on one calendar.
       { to: '/vision-map/timeline', label: tr('Timeline'), icon: ChartGantt },
+      // V18 (MR-FR-01): plan health and documents to share.
+      { to: '/vision-map/report', label: tr('Management Report'), icon: FileBarChart },
       { to: '/plan', label: tr('Plan'), icon: ListChecks },
       { to: '/modules', label: tr('Modules'), icon: GraduationCap },
       { to: '/assessment', label: tr('Assessment'), icon: Gauge },
