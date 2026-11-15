@@ -3107,4 +3107,11 @@ export const km: Record<string, string> = {
   'Deck title (optional)': 'ចំណងជើងស្លាយ (ស្រេចចិត្ត)',
   'Put my name on the title slide': 'ដាក់ឈ្មោះខ្ញុំនៅលើស្លាយចំណងជើង',
   'Progress report': 'របាយការណ៍វឌ្ឍនភាព',
+  // V18 phase 4 (BRD 18.0.0): the 12-week trend. First drafts for a Khmer speaker to review.
+  'Progress over the last 12 weeks': 'វឌ្ឍនភាពក្នុងរយៈពេល ១២ សប្តាហ៍ចុងក្រោយ',
+  'Average task progress went from {from}% to {to}% over {weeks} week(s).': 'វឌ្ឍនភាពមធ្យមនៃកិច្ចការបានកើនពី {from}% ដល់ {to}% ក្នុងរយៈពេល {weeks} សប្តាហ៍។',
+  'No progress history yet. It builds up as tasks move.': 'មិនទាន់មានប្រវត្តិវឌ្ឍនភាពនៅឡើយ។ វានឹងកើនឡើងនៅពេលកិច្ចការដំណើរការ។',
+  'Week ending': 'សប្តាហ៍បញ្ចប់',
+  'Average task progress': 'វឌ្ឍនភាពមធ្យមនៃកិច្ចការ',
+  'Average task progress %': 'វឌ្ឍនភាពមធ្យមនៃកិច្ចការ %',
 };

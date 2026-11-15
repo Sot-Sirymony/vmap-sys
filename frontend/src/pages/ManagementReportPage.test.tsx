@@ -48,6 +48,11 @@ const report = (overrides: Partial<ManagementReport> = {}): ManagementReport => 
     { kind: 'BLOCKED_TASK', itemType: 'TASK', itemId: 11, title: 'Print forms', context: 'Collect the data › Run the survey',
       stepId: 4, goalId: 1 },
   ],
+  trend: [
+    { weekEnd: '2026-11-02', progress: 20 },
+    { weekEnd: '2026-11-09', progress: 33.4 },
+    { weekEnd: '2026-11-16', progress: 41.5 },
+  ],
   ...overrides,
 });
 
@@ -98,6 +103,21 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     const progress = screen.getByRole('region', { name: 'Progress by goal' });
     await userEvent.click(within(progress).getByRole('button', { name: 'Show as table' }));
     expect(within(progress).getByRole('cell', { name: '1. Collect the data' })).toBeInTheDocument();
+  });
+
+  it('shows the 12-week trend in words and as a table, or says there is no history yet (MR-FR-14)', async () => {
+    const { unmount } = renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
+    const trend = await screen.findByRole('region', { name: 'Progress over the last 12 weeks' });
+    expect(within(trend).getByText('Average task progress went from 20% to 42% over 3 week(s).')).toBeInTheDocument();
+    await userEvent.click(within(trend).getByRole('button', { name: 'Show as table' }));
+    const row = within(trend).getByRole('cell', { name: '2026-11-09' }).closest('tr') as HTMLElement;
+    expect(within(row).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['2026-11-09', '33%']);
+    unmount();
+
+    vi.mocked(reportApi.getManagementReport).mockResolvedValue(report({ trend: [] }));
+    renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
+    const empty = await screen.findByRole('region', { name: 'Progress over the last 12 weeks' });
+    expect(within(empty).getByText('No progress history yet. It builds up as tasks move.')).toBeInTheDocument();
   });
 
   it('rates each goal with a label, not colour alone, and lists what needs attention (MRC-04, MR-FR-12)', async () => {

@@ -272,6 +272,8 @@ Protected:
 - `/api/preferences/appearance`
 - `/api/excel/import`
 - `/api/excel/export`
+- `GET /api/reports/management` — the Management Report summary (V18); `?areaId=` or `?dreamId=`
+- `GET /api/reports/management.xlsx` and `GET /api/reports/management.pptx` — the report as Excel and PowerPoint
 
 Protected endpoints require:
 
@@ -359,6 +361,25 @@ docker run -p 8080:8080 \
   -e SETTINGS_ENCRYPTION_KEY='another-long-random-string-of-32-plus-chars' \
   -e CORS_ALLOWED_ORIGINS='http://localhost:5173' \
   vision-mapping-backend
+```
+
+## Management Report (V18)
+
+Under the Vision Map, `Management Report` shows plan health for all dreams, one vision area or one dream, and exports it:
+- **Excel** (`Management_Report_{scope}_{date}.xlsx`): Summary, Report (one row per task with Goals, Steps, Tasks,
+  Blockers / Management Issues, Progress (%), Priority, Due Date, Next Action) and Blockers sheets.
+- **PowerPoint** (`Management_Report_{scope}_{date}.pptx`): a 7 to 8 slide deck for management review.
+
+Both are built on the server with Apache POI from one report model (no AI) and written straight to the response, never
+to disk. Downloads are limited per account: `RATE_LIMIT_REPORT_EXPORT` (default 30) per
+`RATE_LIMIT_REPORT_EXPORT_WINDOW` minutes (default 10). Requirements: [BRD 18.0.0](docs/VMS_BRD_V18.0.0.md); acceptance
+checklist: [UAT_V18.md](docs/UAT_V18.md).
+
+To look at sample files without running the app, run the report tests with a folder for the downloads:
+
+```bash
+cd backend
+mvn test -Dtest='ManagementReport*FlowTests' -Dreport.sample.dir=/tmp
 ```
 
 ## Known Limitations

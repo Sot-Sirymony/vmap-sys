@@ -1,5 +1,6 @@
 package com.visionmapping.service;
 
+import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.ManagementReportResponse;
 import com.visionmapping.dto.response.ManagementReportResponse.AttentionItem;
 import com.visionmapping.dto.response.ManagementReportResponse.GoalHealthRow;
@@ -10,6 +11,7 @@ import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.Obstacle;
 import com.visionmapping.entity.Partner;
+import com.visionmapping.entity.ProgressLog;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.ObstacleType;
@@ -38,6 +40,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -76,14 +79,53 @@ public class ManagementReportService {
     private final TaskItemRepository taskItemRepository;
     private final ObstacleRepository obstacleRepository;
     private final PartnerRepository partnerRepository;
+    private final com.visionmapping.repository.ProgressLogRepository progressLogRepository;
     private final Clock clock;
 
     public ManagementReportResponse summary(@Nullable Long areaId, @Nullable Long dreamId) {
-        return toResponse(build(areaId, dreamId));
+        ManagementReport report = build(areaId, dreamId);
+        return toResponse(report, trend(report));
     }
 
-    /** A generated file and the name to download it as. */
+    /**
+     * MR-FR-14: the dashboard's twelve-week trend (DashboardTrend), fed only
+     * with the progress logs of the tasks in scope, so both mean "average task
+     * progress". Only the Summary needs it; the files skip this query.
+     */
+    private List<DashboardSummaryResponse.TrendPoint> trend(ManagementReport report) {
+        Set<Long> taskIds = report.tasks().map(task -> task.task().getId()).collect(Collectors.toSet());
+        if (taskIds.isEmpty()) {
+            return List.of();
+        }
+        LocalDate today = report.asOf();
+        List<ProgressLog> logs = progressLogRepository.findTrendWindow(lookup.userId(),
+                        DashboardTrend.start(today).atStartOfDay(clock.getZone()).toInstant()).stream()
+                .filter(log -> log.getRelatedTask() != null && taskIds.contains(log.getRelatedTask().getId()))
+                .toList();
+        return DashboardTrend.build(logs, today, clock.getZone());
+    }
+
+    /**
+     * A generated file and the name to download it as. A record's own equals,
+     * hashCode and toString would compare and print the array's identity, so
+     * they use its contents (and toString only its size, never the bytes).
+     */
     public record ReportFile(String fileName, byte[] content) {
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ReportFile file && fileName.equals(file.fileName) && Arrays.equals(content, file.content);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * fileName.hashCode() + Arrays.hashCode(content);
+        }
+
+        @Override
+        public String toString() {
+            return "ReportFile[fileName=" + fileName + ", size=" + content.length + "]";
+        }
     }
 
     /** V18 MR-FR-15 to MR-FR-22: the Excel report, built from the same model as the Summary. */
@@ -232,6 +274,10 @@ public class ManagementReportService {
     }
 
     ManagementReportResponse toResponse(ManagementReport report) {
+        return toResponse(report, List.of());
+    }
+
+    ManagementReportResponse toResponse(ManagementReport report, List<DashboardSummaryResponse.TrendPoint> trend) {
         LocalDate today = report.asOf();
         List<TaskItem> tasks = report.tasks().map(TaskNode::task).toList();
         List<Obstacle> blockers = report.blockers().toList();
@@ -290,7 +336,7 @@ public class ManagementReportService {
                 tasks.stream().filter(task -> ReportRules.isDueSoon(task, today)).count());
 
         return new ManagementReportResponse(new Scope(report.scopeKind(), report.areaId(), report.dreamId(), report.scopeLabel()),
-                today, headline, tasksByStatus, byPriority, blockersByKind, report.unplaced().size(), rows, attention(report));
+                today, headline, tasksByStatus, byPriority, blockersByKind, report.unplaced().size(), rows, attention(report), trend);
     }
 
     /**

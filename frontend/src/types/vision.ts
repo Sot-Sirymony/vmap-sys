@@ -1985,4 +1985,6 @@ export type ManagementReport = {
     stepId: number;
     goalId: number;
   }[];
+  // MR-FR-14: weekly average task progress for the last 12 weeks; empty without history.
+  trend: { weekEnd: string; progress: number }[];
 };

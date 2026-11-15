@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -177,6 +177,39 @@ export function BlockersChart({ report }: Readonly<{ report: ManagementReport }>
             <RechartsTooltip content={<ChartTooltipContent />} />
             <Bar dataKey="blockers" name={tr('Open blockers')} radius={4} fill={chartPrimary} />
           </BarChart>
+        </ResponsiveContainer>
+      )}
+    </ReportChartCard>
+  );
+}
+
+/** MR-FR-14: average task progress per week for the last 12 weeks, the same measure as the dashboard trend. */
+export function ProgressTrendCard({ report }: Readonly<{ report: ManagementReport }>) {
+  const data = report.trend.map((point) => ({ name: point.weekEnd.slice(5), weekEnd: point.weekEnd, progress: Number(point.progress) }));
+  const first = data[0];
+  const last = data[data.length - 1];
+  return (
+    <ReportChartCard
+      title={tr('Progress over the last 12 weeks')}
+      summary={first && last
+        ? tr('Average task progress went from {from}% to {to}% over {weeks} week(s).', {
+          from: Math.round(first.progress), to: Math.round(last.progress), weeks: data.length,
+        })
+        : tr('No progress history yet. It builds up as tasks move.')}
+      headers={[tr('Week ending'), tr('Average task progress')]}
+      rows={data.map((row) => ({ label: row.weekEnd, values: [`${Math.round(row.progress)}%`] }))}
+      height={data.length === 0 ? 60 : 220}
+    >
+      {data.length === 0 ? null : (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ left: 8, right: 16 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+            <YAxis type="number" domain={[0, 100]} tickFormatter={percentTick} tickLine={false} axisLine={false} width={40} />
+            <RechartsTooltip content={<ChartTooltipContent />} />
+            <Line dataKey="progress" name={tr('Average task progress %')} type="monotone" stroke={chartPrimary} strokeWidth={2}
+              dot={{ r: 4 }} />
+          </LineChart>
         </ResponsiveContainer>
       )}
     </ReportChartCard>

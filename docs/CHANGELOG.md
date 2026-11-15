@@ -66,9 +66,22 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [18.0.0] — Phases 1 to 3 of 4 built; awaiting confirmation for phase 4
+## [18.0.0] — All 4 phases built; awaiting UAT, sign-off of Q-01 to Q-06 and the Khmer review
 
 Implements phase 1 of [BRD 18.0.0](VMS_BRD_V18.0.0.md): a **Management Report** under the Vision Map. No migration.
+
+### Fixed
+- SonarQube quality gate on `5abebcf` (reliability rating C on new code): `ManagementReportService.ReportFile` holds a
+  `byte[]`, so a record's generated `equals`, `hashCode` and `toString` compared and printed the array's identity
+  (rule java:S6218). They now use its contents, and `toString` shows only the size.
+
+### Added in phase 4
+- **Progress over the last 12 weeks (MR-FR-14).** A line chart on the Summary tab of average task progress per week,
+  rebuilt from the progress log for the tasks in scope (the same measure as the dashboard trend), with a text summary
+  and a table view.
+- **Docs and review.** A Management Report section in the user guide and README, a UAT checklist
+  ([UAT_V18.md](UAT_V18.md)) and the completed Khmer review file ([km-review-v18.csv](km-review-v18.csv)), including
+  every fixed word inside the exported files.
 
 ### Added in phase 3
 - **Export to PowerPoint (MR-FR-23 to MR-FR-31).** The Export tab downloads `Management_Report_{scope}_{date}.pptx`, a

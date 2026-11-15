@@ -155,6 +155,26 @@ class ManagementReportFlowTests {
     }
 
     @Test
+    void mrFr14_theTrendFollowsProgressOnTasksInScopeOnly() throws Exception {
+        String token = register("report-trend");
+        Branch moving = PlanFixture.branch(mockMvc, objectMapper, token);
+        Branch still = PlanFixture.branch(mockMvc, objectMapper, token);
+        long taskId = task(token, moving.stepId(), Map.of("title", "Draft the survey"));
+        task(token, still.stepId(), Map.of("title", "Untouched"));
+        send(put("/api/tasks/" + taskId), token, Map.of("stepId", moving.stepId(), "title", "Draft the survey", "owner", "Me",
+                "priority", "MEDIUM", "dueDate", TODAY.plusMonths(2).toString(), "status", "IN_PROGRESS", "progressPercent", 60))
+                .andExpect(status().isOk());
+
+        JsonNode trend = summary(token, "?dreamId=" + moving.dreamId()).get("trend");
+        assertThat(trend).isNotEmpty();
+        JsonNode latest = trend.get(trend.size() - 1);
+        assertThat(latest.get("progress").decimalValue()).isEqualByComparingTo("60");
+        assertThat(LocalDate.parse(latest.get("weekEnd").asText())).isAfterOrEqualTo(TODAY);
+        // The other dream's task never moved, so it has no history to show.
+        assertThat(summary(token, "?dreamId=" + still.dreamId()).get("trend")).isEmpty();
+    }
+
+    @Test
     void onlyOneScopeAndOnlyTheParticipantsOwnRecords() throws Exception {
         String owner = register("report-owner");
         String other = register("report-other");

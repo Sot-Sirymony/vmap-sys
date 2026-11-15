@@ -23,7 +23,9 @@ public record ManagementReportResponse(
         // V17 BL-FR-05: active obstacles in scope that are not on a step yet.
         long unplacedObstacles,
         List<GoalHealthRow> goals,
-        List<AttentionItem> attention
+        List<AttentionItem> attention,
+        // MR-FR-14: weekly average task progress for the last 12 weeks, from the progress log; empty without history.
+        List<DashboardSummaryResponse.TrendPoint> trend
 ) {
 
     public ManagementReportResponse {
@@ -32,6 +34,7 @@ public record ManagementReportResponse(
         blockersByKind = Copies.map(blockersByKind);
         goals = Copies.list(goals);
         attention = Copies.list(attention);
+        trend = Copies.list(trend);
     }
 
     /** kind: ALL, AREA or DREAM. label names the area or dream, or is null for ALL. */

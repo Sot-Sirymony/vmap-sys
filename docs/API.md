@@ -448,9 +448,11 @@ V18 phase 1, the Management Report (BRD 18.0.0, MR-FR-03 to MR-FR-13):
   `totalTasks`, `completedTasks`, `overdueTasks`, `blockedTasks`,
   `openBlockers`, `dueSoonTasks`), `tasksByStatus` (all six statuses),
   `openTasksByPriority` (`priority`, `onTrack`, `overdue`), `blockersByKind`,
-  `unplacedObstacles`, `goals` (health rows, most urgent first) and
+  `unplacedObstacles`, `goals` (health rows, most urgent first),
   `attention` (up to 10: `kind`, `itemType`, `itemId`, `title`, `context`,
-  `stepId`, `goalId`).
+  `stepId`, `goalId`) and (phase 4) `trend` (`weekEnd`, `progress`: average
+  task progress per week for the last 12 weeks, from the progress log of the
+  tasks in scope; empty without history).
 - Definitions follow BRD 18.0.0 "Definitions": only unarchived goals, steps
   and tasks; blockers are Open or In Progress obstacles on a step or task in
   scope.

@@ -165,7 +165,7 @@ Open `Partners` to create mentors, experts, advisors, colleagues, or resources. 
 
 ## Track Obstacles
 
-Open `Obstacles` to record blockers. Link each obstacle to the relevant dream, goal, step, or task. Assign a partner when support is needed.
+Open `Obstacles` to record blockers. Put each one on the step or task it holds up; its goal and dream follow from there (V17). A conflict with a person can stay off the steps once its conflict or criticism questions are answered. Assign a partner when support is needed.
 
 ## Build Communication
 
@@ -181,6 +181,32 @@ Useful review notes:
 - what is blocked
 - lessons learned
 - next actions
+
+## Management Report (V18)
+
+Open `Management Report` in the sidebar (under Timeline), or use the `Management report` button on the Vision Map or
+Timeline. From a dream's map, the report opens on that dream.
+
+Choose what to report on: **All dreams**, **One vision area** or **One dream**. The choice and the tab are kept in the
+address bar, so you can bookmark a view. Every view says what it covers and the date.
+
+**Summary tab**
+- Tiles: overall progress, goals by health, overdue tasks, blocked tasks, open blockers and tasks due in 14 days. The
+  overdue and blocked tiles open the Tasks page showing exactly those tasks.
+- Charts: progress by goal, tasks by status, open tasks by priority (on track and overdue), blocked items by kind and
+  progress over the last 12 weeks. Each has a one-line summary; `Show as table` gives the same numbers as a table.
+- Goal health: each goal is **Off track** (overdue, or a blocked task or critical blocker), **At risk** (overdue work,
+  an open blocker, or more than 20 points behind its schedule), **On track** or **Done**.
+- Needs attention: up to 10 items, most urgent first, each linking to where you can fix it.
+
+**Export tab**
+- `Export to Excel` downloads a workbook with a Summary sheet, a Report sheet (one row per task: Goals, Steps, Tasks,
+  Blockers / Management Issues, Progress (%), Priority, Due Date, Next Action) and a Blockers sheet.
+- `Export to PowerPoint` downloads a short deck for a management review: summary, progress by goal, priorities,
+  blockers, overdue items, next actions and the decisions or support you need. You can set the deck title and choose
+  whether your name is on the title slide. All text in the deck can be edited afterwards.
+- Both files use the scope you chose and your language. Private notes, journals and partner contact details are never
+  included.
 
 ## Appearance
 

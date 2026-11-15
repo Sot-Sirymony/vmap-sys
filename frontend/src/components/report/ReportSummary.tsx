@@ -16,7 +16,7 @@ import {
 import { DashboardCard } from '../dashboard/DashboardCard';
 import { DataTable, type DataTableColumn } from '../common/DataTable';
 import { ProgressBar } from '../common/ProgressBar';
-import { BlockersChart, GoalProgressChart, PriorityChart, TasksByStatusChart } from './ReportCharts';
+import { BlockersChart, GoalProgressChart, PriorityChart, ProgressTrendCard, TasksByStatusChart } from './ReportCharts';
 import { tr } from '../../i18n/translate';
 
 const HEALTH_ICONS: Record<ReportHealth, { icon: LucideIcon; color: string }> = {
@@ -100,6 +100,7 @@ export function ReportSummary({ report, filter }: Readonly<{ report: ManagementR
         <TasksByStatusChart report={report} />
         <PriorityChart report={report} />
         <BlockersChart report={report} />
+        <Box sx={{ gridColumn: '1 / -1' }}><ProgressTrendCard report={report} /></Box>
       </Box>
 
       <Card component="section" aria-label={tr('Goal health')}>
