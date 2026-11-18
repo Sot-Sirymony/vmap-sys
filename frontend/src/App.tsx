@@ -34,6 +34,8 @@ const DreamDetailPage = lazy(() => import('./pages/DreamDetailPage').then((m) =>
 const VisionTimelinePage = lazy(() => import('./pages/VisionTimelinePage').then((m) => ({ default: m.VisionTimelinePage })));
 // V18 (BRD 18.0.0): the Management Report under the Vision Map.
 const ManagementReportPage = lazy(() => import('./pages/ManagementReportPage').then((m) => ({ default: m.ManagementReportPage })));
+const SavedReportsPage = lazy(() => import('./pages/SavedReportsPage').then((m) => ({ default: m.SavedReportsPage })));
+const SavedReportPage = lazy(() => import('./pages/SavedReportPage').then((m) => ({ default: m.SavedReportPage })));
 const GoalsPage = lazy(() => import('./pages/GoalsPage').then((m) => ({ default: m.GoalsPage })));
 const StepsPage = lazy(() => import('./pages/StepsPage').then((m) => ({ default: m.StepsPage })));
 const TasksBoardPage = lazy(() => import('./pages/TasksBoardPage').then((m) => ({ default: m.TasksBoardPage })));
@@ -89,6 +91,8 @@ export function App() {
             <Route path="/vision-map" element={<DreamDetailPage />} />
             <Route path="/vision-map/timeline" element={<VisionTimelinePage />} />
             <Route path="/vision-map/report" element={<ManagementReportPage />} />
+            <Route path="/vision-map/reports" element={<SavedReportsPage />} />
+            <Route path="/vision-map/reports/:id" element={<SavedReportPage />} />
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/steps/undated" element={<UndatedStepsPage />} />
             <Route path="/steps" element={<StepsPage />} />

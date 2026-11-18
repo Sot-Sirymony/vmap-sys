@@ -77,7 +77,7 @@ class ManagementReportDeckFlowTests {
             assertThat(deck.getPageSize().getWidth()).isEqualTo(960);
             assertThat(deck.getPageSize().getHeight()).isEqualTo(540);
             assertThat(titleOf(slides.get(0))).isEqualTo("Progress report");
-            assertThat(allText(slides.get(0))).contains("Fixture dream · as of", "Prepared by V18 Test");
+            assertThat(allText(slides.get(0))).contains("Fixture dream · This month · as of", "Prepared by V18 Test");
             for (int index = 1; index < slides.size(); index++) {
                 assertThat(slides.get(index).getTitle()).isEqualTo(TITLES.get(index - 1));
                 assertThat(allText(slides.get(index))).contains((index + 1) + " / 8");

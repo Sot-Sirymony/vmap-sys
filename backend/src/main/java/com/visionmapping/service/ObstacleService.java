@@ -307,6 +307,8 @@ public class ObstacleService {
             throw new BusinessRuleException(
                     "Resolved PARTNER obstacles must also complete all four conflict engagement checklist items.");
         }
+        // V19 RM-FR-08: create, update and status changes all pass here.
+        entity.recordResolution(Instant.now(clock));
     }
 
     private static boolean conflictChecklistComplete(Obstacle entity) {

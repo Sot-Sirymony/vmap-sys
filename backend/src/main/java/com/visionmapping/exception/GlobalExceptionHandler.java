@@ -130,6 +130,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Malformed or invalid request body.", request);
     }
 
+    /** V19 RMC-09: a change the record's state does not allow, such as editing a final report. */
+    @ExceptionHandler(StateConflictException.class)
+    public ResponseEntity<ErrorResponse> handleStateConflict(
+            StateConflictException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.CONFLICT, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(
             ResourceNotFoundException exception,

@@ -238,12 +238,12 @@ Each phase ends with the CI commands passing locally (`mvn verify`, `npm run bui
 
 ## Open questions
 
-- [ ] **Q-01** In the Excel **Report** sheet, should a **Dream** column be added before Goals when the scope covers more than one dream? (Draft: yes, only then; the eight requested columns stay in their order.)
-- [ ] **Q-02** Is the Goal health rule (Red, Amber, Green, Done) right, in particular "more than 20 points behind the time elapsed" for Amber? (Draft: yes.)
-- [ ] **Q-03** Are drawn shapes enough for the deck's charts, or are native, editable PowerPoint charts required? (Draft: drawn shapes; native charts could come later.)
-- [ ] **Q-04** Which Khmer font should the files name? (Draft: "Noto Sans Khmer", falling back to "Khmer OS Battambang"; the reader's computer must have one of them.)
-- [ ] **Q-05** Should the participant's name be on the title slide by default? (Draft: yes, with the option to leave it out, MR-FR-31.)
-- [ ] **Q-06** Should coaches be able to download a participant's report? (Draft: no in V18; it would need a new decision under V9 D-6.)
+- [x] **Q-01** In the Excel **Report** sheet, should a **Dream** column be added before Goals when the scope covers more than one dream? (Draft: yes, only then; the eight requested columns stay in their order.) **Answered: the draft, as built (closed by BRD 19.0.0, RM-FR-03).**
+- [x] **Q-02** Is the Goal health rule (Red, Amber, Green, Done) right, in particular "more than 20 points behind the time elapsed" for Amber? (Draft: yes.) **Answered: the draft, as built; BRD 19.0.0 adds "Done – open work" (RM-FR-02).**
+- [x] **Q-03** Are drawn shapes enough for the deck's charts, or are native, editable PowerPoint charts required? (Draft: drawn shapes; native charts could come later.) **Answered: the draft, as built; asked again as BRD 19.0.0 Q-05.**
+- [x] **Q-04** Which Khmer font should the files name? (Draft: "Noto Sans Khmer", falling back to "Khmer OS Battambang"; the reader's computer must have one of them.) **Answered: the draft, as built (`ReportText.KHMER_FONT`).**
+- [x] **Q-05** Should the participant's name be on the title slide by default? (Draft: yes, with the option to leave it out, MR-FR-31.) **Answered: the draft, as built.**
+- [x] **Q-06** Should coaches be able to download a participant's report? (Draft: no in V18; it would need a new decision under V9 D-6.) **Answered: the draft, as built; BRD 19.0.0 proposes decision D-19-3.**
 
 ## Sign-off
 

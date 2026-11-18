@@ -66,6 +66,42 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [19.0.0] — Phases 1 and 2 of 5 built
+
+Implements phases 1 and 2 of [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations
+`V79__obstacle_resolved_at.sql` and `V80__management_reports.sql`.
+
+### Added in phase 2
+- **Filters (RM-FR-10 to RM-FR-12).** Priority, owner, goal health and "Include completed goals" below the scope and
+  period, kept in the URL, listed in the files' as-of line, with **Reset filters**.
+- **Details tab (RM-FR-13 to RM-FR-15).** The Excel Report sheet's rows on screen with search, sorting, Overdue /
+  Blocked / Due soon quick filters and 50 rows a page, made by the same server code as the Excel file.
+- **Saved reports (RM-FR-16 to RM-FR-24).** **Save as report** keeps a report as a Draft with live figures;
+  **Finalise** freezes its figures in a checksummed snapshot; a final report can only be renamed or archived;
+  **New report from this** starts the next period with the commentary carried over. A **Saved reports** page lists
+  them. Files downloaded from a final report come from its snapshot.
+- **Commentary (RM-FR-26 to RM-FR-31).** Highlights, Risks and issues, Decisions and support needed (or "Nothing needed
+  this period"), Focus for next period and a note per goal, saved as you type, with a rule-based **Suggest a draft**.
+
+### Added in phase 1
+- **Reporting period (RM-FR-06 to RM-FR-09).** The Management Report has a period picker (this or last week, month or
+  quarter, or custom dates up to 366 days), kept in the URL. A "This period" card shows tasks completed, progress
+  gained, blockers opened and closed, and tasks that became overdue; for a past period it says status figures are as
+  of today. The as-of line on the page and in both files names the period.
+- **Health reasons (RM-FR-01).** Every goal's health says why ("Target date passed 3 day(s) ago", "Critical blocker:
+  No budget"): under the label in the goal health table, in a **Why** column in the Excel Summary sheet, and under each
+  goal on the deck's progress slide.
+- **Done – open work (RM-FR-02).** A Completed goal with open tasks gets its own health and a "Reopen or finish" item in
+  Needs attention, linking to its tasks.
+- Obstacles record when they were closed (`resolved_at`), so blockers closed in a period can be counted.
+
+### Changed in phase 1
+- The report model holds plain values copied from the plan, never entities, so private fields cannot reach a file and
+  a later phase can store it as a snapshot (RM-NFR-02). No visible change from this alone.
+- BRD 18.0.0's open questions Q-01 to Q-06 are recorded as answered with their draft answers (RM-FR-03).
+
+---
+
 ## [18.0.0] — All 4 phases built; awaiting UAT, sign-off of Q-01 to Q-06 and the Khmer review
 
 Implements phase 1 of [BRD 18.0.0](VMS_BRD_V18.0.0.md): a **Management Report** under the Vision Map. No migration.

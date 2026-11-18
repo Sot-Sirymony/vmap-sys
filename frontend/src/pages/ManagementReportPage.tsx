@@ -1,53 +1,47 @@
 import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import FormControl from '@mui/material/FormControl';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
-import { getManagementReport, type ReportFilter } from '../api/reportApi';
+import { getManagementReport, getReportRows } from '../api/reportApi';
+import { createSavedReport } from '../api/savedReportApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import { Button } from '../components/common/Button';
-import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
-import { ReportSummary } from '../components/report/ReportSummary';
-import { ReportExportTab } from '../components/report/ReportExportTab';
+import { ReportControls } from '../components/report/ReportControls';
+import { ReportTabs, reportTabFrom, type ReportTab } from '../components/report/ReportTabs';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../i18n/I18nContext';
 import type { Dream, ManagementReport, VisionArea } from '../types/vision';
-import { formatDate } from '../i18n/formatDate';
+import { filterFromSearch, filterToSearch, periodLabel, reportDate } from '../utils/managementReport';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
-import { FileBarChart } from 'lucide-react';
-
-type ScopeKind = 'ALL' | 'AREA' | 'DREAM';
 
 /**
  * V18 (BRD 18.0.0): the Management Report under the Vision Map. Summary
- * charts the plan's health; Export turns it into documents to share. The
- * scope (all dreams, one vision area or one dream) and the tab live in the
- * URL, so a view can be bookmarked (MR-FR-02, MR-FR-03).
+ * charts the plan's health; Details lists its rows; Export turns it into
+ * documents to share. The scope, period, filters and tab live in the URL, so
+ * a view can be bookmarked (MR-FR-02, MR-FR-03, RM-FR-06, RM-FR-10).
+ * V19 RM-FR-16: Save as report keeps it, with commentary, on the Reports page.
  */
 export function ManagementReportPage() {
   const { token } = useAuth();
+  const { language } = useI18n();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get('tab') === 'export' ? 'export' : 'summary';
-  const areaId = Number(searchParams.get('areaId')) || undefined;
-  const dreamId = Number(searchParams.get('dreamId')) || undefined;
-  const filter: ReportFilter = dreamId ? { dreamId } : areaId ? { areaId } : {};
-  const scopeKind: ScopeKind = dreamId ? 'DREAM' : areaId ? 'AREA' : 'ALL';
+  const tab = reportTabFrom(searchParams.get('tab'));
+  const filter = filterFromSearch(searchParams);
+  const filterKey = JSON.stringify(filter);
 
   const [areas, setAreas] = useState<VisionArea[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [report, setReport] = useState<ManagementReport | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -71,9 +65,9 @@ export function ManagementReportPage() {
     return () => {
       active = false;
     };
-    // filter is rebuilt from these two each render.
+    // filter is rebuilt from the URL each render; filterKey says when it changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, areaId, dreamId]);
+  }, [token, filterKey]);
 
   function update(changes: Record<string, string>) {
     const next = new URLSearchParams(searchParams);
@@ -81,91 +75,60 @@ export function ManagementReportPage() {
     setSearchParams(next, { replace: true });
   }
 
-  function changeScopeKind(kind: ScopeKind) {
-    if (kind === 'ALL') update({ areaId: '', dreamId: '' });
-    if (kind === 'AREA') update({ dreamId: '', areaId: String(areas[0]?.id ?? '') });
-    if (kind === 'DREAM') update({ areaId: '', dreamId: String(dreams[0]?.id ?? '') });
+  async function saveAsReport() {
+    if (!token) return;
+    setSaving(true);
+    setError('');
+    try {
+      const saved = await createSavedReport(token, { ...filter, language });
+      navigate(`/vision-map/reports/${saved.id}`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : tr('Unable to save the report.'));
+      setSaving(false);
+    }
   }
 
   const scopeName = report?.scope.kind === 'ALL' || !report ? tr('All dreams') : report.scope.label ?? '';
-  const empty = report !== null && report.goals.length === 0;
 
   return (
     <PageSection
       title={tr('Management Report')}
       subtitle={tr('Plan health at a glance, ready to share with a manager, sponsor or mentor.')}
-      actions={<Button variant="secondary" onClick={() => navigate('/vision-map')}>{tr('Back to the Vision Map')}</Button>}
+      actions={(
+        <Stack direction="row" spacing={1}>
+          <Button variant="secondary" onClick={() => navigate('/vision-map/reports')}>{tr('Saved reports')}</Button>
+          <Button onClick={() => void saveAsReport()} disabled={saving || !report}>{saving ? tr('Saving…') : tr('Save as report')}</Button>
+        </Stack>
+      )}
     >
       <Card>
-        <CardContent sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>
-          <label>
-            {tr('Report on')}
-            <FormControl size="small" sx={{ minWidth: 180, display: 'flex' }}>
-              <Select SelectDisplayProps={{ 'aria-label': tr('Report on') }} value={scopeKind}
-                onChange={(event) => changeScopeKind(event.target.value as ScopeKind)}>
-                <MenuItem value="ALL">{tr('All dreams')}</MenuItem>
-                <MenuItem value="AREA" disabled={areas.length === 0}>{tr('One vision area')}</MenuItem>
-                <MenuItem value="DREAM" disabled={dreams.length === 0}>{tr('One dream')}</MenuItem>
-              </Select>
-            </FormControl>
-          </label>
-          {scopeKind === 'AREA' && (
-            <label>
-              {tr('Vision Area')}
-              <FormControl size="small" sx={{ minWidth: 220, display: 'flex' }}>
-                <Select SelectDisplayProps={{ 'aria-label': tr('Vision Area') }} value={areas.some((area) => area.id === areaId) ? String(areaId) : ''}
-                  displayEmpty onChange={(event) => update({ areaId: event.target.value })}>
-                  {areas.map((area) => <MenuItem value={String(area.id)} key={area.id}>{area.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </label>
-          )}
-          {scopeKind === 'DREAM' && (
-            <label>
-              {tr('Dream')}
-              <FormControl size="small" sx={{ minWidth: 220, display: 'flex' }}>
-                <Select SelectDisplayProps={{ 'aria-label': tr('Dream') }} value={dreams.some((dream) => dream.id === dreamId) ? String(dreamId) : ''}
-                  displayEmpty onChange={(event) => update({ dreamId: event.target.value })}>
-                  {dreams.map((dream) => <MenuItem value={String(dream.id)} key={dream.id}>{dream.title}</MenuItem>)}
-                </Select>
-              </FormControl>
-            </label>
-          )}
-          {report && (
-            // MR-FR-04: the scope and the date, on every view.
-            <Typography variant="body2" color="text.secondary" sx={{ ml: { md: 'auto' } }} role="status">
-              {tr('{scope} · as of {date}', { scope: scopeName, date: formatDate(new Date(`${report.asOf}T00:00:00`), { year: true }) })}
-            </Typography>
-          )}
+        <CardContent>
+          <ReportControls value={filter} onChange={(next) => update(filterToSearch(next))} areas={areas} dreams={dreams}
+            owners={report?.owners ?? []}>
+            {report && (
+              // MR-FR-04, RM-FR-07: the scope, the period and the date, on every view.
+              <Typography variant="body2" color="text.secondary" sx={{ ml: { md: 'auto' } }} role="status">
+                {tr('{scope} · {period} · as of {date}', { scope: scopeName, period: periodLabel(report.period), date: reportDate(report.asOf) })}
+              </Typography>
+            )}
+          </ReportControls>
         </CardContent>
       </Card>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tab} onChange={(_event, value: string) => update({ tab: value === 'export' ? 'export' : '' })} aria-label={tr('Report views')}>
-          <Tab value="summary" label={tr('Summary')} id="report-tab-summary" aria-controls="report-panel-summary" />
-          <Tab value="export" label={tr('Export')} id="report-tab-export" aria-controls="report-panel-export" />
-        </Tabs>
-      </Box>
-
       {error && <ErrorMessage message={error} />}
       {loading && !report && <Loading />}
-      {empty && (
-        // MR-FR-05.
-        <EmptyState
-          headline={tr('Nothing to report yet')}
-          icon={FileBarChart}
-          action={<Button onClick={() => navigate('/vision-map')}>{tr('Open the Vision Map')}</Button>}
-        >
-          {tr('Add goals, steps and tasks to a dream, and the report fills in from them.')}
-        </EmptyState>
-      )}
 
-      <Box role="tabpanel" id="report-panel-summary" aria-labelledby="report-tab-summary" hidden={tab !== 'summary'}>
-        {tab === 'summary' && report && !empty && <ReportSummary report={report} filter={filter} />}
-      </Box>
-      <Box role="tabpanel" id="report-panel-export" aria-labelledby="report-tab-export" hidden={tab !== 'export'}>
-        {tab === 'export' && token && <ReportExportTab token={token} filter={filter} disabledReason={empty ? tr('Add goals to a dream first; there is nothing to export yet.') : ''} />}
-      </Box>
+      {token && (
+        <ReportTabs
+          report={report}
+          filter={filter}
+          tab={tab}
+          onTabChange={(next: ReportTab) => update({ tab: next === 'summary' ? '' : next })}
+          loadRows={(rowsLanguage) => getReportRows(token, filter, rowsLanguage)}
+          reloadKey={filterKey}
+          token={token}
+        />
+      )}
     </PageSection>
   );
 }

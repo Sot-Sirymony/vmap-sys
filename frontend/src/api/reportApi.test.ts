@@ -27,6 +27,15 @@ describe('downloadManagementReport (V18 MR-FR-15)', () => {
     expect(String(fetchMock.mock.calls[2][0])).toMatch(/management\.xlsx\?language=en$/);
   });
 
+  it('sends the period with the scope, leaving out custom dates for a preset (V19 RM-FR-06)', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(new Blob(['x']), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await downloadManagementReport('token', { dreamId: 7, period: 'CUSTOM', from: '2026-11-01', to: '2026-11-10' }, 'xlsx', 'en');
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/management\.xlsx\?dreamId=7&period=CUSTOM&from=2026-11-01&to=2026-11-10&language=en$/);
+    await downloadManagementReport('token', { period: 'LAST_MONTH', from: '2026-11-01', to: '2026-11-10' }, 'xlsx', 'en');
+    expect(String(fetchMock.mock.calls[1][0])).toMatch(/management\.xlsx\?period=LAST_MONTH&language=en$/);
+  });
+
   it('uses the server\'s message when the download is refused', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: 'Dream not found' }), { status: 404 })));
     await expect(downloadManagementReport('token', { dreamId: 9 }, 'xlsx', 'en')).rejects.toThrow('Dream not found');

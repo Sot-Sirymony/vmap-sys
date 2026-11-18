@@ -181,6 +181,8 @@ class AccessControlSweepTests {
         create("issue-reports", Map.of("reportType", "IMPROVEMENT", "title", "Something broke", "description", "Details"));
         create("milestones", Map.of("dreamId", dreamId, "title", "First draft", "achievedOn", LocalDate.now().toString()));
         create("plan-shares", Map.of("dreamId", dreamId, "expiresInDays", 7));
+        // V19 RM-NFR-01: a saved Management Report.
+        create("reports/saved", Map.of("dreamId", dreamId));
         ownerIds.put("goals/synergy-links", postAndId("/api/goals/" + goalId + "/synergy-links", ownerToken,
                 Map.of("relatedGoalId", secondGoalId)));
 

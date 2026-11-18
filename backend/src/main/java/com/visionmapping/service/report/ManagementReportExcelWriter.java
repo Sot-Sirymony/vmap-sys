@@ -1,21 +1,20 @@
 package com.visionmapping.service.report;
 
 import com.visionmapping.dto.response.ManagementReportResponse;
-import com.visionmapping.entity.Obstacle;
-import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.Severity;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.exception.BusinessRuleException;
+import com.visionmapping.service.report.ManagementReport.BlockerInfo;
 import com.visionmapping.service.report.ManagementReport.GoalNode;
 import com.visionmapping.service.report.ManagementReport.StepNode;
+import com.visionmapping.service.report.ManagementReport.TaskInfo;
 import com.visionmapping.service.report.ManagementReport.TaskNode;
 import com.visionmapping.service.report.ReportText.Key;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -48,7 +47,7 @@ public final class ManagementReportExcelWriter {
 
     /** MR-NFR-05: a bigger report asks the participant to narrow the filter. */
     public static final int MAX_ROWS = 10_000;
-    static final String TOO_MANY_ROWS = "This report has more than 10,000 rows. Choose one vision area or one dream.";
+    public static final String TOO_MANY_ROWS = "This report has more than 10,000 rows. Choose one vision area or one dream.";
 
     private static final int HEADER_ROW = 3;
     private static final int TEXT_WIDTH = 32;
@@ -60,24 +59,22 @@ public final class ManagementReportExcelWriter {
     private final ManagementReport report;
     private final ManagementReportResponse summary;
     private final ReportText text;
-    private final ZoneId zone;
     private final Workbook workbook = new XSSFWorkbook();
     private final Styles styles;
 
-    private ManagementReportExcelWriter(ManagementReport report, ManagementReportResponse summary, ReportText text, ZoneId zone) {
+    private ManagementReportExcelWriter(ManagementReport report, ManagementReportResponse summary, ReportText text) {
         this.report = report;
         this.summary = summary;
         this.text = text;
-        this.zone = zone;
         this.styles = new Styles(workbook, text.isKhmer() ? ReportText.KHMER_FONT : "Calibri");
     }
 
-    public static byte[] write(ManagementReport report, ManagementReportResponse summary, ReportText text, ZoneId zone) {
+    public static byte[] write(ManagementReport report, ManagementReportResponse summary, ReportText text) {
         List<ReportRows.Row> rows = ReportRows.build(report, text);
         if (rows.size() > MAX_ROWS) {
             throw new BusinessRuleException(TOO_MANY_ROWS);
         }
-        ManagementReportExcelWriter writer = new ManagementReportExcelWriter(report, summary, text, zone);
+        ManagementReportExcelWriter writer = new ManagementReportExcelWriter(report, summary, text);
         try (Workbook workbook = writer.workbook; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             writer.summarySheet();
             writer.reportSheet(rows);
@@ -89,10 +86,9 @@ public final class ManagementReportExcelWriter {
         }
     }
 
-    /** MR-FR-04: "All dreams · as of 16 Nov 2026". */
+    /** MR-FR-04, RM-FR-07: "All dreams · This month · as of 16 Nov 2026". */
     private String asOfLine() {
-        String scope = "ALL".equals(report.scopeKind()) || report.scopeLabel() == null ? text.get(Key.ALL_DREAMS) : report.scopeLabel();
-        return text.format(Key.AS_OF, scope, text.date(report.asOf()));
+        return text.asOfLine(report);
     }
 
     private void titleRows(Sheet sheet) {
@@ -116,6 +112,14 @@ public final class ManagementReportExcelWriter {
                 List.of(text.get(Key.BLOCKED_TASKS), headline.blockedTasks()),
                 List.of(text.get(Key.OPEN_BLOCKERS), headline.openBlockers()),
                 List.of(text.get(Key.DUE_SOON), headline.dueSoonTasks())));
+        // RM-FR-08: what happened in the period, under its dates.
+        ManagementReport.PeriodFigures period = report.periodFigures();
+        row = table(sheet, row + 1, List.of(text.format(Key.THIS_PERIOD, text.periodDates(report.period())), text.get(Key.VALUE)), List.of(
+                List.of(text.get(Key.PERIOD_TASKS_COMPLETED), period.tasksCompleted()),
+                List.of(text.get(Key.PERIOD_PROGRESS_GAINED), period.progressGained()),
+                List.of(text.get(Key.PERIOD_BLOCKERS_OPENED), period.blockersOpened()),
+                List.of(text.get(Key.PERIOD_BLOCKERS_CLOSED), period.blockersClosed()),
+                List.of(text.get(Key.PERIOD_BECAME_OVERDUE), period.tasksBecameOverdue())));
         List<List<Object>> health = new ArrayList<>();
         for (ReportRules.Health value : ReportRules.Health.values()) {
             health.add(List.of(text.health(value), headline.goalsByHealth().getOrDefault(value.name(), 0L)));
@@ -132,11 +136,13 @@ public final class ManagementReportExcelWriter {
         for (ManagementReportResponse.GoalHealthRow goal : summary.goals()) {
             goals.add(List.of(goal.dreamTitle(), goal.goalTitle(), text.health(ReportRules.Health.valueOf(goal.health())), goal.progress(),
                     goal.targetDate() == null ? "" : goal.targetDate(), goal.overdueTasks(), goal.blockedItems(),
-                    goal.nextAction() == null ? "" : goal.nextAction()));
+                    goal.nextAction() == null ? "" : goal.nextAction(), text.reasons(goal.reasons(), "\n")));
         }
+        // RM-FR-01: a Why column with the rules that set each goal's health.
         table(sheet, row + 1, List.of(text.get(Key.DREAM), text.get(Key.GOAL), text.get(Key.HEALTH), text.get(Key.PROGRESS),
-                text.get(Key.TARGET_DATE), text.get(Key.OVERDUE_TASKS), text.get(Key.BLOCKED_ITEMS), text.get(Key.NEXT_ACTION)), goals);
-        for (int column = 0; column < 8; column++) {
+                text.get(Key.TARGET_DATE), text.get(Key.OVERDUE_TASKS), text.get(Key.BLOCKED_ITEMS), text.get(Key.NEXT_ACTION),
+                text.get(Key.WHY)), goals);
+        for (int column = 0; column < 9; column++) {
             sheet.autoSizeColumn(column);
             capWidth(sheet, column, WIDE_TEXT_WIDTH);
         }
@@ -273,12 +279,12 @@ public final class ManagementReportExcelWriter {
         List<BlockerRow> blockedTasks = new ArrayList<>();
         for (GoalNode goal : report.goals()) {
             for (StepNode step : goal.steps()) {
-                String where = goal.goal().getTitle() + " › " + step.step().getTitle();
+                String where = goal.goal().title() + " › " + step.step().title();
                 step.blockers().forEach(obstacle -> placed.add(obstacleRow(obstacle, where, today)));
                 for (TaskNode task : step.tasks()) {
-                    String taskWhere = where + " › " + task.task().getTitle();
+                    String taskWhere = where + " › " + task.task().title();
                     task.blockers().forEach(obstacle -> placed.add(obstacleRow(obstacle, taskWhere, today)));
-                    if (task.task().getStatus() == WorkStatus.BLOCKED) {
+                    if (task.task().status() == WorkStatus.BLOCKED) {
                         blockedTasks.add(blockedTaskRow(task.task(), taskWhere, today));
                     }
                 }
@@ -288,9 +294,8 @@ public final class ManagementReportExcelWriter {
         List<List<Object>> rows = new ArrayList<>();
         placed.forEach(row -> rows.add(row.values()));
         blockedTasks.forEach(row -> rows.add(row.values()));
-        for (Obstacle obstacle : report.unplaced()) {
-            String context = obstacle.getRelatedGoal() != null ? obstacle.getRelatedGoal().getTitle()
-                    : obstacle.getRelatedDream() != null ? obstacle.getRelatedDream().getTitle() : "";
+        for (BlockerInfo obstacle : report.unplaced()) {
+            String context = obstacle.context();
             String where = context.isEmpty() ? text.get(Key.NOT_ON_A_STEP) : context + " · " + text.get(Key.NOT_ON_A_STEP);
             rows.add(obstacleRow(obstacle, where, today).values());
         }
@@ -314,18 +319,18 @@ public final class ManagementReportExcelWriter {
     }
 
     /** Title, kind, severity, status, days open, helper and solution only (MR-NFR-02). */
-    private BlockerRow obstacleRow(Obstacle obstacle, String where, LocalDate today) {
-        long days = obstacle.getCreatedAt() == null ? 0 : Math.max(0, ChronoUnit.DAYS.between(obstacle.getCreatedAt().atZone(zone).toLocalDate(), today));
-        Severity severity = obstacle.getSeverity();
+    private BlockerRow obstacleRow(BlockerInfo obstacle, String where, LocalDate today) {
+        long days = obstacle.createdOn() == null ? 0 : Math.max(0, ChronoUnit.DAYS.between(obstacle.createdOn(), today));
+        Severity severity = obstacle.severity();
         int rank = severity == null ? Severity.values().length : Severity.values().length - 1 - severity.ordinal();
-        return new BlockerRow(rank, days, List.of(where, obstacle.getTitle(), text.kind(obstacle.getObstacleType()), text.severity(severity),
-                text.obstacleStatus(obstacle.getStatus()), days, text.helper(obstacle.getObstacleType()),
-                obstacle.getSolution() == null ? "" : obstacle.getSolution()));
+        return new BlockerRow(rank, days, List.of(where, obstacle.title(), text.kind(obstacle.type()), text.severity(severity),
+                text.obstacleStatus(obstacle.status()), days, text.helper(obstacle.type()),
+                obstacle.solution() == null ? "" : obstacle.solution()));
     }
 
-    private BlockerRow blockedTaskRow(TaskItem task, String where, LocalDate today) {
-        long days = task.getUpdatedAt() == null ? 0 : Math.max(0, ChronoUnit.DAYS.between(task.getUpdatedAt().atZone(zone).toLocalDate(), today));
-        return new BlockerRow(0, days, List.of(where, task.getBlockerReason() == null ? "" : task.getBlockerReason(),
+    private BlockerRow blockedTaskRow(TaskInfo task, String where, LocalDate today) {
+        long days = task.lastUpdatedOn() == null ? 0 : Math.max(0, ChronoUnit.DAYS.between(task.lastUpdatedOn(), today));
+        return new BlockerRow(0, days, List.of(where, task.blockerReason() == null ? "" : task.blockerReason(),
                 text.get(Key.BLOCKED_TASK), "", text.status(WorkStatus.BLOCKED), days, "", ""));
     }
 

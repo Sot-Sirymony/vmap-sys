@@ -78,7 +78,7 @@ class ManagementReportExcelFlowTests {
                     .containsExactly("Summary", "Report", "Blockers");
             XSSFSheet report = workbook.getSheet("Report");
             assertThat(text(report, 0, 0)).isEqualTo("Management report");
-            assertThat(text(report, 1, 0)).isEqualTo("Fixture dream · as of " + TODAY.format(
+            assertThat(text(report, 1, 0)).isEqualTo("Fixture dream · This month · as of " + TODAY.format(
                     java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.ENGLISH)));
             // MRC-05: one dream, so no Dream column; exactly the requested columns in order.
             assertThat(visibleHeaders(report)).containsExactly("Goals", "Steps", "Tasks", "Blockers / Management Issues",

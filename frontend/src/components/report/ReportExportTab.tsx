@@ -6,7 +6,7 @@ import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
 import { FileSpreadsheet, Presentation } from 'lucide-react';
-import { downloadManagementReport, type ReportFilter, type ReportFormat } from '../../api/reportApi';
+import { downloadManagementReport, type DeckOptions, type ReportFilter, type ReportFormat } from '../../api/reportApi';
 import { useI18n } from '../../i18n/I18nContext';
 import { saveBlob } from '../../utils/saveBlob';
 import { Button } from '../common/Button';
@@ -18,11 +18,15 @@ import { tr } from '../../i18n/translate';
  * V18 MR-FR-15, MR-FR-23: the Export tab. Each file follows the scope chosen
  * above and the participant's language. Nothing is saved on the server.
  */
-export function ReportExportTab({ token, filter, disabledReason }: Readonly<{
+export function ReportExportTab({ token, filter, disabledReason, download: downloadFile, note }: Readonly<{
   token: string;
   filter: ReportFilter;
   /** MR-FR-05: why the buttons are off, or empty when they are on. */
   disabledReason: string;
+  /** V19 RM-FR-38: how a saved report downloads its files; the live report's scope otherwise. */
+  download?: (format: ReportFormat, language: string, deck: DeckOptions) => Promise<{ blob: Blob; fileName: string }>;
+  /** V19 RM-FR-43: a line above the buttons, e.g. that a draft's files are marked DRAFT. */
+  note?: string;
 }>) {
   const { language } = useI18n();
   const [busy, setBusy] = useState<ReportFormat | null>(null);
@@ -37,8 +41,10 @@ export function ReportExportTab({ token, filter, disabledReason }: Readonly<{
     setError('');
     setSaved('');
     try {
-      const { blob, fileName } = await downloadManagementReport(token, filter, format, language,
-        format === 'pptx' ? { title: deckTitle, includeName } : {});
+      const deck = format === 'pptx' ? { title: deckTitle, includeName } : {};
+      const { blob, fileName } = downloadFile
+        ? await downloadFile(format, language, deck)
+        : await downloadManagementReport(token, filter, format, language, deck);
       saveBlob(blob, fileName);
       setSaved(tr('Downloaded {file}.', { file: fileName }));
     } catch (downloadError) {
@@ -51,6 +57,7 @@ export function ReportExportTab({ token, filter, disabledReason }: Readonly<{
   const off = Boolean(disabledReason);
   return (
     <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+      {note && <Alert severity="info" sx={{ gridColumn: '1 / -1' }}>{note}</Alert>}
       <Card component="section" aria-label={tr('Excel report')}>
         <CardHeader avatar={<FileSpreadsheet aria-hidden="true" />} title={tr('Excel report')}
           titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }} />

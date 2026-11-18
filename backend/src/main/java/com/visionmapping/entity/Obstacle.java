@@ -134,6 +134,11 @@ public class Obstacle extends BaseAuditableEntity implements PlanLinked {
     @Column(name = "expectation_released_at")
     private Instant expectationReleasedAt;
 
+    // V19 RM-FR-08: when it moved to Resolved or Accepted; null while open.
+    // Kept by recordResolution, never set by hand.
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
     // FR-62.1: a four-item conduct checklist, required before a PARTNER-type
     // obstacle can be marked Resolved (BR-51) — completeness gates the
     // transition, never the answers themselves. Boolean, not boolean: null
@@ -196,6 +201,20 @@ public class Obstacle extends BaseAuditableEntity implements PlanLinked {
         return checklistStarted || conflictExpectationAgreed != null || anyFilled(conflictIncident, conflictCost,
                 conflictOtherPerspective, conflictLesson, conflictPrivateNote, conflictNextAction,
                 conflictExpectation, criticismOverstated, criticismDelivery, criticismSubstance);
+    }
+
+    /**
+     * V19 RM-FR-08: stamps the first move to Resolved or Accepted and clears
+     * the stamp when the obstacle is reopened. Moving between the two closed
+     * statuses keeps the first date.
+     */
+    public void recordResolution(Instant now) {
+        boolean closed = status == ObstacleStatus.RESOLVED || status == ObstacleStatus.ACCEPTED;
+        if (!closed) {
+            resolvedAt = null;
+        } else if (resolvedAt == null) {
+            resolvedAt = now;
+        }
     }
 
     /** V17 BL-FR-09: anchored, but the step or task it sits on was archived. */

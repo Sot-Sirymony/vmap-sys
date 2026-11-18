@@ -1,5 +1,6 @@
 package com.visionmapping.service.report;
 
+import com.visionmapping.dto.response.ManagementReportResponse.HealthReason;
 import com.visionmapping.entity.enums.ObstacleStatus;
 import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Priority;
@@ -8,6 +9,7 @@ import com.visionmapping.entity.enums.WorkStatus;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.lang.Nullable;
@@ -37,7 +39,17 @@ public final class ReportText {
         SLIDE_NEXT, SLIDE_SUPPORT, SENTENCE_HEALTH, SENTENCE_OVERDUE, SENTENCE_NOTHING_OVERDUE, SENTENCE_SUPPORT,
         SENTENCE_NO_SUPPORT, TASKS_COMPLETED_OF, MORE_IN_EXCEL, NO_GOALS, NO_OVERDUE, NO_NEXT_ACTIONS, DUE_SOON_ITEMS,
         NONE_DUE_SOON, OWNER, DAYS_OVERDUE, DUE, WHY, GAP_NEEDS_HELP, NOTES_SUMMARY, NOTES_PROGRESS, NOTES_PRIORITIES,
-        NOTES_BLOCKERS, NOTES_OVERDUE, NOTES_NEXT, NOTES_SUPPORT, NOTES_TITLE
+        NOTES_BLOCKERS, NOTES_OVERDUE, NOTES_NEXT, NOTES_SUPPORT, NOTES_TITLE,
+        // V19 phase 1 (BRD 19.0.0)
+        HEALTH_DONE_OPEN_WORK, AS_OF_PERIOD, PERIOD_THIS_WEEK, PERIOD_LAST_WEEK, PERIOD_THIS_MONTH, PERIOD_LAST_MONTH,
+        PERIOD_THIS_QUARTER, PERIOD_LAST_QUARTER, PERIOD_RANGE, THIS_PERIOD, PERIOD_TASKS_COMPLETED, PERIOD_PROGRESS_GAINED,
+        PERIOD_BLOCKERS_OPENED, PERIOD_BLOCKERS_CLOSED, PERIOD_BECAME_OVERDUE,
+        REASON_COMPLETED, REASON_COMPLETED_OPEN_WORK, REASON_GOAL_OVERDUE, REASON_BLOCKED_TASKS, REASON_CRITICAL_BLOCKER,
+        REASON_CRITICAL_BLOCKERS, REASON_OVERDUE_WORK, REASON_OPEN_BLOCKERS, REASON_BEHIND_SCHEDULE, REASON_ON_TRACK,
+        // V19 phase 2
+        FILTER_OWNER, FILTER_NO_COMPLETED,
+        DRAFT_COMPLETED_TASKS, DRAFT_GOAL_DONE, DRAFT_RISK_GOAL, DRAFT_RISK_BLOCKER, DRAFT_SUPPORT_BLOCKER, DRAFT_SUPPORT_GAP,
+        DRAFT_FOCUS
     }
 
     private static final Map<Key, String[]> TEXT = new EnumMap<>(Key.class);
@@ -139,6 +151,42 @@ public final class ReportText {
                 "សកម្មភាពបន្ទាប់មួយក្នុងមួយគោលដៅដែលមិនទាន់រួចរាល់៖ កិច្ចការនៅបើកដំបូងរបស់វា។");
         put(Key.NOTES_SUPPORT, "Blockers about a decision, money or a partner, and steps missing knowledge, a skill or money with no help planned.",
                 "ឧបសគ្គអំពីការសម្រេចចិត្ត ថវិកា ឬដៃគូ និងជំហានដែលខ្វះចំណេះដឹង ជំនាញ ឬថវិកា ដោយមិនទាន់មានផែនការជំនួយ។");
+        // V19 phase 1: the period (RM-FR-06 to RM-FR-08), Done – open work (RM-FR-02) and health reasons (RM-FR-01).
+        put(Key.HEALTH_DONE_OPEN_WORK, "Done – open work", "រួចរាល់ – នៅមានការងារ");
+        put(Key.AS_OF_PERIOD, "%s · %s · as of %s", "%s · %s · គិតត្រឹម %s");
+        put(Key.PERIOD_THIS_WEEK, "This week", "សប្តាហ៍នេះ");
+        put(Key.PERIOD_LAST_WEEK, "Last week", "សប្តាហ៍មុន");
+        put(Key.PERIOD_THIS_MONTH, "This month", "ខែនេះ");
+        put(Key.PERIOD_LAST_MONTH, "Last month", "ខែមុន");
+        put(Key.PERIOD_THIS_QUARTER, "This quarter", "ត្រីមាសនេះ");
+        put(Key.PERIOD_LAST_QUARTER, "Last quarter", "ត្រីមាសមុន");
+        put(Key.PERIOD_RANGE, "%s to %s", "%s ដល់ %s");
+        put(Key.THIS_PERIOD, "This period (%s)", "រយៈពេលនេះ (%s)");
+        put(Key.PERIOD_TASKS_COMPLETED, "Tasks completed", "កិច្ចការដែលបានបញ្ចប់");
+        put(Key.PERIOD_PROGRESS_GAINED, "Progress gained (points)", "វឌ្ឍនភាពកើនឡើង (ពិន្ទុ)");
+        put(Key.PERIOD_BLOCKERS_OPENED, "Blockers opened", "ឧបសគ្គថ្មី");
+        put(Key.PERIOD_BLOCKERS_CLOSED, "Blockers closed", "ឧបសគ្គដែលបានបិទ");
+        put(Key.PERIOD_BECAME_OVERDUE, "Tasks that became overdue", "កិច្ចការដែលបានក្លាយជាហួសកំណត់");
+        put(Key.REASON_COMPLETED, "Completed", "បានបញ្ចប់");
+        put(Key.REASON_COMPLETED_OPEN_WORK, "Completed, but %d task(s) are still open", "បានបញ្ចប់ ប៉ុន្តែកិច្ចការ %d នៅបើក");
+        put(Key.REASON_GOAL_OVERDUE, "Target date passed %d day(s) ago", "កាលបរិច្ឆេទគោលដៅបានកន្លងផុត %d ថ្ងៃ");
+        put(Key.REASON_BLOCKED_TASKS, "%d blocked task(s)", "កិច្ចការជាប់គាំង %d");
+        put(Key.REASON_CRITICAL_BLOCKER, "Critical blocker: %s", "ឧបសគ្គធ្ងន់ធ្ងរ៖ %s");
+        put(Key.REASON_CRITICAL_BLOCKERS, "Critical blocker: %s and %d more", "ឧបសគ្គធ្ងន់ធ្ងរ៖ %s និង %d ទៀត");
+        put(Key.REASON_OVERDUE_WORK, "%d overdue task(s) or step(s)", "កិច្ចការ ឬជំហានហួសកំណត់ %d");
+        put(Key.REASON_OPEN_BLOCKERS, "%d open blocker(s)", "ឧបសគ្គនៅបើក %d");
+        put(Key.REASON_BEHIND_SCHEDULE, "Progress %d%% with %d%% of the time gone", "វឌ្ឍនភាព %d%% ខណៈពេលវេលាកន្លងផុត %d%%");
+        put(Key.REASON_ON_TRACK, "No overdue work or open blockers", "គ្មានការងារហួសកំណត់ ឬឧបសគ្គនៅបើក");
+        // V19 phase 2: filters in the as-of line (RM-FR-10) and the rule-based commentary draft (RM-FR-28).
+        put(Key.FILTER_OWNER, "Owner: %s", "អ្នកទទួលខុសត្រូវ៖ %s");
+        put(Key.FILTER_NO_COMPLETED, "Without completed goals", "មិនរាប់បញ្ចូលគោលដៅដែលបានបញ្ចប់");
+        put(Key.DRAFT_COMPLETED_TASKS, "- %s: completed %d task(s) (%s)", "- %s៖ បានបញ្ចប់កិច្ចការ %d (%s)");
+        put(Key.DRAFT_GOAL_DONE, "- %s is done", "- %s រួចរាល់");
+        put(Key.DRAFT_RISK_GOAL, "- %s is off track: %s", "- %s ខុសផ្លូវ៖ %s");
+        put(Key.DRAFT_RISK_BLOCKER, "- %s (%s, %s) on %s", "- %s (%s, %s) លើ %s");
+        put(Key.DRAFT_SUPPORT_BLOCKER, "- %s (%s) on %s", "- %s (%s) លើ %s");
+        put(Key.DRAFT_SUPPORT_GAP, "- %s: missing %s, no help planned yet", "- %s៖ ខ្វះ %s មិនទាន់មានផែនការជំនួយ");
+        put(Key.DRAFT_FOCUS, "- %s: %s", "- %s៖ %s");
     }
 
     private static final Map<WorkStatus, String[]> STATUS = new EnumMap<>(Map.of(
@@ -244,8 +292,78 @@ public final class ReportText {
             case RED -> Key.HEALTH_RED;
             case AMBER -> Key.HEALTH_AMBER;
             case GREEN -> Key.HEALTH_GREEN;
+            case DONE_OPEN_WORK -> Key.HEALTH_DONE_OPEN_WORK;
             case DONE -> Key.HEALTH_DONE;
         });
+    }
+
+    /** RM-FR-06: "This month", or "1 Nov 2026 to 17 Nov 2026" for a custom period. */
+    public String periodLabel(ReportPeriod period) {
+        return switch (period.kind()) {
+            case THIS_WEEK -> get(Key.PERIOD_THIS_WEEK);
+            case LAST_WEEK -> get(Key.PERIOD_LAST_WEEK);
+            case THIS_MONTH -> get(Key.PERIOD_THIS_MONTH);
+            case LAST_MONTH -> get(Key.PERIOD_LAST_MONTH);
+            case THIS_QUARTER -> get(Key.PERIOD_THIS_QUARTER);
+            case LAST_QUARTER -> get(Key.PERIOD_LAST_QUARTER);
+            case CUSTOM -> periodDates(period);
+        };
+    }
+
+    /** "1 Nov 2026 to 17 Nov 2026". */
+    public String periodDates(ReportPeriod period) {
+        return format(Key.PERIOD_RANGE, date(period.from()), date(period.to()));
+    }
+
+    /**
+     * MR-FR-04, RM-FR-07, RM-FR-10: "All dreams · This month · as of 17 Nov
+     * 2026", followed by any filters: " · High, Critical · Owner: Dara".
+     */
+    public String asOfLine(ManagementReport report) {
+        String scope = "ALL".equals(report.scopeKind()) || report.scopeLabel() == null ? get(Key.ALL_DREAMS) : report.scopeLabel();
+        String line = format(Key.AS_OF_PERIOD, scope, periodLabel(report.period()), date(report.asOf()));
+        String filters = filters(report.filters());
+        return filters.isEmpty() ? line : line + " · " + filters;
+    }
+
+    /** "High, Critical · Owner: Dara · Off track · Without completed goals", or empty without filters. */
+    public String filters(ReportFilters filters) {
+        List<String> parts = new java.util.ArrayList<>();
+        if (!filters.priorities().isEmpty()) {
+            parts.add(String.join(", ", filters.priorities().stream().sorted().map(this::priority).toList()));
+        }
+        if (filters.owner() != null) {
+            parts.add(format(Key.FILTER_OWNER, filters.owner()));
+        }
+        if (!filters.healths().isEmpty()) {
+            parts.add(String.join(", ", filters.healths().stream().sorted().map(this::health).toList()));
+        }
+        if (!filters.includeCompleted()) {
+            parts.add(get(Key.FILTER_NO_COMPLETED));
+        }
+        return String.join(" · ", parts);
+    }
+
+    /** RM-FR-01: one health reason in words. An unknown code is shown as it is rather than dropped. */
+    public String reason(HealthReason reason) {
+        long value = reason.value() == null ? 0 : reason.value();
+        return switch (reason.code()) {
+            case "COMPLETED" -> get(Key.REASON_COMPLETED);
+            case "COMPLETED_OPEN_WORK" -> format(Key.REASON_COMPLETED_OPEN_WORK, value);
+            case "GOAL_OVERDUE" -> format(Key.REASON_GOAL_OVERDUE, value);
+            case "BLOCKED_TASKS" -> format(Key.REASON_BLOCKED_TASKS, value);
+            case "CRITICAL_BLOCKER" -> value > 1 ? format(Key.REASON_CRITICAL_BLOCKERS, reason.title(), value - 1)
+                    : format(Key.REASON_CRITICAL_BLOCKER, reason.title());
+            case "OVERDUE_WORK" -> format(Key.REASON_OVERDUE_WORK, value);
+            case "OPEN_BLOCKERS" -> format(Key.REASON_OPEN_BLOCKERS, value);
+            case "BEHIND_SCHEDULE" -> format(Key.REASON_BEHIND_SCHEDULE, value, reason.elapsed() == null ? 0 : reason.elapsed());
+            case "ON_TRACK" -> get(Key.REASON_ON_TRACK);
+            default -> reason.code();
+        };
+    }
+
+    public String reasons(List<HealthReason> reasons, String separator) {
+        return String.join(separator, reasons.stream().map(this::reason).toList());
     }
 
     /** "16 Nov 2026" in English; ISO dates in Khmer, which reads them the same way. */

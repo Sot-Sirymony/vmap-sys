@@ -31,6 +31,7 @@ import {
   Users,
   UsersRound,
   type LucideIcon,
+  FolderClock,
 } from 'lucide-react';
 import { tr } from '../../i18n/translate';
 
@@ -89,6 +90,8 @@ export const navGroups: NavGroup[] = [
       { to: '/vision-map/timeline', label: tr('Timeline'), icon: ChartGantt },
       // V18 (MR-FR-01): plan health and documents to share.
       { to: '/vision-map/report', label: tr('Management Report'), icon: FileBarChart },
+      // V19 (RM-FR-17): reports saved from it, draft and final.
+      { to: '/vision-map/reports', label: tr('Saved reports'), icon: FolderClock },
       { to: '/plan', label: tr('Plan'), icon: ListChecks },
       { to: '/modules', label: tr('Modules'), icon: GraduationCap },
       { to: '/assessment', label: tr('Assessment'), icon: Gauge },

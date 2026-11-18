@@ -1940,15 +1940,39 @@ export type ClientErrorLogEntry = {
 };
 
 // V18 (BRD 18.0.0): the Management Report's Summary (MR-FR-07 to MR-FR-13).
-export type ReportHealth = 'RED' | 'AMBER' | 'GREEN' | 'DONE';
+// V19 RM-FR-02: DONE_OPEN_WORK is a Completed goal that still has open tasks.
+export type ReportHealth = 'RED' | 'AMBER' | 'DONE_OPEN_WORK' | 'GREEN' | 'DONE';
 
 export type ReportScope = { kind: 'ALL' | 'AREA' | 'DREAM'; areaId?: number | null; dreamId?: number | null; label?: string | null };
 
-export type ReportAttentionKind = 'CRITICAL_BLOCKER' | 'BLOCKED_TASK' | 'OVERDUE_URGENT' | 'OVERDUE' | 'GAP_NEEDS_HELP';
+export type ReportAttentionKind = 'CRITICAL_BLOCKER' | 'BLOCKED_TASK' | 'OVERDUE_URGENT' | 'OVERDUE' | 'REOPEN_OR_FINISH' | 'GAP_NEEDS_HELP';
+
+/** V19 RM-FR-06: the reporting period presets, or CUSTOM with from and to dates. */
+export type ReportPeriodKind = 'THIS_WEEK' | 'LAST_WEEK' | 'THIS_MONTH' | 'LAST_MONTH' | 'THIS_QUARTER' | 'LAST_QUARTER' | 'CUSTOM';
+
+/** V19 RM-FR-01: one rule that set a goal's health; value, elapsed and title fill in its words. */
+export type ReportHealthReason = {
+  code: 'COMPLETED' | 'COMPLETED_OPEN_WORK' | 'GOAL_OVERDUE' | 'BLOCKED_TASKS' | 'CRITICAL_BLOCKER' | 'OVERDUE_WORK'
+    | 'OPEN_BLOCKERS' | 'BEHIND_SCHEDULE' | 'ON_TRACK';
+  value?: number | null;
+  elapsed?: number | null;
+  title?: string | null;
+};
 
 export type ManagementReport = {
   scope: ReportScope;
   asOf: string;
+  // V19 RM-FR-06, RM-FR-09. statusAsOfToday: the period ended before today, so status figures are today's.
+  // closedBeforeRecording: the period starts before closing dates were recorded, so older closures use their last update.
+  period: { kind: ReportPeriodKind; from: string; to: string; statusAsOfToday: boolean; closedBeforeRecording: boolean };
+  // V19 RM-FR-08: what happened in the period.
+  periodFigures: {
+    tasksCompleted: number;
+    progressGained: number;
+    blockersOpened: number;
+    blockersClosed: number;
+    tasksBecameOverdue: number;
+  };
   headline: {
     overallProgress: number;
     goalsByHealth: Record<ReportHealth, number>;
@@ -1975,16 +1999,86 @@ export type ManagementReport = {
     overdueTasks: number;
     blockedItems: number;
     nextAction?: string | null;
+    reasons: ReportHealthReason[];
   }[];
   attention: {
     kind: ReportAttentionKind;
-    itemType: 'OBSTACLE' | 'TASK' | 'STEP';
+    itemType: 'OBSTACLE' | 'TASK' | 'STEP' | 'GOAL';
     itemId: number;
     title: string;
     context: string;
-    stepId: number;
+    stepId?: number | null;
     goalId: number;
   }[];
   // MR-FR-14: weekly average task progress for the last 12 weeks; empty without history.
   trend: { weekEnd: string; progress: number }[];
+  // V19 RM-FR-10: the filters applied (empty lists and a null owner mean "any"), and the owners in scope.
+  filters: ReportFiltersApplied;
+  owners: string[];
+};
+
+export type ReportFiltersApplied = { priorities: Priority[]; owner?: string | null; healths: ReportHealth[]; includeCompleted: boolean };
+
+/** V19 RM-FR-13: one Details row, the same as a row of the Excel Report sheet. */
+export type ReportRow = {
+  goalId: number;
+  stepId?: number | null;
+  taskId?: number | null;
+  dream: string;
+  goal: string;
+  step: string;
+  task: string;
+  issues: string[];
+  progress: number;
+  priority?: Priority | null;
+  due?: string | null;
+  nextAction: string;
+  completed: boolean;
+  blocked: boolean;
+  overdue: boolean;
+  dueSoon: boolean;
+};
+
+/** V19 RM-FR-26: the participant's commentary on a saved report. */
+export type SavedReportCommentary = {
+  highlights?: string | null;
+  risks?: string | null;
+  decisionsNeeded?: string | null;
+  nothingNeeded: boolean;
+  nextFocus?: string | null;
+  goalNotes: Record<string, string>;
+};
+
+/** V19 RM-FR-16 to RM-FR-31: a saved report. report is left out of the list. */
+export type SavedReport = {
+  id: number;
+  code: string;
+  name: string;
+  status: 'DRAFT' | 'FINAL';
+  archived: boolean;
+  scopeKind: 'ALL' | 'AREA' | 'DREAM';
+  areaId?: number | null;
+  dreamId?: number | null;
+  scopeLabel?: string | null;
+  periodKind: ReportPeriodKind;
+  periodFrom?: string | null;
+  periodTo?: string | null;
+  filters: ReportFiltersApplied;
+  commentary: SavedReportCommentary;
+  language: string;
+  compareToReportId?: number | null;
+  finalizedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // RM-NFR-04: null for a draft; false when a final report's snapshot failed its check.
+  verified?: boolean | null;
+  report?: ManagementReport | null;
+};
+
+/** V19 RM-FR-28: suggested text for the sections still empty; null where there is none. */
+export type CommentaryDraft = {
+  highlights?: string | null;
+  risks?: string | null;
+  decisionsNeeded?: string | null;
+  nextFocus?: string | null;
 };

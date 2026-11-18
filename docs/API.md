@@ -469,6 +469,73 @@ V18 phase 1, the Management Report (BRD 18.0.0, MR-FR-03 to MR-FR-13):
   `includeName=false` leaves the participant's name off the title slide. 8
   slides, or 7 when nothing needs a decision or support (MR-FR-24, MR-FR-26).
 
+V19 phase 2, filters, Details rows and saved reports (BRD 19.0.0, RM-FR-10 to RM-FR-31):
+- The live report endpoints also take `priority` (comma-separated: LOW,
+  MEDIUM, HIGH, CRITICAL), `owner`, `health` (comma-separated health values)
+  and `includeCompleted` (default true). The Summary adds `filters` and
+  `owners` (task owners in scope before filtering). Goal health is judged
+  before filtering and never changes with it.
+- `GET /reports/management/rows?…same query…&language=en|km`: the Details
+  tab, `{ rows: [...] }`, the same rows as the Excel Report sheet with
+  `goalId`, `stepId`, `taskId`, `issues`, `completed`, `blocked`, `overdue`,
+  `dueSoon`. Over 10,000 rows answers 400.
+- `GET /reports/saved?status=DRAFT|FINAL&includeArchived=&q=`: saved reports,
+  newest change first, without the Summary.
+- `POST /reports/saved` (201): `name` (blank = "{scope} – {period}"),
+  `areaId` or `dreamId`, `period`, `from`, `to`, `priorities`, `owner`,
+  `healths`, `includeCompleted`, `language`. Another user's area or dream =
+  404; at 200 reports = 400.
+- `GET /reports/saved/{id}`: the report, its commentary and `report` (the
+  Summary: live for a DRAFT, frozen for a FINAL). `verified` is null for a
+  draft and false when a final report's snapshot fails its checksum.
+- `PUT /reports/saved/{id}`: a draft's settings; a final report's name only
+  (anything else = 409). `PUT /reports/saved/{id}/commentary`: `highlights`,
+  `risks`, `decisionsNeeded`, `nextFocus` (each up to 2,000 characters),
+  `nothingNeeded`, `goalNotes` ({goalId: text up to 500}); 409 when final.
+- `POST /reports/saved/{id}/commentary-draft?language=`: rule-based text for
+  the sections still empty (null otherwise); nothing is saved.
+- `POST /reports/saved/{id}/finalize?language=`: freezes the snapshot; 409
+  when already final. `POST /reports/saved/{id}/copy` (201): a new draft for
+  the next period with the commentary and `compareToReportId`.
+- `PATCH /reports/saved/{id}/archive` and `/restore`. `DELETE
+  /reports/saved/{id}` (204): drafts only; a final report = 409.
+- `GET /reports/saved/{id}/rows`, `GET /reports/saved/{id}.xlsx` and
+  `.pptx` (same options as the live files, download limit applies): from the
+  snapshot once final. File name `{Report name}_{yyyy-MM-dd}`, letters,
+  digits, dash and underscore only.
+- Another user's report id answers 404 on every endpoint
+  (`AccessControlSweepTests`).
+
+V19 phase 1, the report's period and health reasons (BRD 19.0.0, RM-FR-01 to RM-FR-09):
+- All three report endpoints also take `period` (`THIS_WEEK`, `LAST_WEEK`,
+  `THIS_MONTH`, `LAST_MONTH`, `THIS_QUARTER`, `LAST_QUARTER` or `CUSTOM`;
+  default `THIS_MONTH`) and, for a custom period, `from` and `to`
+  (yyyy-MM-dd, inclusive). Dates without `period` mean `CUSTOM`. A custom
+  period without both dates, starting after its end, ending after today or
+  longer than 366 days answers 400 with the reason; an unknown `period`
+  answers 400 "Unknown report period.".
+- The Summary adds `period` (`kind`, `from`, `to`, `statusAsOfToday`: the
+  period ended before today, so status figures are today's;
+  `closedBeforeRecording`: the period starts before closing dates were
+  recorded) and `periodFigures` (`tasksCompleted`, `progressGained` in points
+  of average task progress, `blockersOpened`, `blockersClosed`,
+  `tasksBecameOverdue`), counted on the tasks and placed blockers in scope.
+- `goalsByHealth` and a goal's `health` may be `DONE_OPEN_WORK` (Completed, but
+  tasks are still open). Each goal row adds `reasons` (`code`, `value`,
+  `elapsed`, `title`): COMPLETED, COMPLETED_OPEN_WORK (value = open tasks),
+  GOAL_OVERDUE (value = days), BLOCKED_TASKS, CRITICAL_BLOCKER (value = how
+  many, title = the first), OVERDUE_WORK, OPEN_BLOCKERS, BEHIND_SCHEDULE
+  (value = progress %, elapsed = time gone %) or ON_TRACK.
+- `attention` may hold `REOPEN_OR_FINISH` items with `itemType` GOAL and a
+  null `stepId`.
+- The files' as-of line names the period ("All dreams · This month · as of
+  17 Nov 2026"). The Excel Summary sheet adds a "This period" table and a
+  **Why** column on the goal health table; the deck's progress slide shows each
+  goal's reasons.
+- Obstacles now record `resolved_at` when moved to Resolved or Accepted
+  (cleared when reopened; migration V79 back-fills closed rows with their last
+  update). It is not in the obstacle API response.
+
 V17 phase 5, the six chains (BRD 17.0.0, BL-FR-30 to BL-FR-35):
 - `PUT /chain-assessments` now takes `settlingScore`, `fearScore`,
   `criticismScore`, `prioritiesScore`, `persistenceScore` and `visionScore`
