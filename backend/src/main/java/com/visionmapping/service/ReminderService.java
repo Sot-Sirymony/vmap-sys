@@ -20,6 +20,11 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import com.visionmapping.service.ai.AiReminderService;
+import com.visionmapping.service.notice.AccountNotice;
+import com.visionmapping.service.notice.AccountNotices;
+import com.visionmapping.service.stepup.StepUpAction;
+import com.visionmapping.service.stepup.StepUpCodes;
+import com.visionmapping.service.stepup.StepUpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
@@ -43,6 +48,8 @@ public class ReminderService {
     private final ReminderMailer reminderMailer;
     private final ActivityService activityService;
     private final AiReminderService aiReminderService;
+    private final StepUpService stepUpService;
+    private final AccountNotices accountNotices;
 
     @Value("${app.reminders.send-hour:8}")
     private int sendHour;
@@ -63,6 +70,17 @@ public class ReminderService {
     }
 
     public ReminderSettingsResponse updateSettings(ReminderSettingsRequest request) {
+        return updateSettings(request, null, null);
+    }
+
+    /**
+     * V20 SV-FR-04: a different reminder address needs the account check
+     * (stepUp: a code to the account email, or the verified window) and, unless
+     * it is being cleared, a code sent to the new address (confirm), so reminders
+     * only ever go to an address the person controls (SV-FR-05). Other settings
+     * need no code.
+     */
+    public ReminderSettingsResponse updateSettings(ReminderSettingsRequest request, @Nullable String stepUp, @Nullable String confirm) {
         AppUser user = userScope.currentUser();
         try {
             ZoneId.of(request.timeZone());
@@ -74,6 +92,17 @@ public class ReminderService {
         String reminderEmail = request.reminderEmail() == null ? "" : request.reminderEmail().trim();
         if (!reminderEmail.isEmpty() && !looksLikeEmail(reminderEmail)) {
             throw new BusinessRuleException("That reminder email address does not look right.");
+        }
+        String previous = user.getReminderEmail();
+        boolean addressChanges = !reminderEmail.equalsIgnoreCase(previous == null ? "" : previous);
+        if (addressChanges) {
+            stepUpService.require(StepUpAction.CHANGE_REMINDER_EMAIL, stepUp);
+            if (!reminderEmail.isEmpty()) {
+                stepUpService.requireForAddress(StepUpAction.CONFIRM_REMINDER_EMAIL, confirm, reminderEmail);
+            }
+            // SV-FR-28, SV-FR-29: the account email and the old reminder address hear about it.
+            accountNotices.changed(AccountNotice.Kind.REMINDER_EMAIL_CHANGED, user, previous,
+                    reminderEmail.isEmpty() ? "your login email" : StepUpCodes.mask(reminderEmail));
         }
         user.setReminderEmail(reminderEmail.isEmpty() ? null : reminderEmail);
         if (request.reportReminder() != null) {
@@ -192,7 +221,7 @@ public class ReminderService {
      * code rather than a regular expression, so long input cannot make it slow
      * or overflow the stack.
      */
-    static boolean looksLikeEmail(String value) {
+    public static boolean looksLikeEmail(String value) {
         int at = value.indexOf('@');
         if (at <= 0 || at != value.lastIndexOf('@') || value.chars().anyMatch(Character::isWhitespace)) {
             return false;

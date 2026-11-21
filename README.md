@@ -61,6 +61,14 @@ export PASSWORD_RESET_URL='http://127.0.0.1:5173/reset-password'
 export PASSWORD_RESET_TTL_MINUTES=30
 ```
 
+V20 "Verify it's you" codes use the same mail settings. Without `MAIL_HOST`, a local run writes the code to the
+backend log; in production no code is sent and risky actions keep their password checks. Optional:
+
+```bash
+export STEP_UP_ENABLED=true            # false switches email codes off (logged at start-up)
+export STEP_UP_SECRET='long-random'    # HMAC key for stored codes; defaults to JWT_SECRET
+```
+
 `DB_PASSWORD` is required — the app fails fast on startup if it isn't set. `JWT_SECRET` should also be overridden with a strong value for anything beyond local development.
 
 ## Browser Tests

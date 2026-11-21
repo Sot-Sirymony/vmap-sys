@@ -165,12 +165,15 @@ public class AuthSessionService {
     /** After a password change: every other session ends, the one making the change stays. */
     @Transactional
     public int endOtherSessions(Long userId, Long keepSessionId) {
+        // V20 (SV-FR-16): the session that stays open must verify again too.
+        repository.closeVerifiedWindows(userId);
         return repository.revokeAllForUser(userId, keepSessionId, REASON_PASSWORD_CHANGED, clock.instant());
     }
 
     /** After a password reset: every session ends. */
     @Transactional
     public int endAllSessions(Long userId) {
+        repository.closeVerifiedWindows(userId);
         return repository.revokeAllForUser(userId, null, REASON_PASSWORD_RESET, clock.instant());
     }
 

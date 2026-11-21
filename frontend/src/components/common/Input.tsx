@@ -6,7 +6,7 @@ type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'color'> 
   inputRef?: Ref<HTMLInputElement>;
 };
 
-export function Input({ min, max, minLength, maxLength, step, pattern, 'aria-label': ariaLabel, ...props }: InputProps) {
+export function Input({ min, max, minLength, maxLength, step, pattern, inputMode, 'aria-label': ariaLabel, ...props }: InputProps) {
   return (
     <TextField
       variant="outlined"
@@ -17,7 +17,7 @@ export function Input({ min, max, minLength, maxLength, step, pattern, 'aria-lab
       // aria-label must land on the native input, not TextField's root div.
       slotProps={{
         htmlInput: {
-          min, max, minLength, maxLength, step, pattern,
+          min, max, minLength, maxLength, step, pattern, inputMode,
           ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
           ...(props.autoFocus ? { 'data-autofocus': true } : {}),
         },

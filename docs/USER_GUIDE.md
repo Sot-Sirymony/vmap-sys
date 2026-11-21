@@ -236,6 +236,28 @@ weekday you choose, or monthly on the last working day. On that day a notice app
 reports page (with **New report from this** for your latest final report) and stays for a week or until you finalise a
 report. If the server can send mail, you also get an email that day, even with the daily reminder off.
 
+## Verify it's you (V20)
+
+Some changes are risky enough that the app checks it is really you, even though you are signed in: changing your
+password (Security), downloading all your data and deleting your account (Account). When you press one of these, a
+**Verify it's you** window opens and the app emails you a 6-digit code. Type it in (your phone may offer it from the
+email); the change then goes ahead without you typing anything again.
+
+- A code works for 10 minutes and only once. After 5 wrong tries, ask for a new one (**Send a new code**, after a
+  minute).
+- After one code, changing your password or downloading your data again within 10 minutes does not ask again.
+  Deleting your account always asks for a new code.
+- Never share the code. The email has no link; if you did not ask for a code, change your password.
+- To delete your account, type the word `DELETE` (capitals or not) in the confirmation box.
+- To send reminders to a new address, you get two codes: one at your account email, then one at the new address, so
+  reminders only go to an address you own. Clearing the address needs only the first.
+- After each of these changes you get a short email saying what changed, when and from which browser. If it was not
+  you, change your password straight away.
+
+*For administrators:* saving or removing the AI key, and naming or changing a cohort's coach, ask for a fresh code
+every time. If the server has no mail set up, the admin pages show a warning: codes cannot be sent, so risky changes
+are protected by passwords only until `MAIL_HOST` is set.
+
 ## Appearance
 
 Open `Appearance` in the sidebar, or click the sun/moon icon in the header for

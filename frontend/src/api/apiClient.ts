@@ -10,17 +10,36 @@ type ApiErrorResponse = {
   error?: string;
   // V10 (SEC-10-02): matches the server log line for this error.
   reference?: string;
+  // V20: what happened, for a page that acts on it (for example STEP_UP_REQUIRED).
+  code?: string;
+  triesLeft?: number;
+  action?: string;
 };
 
 /** A request the server refused. `status` lets callers tell 401, 409 and the rest apart. */
 export class ApiError extends Error {
   readonly status: number;
+  /** V20: the server's code for what happened, such as STEP_UP_REQUIRED. */
+  readonly code?: string;
+  /** V20: tries left after a wrong "Verify it's you" code. */
+  readonly triesLeft?: number;
+  /** V20: on STEP_UP_REQUIRED, which code the server wants. */
+  readonly action?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string, triesLeft?: number, action?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
+    this.triesLeft = triesLeft;
+    this.action = action;
   }
+}
+
+/** V20: the ApiError for a refused file download, so pages can act on its code like any other request. */
+export async function apiErrorFrom(response: Response): Promise<ApiError> {
+  const { message, code, triesLeft, action } = await readError(response);
+  return new ApiError(message, response.status, code, triesLeft, action);
 }
 
 /**
@@ -242,9 +261,9 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     reportSessionEnded(response, retryToken ?? options.token);
-    const { message, reference } = await readError(response);
+    const { message, reference, code, triesLeft, action } = await readError(response);
     reportFailure({ method, path, status: response.status, message, reference });
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, code, triesLeft, action);
   }
 
   if (response.status === 204) {
@@ -255,7 +274,7 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
 }
 
 /** The message to show, and the server's reference for this error when it sent one. */
-async function readError(response: Response): Promise<{ message: string; reference?: string }> {
+async function readError(response: Response): Promise<{ message: string; reference?: string; code?: string; triesLeft?: number; action?: string }> {
   const fallback = `Request failed with status ${response.status}`;
   const text = await response.text();
   if (!text) {
@@ -271,6 +290,9 @@ async function readError(response: Response): Promise<{ message: string; referen
     return {
       message: response.status >= 500 && error.reference ? tr('{message} (Reference: {reference})', { message: tr(message), reference: error.reference }) : message,
       reference: error.reference,
+      code: error.code,
+      triesLeft: error.triesLeft,
+      action: error.action,
     };
   } catch {
     return { message: text };

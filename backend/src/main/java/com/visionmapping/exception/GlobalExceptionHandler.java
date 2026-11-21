@@ -164,6 +164,13 @@ public class GlobalExceptionHandler {
      * A rate limit, not a rejection of what was sent — the same request may well
      * succeed later, which is what 429 tells the client and 400 would not.
      */
+    /** V20: "Verify it's you" answers, with the code the page acts on. */
+    @ExceptionHandler(StepUpException.class)
+    public ResponseEntity<ErrorResponse> handleStepUp(StepUpException exception, HttpServletRequest request) {
+        return ResponseEntity.status(exception.getStatus()).body(ErrorResponse.of(exception.getStatus(), exception.getMessage(),
+                request.getRequestURI(), exception.getCode(), exception.getTriesLeft(), exception.getAction()));
+    }
+
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyRequests(
             TooManyRequestsException exception,

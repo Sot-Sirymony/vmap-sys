@@ -8,12 +8,14 @@ import CardHeader from '@mui/material/CardHeader';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Typography from '@mui/material/Typography';
 import { deleteAccount, exportAccountData } from '../api/accountApi';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { AiConsentCard } from '../components/common/AiConsentCard';
 import { CohortCard } from '../components/common/CohortCard';
 import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
+import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { useAuth } from '../context/AuthContext';
 import { localDateIso } from '../utils/localDate';
 import { saveBlob } from '../utils/saveBlob';
@@ -21,6 +23,11 @@ import { useI18n, type Language } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
 
 const DELETE_WORD = 'DELETE';
+
+/** V20 SV-FR-35: any case, spaces around it ignored (phones type "Delete" or add a space). */
+export function isDeleteWord(value: string) {
+  return value.trim().toUpperCase() === DELETE_WORD;
+}
 
 /** FR-77 and NFR-09: reminders, taking your data with you, and leaving. */
 export function AccountSettingsPage() {
@@ -33,6 +40,7 @@ export function AccountSettingsPage() {
   const [confirmWord, setConfirmWord] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const stepUp = useStepUp(token);
 
   async function handleExport() {
     if (!token) {
@@ -41,9 +49,11 @@ export function AccountSettingsPage() {
     setExporting(true);
     setExportError('');
     try {
-      saveBlob(await exportAccountData(token), `vision-mapping-data-${localDateIso()}.json`);
+      // V20 SV-FR-03: everything at once, so "Verify it's you" first.
+      saveBlob(await stepUp.protect('EXPORT_DATA', (code) => exportAccountData(token, code)), `vision-mapping-data-${localDateIso()}.json`);
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : t('Unable to export your data.'));
+      if (isStepUpCancelled(error)) return;
+      setExportError(error instanceof Error ? t(error.message) : t('Unable to export your data.'));
     } finally {
       setExporting(false);
     }
@@ -51,15 +61,20 @@ export function AccountSettingsPage() {
 
   async function handleDelete(event: FormEvent) {
     event.preventDefault();
-    if (!token || confirmWord !== DELETE_WORD || !password) {
+    if (!token || !isDeleteWord(confirmWord) || !password) {
       return;
     }
     setDeleting(true);
     setDeleteError('');
     try {
-      await deleteAccount(token, password);
+      // V20 SV-FR-02: always a fresh code, even right after another verification.
+      await stepUp.protect('DELETE_ACCOUNT', (code) => deleteAccount(token, password, code));
       logout();
     } catch (error) {
+      if (isStepUpCancelled(error)) {
+        setDeleting(false);
+        return;
+      }
       setDeleteError(error instanceof Error ? error.message : t('Unable to delete your account.'));
       setDeleting(false);
     }
@@ -109,6 +124,7 @@ export function AccountSettingsPage() {
                   {exporting ? t('Preparing…') : t('Download my data')}
                 </Button>
               </Box>
+              <Typography variant="caption" color="text.secondary">{t("We'll email you a code to confirm it's you.")}</Typography>
             </Stack>
           </CardContent>
         </Card>
@@ -125,16 +141,23 @@ export function AccountSettingsPage() {
                 {t('Type {word} to confirm', { word: DELETE_WORD })}
                 <Input aria-label={t('Type {word} to confirm', { word: DELETE_WORD })} value={confirmWord} onChange={(event) => setConfirmWord(event.target.value)} required />
               </label>
+              {confirmWord && !isDeleteWord(confirmWord) && (
+                <Typography variant="caption" color="text.secondary" role="status">
+                  {t('Type {word} to enable the button.', { word: DELETE_WORD })}
+                </Typography>
+              )}
               {deleteError && <Alert severity="error">{t(deleteError)}</Alert>}
               <Box>
-                <Button type="submit" variant="danger" disabled={deleting || !password || confirmWord !== DELETE_WORD}>
+                <Button type="submit" variant="danger" disabled={deleting || !password || !isDeleteWord(confirmWord)}>
                   {deleting ? t('Deleting…') : t('Permanently delete my account')}
                 </Button>
               </Box>
+              <Typography variant="caption" color="text.secondary">{t("We'll email you a code to confirm it's you.")}</Typography>
             </Box>
           </CardContent>
         </Card>
       </Stack>
+      {stepUp.dialog}
     </PageSection>
   );
 }

@@ -60,7 +60,7 @@ describe('CohortsPage (V9 FR-01, FR-20; BR-14)', () => {
     await userEvent.type(screen.getByLabelText('Start date'), '2027-09-01');
     await userEvent.click(create);
 
-    expect(cohortApi.createCohort).toHaveBeenCalledWith('token', { name: 'Autumn 2027', coachEmail: 'dara@example.com', startDate: '2027-09-01' });
+    expect(cohortApi.createCohort).toHaveBeenCalledWith('token', { name: 'Autumn 2027', coachEmail: 'dara@example.com', startDate: '2027-09-01' }, undefined);
     await waitFor(() => expect(cohortApi.listCohorts).toHaveBeenCalledTimes(2));
     expect(screen.getByRole('textbox', { name: 'Cohort name' })).toHaveValue('');
   });
@@ -86,7 +86,7 @@ describe('CohortsPage (V9 FR-01, FR-20; BR-14)', () => {
     await userEvent.type(name, ' (Phnom Penh)');
     await userEvent.click(within(card).getByRole('button', { name: 'Save changes' }));
 
-    expect(cohortApi.updateCohort).toHaveBeenCalledWith('token', 1, { name: 'Spring 2027 (Phnom Penh)', coachEmail: 'dara@example.com', startDate: '2027-03-01' });
+    expect(cohortApi.updateCohort).toHaveBeenCalledWith('token', 1, { name: 'Spring 2027 (Phnom Penh)', coachEmail: 'dara@example.com', startDate: '2027-03-01' }, undefined);
     expect(await screen.findByText('Spring 2027 (Phnom Penh)')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
   });

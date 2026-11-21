@@ -13,6 +13,8 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { getAiSettings, removeAiApiKey, saveAiApiKey, testAiConnection, updateAiSettings } from '../api/aiSettingsApi';
+import { StepUpMailWarning } from '../components/step-up/StepUpMailWarning';
+import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -62,6 +64,7 @@ export function AiSettingsPage() {
 
   return (
     <PageSection title={tr('AI settings')} subtitle={tr('Claude API key, model and budget')}>
+      <StepUpMailWarning token={token} />
       {error && <ErrorMessage message={error} />}
       {!settings && !error && <Loading />}
       {settings && token && (
@@ -80,6 +83,7 @@ export function AiSettingsPage() {
 type CardProps = { settings: AiSettings; token: string; onChanged: (next: AiSettings) => void };
 
 function ApiKeyCard({ settings, token, onChanged }: CardProps) {
+  const stepUp = useStepUp(token);
   const [apiKey, setApiKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -91,7 +95,9 @@ function ApiKeyCard({ settings, token, onChanged }: CardProps) {
       onChanged(await action());
       return true;
     } catch (actionError) {
-      setError(actionError instanceof Error ? tr(actionError.message) : tr(fallback));
+      if (!isStepUpCancelled(actionError)) {
+        setError(actionError instanceof Error ? tr(actionError.message) : tr(fallback));
+      }
       return false;
     } finally {
       setBusy(false);
@@ -100,14 +106,15 @@ function ApiKeyCard({ settings, token, onChanged }: CardProps) {
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
-    if (await run(() => saveAiApiKey(token, apiKey.trim()), 'Unable to save the key.')) {
+    // V20 SV-FR-07: a fresh "Verify it's you" code every time.
+    if (await run(() => stepUp.protect('ADMIN_AI_KEY', (code) => saveAiApiKey(token, apiKey.trim(), code)), 'Unable to save the key.')) {
       setApiKey('');
     }
   }
 
   function handleRemove() {
     if (window.confirm(tr('Remove the saved API key? AI features stop until a new key is added.'))) {
-      void run(() => removeAiApiKey(token), 'Unable to remove the key.');
+      void run(() => stepUp.protect('ADMIN_AI_KEY', (code) => removeAiApiKey(token, code)), 'Unable to remove the key.');
     }
   }
 

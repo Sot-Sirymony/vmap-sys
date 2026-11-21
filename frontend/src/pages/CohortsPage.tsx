@@ -20,6 +20,8 @@ import {
   updateCohort,
   type CohortInput,
 } from '../api/cohortApi';
+import { StepUpMailWarning } from '../components/step-up/StepUpMailWarning';
+import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { PageSwitchesField } from '../components/ai/page-assistant/PageSwitchesField';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -68,6 +70,7 @@ export function CohortsPage() {
 
   return (
     <PageSection title={tr('Cohorts')} subtitle={tr('Groups of participants and their coaches')}>
+      <StepUpMailWarning token={token} />
       <Stack spacing={2}>
         <Card>
           <CardHeader title={tr('New cohort')} subheader={tr('Naming a coach gives that account the coach role. They must register first.')} />
@@ -91,6 +94,7 @@ function CohortForm({ token, cohort, submitLabel, onSaved }: CohortFormProps) {
     : EMPTY);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const stepUp = useStepUp(token);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -100,12 +104,14 @@ function CohortForm({ token, cohort, submitLabel, onSaved }: CohortFormProps) {
     setBusy(true);
     setError('');
     try {
-      const saved = cohort ? await updateCohort(token, cohort.id, input) : await createCohort(token, input);
+      // V20 SV-FR-06, SV-FR-08: changing the coach needs a fresh code; the server names which one.
+      const saved = await stepUp.protect(null, (code) => (cohort ? updateCohort(token, cohort.id, input, code) : createCohort(token, input, code)));
       if (!cohort) {
         setInput(EMPTY);
       }
       onSaved(saved);
     } catch (saveError) {
+      if (isStepUpCancelled(saveError)) return;
       setError(saveError instanceof Error ? tr(saveError.message) : tr('Unable to save this cohort.'));
     } finally {
       setBusy(false);
@@ -128,6 +134,7 @@ function CohortForm({ token, cohort, submitLabel, onSaved }: CohortFormProps) {
       </label>
       <Button type="submit" disabled={busy || !input.name.trim()}>{submitLabel}</Button>
       {error && <Box sx={{ gridColumn: '1 / -1' }}><Alert severity="error">{error}</Alert></Box>}
+      {stepUp.dialog}
     </Box>
   );
 }

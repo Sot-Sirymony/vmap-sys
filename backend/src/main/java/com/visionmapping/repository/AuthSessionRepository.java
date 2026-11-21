@@ -25,6 +25,11 @@ public interface AuthSessionRepository extends JpaRepository<AuthSession, Long> 
     int revokeAllForUser(@Param("userId") Long userId, @Param("keepId") Long keepId,
                          @Param("reason") String reason, @Param("now") Instant now);
 
+    /** V20 (SV-FR-16): a password change or reset closes every verified window of the person. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update AuthSession s set s.verifiedUntil = null where s.user.id = :userId and s.verifiedUntil is not null")
+    int closeVerifiedWindows(@Param("userId") Long userId);
+
     /** Housekeeping: sessions that ended more than a while ago. */
     @Modifying
     @Query("delete from AuthSession s where s.expiresAt < :before or (s.revokedAt is not null and s.revokedAt < :before)")

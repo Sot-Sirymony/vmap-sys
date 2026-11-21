@@ -1,5 +1,6 @@
 package com.visionmapping.exception;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -21,14 +22,26 @@ public record ErrorResponse(
         String error,
         String message,
         String path,
-        String reference
+        String reference,
+        /** V20: what happened, for a page that acts on it (StepUpException). Left out when null. */
+        @JsonInclude(JsonInclude.Include.NON_NULL) String code,
+        /** V20: tries left after a wrong code. Left out when null. */
+        @JsonInclude(JsonInclude.Include.NON_NULL) Integer triesLeft,
+        /** V20: on STEP_UP_REQUIRED, which code the page must ask for. Left out when null. */
+        @JsonInclude(JsonInclude.Include.NON_NULL) String action
 ) {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final int REFERENCE_BYTES = 6;
 
     public static ErrorResponse of(HttpStatus status, String message, String path) {
-        return new ErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), message, path, newReference());
+        return new ErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), message, path, newReference(), null, null, null);
+    }
+
+    /** V20: an answer with a code the page acts on, and the tries left after a wrong code. */
+    public static ErrorResponse of(HttpStatus status, String message, String path, String code, Integer triesLeft, String action) {
+        return new ErrorResponse(Instant.now(), status.value(), status.getReasonPhrase(), message, path, newReference(), code, triesLeft,
+                action);
     }
 
     /** Twelve hex characters: short enough to read out, random enough not to collide in a log search. */

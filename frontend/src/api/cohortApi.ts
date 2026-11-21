@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { stepUpHeader } from './stepUpApi';
 import type { AssistantPage,
   CoachComment,
   CoachCommentTarget,
@@ -83,12 +84,13 @@ export function listCohorts(token: string) {
   return apiClient<Cohort[]>('/admin/cohorts', { token });
 }
 
-export function createCohort(token: string, input: CohortInput) {
-  return apiClient<Cohort>('/admin/cohorts', { method: 'POST', token, body: JSON.stringify(input) });
+/** V20 SV-FR-06, SV-FR-08: changing the coach needs a fresh "Verify it's you" code (stepUp). */
+export function createCohort(token: string, input: CohortInput, stepUp?: number) {
+  return apiClient<Cohort>('/admin/cohorts', { method: 'POST', token, headers: stepUpHeader(stepUp), body: JSON.stringify(input) });
 }
 
-export function updateCohort(token: string, id: number, input: CohortInput) {
-  return apiClient<Cohort>(`/admin/cohorts/${id}`, { method: 'PUT', token, body: JSON.stringify(input) });
+export function updateCohort(token: string, id: number, input: CohortInput, stepUp?: number) {
+  return apiClient<Cohort>(`/admin/cohorts/${id}`, { method: 'PUT', token, headers: stepUpHeader(stepUp), body: JSON.stringify(input) });
 }
 
 export function newJoinCode(token: string, id: number) {

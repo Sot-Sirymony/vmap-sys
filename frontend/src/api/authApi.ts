@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import { stepUpHeader } from './stepUpApi';
 import type {
   AuthResponse,
   ChangePasswordRequest,
@@ -47,9 +48,11 @@ export function register(request: RegisterRequest) {
  * to read — and nothing worth returning, since echoing any part of the request
  * would put a password somewhere it does not need to be.
  */
-export function changePassword(request: ChangePasswordRequest, token: string | null) {
+/** V20 SV-FR-01: needs a "Verify it's you" code (stepUp) or the session's verified window. */
+export function changePassword(request: ChangePasswordRequest, token: string | null, stepUp?: number) {
   return apiClient<void>('/auth/change-password', {
     method: 'POST',
+    headers: stepUpHeader(stepUp),
     body: JSON.stringify(request),
     token,
   });

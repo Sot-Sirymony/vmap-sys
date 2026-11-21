@@ -52,7 +52,7 @@ describe('AiSettingsPage (AI-FR-24)', () => {
     await userEvent.type(field, 'sk-ant-api03-abcdefghijklmnopwxyz');
     await userEvent.click(screen.getByRole('button', { name: 'Save key' }));
 
-    expect(saveAiApiKey).toHaveBeenCalledWith('token', 'sk-ant-api03-abcdefghijklmnopwxyz');
+    expect(saveAiApiKey).toHaveBeenCalledWith('token', 'sk-ant-api03-abcdefghijklmnopwxyz', undefined);
     expect(await screen.findByText('sk-ant-…wxyz')).toBeInTheDocument();
     expect(field).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Replace key' })).toBeInTheDocument();

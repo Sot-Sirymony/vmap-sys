@@ -14,6 +14,7 @@ import { useI18n } from '../../i18n/I18nContext';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Select } from './Select';
+import { isStepUpCancelled, useStepUp } from '../step-up/useStepUp';
 
 /** 1 = Monday to 7 = Sunday, as the server stores them (RM-FR-49). */
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -31,6 +32,7 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const stepUp = useStepUp(token);
 
   function show(settings: ReminderSettings) {
     setReminders(settings);
@@ -55,9 +57,13 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
     setError('');
     setNotice('');
     try {
-      show(await updateReminderSettings(token, enabled, browserTimeZone(), reminderEmail.trim(), report));
+      const address = reminderEmail.trim();
+      // V20 SV-FR-04: a new address needs the account check, then a code sent to that address. Other changes need none.
+      show(await stepUp.protect('CHANGE_REMINDER_EMAIL', (account) => stepUp.protect('CONFIRM_REMINDER_EMAIL',
+        (confirm) => updateReminderSettings(token, enabled, browserTimeZone(), address, report, { account, confirm }), address)));
       setNotice(savedNotice);
     } catch (saveError) {
+      if (isStepUpCancelled(saveError)) return;
       setError(saveError instanceof Error ? t(saveError.message) : t('Unable to save your reminder settings.'));
     } finally {
       setBusy(false);
@@ -135,6 +141,9 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
                 <Typography variant="caption" color="text.secondary">
                   {t('Leave blank to use your login email. Reminders now go to {email}.', { email: reminders.sendsTo })}
                 </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t("To use a new address, we'll email a code to you and one to that address.")}
+                </Typography>
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Button type="submit" disabled={busy || !unsavedEmail}>{t('Save email')}</Button>
                   <Button type="button" variant="secondary" disabled={busy || unsavedEmail || !reminders.emailConfigured} onClick={() => void handleTest()}>
@@ -176,6 +185,7 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
           )}
         </Stack>
       </CardContent>
+      {stepUp.dialog}
     </Card>
   );
 }

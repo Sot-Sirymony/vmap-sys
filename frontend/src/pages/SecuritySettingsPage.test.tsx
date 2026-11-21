@@ -53,6 +53,7 @@ describe('SecuritySettingsPage', () => {
       expect(changePasswordMock).toHaveBeenCalledWith(
         { currentPassword: 'CurrentPass123', newPassword: 'BrandNewPass456' },
         'a-token',
+        undefined,
       );
     });
   });

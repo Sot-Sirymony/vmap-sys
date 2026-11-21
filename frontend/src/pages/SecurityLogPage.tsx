@@ -20,12 +20,14 @@ import { Loading } from '../components/common/Loading';
 import { Select } from '../components/common/Select';
 import { useAuth } from '../context/AuthContext';
 import { tr } from '../i18n/translate';
+import { StepUpMailWarning } from '../components/step-up/StepUpMailWarning';
 import { PageSection } from './PageSection';
 
 /** Kept in step with SecurityEventType on the server. */
 const EVENT_TYPES = [
   'LOGIN_SUCCEEDED', 'LOGIN_FAILED', 'LOGIN_LOCKED', 'LOGGED_OUT', 'REGISTERED', 'PASSWORD_CHANGED',
   'PASSWORD_RESET_REQUESTED', 'PASSWORD_RESET_COMPLETED', 'REFRESH_TOKEN_REUSED', 'INVALID_TOKEN',
+  'STEP_UP_CODE_SENT', 'STEP_UP_VERIFIED', 'STEP_UP_FAILED', 'STEP_UP_LOCKED', 'STEP_UP_SKIPPED_NO_MAIL',
   'ACCESS_DENIED', 'NOT_OWNER', 'RATE_LIMITED', 'ROLE_CHANGED', 'COACH_VIEWED_PARTICIPANT',
   'SHARE_LINK_CREATED', 'SHARE_LINK_OPENED', 'SHARE_LINK_REVOKED', 'EXCEL_IMPORTED', 'EXCEL_EXPORTED',
   'ACCOUNT_EXPORTED', 'ACCOUNT_DELETED', 'AI_SETTINGS_CHANGED', 'AI_KEY_CHANGED', 'AI_KEY_REMOVED',
@@ -79,6 +81,7 @@ export function SecurityLogPage() {
 
   return (
     <PageSection title={tr('Security log')} subtitle={tr('Sign-ins, refused requests and admin changes. Kept for 12 months and cannot be edited.')}>
+      <StepUpMailWarning token={token} />
       <Stack spacing={2}>
         {alerts.length > 0 && (
           <Alert severity="warning">

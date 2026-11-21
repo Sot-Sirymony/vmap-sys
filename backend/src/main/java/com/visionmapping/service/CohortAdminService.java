@@ -19,7 +19,11 @@ import com.visionmapping.repository.CohortRepository;
 import com.visionmapping.service.support.EntityLookup;
 import java.security.SecureRandom;
 import java.util.List;
+import com.visionmapping.service.stepup.StepUpAction;
+import com.visionmapping.service.stepup.StepUpService;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +45,7 @@ public class CohortAdminService {
     private final SecurityEventService securityEvents;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
+    private final StepUpService stepUpService;
 
     @Transactional(readOnly = true)
     public List<CohortResponse> list() {
@@ -49,18 +54,18 @@ public class CohortAdminService {
     }
 
     @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
-    public CohortResponse create(CohortRequest request) {
+    public CohortResponse create(CohortRequest request, @Nullable String stepUp) {
         requireAdmin();
         Cohort cohort = Cohort.builder().joinCode(newCode()).build();
-        apply(cohort, request);
+        apply(cohort, request, stepUp);
         return toResponse(cohortRepository.save(cohort));
     }
 
     @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
-    public CohortResponse update(Long id, CohortRequest request) {
+    public CohortResponse update(Long id, CohortRequest request, @Nullable String stepUp) {
         requireAdmin();
         Cohort cohort = cohort(id);
-        apply(cohort, request);
+        apply(cohort, request, stepUp);
         return toResponse(cohortRepository.save(cohort));
     }
 
@@ -111,7 +116,7 @@ public class CohortAdminService {
         appUserRepository.save(user);
     }
 
-    private void apply(Cohort cohort, CohortRequest request) {
+    private void apply(Cohort cohort, CohortRequest request, @Nullable String stepUp) {
         cohort.setName(request.name().trim());
         cohort.setStartDate(request.startDate());
         if (request.aiPagesOff() != null) {
@@ -121,11 +126,17 @@ public class CohortAdminService {
             cohort.setAiEnabled(request.aiEnabled());
         }
         String coachEmail = request.coachEmail() == null ? "" : request.coachEmail().trim();
-        if (coachEmail.isEmpty()) {
+        AppUser coach = coachEmail.isEmpty() ? null : userByEmail(coachEmail);
+        Long currentCoachId = cohort.getCoach() == null ? null : cohort.getCoach().getId();
+        if (!Objects.equals(currentCoachId, coach == null ? null : coach.getId())) {
+            // V20 SV-FR-06, SV-FR-08: a fresh code for the admin. Making someone a coach is a role change, which covers both.
+            boolean promotes = coach != null && coach.getRole() == UserRole.USER;
+            stepUpService.require(promotes ? StepUpAction.ADMIN_ROLE_CHANGE : StepUpAction.ADMIN_COHORT_COACH, stepUp);
+        }
+        if (coach == null) {
             cohort.setCoach(null);
             return;
         }
-        AppUser coach = userByEmail(coachEmail);
         if (coach.getRole() == UserRole.USER) {
             coach.setRole(UserRole.COACH);
             appUserRepository.save(coach);

@@ -66,6 +66,66 @@ requirement; it is internal quality and UX work.
 
 ---
 
+## [20.0.0] — Phases 1 to 4 built
+
+Implements [BRD 20.0.0](VMS_BRD_V20.0.0.md) ("Verify it's you"). Migration
+`V84__step_up_challenges.sql`.
+
+### Added in phase 4
+- **Admin actions (SV-FR-06 to SV-FR-08).** Saving or removing the AI key, making someone a coach (a role change) and
+  changing a cohort's coach need a fresh code for the admin every time. The cohort form asks for whichever code the
+  server names; other cohort edits need none.
+- **Mail warning (SV-FR-34).** `GET /api/admin/step-up` and a warning on the Cohorts, AI settings and Security log pages
+  while codes are on but no mail server can send them.
+- Docs: `UAT_V20.md`, `SECURITY.md`, `DATA_MODEL.md`, `USER_GUIDE.md`, `API.md`.
+
+### Added in phase 3
+- **Confirm a new reminder address (SV-FR-04, SV-FR-05).** Saving a different reminder address needs the account check
+  (a code to the account email, or the verified window) and then a code sent to the new address, so reminders and the
+  test email only ever go to an address the person controls. Clearing it needs only the account check; other reminder
+  settings need no code. The page asks for both codes in turn and saves once.
+- **Change notices (SV-FR-28 to SV-FR-31).** After a password change, a data download, a reminder address change or an
+  account deletion, a short email goes to the account email (and, for a reminder address, to the old address): what
+  changed, when in the person's time zone, from which browser, and "If this was not you, change your password now".
+  Sent only after the change is saved, never for one that failed; no code and no link.
+- The `STEP_UP_REQUIRED` answer names the code it wants (`action`).
+
+### Added in phase 2
+- **Protected actions (SV-FR-01 to SV-FR-03).** Changing the password, downloading all your data and deleting the
+  account now need an emailed code (`X-Step-Up` header), checked before the password. Password change and download
+  share the 10-minute verified window; deleting always needs its own code from the last 5 minutes.
+- **Verify it's you dialog (SV-FR-20 to SV-FR-27).** One dialog for every protected action: the masked address and
+  minutes left, a code box that phones can fill from the email and that submits at six digits, a resend countdown,
+  clear messages for wrong, ended and unsent codes, and a "no mail on this server" path that goes on with the password
+  checks. When the server asks for a code, the page opens the dialog and repeats the action once afterwards, keeping
+  what was typed. Each protected action says "We'll email you a code to confirm it's you."
+- **Delete confirmation word (SV-FR-35).** `DELETE` in any case, with spaces around it, enables the button; another
+  word shows "Type DELETE to enable the button."
+- Khmer drafts in `docs/km-review-v20.csv`.
+
+### Changed in phase 2
+- Error answers carry `code` and `triesLeft` to the frontend (`ApiError`), including for file downloads.
+- The shared `Input` passes `inputMode` to the real input element.
+
+### Added in phase 1
+- **Email codes (SV-FR-10 to SV-FR-18).** `POST /api/account/step-up` sends a six-digit code by email for one action
+  (in English or Khmer); `POST /api/account/step-up/{id}/verify` checks it. A code works for 10 minutes and once, stops
+  after 5 wrong tries, is tied to the person, the session and the action, and only its HMAC is stored. A new code can be
+  asked for after 60 seconds, at most 5 an hour and 20 a day.
+- **Verified window (SV-FR-16).** A code for a settings action (change password, download my data, change reminder email)
+  covers the others in the same session for 10 minutes. Deleting the account and admin actions always need their own
+  code. A password change or reset closes every window.
+- **Stolen-session signal (SV-FR-19).** Ten wrong codes within an hour end the person's other sessions and send a
+  security notice.
+- **No mail (SV-FR-32, SV-FR-33).** Without a mail server the code is written to the log on a local or test run only;
+  in production no code is sent and the action keeps its password checks (D-20-4). A failed send keeps nothing.
+- **Security log.** `STEP_UP_CODE_SENT`, `STEP_UP_VERIFIED`, `STEP_UP_FAILED`, `STEP_UP_LOCKED` and
+  `STEP_UP_SKIPPED_NO_MAIL`, never with the code; the admin log filter lists them.
+- New optional settings: `STEP_UP_ENABLED` (default true) and `STEP_UP_SECRET` (the code HMAC key; defaults to
+  `JWT_SECRET`).
+
+---
+
 ## [19.0.0] — Phases 1 to 5 built
 
 Implements [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations `V79__obstacle_resolved_at.sql`,

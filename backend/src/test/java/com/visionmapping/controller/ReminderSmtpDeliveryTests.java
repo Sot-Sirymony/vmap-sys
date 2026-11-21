@@ -91,9 +91,13 @@ class ReminderSmtpDeliveryTests {
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/account/reminders/test").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
-        assertThat(SMTP.waitForIncomingEmail(10_000, 2)).isTrue();
-        MimeMessage test = SMTP.getReceivedMessages()[1];
+        // V20 SV-FR-28: changing the address also sends a notice to the account email.
+        assertThat(SMTP.waitForIncomingEmail(10_000, 3)).isTrue();
+        MimeMessage test = java.util.Arrays.stream(SMTP.getReceivedMessages())
+                .filter(received -> GreenMailUtil.getBody(received).contains("This is a test")).findFirst().orElseThrow();
         assertThat(test.getAllRecipients()[0].toString()).isEqualTo("other@example.org");
-        assertThat(GreenMailUtil.getBody(test)).contains("This is a test");
+        MimeMessage notice = java.util.Arrays.stream(SMTP.getReceivedMessages())
+                .filter(received -> GreenMailUtil.getBody(received).contains("reminders now go to")).findFirst().orElseThrow();
+        assertThat(notice.getAllRecipients()[0].toString()).isEqualTo(email);
     }
 }

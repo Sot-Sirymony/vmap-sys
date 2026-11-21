@@ -2208,3 +2208,34 @@ export type CommentaryDraft = {
   decisionsNeeded?: string | null;
   nextFocus?: string | null;
 };
+
+/** V20 (BRD 20.0.0): the actions that need a "Verify it's you" code. */
+export type StepUpAction = 'CHANGE_PASSWORD' | 'EXPORT_DATA' | 'CHANGE_REMINDER_EMAIL' | 'CONFIRM_REMINDER_EMAIL' | 'DELETE_ACCOUNT'
+  | 'ADMIN_ROLE_CHANGE' | 'ADMIN_AI_KEY' | 'ADMIN_COHORT_COACH';
+
+/**
+ * V20: a code was sent. delivery is EMAIL, LOG (development: the code is in the
+ * server log) or NONE (no mail server: no code, the action keeps its password
+ * checks), when challengeId is null.
+ */
+export type StepUpChallenge = {
+  challengeId?: number | null;
+  sentTo: string;
+  expiresAt?: string | null;
+  resendAfter?: string | null;
+  delivery: 'EMAIL' | 'LOG' | 'NONE';
+};
+
+/** V20: the code was right; windowUntil is set for the settings actions. */
+export type StepUpVerified = {
+  verified: boolean;
+  challengeId: number;
+  windowUntil?: string | null;
+};
+
+/** V20 SV-FR-34: whether codes are on, how they are delivered, and so whether actions ask for one. */
+export type StepUpStatus = {
+  enabled: boolean;
+  delivery: 'EMAIL' | 'LOG' | 'NONE';
+  active: boolean;
+};

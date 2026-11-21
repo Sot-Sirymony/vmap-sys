@@ -13,10 +13,12 @@ import com.visionmapping.service.PasswordResetService;
 import com.visionmapping.util.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import com.visionmapping.service.stepup.StepUpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -80,8 +82,9 @@ public class AuthController {
      */
     @PostMapping("/change-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(request);
+    public void changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                               @RequestHeader(value = StepUpService.HEADER, required = false) String stepUp) {
+        authService.changePassword(request, stepUp);
     }
 
     /**

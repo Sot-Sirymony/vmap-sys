@@ -20,6 +20,11 @@ import com.visionmapping.security.AppUserPrincipal;
 import com.visionmapping.service.support.LoginAttemptLimiter;
 import com.visionmapping.service.support.PasswordPolicy;
 import com.visionmapping.util.UserScope;
+import com.visionmapping.service.notice.AccountNotice;
+import com.visionmapping.service.notice.AccountNotices;
+import com.visionmapping.service.stepup.StepUpService;
+import com.visionmapping.service.stepup.StepUpAction;
+import org.springframework.lang.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -49,6 +54,8 @@ public class AuthService {
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
     private final PasswordPolicy passwordPolicy;
+    private final StepUpService stepUpService;
+    private final AccountNotices accountNotices;
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
@@ -135,7 +142,9 @@ public class AuthService {
      * mid-change for the ordinary mistake of mistyping their old password.
      */
     @SecurityAudit(value = SecurityEventType.PASSWORD_CHANGED, target = "user")
-    public void changePassword(ChangePasswordRequest request) {
+    public void changePassword(ChangePasswordRequest request, @Nullable String stepUp) {
+        // V20 SV-FR-01: the email code first, so this is no password oracle for someone holding the session.
+        stepUpService.require(StepUpAction.CHANGE_PASSWORD, stepUp);
         AppUser user = userScope.currentUser();
 
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
@@ -155,6 +164,8 @@ public class AuthService {
         // V10 (SEC-07-03): every other session ends, so a device someone else
         // signed in on loses access. The session making the change stays open.
         authSessionService.endOtherSessions(user.getId(), currentSessionId());
+        // V20 SV-FR-28: a notice to the account email once this is saved.
+        accountNotices.changed(AccountNotice.Kind.PASSWORD_CHANGED, user);
     }
 
     private static Long currentSessionId() {

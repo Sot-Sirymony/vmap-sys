@@ -38,7 +38,7 @@ describe('AccountSettingsPage', () => {
 
     await userEvent.click(await screen.findByRole('switch', { name: 'Email me a daily reminder' }));
 
-    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), '', undefined));
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), '', undefined, { account: undefined, confirm: undefined }));
   });
 
   it('saves a weekly report reminder on a chosen weekday, then a monthly one (V19 RM-FR-49)', async () => {
@@ -52,14 +52,14 @@ describe('AccountSettingsPage', () => {
 
     await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Remind me to prepare a report' }), 'WEEKLY');
     await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', false, expect.any(String), '',
-      { reportReminder: 'WEEKLY', reportReminderDay: 5 }));
+      { reportReminder: 'WEEKLY', reportReminderDay: 5 }, { account: undefined, confirm: undefined }));
     expect(await screen.findByText('Report reminder saved.')).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Weekday' }), 'Monday');
     await waitFor(() => expect(updateReminderSettings).toHaveBeenLastCalledWith('token', false, expect.any(String), '',
-      { reportReminder: 'WEEKLY', reportReminderDay: 1 }));
+      { reportReminder: 'WEEKLY', reportReminderDay: 1 }, { account: undefined, confirm: undefined }));
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Remind me to prepare a report' }), 'MONTHLY');
     await waitFor(() => expect(updateReminderSettings).toHaveBeenLastCalledWith('token', false, expect.any(String), '',
-      { reportReminder: 'MONTHLY', reportReminderDay: null }));
+      { reportReminder: 'MONTHLY', reportReminderDay: null }, { account: undefined, confirm: undefined }));
     expect(screen.queryByRole('combobox', { name: 'Weekday' })).not.toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe('AccountSettingsPage', () => {
     await userEvent.type(screen.getByLabelText('Send reminders to'), ' inbox@example.org ');
     expect(screen.getByRole('button', { name: 'Send test email' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Save email' }));
-    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), 'inbox@example.org', undefined));
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), 'inbox@example.org', undefined, { account: undefined, confirm: undefined }));
     expect(await screen.findByText('Reminder email saved.')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Send test email' }));
@@ -93,13 +93,16 @@ describe('AccountSettingsPage', () => {
     expect(button).toBeDisabled();
 
     await userEvent.type(screen.getByLabelText('Your password'), 'secret');
-    await userEvent.type(screen.getByLabelText('Type DELETE to confirm'), 'delete');
+    await userEvent.type(screen.getByLabelText('Type DELETE to confirm'), 'remove');
     expect(button).toBeDisabled();
+    expect(screen.getByText('Type DELETE to enable the button.')).toBeInTheDocument();
+    // V20 SV-FR-35: any case, with spaces around it.
     await userEvent.clear(screen.getByLabelText('Type DELETE to confirm'));
-    await userEvent.type(screen.getByLabelText('Type DELETE to confirm'), 'DELETE');
+    await userEvent.type(screen.getByLabelText('Type DELETE to confirm'), ' Delete ');
+    expect(screen.queryByText('Type DELETE to enable the button.')).not.toBeInTheDocument();
     await userEvent.click(button);
 
-    await waitFor(() => expect(deleteAccount).toHaveBeenCalledWith('token', 'secret'));
+    await waitFor(() => expect(deleteAccount).toHaveBeenCalledWith('token', 'secret', undefined));
     await waitFor(() => expect(logout).toHaveBeenCalled());
   });
 

@@ -13,6 +13,12 @@ public enum SecurityEventType {
     PASSWORD_RESET_COMPLETED,
     REFRESH_TOKEN_REUSED,
     INVALID_TOKEN,
+    // V20 "Verify it's you" (SV-NFR-05): never the code itself
+    STEP_UP_CODE_SENT,
+    STEP_UP_VERIFIED,
+    STEP_UP_FAILED,
+    STEP_UP_LOCKED,
+    STEP_UP_SKIPPED_NO_MAIL,
     // refused requests
     ACCESS_DENIED,
     NOT_OWNER,

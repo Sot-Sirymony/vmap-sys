@@ -171,6 +171,12 @@ Since V10, a password change ends every other session of the account at once;
 the session that made the change stays signed in. A password reset ends all of
 them.
 
+Since V20 (SV-FR-01) it also needs "Verify it's you": send the verified
+challenge id in the `X-Step-Up` header, or rely on the session's 10-minute
+verified window. Without either it answers `403` with `"code": "STEP_UP_REQUIRED"`,
+**before** the current password is checked, so the endpoint cannot be used to
+test passwords. A password change closes every verified window.
+
 ### Login
 
 ```text
@@ -792,10 +798,12 @@ Private to the account (BR-64); no coach endpoint reads them.
 |---|---|---|
 | GET | `/api/progress-metrics?date=` | BO-01 to BO-06 for this user |
 | GET | `/api/dreams/{id}/plan.pdf` | The dream's plan as a PDF |
-| GET, PUT | `/api/account/reminders` | Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh", "reminderEmail": "me@example.org" }`. A blank `reminderEmail` uses the login email; the reply's `sendsTo` says where mail goes. V19 (RM-FR-49): optional `reportReminder` (`NONE`, `WEEKLY`, `MONTHLY`) and `reportReminderDay` (1 = Monday to 7 = Sunday, required for `WEEKLY`, cleared otherwise); left out, the report reminder is unchanged. The reply always carries both |
+| GET, PUT | `/api/account/reminders` | V20 (SV-FR-04): a **different** `reminderEmail` needs `X-Step-Up` (a code verified for `CHANGE_REMINDER_EMAIL`, or the verified window) and, unless it is cleared, `X-Step-Up-Confirm` (a code verified for `CONFIRM_REMINDER_EMAIL` with `target` = the new address). Each missing check answers `403` `"code": "STEP_UP_REQUIRED"` with `"action"` naming the code to ask for. The same address in another case, and every other field, need no code. A change sends a notice to the account email and the old address. Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh", "reminderEmail": "me@example.org" }`. A blank `reminderEmail` uses the login email; the reply's `sendsTo` says where mail goes. V19 (RM-FR-49): optional `reportReminder` (`NONE`, `WEEKLY`, `MONTHLY`) and `reportReminderDay` (1 = Monday to 7 = Sunday, required for `WEEKLY`, cleared otherwise); left out, the report reminder is unchanged. The reply always carries both |
 | POST | `/api/account/reminders/test` | Sends a test reminder to `sendsTo` now; 400 when no mail server is set up |
-| GET | `/api/account/export` | All of this user's data as JSON. Never includes the password hash |
-| POST | `/api/account/delete` | Permanently delete the account: `{ "password": "..." }`. **400** if wrong |
+| POST | `/api/account/step-up?language=en` | V20 (SV-FR-10 to SV-FR-14): `{ "action", "target"? }` sends a six-digit "Verify it's you" code. Actions: `CHANGE_PASSWORD`, `EXPORT_DATA`, `CHANGE_REMINDER_EMAIL` (settings group, verified window), `CONFIRM_REMINDER_EMAIL` (needs `target`, the new address, where the code goes), `DELETE_ACCOUNT`, `ADMIN_ROLE_CHANGE`, `ADMIN_AI_KEY`, `ADMIN_COHORT_COACH`. 201 `{ "challengeId", "sentTo" (masked), "expiresAt", "resendAfter", "delivery" }`; `delivery` is `EMAIL`, `LOG` (local/test run, code in the server log) or `NONE` (no mail server: `challengeId` null, the action keeps its password checks). 400 for a `target` on another action or a bad address; 429 within 60 s of the last code for the same action, over 5 codes an hour or 20 a day; 503 `"code": "STEP_UP_MAIL_FAILED"` when sending fails (nothing is kept) |
+| POST | `/api/account/step-up/{challengeId}/verify` | V20 (SV-FR-13, SV-FR-16): `{ "code" }` (spaces and dashes ignored). 200 `{ "verified": true, "challengeId", "windowUntil" }` (`windowUntil` set for the settings group). 400 `"code": "STEP_UP_WRONG_CODE"` with `triesLeft`; 410 `"code": "STEP_UP_CODE_ENDED"` when used, ended (10 minutes) or out of tries; 404 for another person's or another session's code. Ten wrong tries within an hour end the person's other sessions. Error bodies may carry `code` and `triesLeft` |
+| GET | `/api/account/export` | All of this user's data as JSON. Never includes the password hash. V20 (SV-FR-03): needs the `X-Step-Up` header with a code verified for `EXPORT_DATA`, or the verified window; otherwise `403` `"code": "STEP_UP_REQUIRED"` |
+| POST | `/api/account/delete` | Permanently delete the account: `{ "password": "..." }`. **400** if wrong. V20 (SV-FR-02): needs `X-Step-Up` with a code verified for `DELETE_ACCOUNT` within 5 minutes (never the window), checked before the password; a wrong password does not use the code up |
 
 ## Module Content (V8, ADMIN only)
 
@@ -825,8 +833,8 @@ accept `?language=km`; a language with no text falls back to English.
 | GET | `/api/coach/participants` | Coach or admin. Participants of the active cohorts they coach, with objectives, last activity and `atRisk` (7 quiet days) |
 | GET | `/api/coach/participants/{userId}` | Coach. Read-only plan; `fearEntries` and `attitudeCheckIns` are null unless shared. 404 outside the coach's cohorts |
 | POST | `/api/coach/participants/{userId}/comments` | Coach. `{ "targetType": "GENERAL" \| "DREAM" \| "GOAL" \| "STEP", "targetId": 12, "body": "..." }`; the target must be in that participant's plan |
-| GET, POST | `/api/admin/cohorts` | Admin. List, or create `{ "name", "coachEmail", "startDate" }`; naming a coach gives them the COACH role |
-| PUT | `/api/admin/cohorts/{id}` | Admin. Update name, coach and start date |
+| GET, POST | `/api/admin/cohorts` | Admin. List, or create `{ "name", "coachEmail", "startDate" }`; naming a coach gives them the COACH role. V20: naming a coach needs `X-Step-Up` with a fresh code: `ADMIN_ROLE_CHANGE` when it makes a USER a coach, else `ADMIN_COHORT_COACH` (the `403` names which) |
+| PUT | `/api/admin/cohorts/{id}` | Admin. Update name, coach and start date. V20: a **different** coach needs a fresh code as above; other edits need none |
 | POST | `/api/admin/cohorts/{id}/join-code` | Admin. New join code; the old one stops working |
 | POST | `/api/admin/cohorts/{id}/archive`, `/restore` | Admin. An archived cohort's coach loses access and its code stops working |
 | GET, POST | `/api/admin/cohorts/{id}/members` | Admin. List, or add `{ "email" }` (moves them from any other cohort) |
@@ -839,8 +847,9 @@ accept `?language=km`; a language with no text falls back to English.
 | --- | --- | --- |
 | GET | `/api/admin/ai-settings` | `enabled`, `model`, `models` (choices), `monthlyBudgetUsd`, `keySource` (`DATABASE`, `ENVIRONMENT`, `NONE`), `keyReadable`, `apiKeyLast4`, last test result. The key itself is never returned |
 | PUT | `/api/admin/ai-settings` | `{ "enabled", "model", "monthlyBudgetUsd": 0-1000 }`; turning AI on needs a key |
-| PUT | `/api/admin/ai-settings/api-key` | `{ "apiKey": "sk-ant-..." }`; stored AES-GCM encrypted; takes priority over `ANTHROPIC_API_KEY` |
-| DELETE | `/api/admin/ai-settings/api-key` | Removes the saved key; AI turns off unless `ANTHROPIC_API_KEY` is set |
+| PUT | `/api/admin/ai-settings/api-key` | `{ "apiKey": "sk-ant-..." }`; stored AES-GCM encrypted; takes priority over `ANTHROPIC_API_KEY`. V20 (SV-FR-07): needs `X-Step-Up` with a fresh code for `ADMIN_AI_KEY`, every time |
+| DELETE | `/api/admin/ai-settings/api-key` | Removes the saved key; AI turns off unless `ANTHROPIC_API_KEY` is set. V20: needs a fresh `ADMIN_AI_KEY` code |
+| GET | `/api/admin/step-up` | V20 (SV-FR-34). Admin. `{ "enabled", "delivery": "EMAIL|LOG|NONE", "active" }`: whether risky actions ask for an email code; the admin pages warn when `enabled` and `NONE` |
 | POST | `/api/admin/ai-settings/test` | Looks up the chosen model with the key through the Models API (no tokens used) and stores the result |
 
 ### V9: Dream Coach (Phase 3)

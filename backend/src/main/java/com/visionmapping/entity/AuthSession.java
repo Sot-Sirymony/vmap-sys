@@ -58,6 +58,10 @@ public class AuthSession extends BaseAuditableEntity {
     @Column(name = "revoked_reason", length = 40)
     private String revokedReason;
 
+    /** V20 (D-20-3): until when "Verify it's you" covers the settings group of actions in this session. */
+    @Column(name = "verified_until")
+    private Instant verifiedUntil;
+
     public boolean isActive(Instant now) {
         return revokedAt == null && expiresAt.isAfter(now);
     }

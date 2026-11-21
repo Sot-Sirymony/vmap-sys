@@ -7,6 +7,7 @@ import com.visionmapping.dto.response.CohortResponse;
 import com.visionmapping.service.CohortAdminService;
 import jakarta.validation.Valid;
 import java.util.List;
+import com.visionmapping.service.stepup.StepUpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,13 +36,15 @@ public class CohortAdminController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CohortResponse create(@Valid @RequestBody CohortRequest request) {
-        return service.create(request);
+    public CohortResponse create(@Valid @RequestBody CohortRequest request,
+                                 @RequestHeader(value = StepUpService.HEADER, required = false) String stepUp) {
+        return service.create(request, stepUp);
     }
 
     @PutMapping("/{id}")
-    public CohortResponse update(@PathVariable Long id, @Valid @RequestBody CohortRequest request) {
-        return service.update(id, request);
+    public CohortResponse update(@PathVariable Long id, @Valid @RequestBody CohortRequest request,
+                                 @RequestHeader(value = StepUpService.HEADER, required = false) String stepUp) {
+        return service.update(id, request, stepUp);
     }
 
     @PostMapping("/{id}/join-code")

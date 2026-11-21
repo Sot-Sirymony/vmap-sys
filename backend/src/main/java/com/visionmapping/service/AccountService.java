@@ -36,6 +36,11 @@ import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.util.UserScope;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import com.visionmapping.service.notice.AccountNotice;
+import com.visionmapping.service.notice.AccountNotices;
+import com.visionmapping.service.stepup.StepUpService;
+import com.visionmapping.service.stepup.StepUpAction;
+import org.springframework.lang.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -79,6 +84,7 @@ public class AccountService {
             "coach_comments",
             "plan_shares",
             "password_reset_tokens",
+            "step_up_challenges",
             "auth_sessions",
             "issue_reports",
             "module_completions",
@@ -133,13 +139,22 @@ public class AccountService {
     private final AiMessageRepository aiMessageRepository;
     private final SelfAssessmentItemRepository selfAssessmentItemRepository;
     private final SelfAssessmentSnapshotRepository selfAssessmentSnapshotRepository;
+    private final StepUpService stepUpService;
+    private final AccountNotices accountNotices;
 
-    /** The password hash is deliberately never part of this. Archived records are. */
-    @Transactional(readOnly = true)
+    /**
+     * The password hash is deliberately never part of this. Archived records are.
+     * V20 SV-FR-03: it hands over everything at once, so it needs an email code
+     * (not read-only, because using the code is a write).
+     */
+    @Transactional
     @SecurityAudit(value = SecurityEventType.ACCOUNT_EXPORTED)
-    public AccountExportResponse exportData() {
+    public AccountExportResponse exportData(@Nullable String stepUp) {
+        stepUpService.require(StepUpAction.EXPORT_DATA, stepUp);
         AppUser user = userScope.currentUser();
         Long userId = user.getId();
+        // V20 SV-FR-28: a notice to the account email once the download is made.
+        accountNotices.changed(AccountNotice.Kind.DATA_EXPORTED, user);
         return AccountExportResponse.builder()
                 .account(new AccountExportResponse.Account(user.getFullName(), user.getEmail(), user.getReminderEmail(),
                         user.getAiConsentAt(), user.getCohort() == null ? null : user.getCohort().getName(),
@@ -206,12 +221,16 @@ public class AccountService {
     }
 
     @SecurityAudit(value = SecurityEventType.ACCOUNT_DELETED)
-    public void deleteAccount(DeleteAccountRequest request) {
+    public void deleteAccount(DeleteAccountRequest request, @Nullable String stepUp) {
+        // V20 SV-FR-02: a fresh email code first, never covered by the verified window.
+        stepUpService.require(StepUpAction.DELETE_ACCOUNT, stepUp);
         AppUser user = userScope.currentUser();
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BusinessRuleException("That password is not correct.");
         }
         Long userId = user.getId();
+        // V20 SV-FR-30: a last notice to the deleted account's email, sent only after the deletion is committed.
+        accountNotices.changed(AccountNotice.Kind.ACCOUNT_DELETED, user);
         entityManager.clear();
         for (String table : USER_TABLES_ANONYMISED) {
             jdbcTemplate.update("UPDATE " + table + " SET user_id = NULL WHERE user_id = ?", userId);

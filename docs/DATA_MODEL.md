@@ -345,6 +345,18 @@ the participant or the coach.
 Saved reports, download history, share links and coach shares are deleted with the account.
 They are not yet in the account data export.
 
+## V20 Verify it's you
+
+**StepUpChallenge** (`step_up_challenges`, `V84`, SV-FR-10 to SV-FR-16): one emailed code. `userId`, `sessionId`
+(the `auth_sessions` row that asked; deleted with it), `action` (CHANGE_PASSWORD, EXPORT_DATA, CHANGE_REMINDER_EMAIL,
+CONFIRM_REMINDER_EMAIL, DELETE_ACCOUNT, ADMIN_ROLE_CHANGE, ADMIN_AI_KEY, ADMIN_COHORT_COACH), `targetHash` (SHA-256 of a
+new reminder address, CONFIRM_REMINDER_EMAIL only), `codeHash` (HMAC-SHA256; the code itself is never stored),
+`attempts` (wrong tries, at most 5), `expiresAt` (10 minutes), `verifiedAt`, `usedAt` (used by an action, or cancelled
+by a newer code) and `createdAt`. Removed by a daily clean-up after 7 days and with the account; not in the data export.
+
+**AuthSession** adds `verifiedUntil` (`V84`, D-20-3): the end of the session's 10-minute verified window for the
+settings actions. Cleared when the password is changed or reset.
+
 ## Business Rules
 
 - A Dream must belong to a Vision Area.

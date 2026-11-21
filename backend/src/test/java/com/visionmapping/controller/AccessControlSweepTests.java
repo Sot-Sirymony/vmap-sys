@@ -191,6 +191,8 @@ class AccessControlSweepTests {
         postAndId("/api/reports/saved/" + ownerIds.get("reports/saved") + "/finalize", ownerToken, Map.of());
         ownerIds.put("report-shares", postAndId("/api/reports/saved/" + ownerIds.get("reports/saved") + "/shares", ownerToken,
                 Map.of("expiresInDays", 7)));
+        // V20: a "Verify it's you" code of the owner's own session.
+        ownerIds.put("step-up", postAndId("/api/account/step-up", ownerToken, Map.of("action", "EXPORT_DATA"), "challengeId"));
         ownerIds.put("goals/synergy-links", postAndId("/api/goals/" + goalId + "/synergy-links", ownerToken,
                 Map.of("relatedGoalId", secondGoalId)));
 
@@ -389,7 +391,8 @@ class AccessControlSweepTests {
             "createdAt", "updatedAt", "archived", "deleted", "cohortId", "coachId", "code");
 
     private static final Map<String, String> ALLOWED_PRIVILEGED_FIELDS = Map.of(
-            "PartnerRequest.role", "the partner's job title, free text, not an app role");
+            "PartnerRequest.role", "the partner's job title, free text, not an app role",
+            "StepUpVerifyRequest.code", "the six-digit code the person typed, checked against the stored hash (V20)");
 
     @Test
     void noRequestBodyLetsTheCallerSetPrivilegedFields() {
@@ -515,6 +518,7 @@ class AccessControlSweepTests {
             case "taskId" -> ownerIds.get("tasks");
             case "linkId" -> ownerIds.get("goals/synergy-links");
             case "shareId" -> ownerIds.get("report-shares");
+            case "challengeId" -> ownerIds.get("step-up");
             case "id" -> ownerIds.get(pattern.substring("/api/".length(), pattern.indexOf("/{id}")));
             default -> null;
         };
@@ -558,6 +562,10 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/cover") && route.method() == HttpMethod.PUT) {
             return json(Map.of("method", "ACCEPT", "note", "Someone else's reason"));
+        }
+        // V20: checking another person's "Verify it's you" code.
+        if (pattern.endsWith("/verify")) {
+            return json(Map.of("code", "123456"));
         }
         // V17 BL-FR-25 (BLC-20): splitting another user's task.
         if (pattern.endsWith("/split")) {
@@ -645,13 +653,17 @@ class AccessControlSweepTests {
     }
 
     private long postAndId(String path, String token, Map<String, Object> body) throws Exception {
+        return postAndId(path, token, body, "id");
+    }
+
+    private long postAndId(String path, String token, Map<String, Object> body, String idField) throws Exception {
         MockHttpServletResponse response = mockMvc.perform(post(path)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(body)))
                 .andReturn().getResponse();
         assertThat(response.getStatus()).as("create " + path + ": " + response.getContentAsString()).isBetween(200, 201);
-        return objectMapper.readTree(response.getContentAsString()).get("id").asLong();
+        return objectMapper.readTree(response.getContentAsString()).get(idField).asLong();
     }
 
     private String register(String email) throws Exception {

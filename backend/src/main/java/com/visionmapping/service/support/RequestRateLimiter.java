@@ -34,7 +34,9 @@ public class RequestRateLimiter {
         REPORT_EXPORT("Too many report downloads in a short time. Try again in a few minutes."),
         // V19 RM-NFR-07: share links made per account per day, and views of one shared report per minute.
         REPORT_SHARE("You have made 20 share links today. Try again tomorrow."),
-        SHARED_REPORT("Too many requests for this shared report. Try again in a minute.");
+        SHARED_REPORT("Too many requests for this shared report. Try again in a minute."),
+        // V20 SV-NFR-06: code checks per person; the hourly and daily send limits are counted in the database.
+        STEP_UP_VERIFY("Too many code attempts. Wait a few minutes and ask for a new code.");
 
         private final String message;
 
@@ -64,7 +66,9 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.report-share-per-user:20}") int shareLimit,
             @Value("${app.security.rate-limit.report-share-window-minutes:1440}") long shareWindow,
             @Value("${app.security.rate-limit.shared-report-per-token:60}") int sharedReportLimit,
-            @Value("${app.security.rate-limit.shared-report-window-minutes:1}") long sharedReportWindow) {
+            @Value("${app.security.rate-limit.shared-report-window-minutes:1}") long sharedReportWindow,
+            @Value("${app.security.rate-limit.step-up-verify-per-user:20}") int stepUpVerifyLimit,
+            @Value("${app.security.rate-limit.step-up-verify-window-minutes:10}") long stepUpVerifyWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.limits = Map.of(
                 Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow)),
@@ -73,7 +77,8 @@ public class RequestRateLimiter {
                 Action.EXCEL_IMPORT, new Limit(importLimit, Duration.ofMinutes(importWindow)),
                 Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow)),
                 Action.REPORT_SHARE, new Limit(shareLimit, Duration.ofMinutes(shareWindow)),
-                Action.SHARED_REPORT, new Limit(sharedReportLimit, Duration.ofMinutes(sharedReportWindow)));
+                Action.SHARED_REPORT, new Limit(sharedReportLimit, Duration.ofMinutes(sharedReportWindow)),
+                Action.STEP_UP_VERIFY, new Limit(stepUpVerifyLimit, Duration.ofMinutes(stepUpVerifyWindow)));
     }
 
     /**

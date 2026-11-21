@@ -8,6 +8,7 @@ import { changePassword } from '../api/authApi';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
+import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { useAuth } from '../context/AuthContext';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
@@ -23,6 +24,7 @@ export function SecuritySettingsPage() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const stepUp = useStepUp(token);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -39,7 +41,8 @@ export function SecuritySettingsPage() {
 
     setLoading(true);
     try {
-      await changePassword({ currentPassword, newPassword }, token);
+      // V20 SV-FR-01: the server may ask "Verify it's you" first; the form keeps what was typed.
+      await stepUp.protect('CHANGE_PASSWORD', (code) => changePassword({ currentPassword, newPassword }, token, code));
       setSaved(true);
       // Cleared on success so the new password is not left sitting in three
       // form fields on a screen the user may walk away from.
@@ -47,7 +50,8 @@ export function SecuritySettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
-      setError(error instanceof Error ? error.message : tr('Could not change the password.'));
+      if (isStepUpCancelled(error)) return;
+      setError(error instanceof Error ? tr(error.message) : tr('Could not change the password.'));
     } finally {
       setLoading(false);
     }
@@ -113,10 +117,14 @@ export function SecuritySettingsPage() {
               <Button type="submit" disabled={loading}>
                 {loading ? tr('Saving...') : tr('Change password')}
               </Button>
+              <Typography variant="caption" color="text.secondary">
+                {tr("We'll email you a code to confirm it's you.")}
+              </Typography>
             </form>
           </Stack>
         </CardContent>
       </Card>
+      {stepUp.dialog}
     </PageSection>
   );
 }
