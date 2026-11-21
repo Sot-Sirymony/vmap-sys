@@ -61,8 +61,9 @@ describe('SharedReportPage (V19 RM-FR-47)', () => {
     expect(screen.getByRole('region', { name: 'Goal health' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Needs attention' })).not.toBeInTheDocument();
     expect(screen.queryByText(/not on a step yet/)).not.toBeInTheDocument();
-    const details = screen.getByRole('region', { name: 'Details' });
+    const details = await screen.findByRole('region', { name: 'Details' });
     expect(await within(details).findByText('Print forms')).toBeInTheDocument();
+    expect(screen.getAllByRole('region', { name: 'Details' })).toHaveLength(1);
     // RM-FR-47: no links into the plan anywhere on the page.
     expect(screen.queryAllByRole('link')).toHaveLength(0);
     expect(screen.getByText('This link stops working on Dec 30, 2026.')).toBeInTheDocument();

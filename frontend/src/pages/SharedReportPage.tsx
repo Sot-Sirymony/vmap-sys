@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import CardHeader from '@mui/material/CardHeader';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -110,13 +107,9 @@ export function SharedReportPage() {
             )}
             <ReportSummary report={report} filter={{}} shared />
             {shared.rows && (
-              <Card component="section" aria-label={tr('Details')}>
-                <CardHeader title={tr('Details')} titleTypographyProps={{ variant: 'subtitle1', component: 'h2', fontWeight: 600 }} />
-                <CardContent sx={{ pt: 0 }}>
-                  <ReportDetailsTab loadRows={() => Promise.resolve(shared.rows ?? [])} showDream={report.scope.kind !== 'DREAM'}
-                    reloadKey={shareToken} noLinks />
-                </CardContent>
-              </Card>
+              // The Details table is its own "Details" card.
+              <ReportDetailsTab loadRows={() => Promise.resolve(shared.rows ?? [])} showDream={report.scope.kind !== 'DREAM'}
+                reloadKey={shareToken} noLinks />
             )}
             <Typography variant="caption" color="text.secondary">
               {tr('This link stops working on {date}.', { date: reportDate(shared.expiresAt.slice(0, 10)) })}

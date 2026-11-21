@@ -217,7 +217,7 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     ]);
     const { unmount } = renderPage(<SavedReportPage />, { route: '/vision-map/reports/3?tab=export', path: '/vision-map/reports/:id' });
     const history = await screen.findByRole('region', { name: 'Download history' });
-    expect(within(history).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    expect((await within(history).findAllByRole('listitem')).map((item) => item.textContent)).toEqual([
       expect.stringMatching(/^PDF · ខ្មែរ · Nov 18, 2026/), expect.stringMatching(/^Excel · English · Nov 17, 2026/)]);
     expect(screen.queryByRole('region', { name: 'Share' })).not.toBeInTheDocument();
     unmount();
