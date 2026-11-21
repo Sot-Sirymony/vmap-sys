@@ -46,7 +46,9 @@ public record AccountExportResponse(
         List<AiMessage> aiMessages,
         List<PlanShare> planShares,
         List<SelfAssessmentItemResponse> selfAssessmentItems,
-        List<SelfAssessmentSnapshot> selfAssessmentSnapshots
+        List<SelfAssessmentSnapshot> selfAssessmentSnapshots,
+        // V14 (GA-FR-32): provider, email and link date of each linked sign-in, never the provider's user ID.
+        List<SignInMethodsResponse.LinkedAccount> linkedAccounts
 ) {
 
     public AccountExportResponse {
@@ -76,6 +78,7 @@ public record AccountExportResponse(
         planShares = Copies.list(planShares);
         selfAssessmentItems = Copies.list(selfAssessmentItems);
         selfAssessmentSnapshots = Copies.list(selfAssessmentSnapshots);
+        linkedAccounts = Copies.list(linkedAccounts);
     }
 
 

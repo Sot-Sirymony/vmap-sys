@@ -75,6 +75,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- V14 (BRD 14.0.0, Q1): checks Google's signed ID token (Nimbus JWT,
+             cached JWK set). Version managed by Spring Boot. Only the JOSE
+             module: no resource-server or client auto-configuration. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>

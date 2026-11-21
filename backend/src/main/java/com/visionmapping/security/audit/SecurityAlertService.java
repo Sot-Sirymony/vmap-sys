@@ -28,7 +28,8 @@ import org.springframework.stereotype.Service;
  * <p>Rules, each counted over the last {@code window-minutes}:
  * <ul>
  *   <li>{@code failed-logins-per-account} failed or locked sign-ins for one email;</li>
- *   <li>{@code failed-logins-per-ip} from one network;</li>
+ *   <li>{@code failed-logins-per-ip} from one network, and as many failed Google
+ *       sign-ins from one network (V14 GA-FR-34);</li>
  *   <li>{@code refusals-per-user} refused requests (403, or another user's record) by one user;</li>
  *   <li>at once: a reused refresh token (likely theft), the admin role granted,
  *       and the Claude API key changed or removed.</li>
@@ -91,6 +92,14 @@ public class SecurityAlertService {
                         SIGN_IN_FAILURES, event.getIpAddress(), since) >= failedLoginsPerIp) {
                     alert("ip:" + event.getIpAddress(), "Many failed sign-ins from network " + event.getIpAddress()
                             + " in the last " + windowMinutes + " minutes.");
+                }
+            }
+            // V14 GA-FR-34: failed Google callbacks and code exchanges, with the failed sign-in threshold.
+            case GOOGLE_SIGN_IN_FAILED -> {
+                if (event.getIpAddress() != null && repository.countByEventTypeInAndIpAddressAndOccurredAtAfter(
+                        Set.of(SecurityEventType.GOOGLE_SIGN_IN_FAILED), event.getIpAddress(), since) >= failedLoginsPerIp) {
+                    alert("google-ip:" + event.getIpAddress(), "Many failed Google sign-ins from network "
+                            + event.getIpAddress() + " in the last " + windowMinutes + " minutes.");
                 }
             }
             case ACCESS_DENIED, NOT_OWNER -> {

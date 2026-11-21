@@ -147,18 +147,23 @@ public class AuthService {
         stepUpService.require(StepUpAction.CHANGE_PASSWORD, stepUp);
         AppUser user = userScope.currentUser();
 
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
-            throw new BusinessRuleException("Current password is incorrect.");
-        }
-
-        // Otherwise the form reports success having changed nothing, which reads
-        // as though the new password took effect when it is the old one.
-        if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
-            throw new BusinessRuleException("New password must be different from the current password.");
+        // V14 (D-14-3): an account created with Google has no password anyone
+        // knows; the email code above is its proof, and this sets its first one.
+        if (user.isPasswordSet()) {
+            String current = request.currentPassword();
+            if (current == null || current.isBlank() || !passwordEncoder.matches(current, user.getPasswordHash())) {
+                throw new BusinessRuleException("Current password is incorrect.");
+            }
+            // Otherwise the form reports success having changed nothing, which reads
+            // as though the new password took effect when it is the old one.
+            if (passwordEncoder.matches(request.newPassword(), user.getPasswordHash())) {
+                throw new BusinessRuleException("New password must be different from the current password.");
+            }
         }
         passwordPolicy.check(request.newPassword(), user.getEmail());
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        user.setPasswordSet(true);
         appUserRepository.save(user);
 
         // V10 (SEC-07-03): every other session ends, so a device someone else
@@ -175,7 +180,8 @@ public class AuthService {
                 : null;
     }
 
-    private AuthResponse response(AuthSessionService.Tokens tokens) {
+    /** The sign-in answer for an opened session; also used by Google sign-in (V14 GA-FR-20). */
+    public static AuthResponse response(AuthSessionService.Tokens tokens) {
         AppUser user = tokens.user();
         return new AuthResponse(
                 tokens.accessToken(),

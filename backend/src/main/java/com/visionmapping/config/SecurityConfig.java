@@ -127,6 +127,10 @@ public class SecurityConfig {
                                 // and single-use.
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
+                                // V14 (BRD 14.0.0, Appendix B): Google sign-in. The
+                                // person is not signed in yet; state, PKCE and the
+                                // one-time codes are the keys.
+                                "/api/auth/oauth/google/**",
                                 // FR-20: interface text changes, needed before
                                 // sign-in to draw the sign-in page. Read-only.
                                 "/api/ui-text"

@@ -15,8 +15,10 @@ import { Input } from '../components/common/Input';
 import { AiConsentCard } from '../components/common/AiConsentCard';
 import { CohortCard } from '../components/common/CohortCard';
 import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
+import { SignInMethodsCard } from '../components/common/SignInMethodsCard';
 import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { useAuth } from '../context/AuthContext';
+import { useSignInMethods } from '../hooks/useSignInMethods';
 import { localDateIso } from '../utils/localDate';
 import { saveBlob } from '../utils/saveBlob';
 import { useI18n, type Language } from '../i18n/I18nContext';
@@ -41,6 +43,9 @@ export function AccountSettingsPage() {
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const stepUp = useStepUp(token);
+  // V14 (GA-FR-32, D-14-3): an account created with Google has no password; the fresh email code is enough.
+  const { methods } = useSignInMethods(token);
+  const needsPassword = methods?.passwordSet !== false;
 
   async function handleExport() {
     if (!token) {
@@ -61,14 +66,14 @@ export function AccountSettingsPage() {
 
   async function handleDelete(event: FormEvent) {
     event.preventDefault();
-    if (!token || !isDeleteWord(confirmWord) || !password) {
+    if (!token || !isDeleteWord(confirmWord) || (needsPassword && !password)) {
       return;
     }
     setDeleting(true);
     setDeleteError('');
     try {
       // V20 SV-FR-02: always a fresh code, even right after another verification.
-      await stepUp.protect('DELETE_ACCOUNT', (code) => deleteAccount(token, password, code));
+      await stepUp.protect('DELETE_ACCOUNT', (code) => deleteAccount(token, needsPassword ? password : '', code));
       logout();
     } catch (error) {
       if (isStepUpCancelled(error)) {
@@ -108,6 +113,8 @@ export function AccountSettingsPage() {
           </CardContent>
         </Card>
 
+        <SignInMethodsCard methods={methods} />
+
         <CohortCard token={token} />
 
         <AiConsentCard token={token} />
@@ -133,10 +140,16 @@ export function AccountSettingsPage() {
           <CardHeader title={t('Delete your account')} subheader={t('This permanently erases your account and all your data. It cannot be undone, so export your data first.')} />
           <CardContent>
             <Box component="form" onSubmit={(event) => void handleDelete(event)} sx={{ display: 'grid', gap: 1.5 }}>
-              <label>
-                {t('Your password')}
-                <Input type="password" autoComplete="current-password" aria-label={t('Your password')} value={password} onChange={(event) => setPassword(event.target.value)} required />
-              </label>
+              {needsPassword ? (
+                <label>
+                  {t('Your password')}
+                  <Input type="password" autoComplete="current-password" aria-label={t('Your password')} value={password} onChange={(event) => setPassword(event.target.value)} required />
+                </label>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {t('You signed up with Google, so no password is needed. We will email you a code instead.')}
+                </Typography>
+              )}
               <label>
                 {t('Type {word} to confirm', { word: DELETE_WORD })}
                 <Input aria-label={t('Type {word} to confirm', { word: DELETE_WORD })} value={confirmWord} onChange={(event) => setConfirmWord(event.target.value)} required />
@@ -148,7 +161,7 @@ export function AccountSettingsPage() {
               )}
               {deleteError && <Alert severity="error">{t(deleteError)}</Alert>}
               <Box>
-                <Button type="submit" variant="danger" disabled={deleting || !password || !isDeleteWord(confirmWord)}>
+                <Button type="submit" variant="danger" disabled={deleting || (needsPassword && !password) || !isDeleteWord(confirmWord)}>
                   {deleting ? t('Deleting…') : t('Permanently delete my account')}
                 </Button>
               </Box>

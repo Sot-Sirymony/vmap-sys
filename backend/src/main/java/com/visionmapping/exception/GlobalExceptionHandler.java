@@ -211,6 +211,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), request);
     }
 
+    /** V14 (GA-FR-02): Google sign-in is not set up; password sign-in still works. */
+    @ExceptionHandler(GoogleSignInUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleGoogleSignInUnavailable(
+            GoogleSignInUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), request);
+    }
+
     /** V10 (SEC-07-03): the refresh token no longer opens a session. */
     @ExceptionHandler(SessionEndedException.class)
     public ResponseEntity<ErrorResponse> handleSessionEnded(

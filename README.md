@@ -262,9 +262,11 @@ Public:
 - `POST /api/auth/login`
 - `POST /api/auth/forgot-password` — email a reset link
 - `POST /api/auth/reset-password` — redeem the link and set a new password
+- `/api/auth/oauth/google/*` — Sign in with Google (V14): `status`, `authorize-url`, `callback`, `exchange`, `link` (see [docs/API.md](docs/API.md))
 
 Protected:
-- `POST /api/auth/change-password` — set a new password, current password required
+- `POST /api/auth/change-password` — set a new password, current password required (an account created with Google sets its first one with the email code only)
+- `GET /api/account/sign-in-methods` — whether a password is set, and any linked Google account (V14)
 - `/api/vision-areas`
 - `/api/dreams`
 - `/api/goals`
@@ -350,6 +352,9 @@ Everything that differs between local dev and Render is env-driven — nothing i
 | `SWAGGER_ENABLED` | Not set in `render.yaml` (off) | Turns on Swagger UI and `/v3/api-docs`. Leave it unset in production unless the API description should be public |
 | `CORS_ALLOWED_ORIGINS` | Set in `render.yaml`, defaults to the predicted frontend URL | Comma-separated list; must include the frontend's real Render URL |
 | `VITE_API_BASE_URL` | Set in `render.yaml`, defaults to the predicted backend URL + `/api` | Baked into the frontend bundle at **build** time, not runtime |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Set in the Render dashboard (`sync: false`); never commit the secret | V14 Sign in with Google. On only when both are set **and** mail is set up (`MAIL_HOST`) with "Verify it's you" on (D-14-5); otherwise off (the button is hidden and the endpoints answer 503, and the log says why). Create them in Google Cloud as in BRD 14 Appendix A |
+| `GOOGLE_REDIRECT_URI`, `FRONTEND_URL` | Set in `render.yaml` (defaults `http://localhost:8080/api/auth/oauth/google/callback`, `http://localhost:5173`) | V14: the backend callback registered in Google Cloud (must match exactly), and where the browser goes afterwards. Update both if Render added a suffix to a service name |
+| `RATE_LIMIT_GOOGLE_SIGN_IN_PER_IP`, `RATE_LIMIT_GOOGLE_SIGN_IN_WINDOW` | Optional (defaults 60 per 15 minutes) | V14: Google sign-in steps per network |
 
 **The one manual step:** Render assigns each service a URL of the form `https://<service-name>.onrender.com`, but only if that name isn't already taken by another Render user — otherwise it appends a suffix. `render.yaml` *predicts* `vision-mapping-backend`/`vision-mapping-frontend` for these URLs. After the first deploy, check the two actual URLs Render assigned:
 

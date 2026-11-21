@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { deleteAccount, getReminderSettings, sendTestReminder, updateReminderSettings } from '../api/accountApi';
+import { getSignInMethods } from '../api/oauthApi';
 import { AccountSettingsPage } from './AccountSettingsPage';
 
 const logout = vi.fn();
@@ -17,6 +18,8 @@ vi.mock('../api/accountApi', () => ({
   sendTestReminder: vi.fn(),
 }));
 
+vi.mock('../api/oauthApi', () => ({ getSignInMethods: vi.fn() }));
+
 const LOGIN = 'me@example.com';
 
 const render = (page: ReactElement) => renderPlain(<MemoryRouter>{page}</MemoryRouter>);
@@ -24,6 +27,7 @@ const render = (page: ReactElement) => renderPlain(<MemoryRouter>{page}</MemoryR
 describe('AccountSettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getSignInMethods).mockResolvedValue({ passwordSet: true, linkedAccounts: [] });
     vi.mocked(getReminderSettings).mockResolvedValue({ enabled: false, timeZone: null, emailConfigured: false, sendHour: 8, reminderEmail: null, sendsTo: LOGIN });
   });
 
@@ -84,6 +88,24 @@ describe('AccountSettingsPage', () => {
   it('keeps the test button off when no mail server is set up', async () => {
     render(<AccountSettingsPage />);
     expect(await screen.findByRole('button', { name: 'Send test email' })).toBeDisabled();
+  });
+
+  it('deletes an account created with Google with the word and the email code only (V14 GA-FR-32)', async () => {
+    vi.mocked(getSignInMethods).mockResolvedValue({
+      passwordSet: false,
+      linkedAccounts: [{ provider: 'GOOGLE', email: 'pat@gmail.com', linkedAt: '2026-11-21T10:00:00Z' }],
+    });
+    vi.mocked(deleteAccount).mockResolvedValue(undefined);
+    render(<AccountSettingsPage />);
+
+    expect(await screen.findByText(/You signed up with Google, so no password is needed/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Your password')).not.toBeInTheDocument();
+    expect(screen.getByText('Google: connected as pat@gmail.com')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Type DELETE to confirm'), 'DELETE');
+    await userEvent.click(screen.getByRole('button', { name: 'Permanently delete my account' }));
+
+    await waitFor(() => expect(deleteAccount).toHaveBeenCalledWith('token', '', undefined));
+    expect(logout).toHaveBeenCalled();
   });
 
   it('keeps delete disabled until the password and the word are both given, then signs out', async () => {

@@ -99,7 +99,7 @@ class AccountExportShapeTests {
                 "communicationMessages", "reviews", "obstacles", "progressLogs", "gratitudeEntries", "fearEntries",
                 "attitudeCheckIns", "habits", "assessments", "moduleCompletions", "milestones", "idealPartnerProfiles",
                 "issueReports", "goalSynergyLinks", "aiConsentEvents", "aiMessages", "planShares", "selfAssessmentItems",
-                "selfAssessmentSnapshots");
+                "selfAssessmentSnapshots", "linkedAccounts");
         assertThat(fieldNames(export.get("account"))).containsExactly(
                 "fullName", "email", "reminderEmail", "aiConsentAt", "cohort", "shareJournalsWithCoach", "createdAt");
         assertThat(export.toString()).doesNotContainIgnoringCase("passwordHash").doesNotContainIgnoringCase("tokenHash");

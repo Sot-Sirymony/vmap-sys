@@ -84,6 +84,9 @@ public class AccountService {
             "coach_comments",
             "plan_shares",
             "password_reset_tokens",
+            // V14 (GA-FR-32): Google links and any open hand-off codes.
+            "oauth_handoffs",
+            "external_identities",
             "step_up_challenges",
             "auth_sessions",
             "issue_reports",
@@ -140,6 +143,7 @@ public class AccountService {
     private final SelfAssessmentItemRepository selfAssessmentItemRepository;
     private final SelfAssessmentSnapshotRepository selfAssessmentSnapshotRepository;
     private final StepUpService stepUpService;
+    private final SignInMethodsService signInMethodsService;
     private final AccountNotices accountNotices;
 
     /**
@@ -217,6 +221,7 @@ public class AccountService {
                         .map(snapshot -> new AccountExportResponse.SelfAssessmentSnapshot(snapshot.getDream().getId(),
                                 snapshot.getTakenOn(), snapshot.getItemsJson()))
                         .toList())
+                .linkedAccounts(signInMethodsService.linkedAccounts(userId))
                 .build();
     }
 
@@ -225,8 +230,13 @@ public class AccountService {
         // V20 SV-FR-02: a fresh email code first, never covered by the verified window.
         stepUpService.require(StepUpAction.DELETE_ACCOUNT, stepUp);
         AppUser user = userScope.currentUser();
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BusinessRuleException("That password is not correct.");
+        // V14 (GA-FR-32, D-14-3): an account created with Google has no password
+        // anyone knows; the fresh email code above is its proof.
+        if (user.isPasswordSet()) {
+            String password = request.password();
+            if (password == null || password.isBlank() || !passwordEncoder.matches(password, user.getPasswordHash())) {
+                throw new BusinessRuleException("That password is not correct.");
+            }
         }
         Long userId = user.getId();
         // V20 SV-FR-30: a last notice to the deleted account's email, sent only after the deletion is committed.

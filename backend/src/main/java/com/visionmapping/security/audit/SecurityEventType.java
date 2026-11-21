@@ -13,6 +13,10 @@ public enum SecurityEventType {
     PASSWORD_RESET_COMPLETED,
     REFRESH_TOKEN_REUSED,
     INVALID_TOKEN,
+    // V14 Google sign-in (GA-FR-33): a reason code, never a token
+    GOOGLE_SIGN_IN_SUCCEEDED,
+    GOOGLE_SIGN_IN_FAILED,
+    GOOGLE_LINKED,
     // V20 "Verify it's you" (SV-NFR-05): never the code itself
     STEP_UP_CODE_SENT,
     STEP_UP_VERIFIED,

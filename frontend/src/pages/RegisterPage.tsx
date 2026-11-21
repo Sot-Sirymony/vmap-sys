@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { register } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
+import { GoogleSignInSection } from '../components/common/GoogleSignInButton';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
 
@@ -50,10 +50,11 @@ export function RegisterPage() {
 
   return (
     <AuthLayout subtitle={tr('Create your account')}>
-      <GoogleSignInButton onClick={() => navigate('/oauth/google')} />
-      <div className="auth-divider" aria-hidden="true">
-        <span>or</span>
-      </div>
+      {/* V14 (GA-FR-22): a new account made with Google keeps its session, like signing up does. */}
+      <GoogleSignInSection
+        onClick={() => navigate('/oauth/google', { state: { from: '/', remember: true } })}
+        divider={tr('or')}
+      />
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="register-name"

@@ -24,7 +24,8 @@ export type LoginRequest = {
  * token belongs to, so one account can never re-password another.
  */
 export type ChangePasswordRequest = {
-  currentPassword: string;
+  /** Left out by an account created with Google, which has no password yet (V14 D-14-3). */
+  currentPassword?: string;
   newPassword: string;
 };
 

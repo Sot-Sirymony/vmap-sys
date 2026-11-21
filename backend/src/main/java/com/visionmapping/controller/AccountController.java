@@ -4,8 +4,10 @@ import com.visionmapping.dto.request.DeleteAccountRequest;
 import com.visionmapping.dto.request.ReminderSettingsRequest;
 import com.visionmapping.dto.response.AccountExportResponse;
 import com.visionmapping.dto.response.ReminderSettingsResponse;
+import com.visionmapping.dto.response.SignInMethodsResponse;
 import com.visionmapping.service.AccountService;
 import com.visionmapping.service.ReminderService;
+import com.visionmapping.service.SignInMethodsService;
 import jakarta.validation.Valid;
 import com.visionmapping.service.stepup.StepUpService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,13 @@ public class AccountController {
 
     private final AccountService accountService;
     private final ReminderService reminderService;
+    private final SignInMethodsService signInMethodsService;
+
+    /** V14 (GA-FR-26, GA-FR-27): whether a password is set, and any linked Google account. */
+    @GetMapping("/sign-in-methods")
+    public SignInMethodsResponse signInMethods() {
+        return signInMethodsService.current();
+    }
 
     @GetMapping("/export")
     public AccountExportResponse export(@RequestHeader(value = StepUpService.HEADER, required = false) String stepUp) {

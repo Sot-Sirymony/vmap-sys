@@ -9,6 +9,12 @@ vi.mock('../api/authApi', () => ({
   changePassword: (...args: unknown[]) => changePasswordMock(...args),
 }));
 
+const getSignInMethodsMock = vi.fn();
+
+vi.mock('../api/oauthApi', () => ({
+  getSignInMethods: (...args: unknown[]) => getSignInMethodsMock(...args),
+}));
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ token: 'a-token', user: { id: 1, email: 'pat@example.com', fullName: 'Pat', role: 'USER' } }),
 }));
@@ -41,6 +47,28 @@ describe('SecuritySettingsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     changePasswordMock.mockResolvedValue(undefined);
+    getSignInMethodsMock.mockResolvedValue({ passwordSet: true, linkedAccounts: [] });
+  });
+
+  it('lets an account created with Google set its first password without a current one (V14 D-14-3)', async () => {
+    getSignInMethodsMock.mockResolvedValue({
+      passwordSet: false,
+      linkedAccounts: [{ provider: 'GOOGLE', email: 'pat@gmail.com', linkedAt: '2026-11-21T10:00:00Z' }],
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText(/You signed up with Google, so there is no current password/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/current password/i)).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/^new password/i), 'BrandNewPass456');
+    await user.type(screen.getByLabelText(/confirm new password/i), 'BrandNewPass456');
+    await user.click(screen.getByRole('button', { name: 'Set password' }));
+
+    await waitFor(() => {
+      expect(changePasswordMock).toHaveBeenCalledWith({ newPassword: 'BrandNewPass456' }, 'a-token', undefined);
+    });
+    // Once set, the form asks for the current password like any other account.
+    expect(await screen.findByLabelText(/current password/i)).toBeInTheDocument();
   });
 
   it('sends the old and new password with the session token', async () => {

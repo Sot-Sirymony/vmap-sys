@@ -16,9 +16,14 @@ import jakarta.validation.constraints.Size;
  * against the stored hash, never stored, and a length rule here would only
  * report that an existing password is the "wrong shape" — including for accounts
  * created before any such rule existed.
+ *
+ * V14 (D-14-3): an account created with Google sets its first password here with
+ * only the "Verify it's you" email code, since it has no current password.
  */
 public record ChangePasswordRequest(
-        @NotBlank @Size(max = 100) String currentPassword,
+        // V14 (D-14-3): left out by an account created with Google, which has no
+        // password to confirm; the service requires it for every other account.
+        @Size(max = 100) String currentPassword,
         @NotBlank @Size(min = 8, max = 100) String newPassword
 ) {
 }

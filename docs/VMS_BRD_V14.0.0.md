@@ -20,6 +20,7 @@ V14 makes the existing "Continue with Google" button work. Participants can sign
 | Version | Change | Author |
 | --- | --- | --- |
 | 14.0.0 | First draft: current state at commit `bceea65`, sign-in flow, requirements GA-FR-01 to GA-FR-34, security requirements, phased plan, Google Cloud setup and acceptance criteria | BA |
+| 14.0.0 (21 Nov 2026) | Resumed after V20. Decisions D-14-1 to D-14-5 answer Q1, Q2, Q3 and Q5 and close the mail gap; GA-FR-26 and GA-FR-32 now use the V20 step-up code. Phase 1 built (migration V85) | BA |
 
 ## Executive summary
 
@@ -301,6 +302,20 @@ Following `CLAUDE.md`, work stops at the end of each phase for confirmation.
 | Q4 | Who owns the Google Cloud project and its consent screen (name, logo, support email, privacy policy link)? | Sponsor |
 | Q5 | When Google sign-in is off, hide the button (GA-FR-03) or keep it and show the "not set up" message? Recommendation: hide it. | Product owner |
 | Q6 | Is "Disconnect Google" needed in V14, or later? It needs a rule for accounts that have no password. | Product owner |
+
+## Decisions recorded by this BRD (21 Nov 2026)
+
+V14 was paused on 8 Nov 2026 and resumed on 21 Nov 2026, after V15 to V20 shipped. V20 added "Verify it's you" email codes (step-up), which changes the answer to Q3.
+
+| ID | Answers | Decision | Effect on requirements |
+| --- | --- | --- | --- |
+| D-14-1 | Q1 | Google's ID token is checked with `spring-security-oauth2-jose` (Spring's Nimbus decoder, version managed by Spring Boot). Only that module is added: no resource-server or OAuth client auto-configuration. | GA-NFR-07 satisfied |
+| D-14-2 | Q2 | Signing up with Google creates a plain account. The participant enters a cohort join code afterwards, in the app, as today. | None |
+| D-14-3 | Q3 | An account created with Google has no password anyone knows. Where the app asks for the current password (change password, delete account), such an account uses the V20 step-up email code **instead of** the password, and can set a first password with only a step-up code. "Forgot password" still works but is no longer required. This keeps D-20-1 for accounts that have a password. | GA-FR-26 and GA-FR-32 change: no "use Forgot password first" message |
+| D-14-4 | Q5 | When Google sign-in is off, the Sign In and Sign Up pages hide the button, using `GET /api/auth/oauth/google/status`. | GA-FR-03 becomes required |
+| D-14-5 | Found in Phase 5 | Google sign-in is on only when the Google settings are present **and** "Verify it's you" codes can be sent (mail set up and `STEP_UP_ENABLED` on). Otherwise the button stays hidden and the endpoints answer 503, and a start-up warning says why. Without codes, an account created with Google would have no proof at all for setting a first password or deleting the account (D-20-4 skips the code when mail is missing). *(Approved 21 Nov 2026.)* | GA-FR-02 tightened |
+
+Q4 (Google Cloud project owner) and Q6 (Disconnect Google, proposed for later) remain open. Q4 is needed before Phase 6 only.
 
 ## Appendix A – Google Cloud setup (for the project owner)
 

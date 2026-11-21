@@ -54,6 +54,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
 const OAuthGoogleStartPage = lazy(() => import('./pages/OAuthGoogleStartPage').then((m) => ({ default: m.OAuthGoogleStartPage })));
 const OAuthGoogleErrorPage = lazy(() => import('./pages/OAuthGoogleErrorPage').then((m) => ({ default: m.OAuthGoogleErrorPage })));
+const OAuthGoogleCallbackPage = lazy(() => import('./pages/OAuthGoogleCallbackPage').then((m) => ({ default: m.OAuthGoogleCallbackPage })));
 const AccountLinkingPage = lazy(() => import('./pages/AccountLinkingPage').then((m) => ({ default: m.AccountLinkingPage })));
 const DreamCoachPage = lazy(() => import('./pages/DreamCoachPage').then((m) => ({ default: m.DreamCoachPage })));
 const AiSettingsPage = lazy(() => import('./pages/AiSettingsPage').then((m) => ({ default: m.AiSettingsPage })));
@@ -72,6 +73,7 @@ export function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         {/* Public: the Google OAuth flow happens while signed out. */}
         <Route path="/oauth/google" element={<OAuthGoogleStartPage />} />
+        <Route path="/oauth/google/callback" element={<OAuthGoogleCallbackPage />} />
         <Route path="/oauth/google/error" element={<OAuthGoogleErrorPage />} />
         <Route path="/oauth/google/link" element={<AccountLinkingPage />} />
         {/* Public: V9 (v0.1 FR-10) a partner opens a shared plan without an account. */}

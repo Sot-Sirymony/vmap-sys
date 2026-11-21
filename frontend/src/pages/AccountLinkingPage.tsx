@@ -17,7 +17,8 @@ import { tr } from '../i18n/translate';
  */
 export function AccountLinkingPage() {
   const navigate = useNavigate();
-  const state = useLocation().state as { linkToken?: string } | null;
+  // V14 (GA-FR-21): set by the Google callback page.
+  const state = useLocation().state as { linkToken?: string; remember?: boolean; from?: string } | null;
   const linkToken = state?.linkToken ?? '';
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -53,10 +54,10 @@ export function AccountLinkingPage() {
     setLoading(true);
     try {
       const response = await linkGoogleAccount({ linkToken, password });
-      setSession(response, true);
-      navigate('/', { replace: true });
+      setSession(response, state?.remember ?? true);
+      navigate(state?.from ?? '/', { replace: true });
     } catch (error) {
-      setError(error instanceof Error ? error.message : tr('Could not link the accounts.'));
+      setError(error instanceof Error ? tr(error.message) : tr('Could not link the accounts.'));
     } finally {
       setLoading(false);
     }

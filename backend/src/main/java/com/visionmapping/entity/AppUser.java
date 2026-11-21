@@ -98,6 +98,12 @@ public class AppUser extends BaseAuditableEntity {
     @Column(name = "share_journals_with_coach", nullable = false)
     private boolean shareJournalsWithCoach = false;
 
+    // V14 (GA-FR-25, D-14-3): false for an account created with Google, whose
+    // password hash is a random secret nobody knows, until a password is set.
+    @Builder.Default
+    @Column(name = "password_set", nullable = false)
+    private boolean passwordSet = true;
+
     // V9 (AI-NFR-03): when this person consented to AI reading their data; null means no consent.
     @Column(name = "ai_consent_at")
     private Instant aiConsentAt;

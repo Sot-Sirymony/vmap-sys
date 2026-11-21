@@ -155,6 +155,8 @@ public class PasswordResetService {
         AppUser user = token.getUser();
         passwordPolicy.check(request.newPassword(), user.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        // V14 (D-14-3): an account created with Google now has a password of its own.
+        user.setPasswordSet(true);
         appUserRepository.save(user);
 
         // Spent before returning, so the same link cannot be replayed — including

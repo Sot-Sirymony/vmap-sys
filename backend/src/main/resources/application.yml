@@ -124,6 +124,9 @@ app:
       # V18 MR-NFR-05: Management Report downloads (Excel and PowerPoint) per account.
       report-export-per-user: ${RATE_LIMIT_REPORT_EXPORT:30}
       report-export-window-minutes: ${RATE_LIMIT_REPORT_EXPORT_WINDOW:10}
+      # V14 GA-SEC-09: each Google sign-in step (start, callback, exchange, link) per network.
+      google-sign-in-per-ip: ${RATE_LIMIT_GOOGLE_SIGN_IN_PER_IP:60}
+      google-sign-in-window-minutes: ${RATE_LIMIT_GOOGLE_SIGN_IN_WINDOW:15}
     login:
       max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
       max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}
@@ -137,6 +140,16 @@ app:
     enabled: ${STEP_UP_ENABLED:true}
     # The code HMAC key (SV-NFR-01). Defaults to the JWT secret, which production already requires.
     secret: ${STEP_UP_SECRET:${app.security.jwt-secret}}
+  # V14 (BRD 14.0.0, GA-FR-01): Sign in with Google. Off until both the client
+  # ID and the client secret are set (GA-FR-02). The secret is set in the Render
+  # dashboard and never committed (GA-SEC-12). The redirect URI must match the
+  # one registered in Google Cloud exactly (BRD 14 Appendix A).
+  oauth:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+      redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/oauth/google/callback}
+      frontend-url: ${FRONTEND_URL:http://localhost:5173}
   password-reset:
     # Long enough to go and find the mail, short enough that a link left sitting
     # in a mailbox stops being a key to the account.
@@ -339,3 +352,4 @@ app:
       join-code-per-key: 1000000
       shared-plan-per-ip: 1000000
       excel-import-per-user: 1000000
+      google-sign-in-per-ip: 1000000

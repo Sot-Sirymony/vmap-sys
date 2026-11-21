@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { getGoogleAuthorizeUrl } from '../api/oauthApi';
 import { GoogleGlyph } from '../components/common/GoogleSignInButton';
 import { AuthLayout } from '../layouts/AuthLayout';
@@ -9,16 +9,21 @@ import { tr } from '../i18n/translate';
  * The OAuth loading screen. On arrival it asks the backend for Google's
  * authorization URL and sends the browser there; while that is in flight the
  * user sees the Stitch spinner-with-G treatment. If the backend cannot start
- * the flow (it does not implement OAuth yet, or the request fails), the flow
+ * the flow (Google sign-in is not set up, or the request fails), the flow
  * lands on the designed error screen rather than a dead page.
  */
 export function OAuthGoogleStartPage() {
   const navigate = useNavigate();
+  // V14 (GA-FR-22): set by the Sign In and Sign Up pages. Opened directly, the
+  // session is remembered and the home page opens afterwards.
+  const state = useLocation().state as { from?: string; remember?: boolean } | null;
+  const remember = state?.remember ?? true;
+  const from = state?.from ?? '/';
 
   useEffect(() => {
     let cancelled = false;
 
-    getGoogleAuthorizeUrl()
+    getGoogleAuthorizeUrl(remember, from)
       .then(({ url }) => {
         if (!cancelled) {
           window.location.assign(url);
@@ -36,7 +41,7 @@ export function OAuthGoogleStartPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [navigate, remember, from]);
 
   return (
     <AuthLayout>

@@ -10,6 +10,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { useAuth } from '../context/AuthContext';
+import { useSignInMethods } from '../hooks/useSignInMethods';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 
@@ -25,6 +26,9 @@ export function SecuritySettingsPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const stepUp = useStepUp(token);
+  // V14 (D-14-3): an account created with Google sets its first password with only the email code.
+  const { methods, setMethods } = useSignInMethods(token);
+  const firstPassword = methods?.passwordSet === false;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -42,8 +46,10 @@ export function SecuritySettingsPage() {
     setLoading(true);
     try {
       // V20 SV-FR-01: the server may ask "Verify it's you" first; the form keeps what was typed.
-      await stepUp.protect('CHANGE_PASSWORD', (code) => changePassword({ currentPassword, newPassword }, token, code));
+      const request = firstPassword ? { newPassword } : { currentPassword, newPassword };
+      await stepUp.protect('CHANGE_PASSWORD', (code) => changePassword(request, token, code));
       setSaved(true);
+      if (methods) setMethods({ ...methods, passwordSet: true });
       // Cleared on success so the new password is not left sitting in three
       // form fields on a screen the user may walk away from.
       setCurrentPassword('');
@@ -58,26 +64,30 @@ export function SecuritySettingsPage() {
   }
 
   return (
-    <PageSection title={tr('Security')} subtitle={tr('Change the password for your account.')}>
+    <PageSection title={tr('Security')} subtitle={firstPassword ? tr('Set a password for your account.') : tr('Change the password for your account.')}>
       <Card sx={{ maxWidth: 520 }}>
         <CardContent>
           <Stack spacing={2}>
             <Typography variant="body2" color="text.secondary">
-              {tr('Signed in as {email}. Enter your current password to confirm it is you.', { email: user?.email ?? '' })}
+              {firstPassword
+                ? tr('Signed in as {email}. You signed up with Google, so there is no current password. Set one to also sign in with your email.', { email: user?.email ?? '' })
+                : tr('Signed in as {email}. Enter your current password to confirm it is you.', { email: user?.email ?? '' })}
             </Typography>
 
             <form className="form-stack" onSubmit={handleSubmit}>
-              <label>
-                {tr('Current password')}
-                <Input
-                  type="password"
-                  name="currentPassword"
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                  required
-                />
-              </label>
+              {!firstPassword && (
+                <label>
+                  {tr('Current password')}
+                  <Input
+                    type="password"
+                    name="currentPassword"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    required
+                  />
+                </label>
+              )}
               <label>
                 {tr('New password')}
                 <Input
@@ -115,7 +125,7 @@ export function SecuritySettingsPage() {
               )}
 
               <Button type="submit" disabled={loading}>
-                {loading ? tr('Saving...') : tr('Change password')}
+                {loading ? tr('Saving...') : firstPassword ? tr('Set password') : tr('Change password')}
               </Button>
               <Typography variant="caption" color="text.secondary">
                 {tr("We'll email you a code to confirm it's you.")}

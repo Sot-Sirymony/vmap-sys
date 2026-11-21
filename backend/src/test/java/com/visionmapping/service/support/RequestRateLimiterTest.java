@@ -16,7 +16,7 @@ class RequestRateLimiterTest {
 
     private final MutableClock clock = new MutableClock(Instant.parse("2026-11-09T09:00:00Z"));
     // 2 registrations an hour, 3 join codes in 15 minutes, 2 share views a minute, 1 import an hour.
-    private final RequestRateLimiter limiter = new RequestRateLimiter(clock, 2, 60, 3, 15, 2, 1, 1, 60, 2, 10, 2, 1440, 2, 1, 2, 10);
+    private final RequestRateLimiter limiter = new RequestRateLimiter(clock, 2, 60, 3, 15, 2, 1, 1, 60, 2, 10, 2, 1440, 2, 1, 2, 10, 2, 15);
 
     @Test
     void refusesOverTheLimitWithTheSecondsLeftInTheWindow() {
@@ -44,6 +44,18 @@ class RequestRateLimiterTest {
         assertThatThrownBy(() -> limiter.check(Action.SHARED_PLAN, "198.51.100.1")).isInstanceOf(TooManyRequestsException.class);
         clock.advance(Duration.ofMinutes(1));
         assertThatCode(() -> limiter.check(Action.SHARED_PLAN, "198.51.100.1")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void googleSignInStepsAreLimitedPerNetwork_v14GaSec09() {
+        limiter.check(Action.GOOGLE_SIGN_IN, "203.0.113.20");
+        limiter.check(Action.GOOGLE_SIGN_IN, "203.0.113.20");
+        assertThatThrownBy(() -> limiter.check(Action.GOOGLE_SIGN_IN, "203.0.113.20"))
+                .isInstanceOf(TooManyRequestsException.class)
+                .hasMessageContaining("Google sign-in");
+        assertThatCode(() -> limiter.check(Action.GOOGLE_SIGN_IN, "203.0.113.21")).doesNotThrowAnyException();
+        clock.advance(Duration.ofMinutes(15));
+        assertThatCode(() -> limiter.check(Action.GOOGLE_SIGN_IN, "203.0.113.20")).doesNotThrowAnyException();
     }
 
     @Test

@@ -7,7 +7,7 @@ import { Lock, Mail } from 'lucide-react';
 import { login } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
+import { GoogleSignInSection } from '../components/common/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
@@ -82,10 +82,11 @@ export function LoginPage() {
   return (
     <AuthLayout subtitle={tr('Sign in to continue to your dashboard')}>
       {showNotice && notice && <MuiAlert severity={state?.sessionExpired ? 'info' : 'success'}>{notice}</MuiAlert>}
-      <GoogleSignInButton onClick={() => navigate('/oauth/google', { state: { from } })} />
-      <div className="auth-divider" aria-hidden="true">
-        <span>{tr('or sign in with email')}</span>
-      </div>
+      {/* V14 (GA-FR-22): "remember me" and the page to return to travel with the Google sign-in. */}
+      <GoogleSignInSection
+        onClick={() => navigate('/oauth/google', { state: { from, remember } })}
+        divider={tr('or sign in with email')}
+      />
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="login-email"

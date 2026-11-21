@@ -252,6 +252,38 @@ its access tokens at once.
 apply the user's saved theme on first paint, instead of rendering the default and
 swapping it once a follow-up request returns.
 
+### Sign in with Google (V14)
+
+All public except `sign-in-methods`. Off until `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET` are set and "Verify it's you" codes can be emailed (D-14-5). Every step is limited per network (60 per 15
+minutes by default; 429 with `Retry-After`).
+
+| Method and path | Answer |
+| --- | --- |
+| `GET /auth/oauth/google/status` | `{ "enabled": true }` or `false`; the frontend hides the Google button when false |
+| `GET /auth/oauth/google/authorize-url?remember=true&from=/tasks` | `{ "url": "https://accounts.google.com/…" }`; 503 "Google sign-in is not set up yet…" when off. `from` must be an in-app path, otherwise `/` is used |
+| `GET /auth/oauth/google/callback?code&state` (or `?error=`) | Called by Google. Always a 302 to `{FRONTEND_URL}/oauth/google/callback#…`, with `Referrer-Policy: no-referrer` and `Cache-Control: no-store` |
+| `POST /auth/oauth/google/exchange` `{ "code" }` | The same answer as `POST /auth/login`; 400 "This sign-in link has expired. Please try again." |
+| `POST /auth/oauth/google/link` `{ "linkToken", "password" }` | The same answer as login; 400 "That password is not correct." (counts as a failed sign-in; the link code stays usable) or "This link has expired. Please sign in with Google again."; 429 when the email is locked |
+| `GET /account/sign-in-methods` (signed in) | `{ "passwordSet": false, "linkedAccounts": [{ "provider": "GOOGLE", "email": "…", "linkedAt": "…" }] }` |
+
+The callback fragment is one of:
+
+```text
+#result=signed-in&code=<60-second code>&remember=true&from=%2Ftasks
+#result=link&code=<10-minute code>&remember=true&from=%2F
+#result=error&reason=cancelled|expired|verification|google|unavailable|too-many
+```
+
+A fragment is never sent to a server, and no access or refresh token is ever in
+a URL. Each code works once and only its SHA-256 is stored.
+
+Accounts created with Google have no password anyone knows (`passwordSet:
+false`). For them, `POST /auth/change-password` takes only `newPassword` (with
+the "Verify it's you" code) and sets their first password, and `POST
+/account/delete` takes `{}` (with the code). The account export has a
+`linkedAccounts` section (provider, email, link date; never Google's user ID).
+
 ## Standard CRUD Pattern
 
 Most resources support:

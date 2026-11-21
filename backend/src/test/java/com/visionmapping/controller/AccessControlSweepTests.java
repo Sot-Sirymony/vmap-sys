@@ -80,6 +80,12 @@ class AccessControlSweepTests {
             "POST /api/auth/logout",
             "POST /api/auth/forgot-password",
             "POST /api/auth/reset-password",
+            // V14: Google sign-in happens before the person has a token.
+            "GET /api/auth/oauth/google/status",
+            "GET /api/auth/oauth/google/authorize-url",
+            "GET /api/auth/oauth/google/callback",
+            "POST /api/auth/oauth/google/exchange",
+            "POST /api/auth/oauth/google/link",
             "GET /api/ui-text",
             "GET /api/shared-plans/{token}",
             "GET /api/public/reports/{token}",
@@ -392,7 +398,8 @@ class AccessControlSweepTests {
 
     private static final Map<String, String> ALLOWED_PRIVILEGED_FIELDS = Map.of(
             "PartnerRequest.role", "the partner's job title, free text, not an app role",
-            "StepUpVerifyRequest.code", "the six-digit code the person typed, checked against the stored hash (V20)");
+            "StepUpVerifyRequest.code", "the six-digit code the person typed, checked against the stored hash (V20)",
+            "GoogleExchangeRequest.code", "the one-time Google sign-in code, checked against the stored hash (V14)");
 
     @Test
     void noRequestBodyLetsTheCallerSetPrivilegedFields() {

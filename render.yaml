@@ -98,6 +98,19 @@ services:
       # and must not be committed here) to turn real delivery on.
       - key: MAIL_FROM
         value: no-reply@visionmapping.app
+      # V14 (BRD 14.0.0, GA-FR-01, GA-SEC-12): Sign in with Google. Off until
+      # GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set in the Render dashboard
+      # (the secret is never committed) AND mail works (MAIL_HOST, D-14-5). The redirect URI must match the one
+      # registered in Google Cloud exactly (BRD 14 Appendix A); update both
+      # addresses if Render gave the services a different subdomain.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://vision-mapping-backend.onrender.com/api/auth/oauth/google/callback
+      - key: FRONTEND_URL
+        value: https://vision-mapping-frontend.onrender.com
 
   # React/Vite SPA — static build, served from frontend/dist
   - type: web

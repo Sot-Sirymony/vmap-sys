@@ -236,6 +236,23 @@ weekday you choose, or monthly on the last working day. On that day a notice app
 reports page (with **New report from this** for your latest final report) and stays for a week or until you finalise a
 report. If the server can send mail, you also get an email that day, even with the daily reminder off.
 
+## Sign in with Google (V14)
+
+When the server has Google sign-in set up, the Sign In and Sign Up pages show **Continue with Google**.
+
+- **New to the app:** choose your Google account and agree to share your name and email. Your account is created and
+  you are signed in; no password is needed.
+- **You already have an account with the same email:** the first time, the app asks for that account's password once,
+  to prove it is yours. After that, Google signs you straight in. A wrong password counts like a wrong password on the
+  Sign In page.
+- **Remember me** on the Sign In page works for Google too: unticked, you are signed out when you close the browser.
+- If you press **Cancel** at Google, or something goes wrong, you see a short reason with **Try again** and **Sign in
+  with email instead**.
+- **Account → Sign-in methods** shows "Google: connected as …" and whether you have a password.
+- If you signed up with Google, you can add a password on **Security** (only the emailed code is asked, since there is
+  no current password), and you can delete your account with the emailed code alone.
+- Signing up with Google does not join a cohort. Enter your join code on the Account page afterwards.
+
 ## Verify it's you (V20)
 
 Some changes are risky enough that the app checks it is really you, even though you are signed in: changing your

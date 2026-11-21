@@ -36,7 +36,9 @@ public class RequestRateLimiter {
         REPORT_SHARE("You have made 20 share links today. Try again tomorrow."),
         SHARED_REPORT("Too many requests for this shared report. Try again in a minute."),
         // V20 SV-NFR-06: code checks per person; the hourly and daily send limits are counted in the database.
-        STEP_UP_VERIFY("Too many code attempts. Wait a few minutes and ask for a new code.");
+        STEP_UP_VERIFY("Too many code attempts. Wait a few minutes and ask for a new code."),
+        // V14 GA-SEC-09: each Google sign-in step, per network.
+        GOOGLE_SIGN_IN("Too many Google sign-in attempts from this network. Try again in a few minutes.");
 
         private final String message;
 
@@ -68,7 +70,9 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.shared-report-per-token:60}") int sharedReportLimit,
             @Value("${app.security.rate-limit.shared-report-window-minutes:1}") long sharedReportWindow,
             @Value("${app.security.rate-limit.step-up-verify-per-user:20}") int stepUpVerifyLimit,
-            @Value("${app.security.rate-limit.step-up-verify-window-minutes:10}") long stepUpVerifyWindow) {
+            @Value("${app.security.rate-limit.step-up-verify-window-minutes:10}") long stepUpVerifyWindow,
+            @Value("${app.security.rate-limit.google-sign-in-per-ip:60}") int googleLimit,
+            @Value("${app.security.rate-limit.google-sign-in-window-minutes:15}") long googleWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.limits = Map.of(
                 Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow)),
@@ -78,7 +82,8 @@ public class RequestRateLimiter {
                 Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow)),
                 Action.REPORT_SHARE, new Limit(shareLimit, Duration.ofMinutes(shareWindow)),
                 Action.SHARED_REPORT, new Limit(sharedReportLimit, Duration.ofMinutes(sharedReportWindow)),
-                Action.STEP_UP_VERIFY, new Limit(stepUpVerifyLimit, Duration.ofMinutes(stepUpVerifyWindow)));
+                Action.STEP_UP_VERIFY, new Limit(stepUpVerifyLimit, Duration.ofMinutes(stepUpVerifyWindow)),
+                Action.GOOGLE_SIGN_IN, new Limit(googleLimit, Duration.ofMinutes(googleWindow)));
     }
 
     /**

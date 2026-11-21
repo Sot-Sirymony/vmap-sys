@@ -2,11 +2,14 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../api/authApi';
+import * as oauthApi from '../api/oauthApi';
+import { resetGoogleSignInStatus } from '../components/common/GoogleSignInButton';
 import { setCurrentLanguage } from '../i18n/translate';
 import { currentLocation, renderPage } from '../test/render';
 import { LoginPage } from './LoginPage';
 
 vi.mock('../api/authApi');
+vi.mock('../api/oauthApi');
 
 const REMEMBERED_EMAIL_KEY = 'visionMappingRememberedEmail';
 const session = { token: 'new-token', user: { id: 1, fullName: 'Sok Chan', email: 'chan@example.com', role: 'USER' } };
@@ -20,6 +23,8 @@ describe('LoginPage', () => {
     vi.clearAllMocks();
     localStorage.clear();
     vi.mocked(authApi.login).mockResolvedValue(session as never);
+    vi.mocked(oauthApi.getGoogleSignInStatus).mockResolvedValue({ enabled: true });
+    resetGoogleSignInStatus();
   });
   afterEach(() => setCurrentLanguage('en'));
 
@@ -94,8 +99,16 @@ describe('LoginPage', () => {
     renderPage(<LoginPage />, { route: '/login' });
     expect(screen.getByRole('link', { name: 'Forgot password?' })).toHaveAttribute('href', '/forgot-password');
     expect(screen.getByRole('link', { name: 'Create one' })).toHaveAttribute('href', '/register');
-    await userEvent.click(screen.getByRole('button', { name: /Google/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Google/ }));
     expect(currentLocation()).toBe('/oauth/google');
+  });
+
+  it('hides Google sign-in when the server has not set it up (V14 GA-FR-03)', async () => {
+    vi.mocked(oauthApi.getGoogleSignInStatus).mockResolvedValue({ enabled: false });
+    renderPage(<LoginPage />, { route: '/login' });
+    await waitFor(() => expect(oauthApi.getGoogleSignInStatus).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('or sign in with email')).not.toBeInTheDocument();
   });
 
   it('shows the form in Khmer (COV-NFR-08)', () => {

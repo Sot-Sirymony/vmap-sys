@@ -23,7 +23,7 @@ export function OAuthGoogleErrorPage() {
         <p className="auth-status-text">
           {tr('There was a problem authenticating your account. Please try again or use your password.')}
         </p>
-        {state?.message && <p className="auth-status-note">{state.message}</p>}
+        {state?.message && <p className="auth-status-note">{tr(state.message)}</p>}
       </div>
       <div className="auth-actions">
         <button className="auth-submit" type="button" onClick={() => navigate('/oauth/google')}>

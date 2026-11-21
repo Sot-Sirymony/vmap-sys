@@ -17,6 +17,103 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 14.0.0 — Sign in with Google (in progress)
+
+BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
+
+### Phase 1 — setup and data (2026-11-21)
+- **Settings and switch (GA-FR-01, 02, 04).** `GOOGLE_CLIENT_ID`,
+  `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` and `FRONTEND_URL`. Without the
+  client ID and secret the feature is off: `GET /api/auth/oauth/google/status`
+  answers `{ "enabled": false }` and `authorize-url` answers 503. The secret is
+  never logged or returned.
+- **Data (GA-FR-28 to 31).** Migration `V85__google_sign_in.sql`:
+  `external_identities`, `oauth_login_attempts`, `oauth_handoffs`; expired
+  attempts and codes are deleted daily at 03:50. "Delete my account" removes
+  Google links.
+- **Library (D-14-1).** `spring-security-oauth2-jose` added for Phase 2.
+
+### Phase 2 — start and Google's answer (2026-11-21)
+- **Start (GA-FR-05 to 08).** `authorize-url` records a 10-minute, single-use
+  attempt (state stored as a SHA-256, PKCE verifier sealed, nonce) and returns
+  Google's address with `openid email profile`, S256 and `prompt=select_account`.
+  `from` keeps only in-app paths; anything else becomes `/`.
+- **Google's answer (GA-FR-09 to 13).** `GET /api/auth/oauth/google/callback`
+  uses the state once, exchanges the code with the client secret and PKCE
+  verifier (5-second timeout, fails closed), and verifies the ID token:
+  RS256 signature against Google's key set (re-fetched on an unknown key ID),
+  issuer, audience, expiry with 2 minutes' leeway, nonce and `email_verified`.
+  Every outcome is a 302 to `{FRONTEND_URL}/oauth/google/callback#result=error&reason=…`
+  (`cancelled`, `expired`, `verification`, `google`, `unavailable`), with
+  `Referrer-Policy: no-referrer` and `Cache-Control: no-store`.
+- **Tests.** A local Google stub (`GoogleStubServer`) signs test ID tokens; no
+  test calls Google.
+
+### Phase 3 — the three outcomes and linking (2026-11-21)
+- **Outcomes (GA-FR-14 to 19).** A known Google `sub` signs in (a changed Gmail
+  address is recorded, the account email stays). An email that already has an
+  account gets `#result=link&code=…` and nothing is linked yet (GA-SEC-06). A
+  new email creates a USER account with a random, unknown password hash
+  (GA-FR-25) and records `REGISTERED` "google". Disabled accounts end on
+  `reason=unavailable`. Fragments carry `from` for the page to open afterwards.
+- **Codes (GA-FR-19, 20, GA-SEC-07).** Sign-in codes last 60 seconds and link
+  codes 10 minutes; each works once and only its SHA-256 is kept.
+  `POST /api/auth/oauth/google/exchange` returns the normal sign-in answer, or 400.
+- **Linking (GA-FR-23, 24).** `POST /api/auth/oauth/google/link` checks the
+  password with the sign-in lock: a wrong password is a failed sign-in, 400,
+  and the code stays usable; 429 when locked.
+- **Data (D-14-3).** Migration `V86__app_users_password_set.sql` adds
+  `app_users.password_set`: false for accounts created with Google, set to
+  true by a password reset.
+- **Security log (GA-FR-33).** `GOOGLE_SIGN_IN_SUCCEEDED`, `GOOGLE_SIGN_IN_FAILED`
+  (reason code only) and `GOOGLE_LINKED`, also in the admin log's filter.
+
+### Phase 4 — frontend (2026-11-21)
+- **Callback page (GA-FR-21).** New `/oauth/google/callback` reads the fragment,
+  clears it from the address bar at once, and then signs in (session stored
+  where "remember me" chose), opens the linking screen, or opens the error
+  screen with a message for the reason. The code is used once, even under
+  React's development double effects.
+- **Button (GA-FR-03, 22, D-14-4).** The Google button and its divider show
+  only when `GET …/status` says Google sign-in is on. Sign In passes "remember
+  me" and the page to return to; Sign Up remembers the session. The fragment
+  now also carries `remember`.
+- **First password (GA-FR-26, D-14-3).** An account created with Google sets a
+  password on the Security page with only the email code; no current password
+  is asked. `POST /api/auth/change-password` accepts a missing
+  `currentPassword` for such accounts only.
+- **Account page (GA-FR-27).** New `GET /api/account/sign-in-methods`; a
+  "Sign-in methods" card shows "Google: connected as …" and whether a password
+  is set. It stays hidden for accounts that never used Google.
+- **Khmer (GA-NFR-05).** 21 new entries, including the server's Google messages.
+
+### Phase 5 — hardening and docs (2026-11-21)
+- **Delete and export (GA-FR-32, D-14-3).** An account created with Google is
+  deleted with the fresh email code alone (the Account page hides the password
+  box); accounts with a password still need it. The data export gains a
+  `linkedAccounts` section (provider, email, link date; never Google's `sub`).
+  Deleting an account removes its Google link and open codes.
+- **Rate limits (GA-SEC-09).** `authorize-url`, `callback`, `exchange` and
+  `link`: 60 per network per 15 minutes (`RATE_LIMIT_GOOGLE_SIGN_IN_*`). Over
+  the limit the callback still redirects, with `reason=too-many`.
+- **Alerts (GA-FR-34).** Failed exchanges are logged as `GOOGLE_SIGN_IN_FAILED`
+  "exchange"; 50 failed Google sign-ins from one network in 15 minutes raise a
+  `SECURITY ALERT`.
+- **Headers (GA-SEC-10).** Tested: the callback keeps CSP, HSTS and nosniff and
+  adds `Referrer-Policy: no-referrer`.
+- **Render (GA-SEC-12).** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as
+  dashboard-only secrets; `GOOGLE_REDIRECT_URI` and `FRONTEND_URL` set.
+- **Docs.** README, `docs/API.md`, `docs/SECURITY.md`, `docs/USER_GUIDE.md`.
+
+### Phase 6 — rollout preparation (2026-11-21)
+- **Mail required (D-14-5).** Google sign-in is on only when its settings are
+  present and "Verify it's you" codes can be emailed; otherwise the button is
+  hidden, the endpoints answer 503 and a start-up warning says why.
+- Production switch-on (Google Cloud client, Render secrets, published consent
+  screen, live check) is done by the project owner; see BRD 14 Appendix A.
+
+---
+
 ## Unreleased — no BRD change
 
 Work on `main` after the last BRD v2.0.0 feature commit. None of this changes a
