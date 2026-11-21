@@ -40,6 +40,8 @@ import com.visionmapping.service.report.ManagementReport.TaskInfo;
 import com.visionmapping.service.report.ManagementReport.TaskNode;
 import com.visionmapping.service.report.ManagementReportDeckWriter;
 import com.visionmapping.service.report.ManagementReportExcelWriter;
+import com.visionmapping.service.report.ManagementReportPdfWriter;
+import com.visionmapping.service.support.PdfFonts;
 import com.visionmapping.service.report.ReportComparison;
 import com.visionmapping.service.report.ReportExtras;
 import com.visionmapping.service.report.ReportFilters;
@@ -104,6 +106,7 @@ public class ManagementReportService {
     private final PartnerRepository partnerRepository;
     private final ProgressLogRepository progressLogRepository;
     private final Clock clock;
+    private final PdfFonts pdfFonts;
 
     /**
      * What a report covers: at most one of areaId and dreamId (neither means
@@ -227,6 +230,20 @@ public class ManagementReportService {
                            boolean includeName, String fileName, ReportExtras extras) {
         String presenter = includeName ? lookup.currentUser().getFullName() : null;
         return new ReportFile(fileName, ManagementReportDeckWriter.write(report, summary, ReportText.of(language), title, presenter, extras));
+    }
+
+    /** V19 RM-FR-42: the live report as a PDF, with the chosen sections and its comparison, if any. */
+    public ReportFile pdf(Built built, @Nullable String language, ReportExtras extras) {
+        ReportText text = ReportText.of(language);
+        return pdf(built.report(), built.summary(), language, fileName(built.report(), "pdf"), extras,
+                new ManagementReportPdfWriter.Cover(text.get(ReportText.Key.TITLE),
+                        text.format(ReportText.Key.PDF_STATUS_LIVE, text.date(built.report().asOf()))));
+    }
+
+    /** RM-FR-42: the PDF for a given model and Summary: live, or frozen in a final report. */
+    public ReportFile pdf(ManagementReport report, ManagementReportResponse summary, @Nullable String language, String fileName,
+                          ReportExtras extras, ManagementReportPdfWriter.Cover cover) {
+        return new ReportFile(fileName, ManagementReportPdfWriter.write(report, summary, ReportText.of(language), extras, pdfFonts, cover));
     }
 
     /**

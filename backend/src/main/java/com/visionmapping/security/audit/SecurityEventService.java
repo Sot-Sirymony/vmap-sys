@@ -77,6 +77,14 @@ public class SecurityEventService {
     }
 
     /**
+     * V19 RM-FR-52: an event with no actor and no network address, for a
+     * public page whose visits are counted but never traced to a visitor.
+     */
+    public void recordAnonymous(SecurityEventType type, SecurityOutcome outcome, String targetType, Long targetId, String detail) {
+        save(type, outcome, null, null, targetType, targetId, detail, false);
+    }
+
+    /**
      * An event about an email address that may or may not have an account (a
      * failed sign-in, a lock, a reset request). Only a hash of the address is
      * kept, enough to count attempts against one account.
@@ -87,6 +95,11 @@ public class SecurityEventService {
 
     private void save(SecurityEventType type, SecurityOutcome outcome, Long actorId, String subjectHash,
                       String targetType, Long targetId, String detail) {
+        save(type, outcome, actorId, subjectHash, targetType, targetId, detail, true);
+    }
+
+    private void save(SecurityEventType type, SecurityOutcome outcome, Long actorId, String subjectHash,
+                      String targetType, Long targetId, String detail, boolean withAddress) {
         try {
             SecurityEvent event = SecurityEvent.builder()
                     .occurredAt(clock.instant())
@@ -94,7 +107,7 @@ public class SecurityEventService {
                     .outcome(outcome)
                     .actorId(actorId)
                     .subjectHash(subjectHash)
-                    .ipAddress(currentIp())
+                    .ipAddress(withAddress ? currentIp() : null)
                     .targetType(targetType)
                     .targetId(targetId)
                     .detail(oneLine(detail))

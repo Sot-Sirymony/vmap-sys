@@ -2128,6 +2128,40 @@ export type SavedReport = {
   report?: ManagementReport | null;
 };
 
+/** V19 RM-FR-25: one download of a saved report. */
+export type ReportExport = { id: number; format: 'xlsx' | 'pptx' | 'pdf'; language: string; createdAt: string };
+
+/** V19 RM-FR-46: a share link to a final report. token is only in the answer to creating it. */
+export type ReportShare = {
+  id: number;
+  sections: ReportSection[];
+  createdAt: string;
+  expiresAt: string;
+  revokedAt?: string | null;
+  open: boolean;
+  viewCount: number;
+  lastViewedAt?: string | null;
+  token?: string | null;
+};
+
+/**
+ * V19 RM-FR-47: what a reviewer sees through a share link. report has no attention items or owners; its goals are
+ * empty unless GOAL_HEALTH is shared and its comparison null unless CHANGES is. commentary and rows are null unless
+ * shared.
+ */
+export type SharedReport = {
+  name: string;
+  code: string;
+  sharedBy: string;
+  language: string;
+  finalizedAt?: string | null;
+  expiresAt: string;
+  sections: ReportSection[];
+  report: ManagementReport;
+  commentary?: SavedReportCommentary | null;
+  rows?: ReportRow[] | null;
+};
+
 /** V19 RM-FR-28: suggested text for the sections still empty; null where there is none. */
 export type CommentaryDraft = {
   highlights?: string | null;

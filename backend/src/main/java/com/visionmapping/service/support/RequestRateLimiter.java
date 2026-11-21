@@ -31,7 +31,10 @@ public class RequestRateLimiter {
         SHARED_PLAN("Too many requests for shared plans from this network. Try again in a minute."),
         EXCEL_IMPORT("Too many imports in a short time. Try again later."),
         // V18 MR-NFR-05: each report download builds a whole workbook or deck.
-        REPORT_EXPORT("Too many report downloads in a short time. Try again in a few minutes.");
+        REPORT_EXPORT("Too many report downloads in a short time. Try again in a few minutes."),
+        // V19 RM-NFR-07: share links made per account per day, and views of one shared report per minute.
+        REPORT_SHARE("You have made 20 share links today. Try again tomorrow."),
+        SHARED_REPORT("Too many requests for this shared report. Try again in a minute.");
 
         private final String message;
 
@@ -57,14 +60,20 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.excel-import-per-user:10}") int importLimit,
             @Value("${app.security.rate-limit.excel-import-window-minutes:60}") long importWindow,
             @Value("${app.security.rate-limit.report-export-per-user:30}") int reportLimit,
-            @Value("${app.security.rate-limit.report-export-window-minutes:10}") long reportWindow) {
+            @Value("${app.security.rate-limit.report-export-window-minutes:10}") long reportWindow,
+            @Value("${app.security.rate-limit.report-share-per-user:20}") int shareLimit,
+            @Value("${app.security.rate-limit.report-share-window-minutes:1440}") long shareWindow,
+            @Value("${app.security.rate-limit.shared-report-per-token:60}") int sharedReportLimit,
+            @Value("${app.security.rate-limit.shared-report-window-minutes:1}") long sharedReportWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.limits = Map.of(
                 Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow)),
                 Action.JOIN_CODE, new Limit(joinCodeLimit, Duration.ofMinutes(joinCodeWindow)),
                 Action.SHARED_PLAN, new Limit(sharedPlanLimit, Duration.ofMinutes(sharedPlanWindow)),
                 Action.EXCEL_IMPORT, new Limit(importLimit, Duration.ofMinutes(importWindow)),
-                Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow)));
+                Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow)),
+                Action.REPORT_SHARE, new Limit(shareLimit, Duration.ofMinutes(shareWindow)),
+                Action.SHARED_REPORT, new Limit(sharedReportLimit, Duration.ofMinutes(sharedReportWindow)));
     }
 
     /**

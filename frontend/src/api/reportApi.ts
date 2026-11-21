@@ -64,8 +64,8 @@ export function fileOptions(format: ReportFormat, options: DeckOptions) {
   return `${deck}${options.sections?.length ? `&sections=${options.sections.join(',')}` : ''}`;
 }
 
-/** V18 MR-FR-15, MR-FR-23: the report's files. */
-export type ReportFormat = 'xlsx' | 'pptx';
+/** V18 MR-FR-15, MR-FR-23, V19 RM-FR-42: the report's files. */
+export type ReportFormat = 'xlsx' | 'pptx' | 'pdf';
 
 /**
  * Downloads the report as a file for the same scope as the Summary. The name

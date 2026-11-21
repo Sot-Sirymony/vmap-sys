@@ -138,6 +138,9 @@ public class SecurityConfig {
                         // V9 (v0.1 FR-10): a partner opens a shared plan without an
                         // account. Read-only; the 256-bit token in the path is the key.
                         .requestMatchers(HttpMethod.GET, "/api/shared-plans/*").permitAll()
+                        // V19 RM-FR-47: a reviewer opens a shared final report, and its
+                        // PDF, without an account. Read-only; the token is the key.
+                        .requestMatchers(HttpMethod.GET, "/api/public/reports/*").permitAll()
                         // V10 (SEC-01-03): role rules by path, checked before any
                         // controller or request-body validation runs. Services check
                         // again through Roles. The role comes from the database on

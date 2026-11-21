@@ -49,6 +49,8 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     vi.clearAllMocks();
     vi.mocked(savedReportApi.getSavedReport).mockResolvedValue(saved());
     vi.mocked(savedReportApi.listSavedReports).mockResolvedValue([]);
+    vi.mocked(savedReportApi.listReportShares).mockResolvedValue([]);
+    vi.mocked(savedReportApi.listReportExports).mockResolvedValue([]);
     vi.mocked(dreamApi.listDreams).mockResolvedValue([{ id: 7, title: 'Publish a study', archived: false }] as never);
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue([]);
     vi.mocked(savedReportApi.saveReportCommentary).mockImplementation(async (_token, _id, commentary) => saved({ commentary }));
@@ -101,7 +103,7 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
       commentary: { nothingNeeded: true, goalNotes: { 5: 'On schedule' } } }));
     vi.mocked(savedReportApi.renameSavedReport).mockResolvedValue(saved({ status: 'FINAL', name: 'Q4 review' }));
     open();
-    expect(await screen.findByText(/could not be verified/)).toBeInTheDocument();
+    expect(await screen.findByText('This report could not be verified. Its stored figures may have been changed.')).toBeInTheDocument();
     expect(screen.getByText('Nothing needed this period.')).toBeInTheDocument();
     expect(screen.getByText('On schedule')).toBeInTheDocument();
     const name = screen.getByRole('textbox', { name: 'Report name' });
@@ -166,6 +168,65 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     await userEvent.click(within(include).getByRole('checkbox', { name: 'Blockers' }));
     expect(savedReportApi.saveReportSections).toHaveBeenCalledWith('token', 3, ['SUMMARY', 'DETAILS', 'BLOCKERS']);
     expect(screen.getByText(/These files show the figures frozen on/)).toBeInTheDocument();
+  });
+
+  it('rmFr46: shares a final report after showing what the reviewer sees, shows the link once, and stops it (RM-FR-48)', async () => {
+    const final = saved({ status: 'FINAL', finalizedAt: '2026-11-17T09:00:00Z', verified: true });
+    vi.mocked(savedReportApi.getSavedReport).mockResolvedValue(final);
+    const open = { id: 21, sections: ['COMMENTARY', 'GOAL_HEALTH', 'CHANGES'] as const, createdAt: '2026-11-18T09:00:00Z',
+      expiresAt: '2026-12-18T09:00:00Z', revokedAt: null, open: true, viewCount: 3, lastViewedAt: '2026-11-19T09:00:00Z' };
+    vi.mocked(savedReportApi.listReportShares).mockResolvedValueOnce([]).mockResolvedValue([{ ...open, sections: [...open.sections] }]);
+    vi.mocked(savedReportApi.createReportShare).mockResolvedValue({ ...open, sections: ['COMMENTARY', 'GOAL_HEALTH', 'CHANGES', 'DETAILS'],
+      viewCount: 0, lastViewedAt: null, token: 'tok123' });
+    vi.mocked(savedReportApi.revokeReportShare).mockResolvedValue({ ...open, sections: [], open: false, revokedAt: '2026-11-20T09:00:00Z' });
+    renderPage(<SavedReportPage />, { route: '/vision-map/reports/3', path: '/vision-map/reports/:id' });
+
+    const card = await screen.findByRole('region', { name: 'Share' });
+    expect(within(card).getByText('No share links yet.')).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole('button', { name: 'Create share link' }));
+    const dialog = screen.getByRole('dialog', { name: 'Share this report?' });
+    await userEvent.selectOptions(within(dialog).getByRole('combobox', { name: 'Link lasts' }), '90');
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Details / Report rows' }));
+    expect(within(dialog).getByRole('status')).toHaveTextContent(
+      'The reviewer will see: Headline and period figures, Commentary, Goal health, Details / Report rows, What changed.');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create link' }));
+    expect(savedReportApi.createReportShare).toHaveBeenCalledWith('token', 3, 90, ['COMMENTARY', 'GOAL_HEALTH', 'DETAILS', 'CHANGES']);
+    const ready = await screen.findByRole('dialog', { name: 'Link ready' });
+    expect(within(ready).getByRole('textbox', { name: 'Share link' })).toHaveValue(`${window.location.origin}/shared-report/tok123`);
+    await userEvent.click(within(ready).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    expect(await within(card).findByText(/3 view\(s\) · last viewed Nov 19, 2026/)).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole('button', { name: 'Stop link made Nov 18, 2026' }));
+    expect(savedReportApi.revokeReportShare).toHaveBeenCalledWith('token', 3, 21);
+
+    // RM-FR-51: archiving warns that open links stop.
+    vi.mocked(savedReportApi.archiveSavedReport).mockResolvedValue({ ...final, archived: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    const confirm = screen.getByRole('dialog', { name: 'Archive this report?' });
+    expect(confirm).toHaveTextContent('Its 1 open share link(s) will stop working at once.');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Archive' }));
+    await waitFor(() => expect(savedReportApi.archiveSavedReport).toHaveBeenCalledWith('token', 3));
+    expect(await screen.findByText('Restore this report before you share it.')).toBeInTheDocument();
+  });
+
+  it('rmc18: a draft has no Share card; an unverified final report cannot be shared; downloads are listed (RM-FR-25)', async () => {
+    vi.mocked(savedReportApi.listReportExports).mockResolvedValue([
+      { id: 2, format: 'pdf', language: 'km', createdAt: '2026-11-18T09:30:00Z' },
+      { id: 1, format: 'xlsx', language: 'en', createdAt: '2026-11-17T08:00:00Z' },
+    ]);
+    const { unmount } = renderPage(<SavedReportPage />, { route: '/vision-map/reports/3?tab=export', path: '/vision-map/reports/:id' });
+    const history = await screen.findByRole('region', { name: 'Download history' });
+    expect(within(history).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      expect.stringMatching(/^PDF · ខ្មែរ · Nov 18, 2026/), expect.stringMatching(/^Excel · English · Nov 17, 2026/)]);
+    expect(screen.queryByRole('region', { name: 'Share' })).not.toBeInTheDocument();
+    unmount();
+
+    vi.mocked(savedReportApi.getSavedReport).mockResolvedValue(saved({ status: 'FINAL', finalizedAt: '2026-11-17T09:00:00Z', verified: false }));
+    open();
+    const card = await screen.findByRole('region', { name: 'Share' });
+    expect(within(card).getByRole('button', { name: 'Create share link' })).toBeDisabled();
+    expect(within(card).getByText('This report could not be verified, so it cannot be shared.')).toBeInTheDocument();
   });
 
   it('opens the new report made from this one (RM-FR-21)', async () => {

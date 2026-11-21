@@ -469,6 +469,41 @@ V18 phase 1, the Management Report (BRD 18.0.0, MR-FR-03 to MR-FR-13):
   `includeName=false` leaves the participant's name off the title slide. 8
   slides, or 7 when nothing needs a decision or support (MR-FR-24, MR-FR-26).
 
+V19 phase 4, PDF, share links and download history (BRD 19.0.0, RM-FR-25, RM-FR-42, RM-FR-46 to RM-FR-52):
+- `GET /reports/management.pdf?…same query…&language=&sections=` and
+  `GET /reports/saved/{id}.pdf?language=&sections=`: an A4 landscape PDF
+  (`application/pdf`) with the chosen sections, page numbers and the status
+  in every footer ("Final · frozen …", "DRAFT · …" or "Live report · …").
+  Download limit applies. Khmer prints with the embedded Noto Sans Khmer.
+- `GET /reports/saved/{id}/exports`: the report's downloads (Excel,
+  PowerPoint and PDF), newest first, at most 50: `id`, `format` (xlsx, pptx,
+  pdf), `language`, `createdAt`. The live report keeps none.
+- `GET /reports/saved/{id}/shares`: its share links: `id`, `sections`,
+  `createdAt`, `expiresAt`, `revokedAt`, `open`, `viewCount`,
+  `lastViewedAt` (`token` is always null here).
+- `POST /reports/saved/{id}/shares` (201) with `{ "expiresInDays": 7|30|90,
+  "sections": [...] }` (30 days, and COMMENTARY, GOAL_HEALTH and CHANGES, when
+  left out): a read-only link. The answer's `token` is shown only this once;
+  only its SHA-256 is stored. A draft, an archived report or one whose
+  snapshot fails its check = 409; another expiry = 400; 20 links a day per
+  account (429 after).
+- `PATCH /reports/saved/{id}/shares/{shareId}/revoke`: stops a link at once.
+  Archiving a report stops all its open links; restoring does not reopen them.
+- Public, no sign-in: `GET /public/reports/{token}` (the shared view: `name`,
+  `code`, `sharedBy` (first name), `language`, `finalizedAt`, `expiresAt`,
+  `sections`, `report` (the frozen Summary without `attention` or `owners`;
+  `goals` empty unless GOAL_HEALTH and `comparison` null unless CHANGES are
+  shared), `commentary` (null unless COMMENTARY) and `rows` (null unless
+  DETAILS)) and `GET /public/reports/{token}.pdf` (the PDF with the shared
+  sections). Both answer `X-Robots-Tag: noindex, nofollow`,
+  `Referrer-Policy: no-referrer` and `Cache-Control: no-store`; 60 requests a
+  minute per link. An unknown, expired or stopped token, an archived report
+  or one that fails its check all answer the same 404 "This report is no
+  longer shared.". Only the view counts a visit.
+- The security log records `SHARE_LINK_CREATED` and `SHARE_LINK_REVOKED`
+  (target `report_share`, with the participant), and `SHARE_LINK_OPENED` for
+  every view or refused token with no actor and no network address.
+
 V19 phase 3, comparison, What changed and file options (BRD 19.0.0, RM-FR-32 to RM-FR-44):
 - `GET /reports/management?…&compareTo={reportId}`: the live Summary compared
   with one of the participant's FINAL saved reports on the same scope.

@@ -2,15 +2,10 @@ package com.visionmapping.service.report;
 
 import com.visionmapping.dto.response.ManagementReportResponse;
 import com.visionmapping.dto.response.ManagementReportResponse.GoalHealthRow;
-import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.Priority;
-import com.visionmapping.entity.enums.Severity;
-import com.visionmapping.entity.enums.WorkStatus;
-import com.visionmapping.service.report.ManagementReport.BlockerInfo;
-import com.visionmapping.service.report.ManagementReport.GoalNode;
-import com.visionmapping.service.report.ManagementReport.StepNode;
 import com.visionmapping.service.report.ManagementReport.TaskInfo;
 import com.visionmapping.service.report.ManagementReport.TaskNode;
+import com.visionmapping.service.report.ReportLists.Item;
 import com.visionmapping.service.report.ReportRules.Health;
 import com.visionmapping.service.report.ReportText.Key;
 import java.awt.Color;
@@ -19,13 +14,10 @@ import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.poi.sl.usermodel.Placeholder;
 import org.apache.poi.sl.usermodel.ShapeType;
 import org.apache.poi.sl.usermodel.TableCell.BorderEdge;
@@ -83,7 +75,6 @@ public final class ManagementReportDeckWriter {
             Health.GREEN, new Color(0x10, 0x7C, 0x10),
             Health.DONE_OPEN_WORK, new Color(0x8A, 0x88, 0x86),
             Health.DONE, new Color(0x8A, 0x88, 0x86));
-    private static final Set<ObstacleType> SUPPORT_KINDS = EnumSet.of(ObstacleType.DECISION, ObstacleType.MONEY, ObstacleType.PARTNER);
 
     private final ManagementReport report;
     private final ManagementReportResponse summary;
@@ -209,8 +200,7 @@ public final class ManagementReportDeckWriter {
 
     /** Up to five bullet lines of the participant's text, clipped; "- " bullets become real bullets. */
     private void commentaryLines(XSLFTextShape box, String body, int maxChars) {
-        List<String> lines = body.lines().map(String::strip).filter(line -> !line.isEmpty())
-                .map(line -> line.startsWith("- ") ? line.substring(2) : line).toList();
+        List<String> lines = ReportLists.lines(body);
         for (String value : lines.stream().limit(MAX_COMMENTARY_LINES).toList()) {
             bullet(line(box, clip(value, maxChars), 15, false, INK));
         }
@@ -223,14 +213,7 @@ public final class ManagementReportDeckWriter {
     private void changesSlide() {
         ManagementReportResponse.Comparison comparison = summary.comparison();
         XSLFSlide slide = contentSlide(text.get(Key.SLIDE_CHANGES));
-        List<Item> items = new ArrayList<>();
-        for (ManagementReportResponse.ChangeItem change : comparison.changes()) {
-            String before = text.changeValue(change.kind(), change.before());
-            String after = text.changeValue(change.kind(), change.after());
-            String values = before.isEmpty() && after.isEmpty() ? "" : " · " + (before.isEmpty() ? after : before + " → " + after);
-            items.add(new Item(change.title() + (change.renamed() ? " " + text.get(Key.RENAMED) : ""),
-                    text.changeKind(change.kind()) + values + (ReportRules.blank(change.context()) ? "" : " · " + change.context())));
-        }
+        List<Item> items = ReportLists.changes(comparison, text);
         // MR-FR-25: the overflow line counts every change, not only those kept in the comparison.
         List<Item> shown = items.stream().limit(MAX_CHANGES).toList();
         listItems(slide, shown, MAX_CHANGES, 50, text.get(Key.NO_CHANGES));
@@ -344,10 +327,6 @@ public final class ManagementReportDeckWriter {
         notes(slide, text.format(Key.NOTES_PRIORITIES, open, summary.headline().overdueTasks(), summary.headline().dueSoonTasks()));
     }
 
-    /** One item on a list slide: a bold first line and a muted second line. */
-    private record Item(String heading, String detail) {
-    }
-
     private void blockersSlide() {
         XSLFSlide slide = contentSlide(text.get(Key.SLIDE_BLOCKERS));
         List<Item> items = blockerItems();
@@ -358,80 +337,19 @@ public final class ManagementReportDeckWriter {
 
     /** MR-FR-24 (5): open blockers most severe first, then Blocked tasks; where, why and who could help. */
     List<Item> blockerItems() {
-        List<Located> obstacles = new ArrayList<>();
-        List<Item> blockedTasks = new ArrayList<>();
-        for (GoalNode goal : report.goals()) {
-            for (StepNode step : goal.steps()) {
-                String where = goal.goal().title() + " › " + step.step().title();
-                step.blockers().forEach(obstacle -> obstacles.add(new Located(obstacle, where)));
-                for (TaskNode task : step.tasks()) {
-                    String taskWhere = where + " › " + task.task().title();
-                    task.blockers().forEach(obstacle -> obstacles.add(new Located(obstacle, taskWhere)));
-                    if (task.task().status() == WorkStatus.BLOCKED) {
-                        String why = ReportRules.blank(task.task().blockerReason()) ? "" : task.task().blockerReason().strip();
-                        blockedTasks.add(new Item(text.get(Key.BLOCKED_TASK) + ": " + task.task().title(),
-                                where + (why.isEmpty() ? "" : " · " + text.get(Key.WHY) + ": " + why)));
-                    }
-                }
-            }
-        }
-        obstacles.sort(Comparator.comparingInt((Located located) -> severityRank(located.obstacle().severity())));
-        List<Item> items = new ArrayList<>();
-        for (Located located : obstacles) {
-            BlockerInfo obstacle = located.obstacle();
-            String helper = text.helper(obstacle.type());
-            items.add(new Item(obstacle.title(), located.where() + " · " + text.kind(obstacle.type()) + ", "
-                    + text.severity(obstacle.severity()) + (helper.isEmpty() ? "" : " · " + text.get(Key.SUGGESTED_HELPER) + ": " + helper)));
-        }
-        items.addAll(blockedTasks);
-        return items;
-    }
-
-    private record Located(BlockerInfo obstacle, String where) {
+        return ReportLists.blockers(report, text);
     }
 
     private void overdueSlide() {
         XSLFSlide slide = contentSlide(text.get(Key.SLIDE_OVERDUE));
-        LocalDate today = report.asOf();
-        record Late(TaskInfo task, Item item) {
-        }
-        List<Late> late = new ArrayList<>();
-        for (GoalNode goal : report.goals()) {
-            for (StepNode step : goal.steps()) {
-                for (TaskNode task : step.tasks()) {
-                    TaskInfo item = task.task();
-                    if (ReportRules.isOverdue(item, today)) {
-                        late.add(new Late(item, new Item(item.title(), goal.goal().title() + " › " + step.step().title() + " · "
-                                + text.format(Key.DUE, text.date(item.dueDate())) + " ("
-                                + text.format(Key.DAYS_OVERDUE, ChronoUnit.DAYS.between(item.dueDate(), today)) + ") · "
-                                + text.get(Key.OWNER) + ": " + item.owner())));
-                    }
-                }
-            }
-        }
-        // Most overdue first.
-        late.sort(Comparator.comparing((Late entry) -> entry.task().dueDate()));
-        List<Item> sorted = late.stream().map(Late::item).toList();
-        List<Item> items = sorted;
-        listItems(slide, sorted, MAX_OVERDUE, 50, text.get(Key.NO_OVERDUE));
+        List<Item> items = ReportLists.overdue(report, text);
+        listItems(slide, items, MAX_OVERDUE, 50, text.get(Key.NO_OVERDUE));
         notes(slide, text.format(Key.NOTES_OVERDUE, items.size()));
     }
 
     private void nextActionsSlide() {
         XSLFSlide slide = contentSlide(text.get(Key.SLIDE_NEXT));
-        List<Item> items = new ArrayList<>();
-        for (GoalHealthRow row : summary.goals()) {
-            if ("DONE".equals(row.health())) {
-                continue;
-            }
-            report.goals().stream().filter(node -> node.goal().id().equals(row.goalId())).findFirst()
-                    .flatMap(node -> node.tasks().map(TaskNode::task).filter(task -> task.status() != WorkStatus.COMPLETED).findFirst())
-                    .ifPresent(task -> items.add(new Item(row.goalTitle(),
-                            (ReportRules.blank(task.nextAction()) ? task.title() : task.nextAction().strip()) + " · "
-                                    + text.get(Key.OWNER) + ": " + task.owner()
-                                    + (task.dueDate() == null ? "" : " · " + text.format(Key.DUE, text.date(task.dueDate()))))));
-        }
-        listItems(slide, items, MAX_NEXT, 50, text.get(Key.NO_NEXT_ACTIONS));
+        listItems(slide, ReportLists.nextActions(report, summary, text), MAX_NEXT, 50, text.get(Key.NO_NEXT_ACTIONS));
         notes(slide, text.get(Key.NOTES_NEXT));
     }
 
@@ -469,27 +387,7 @@ public final class ManagementReportDeckWriter {
 
     /** Blockers about a decision, money or a partner, then steps whose gap needs help (V17 BL-FR-22). */
     List<Item> supportItems() {
-        List<Item> items = new ArrayList<>();
-        for (GoalNode goal : report.goals()) {
-            for (StepNode step : goal.steps()) {
-                String where = goal.goal().title() + " › " + step.step().title();
-                List<BlockerInfo> blockers = new ArrayList<>(step.blockers());
-                step.tasks().forEach(task -> blockers.addAll(task.blockers()));
-                for (BlockerInfo obstacle : blockers) {
-                    if (SUPPORT_KINDS.contains(obstacle.type())) {
-                        String helper = text.helper(obstacle.type());
-                        items.add(new Item(obstacle.title(), where + " · " + text.kind(obstacle.type())
-                                + (helper.isEmpty() ? "" : " · " + text.get(Key.SUGGESTED_HELPER) + ": " + helper)));
-                    }
-                }
-            }
-        }
-        for (GoalNode goal : report.goals()) {
-            goal.steps().stream().filter(StepNode::gapNeedsHelp).forEach(step -> items.add(new Item(step.step().title(),
-                    goal.goal().title() + " · " + text.format(Key.GAP_NEEDS_HELP, text.kind(step.step().gapKind()).toLowerCase())
-                            + " · " + text.get(Key.SUGGESTED_HELPER) + ": " + text.helper(step.step().gapKind()))));
-        }
-        return items;
+        return ReportLists.support(report, text);
     }
 
     // ---------- building blocks ----------
@@ -637,9 +535,6 @@ public final class ManagementReportDeckWriter {
         return text.asOfLine(report);
     }
 
-    private static int severityRank(@Nullable Severity severity) {
-        return severity == null ? Severity.values().length : Severity.values().length - 1 - severity.ordinal();
-    }
 
     static String clip(String value, int max) {
         String clean = value == null ? "" : value.strip().replace('\n', ' ');

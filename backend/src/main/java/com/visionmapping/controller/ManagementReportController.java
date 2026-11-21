@@ -94,6 +94,15 @@ public class ManagementReportController {
                 ManagementReportService.fileName(built.report(), "pptx"), extras(sections)), PPTX);
     }
 
+    /** V19 RM-FR-42: the live report as a PDF, with the chosen sections and, when compared, What changed. */
+    @GetMapping("/management.pdf")
+    public ResponseEntity<ByteArrayResource> pdf(@Valid @ModelAttribute ReportQuery query,
+                                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
+                                                 @RequestParam(required = false) List<ReportSection> sections) {
+        rateLimiter.check(RequestRateLimiter.Action.REPORT_EXPORT, "user:" + userScope.currentUser().getId());
+        return download(service.pdf(savedReports.live(query.toScope(), query.compareTo()), language, extras(sections)), PDF);
+    }
+
     /** The live report has no commentary and no draft mark; only the sections differ. */
     private static ReportExtras extras(@Nullable List<ReportSection> sections) {
         return new ReportExtras(null, sections == null ? null : Set.copyOf(sections), false);
@@ -101,6 +110,7 @@ public class ManagementReportController {
 
     static final String XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     static final String PPTX = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    static final String PDF = "application/pdf";
 
     static ResponseEntity<ByteArrayResource> download(ManagementReportService.ReportFile file, String mediaType) {
         return ResponseEntity.ok()

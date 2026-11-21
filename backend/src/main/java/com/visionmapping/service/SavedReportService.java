@@ -8,7 +8,11 @@ import com.visionmapping.dto.request.SavedReportRequest;
 import com.visionmapping.dto.response.CommentaryDraftResponse;
 import com.visionmapping.dto.response.ManagementReportResponse;
 import com.visionmapping.dto.response.SavedReportResponse;
+import com.visionmapping.dto.response.ReportExportResponse;
+import com.visionmapping.entity.ReportExport;
 import com.visionmapping.entity.SavedReport;
+import com.visionmapping.repository.ReportExportRepository;
+import com.visionmapping.repository.ReportShareLinkRepository;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.exception.StateConflictException;
@@ -17,6 +21,7 @@ import com.visionmapping.service.ManagementReportService.Built;
 import com.visionmapping.service.ManagementReportService.ReportFile;
 import com.visionmapping.service.ManagementReportService.ReportScope;
 import com.visionmapping.service.report.ManagementReport;
+import com.visionmapping.service.report.ManagementReportPdfWriter;
 import com.visionmapping.service.report.ReportCommentaryDrafter;
 import com.visionmapping.service.report.ReportComparison;
 import com.visionmapping.service.report.ReportExtras;
@@ -75,15 +80,19 @@ public class SavedReportService {
     static final String BAD_COMPARISON = "Choose a final report on the same scope to compare with.";
 
     private final SavedReportRepository repository;
+    private final ReportExportRepository exports;
+    private final ReportShareLinkRepository shareLinks;
     private final ManagementReportService reports;
     private final EntityLookup lookup;
     private final ObjectMapper mapper;
     private final ReportSnapshotCodec codec;
     private final Clock clock;
 
-    public SavedReportService(SavedReportRepository repository, ManagementReportService reports, EntityLookup lookup,
-                              ObjectMapper mapper, Clock clock) {
+    public SavedReportService(SavedReportRepository repository, ReportExportRepository exports, ReportShareLinkRepository shareLinks,
+                              ManagementReportService reports, EntityLookup lookup, ObjectMapper mapper, Clock clock) {
         this.repository = repository;
+        this.exports = exports;
+        this.shareLinks = shareLinks;
         this.reports = reports;
         this.lookup = lookup;
         this.mapper = mapper;
@@ -124,34 +133,72 @@ public class SavedReportService {
     }
 
     /** RM-FR-38 (brought forward): the Excel file, from the snapshot once final. */
-    @Transactional(readOnly = true)
     public ReportFile excel(Long id, @Nullable String language) {
         return excel(id, language, null);
     }
 
     /** RM-FR-39 to RM-FR-44: with the commentary, the chosen (or remembered) sections and, for a draft, "DRAFT". */
-    @Transactional(readOnly = true)
     public ReportFile excel(Long id, @Nullable String language, @Nullable List<ReportSection> sections) {
         SavedReport saved = owned(id);
         Built content = content(saved);
-        return reports.excel(content.report(), content.summary(), languageOf(saved, language), fileName(saved, content.report(), "xlsx"),
-                extras(saved, sections));
+        ReportFile file = reports.excel(content.report(), content.summary(), languageOf(saved, language),
+                fileName(saved, content.report(), "xlsx"), extras(saved, sections));
+        recordExport(saved, "xlsx", language);
+        return file;
     }
 
     /** RM-FR-38 (brought forward): the deck, from the snapshot once final. */
-    @Transactional(readOnly = true)
     public ReportFile deck(Long id, @Nullable String language, @Nullable String title, boolean includeName) {
         return deck(id, language, title, includeName, null);
     }
 
     /** RM-FR-39 to RM-FR-44: with the commentary, the chosen (or remembered) sections and, for a draft, "DRAFT". */
-    @Transactional(readOnly = true)
     public ReportFile deck(Long id, @Nullable String language, @Nullable String title, boolean includeName,
                            @Nullable List<ReportSection> sections) {
         SavedReport saved = owned(id);
         Built content = content(saved);
-        return reports.deck(content.report(), content.summary(), languageOf(saved, language), title, includeName,
+        ReportFile file = reports.deck(content.report(), content.summary(), languageOf(saved, language), title, includeName,
                 fileName(saved, content.report(), "pptx"), extras(saved, sections));
+        recordExport(saved, "pptx", language);
+        return file;
+    }
+
+    /** RM-FR-42: the PDF, from the snapshot once final; a draft's says "DRAFT" in every footer (RM-FR-43). */
+    public ReportFile pdf(Long id, @Nullable String language, @Nullable List<ReportSection> sections) {
+        SavedReport saved = owned(id);
+        Built content = content(saved);
+        String fileLanguage = languageOf(saved, language);
+        ReportFile file = reports.pdf(content.report(), content.summary(), fileLanguage, fileName(saved, content.report(), "pdf"),
+                extras(saved, sections), cover(saved, content.report(), ReportText.of(fileLanguage)));
+        recordExport(saved, "pdf", language);
+        return file;
+    }
+
+    /** RM-FR-42: the report's name, and "Final · frozen {date}" or "DRAFT · {date}" for the footer. */
+    static ManagementReportPdfWriter.Cover cover(SavedReport saved, ManagementReport report, ReportText text) {
+        String status = saved.isFinal() && saved.getFinalizedAt() != null
+                ? text.format(ReportText.Key.PDF_STATUS_FINAL, text.date(report.asOf()))
+                : text.format(ReportText.Key.PDF_STATUS_DRAFT, text.date(report.asOf()));
+        return new ManagementReportPdfWriter.Cover(saved.getName(), status);
+    }
+
+    /** RM-FR-25: the report's downloads, newest first (the last 50). */
+    @Transactional(readOnly = true)
+    public List<ReportExportResponse> exports(Long id) {
+        SavedReport saved = owned(id);
+        return exports.findTop50ByReport_IdAndUser_IdOrderByCreatedAtDescIdDesc(saved.getId(), lookup.userId()).stream()
+                .map(export -> new ReportExportResponse(export.getId(), export.getFormat(), export.getLanguage(), export.getCreatedAt()))
+                .toList();
+    }
+
+    private void recordExport(SavedReport saved, String format, @Nullable String language) {
+        exports.save(ReportExport.builder()
+                .user(saved.getUser())
+                .report(saved)
+                .format(format)
+                .language(languageOf(saved, language))
+                .createdAt(Instant.now(clock).truncatedTo(ChronoUnit.MICROS))
+                .build());
     }
 
     /**
@@ -331,10 +378,16 @@ public class SavedReportService {
         return toResponse(report, null, null);
     }
 
-    /** RM-FR-22 (business rule 12). */
+    /** RM-FR-22 (business rule 12); RM-FR-51: archiving stops the report's open share links. */
     public SavedReportResponse archive(Long id, boolean archived) {
         SavedReport report = owned(id);
         report.setArchived(archived);
+        if (archived) {
+            Instant now = Instant.now(clock);
+            shareLinks.findByReport_IdAndUser_IdOrderByCreatedAtDescIdDesc(report.getId(), lookup.userId()).stream()
+                    .filter(link -> link.isOpenAt(now))
+                    .forEach(link -> link.setRevokedAt(now));
+        }
         return toResponse(report, null, null);
     }
 
@@ -428,7 +481,7 @@ public class SavedReportService {
 
     // ---------- helpers ----------
 
-    private SavedReport owned(Long id) {
+    SavedReport owned(Long id) {
         return repository.findByIdAndUser_Id(id, lookup.userId()).orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND));
     }
 
@@ -516,7 +569,7 @@ public class SavedReportService {
         return stored.isEmpty() ? ReportSection.all() : EnumSet.copyOf(stored);
     }
 
-    private SavedReportResponse.Commentary commentaryOf(SavedReport report) {
+    SavedReportResponse.Commentary commentaryOf(SavedReport report) {
         return new SavedReportResponse.Commentary(report.getHighlights(), report.getRisks(), report.getDecisionsNeeded(),
                 report.isNothingNeeded(), report.getNextFocus(), goalNotesOf(report));
     }
@@ -541,7 +594,7 @@ public class SavedReportService {
     }
 
     /** What a report shows: live (and compared, RM-FR-32) for a draft, frozen for a final report. */
-    private Built content(SavedReport report) {
+    Built content(SavedReport report) {
         if (!report.isFinal()) {
             Built live = live(report);
             ReportComparison.Earlier earlier = earlier(report);
@@ -551,7 +604,7 @@ public class SavedReportService {
         return new Built(snapshot.report(), snapshot.summary());
     }
 
-    private Decoded decode(SavedReport report) {
+    Decoded decode(SavedReport report) {
         return codec.decode(report.getSnapshot(), report.getSnapshotChecksum(), report.getSnapshotVersion());
     }
 

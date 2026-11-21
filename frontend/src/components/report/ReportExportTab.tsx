@@ -5,7 +5,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
-import { FileSpreadsheet, Presentation } from 'lucide-react';
+import { FileSpreadsheet, FileText, Presentation } from 'lucide-react';
 import { downloadManagementReport, type DeckOptions, type ReportFilter, type ReportFormat } from '../../api/reportApi';
 import { useI18n } from '../../i18n/I18nContext';
 import { saveBlob } from '../../utils/saveBlob';
@@ -24,7 +24,7 @@ import { Select } from '../common/Select';
  * a saved report remembers the sections through onSectionsChange.
  */
 export function ReportExportTab({
-  token, filter, disabledReason, download: downloadFile, note, sections: initialSections, onSectionsChange, defaultLanguage,
+  token, filter, disabledReason, download: downloadFile, note, sections: initialSections, onSectionsChange, defaultLanguage, onDownloaded,
 }: Readonly<{
   token: string;
   filter: ReportFilter;
@@ -39,6 +39,8 @@ export function ReportExportTab({
   onSectionsChange?: (sections: ReportSection[]) => void;
   /** RM-FR-44: the file language to start with, e.g. a final report's own. */
   defaultLanguage?: string;
+  /** Called after each successful download, e.g. to refresh the download history. */
+  onDownloaded?: () => void;
 }>) {
   const { language: appLanguage } = useI18n();
   const [language, setLanguage] = useState(defaultLanguage ?? appLanguage);
@@ -63,6 +65,7 @@ export function ReportExportTab({
         : await downloadManagementReport(token, filter, format, language, deck);
       saveBlob(blob, fileName);
       setSaved(tr('Downloaded {file}.', { file: fileName }));
+      onDownloaded?.();
     } catch (downloadError) {
       setError(downloadError instanceof Error ? downloadError.message : tr('Unable to download the report.'));
     } finally {
@@ -78,7 +81,7 @@ export function ReportExportTab({
 
   const off = Boolean(disabledReason) || sections.length === 0;
   return (
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: 'repeat(3, 1fr)' } }}>
       {note && <Alert severity="info" sx={{ gridColumn: '1 / -1' }}>{note}</Alert>}
       <Card component="section" aria-label={tr('What the files include')} sx={{ gridColumn: '1 / -1' }}>
         <CardHeader title={tr('What the files include')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }}
@@ -135,6 +138,20 @@ export function ReportExportTab({
           <Box>
             <Button onClick={() => void download('pptx')} disabled={off || busy !== null}>
               {busy === 'pptx' ? tr('Preparing…') : tr('Export to PowerPoint')}
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+      <Card component="section" aria-label={tr('PDF report')}>
+        <CardHeader avatar={<FileText aria-hidden="true" />} title={tr('PDF report')}
+          titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }} />
+        <CardContent sx={{ pt: 0, display: 'grid', gap: 1.5 }}>
+          <Typography variant="body2">
+            {tr('A printable A4 report: commentary, headline figures, goal health with reasons, what changed, blockers, next actions and the support needed, with page numbers.')}
+          </Typography>
+          <Box>
+            <Button onClick={() => void download('pdf')} disabled={off || busy !== null}>
+              {busy === 'pdf' ? tr('Preparing…') : tr('Export to PDF')}
             </Button>
           </Box>
         </CardContent>

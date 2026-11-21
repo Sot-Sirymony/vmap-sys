@@ -62,7 +62,10 @@ public class AccountService {
 
     /** Children before parents. A test fails if a table with a user_id is missing here. */
     static final List<String> USER_TABLES_IN_DELETE_ORDER = List.of(
-            // V19: saved reports reference areas and dreams (ON DELETE SET NULL) and each other, so first.
+            // V19: a saved report's downloads and share links, then the reports, which reference areas and
+            // dreams (ON DELETE SET NULL) and each other, so first.
+            "report_exports",
+            "report_share_links",
             "management_reports",
             "plan_builder_drafts",
             "client_error_logs",

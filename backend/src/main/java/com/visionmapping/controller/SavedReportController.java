@@ -8,6 +8,10 @@ import com.visionmapping.dto.response.CommentaryDraftResponse;
 import com.visionmapping.dto.response.ReportRowsResponse;
 import com.visionmapping.dto.response.SavedReportResponse;
 import com.visionmapping.mapper.ReportRowsMapper;
+import com.visionmapping.dto.request.ReportShareRequest;
+import com.visionmapping.dto.response.ReportExportResponse;
+import com.visionmapping.dto.response.ReportShareResponse;
+import com.visionmapping.service.ReportShareService;
 import com.visionmapping.service.SavedReportService;
 import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.util.UserScope;
@@ -44,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SavedReportController {
 
     private final SavedReportService service;
+    private final ReportShareService shares;
     private final RequestRateLimiter rateLimiter;
     private final UserScope userScope;
 
@@ -128,6 +133,40 @@ public class SavedReportController {
                                                    @RequestParam(required = false) List<ReportSection> sections) {
         rateLimiter.check(RequestRateLimiter.Action.REPORT_EXPORT, "user:" + userScope.currentUser().getId());
         return ManagementReportController.download(service.excel(id, language, sections), ManagementReportController.XLSX);
+    }
+
+    /** RM-FR-42: the PDF, from the snapshot once final. */
+    @GetMapping("/{id}.pdf")
+    public ResponseEntity<ByteArrayResource> pdf(@PathVariable Long id,
+                                                 @RequestParam(required = false) @Pattern(regexp = "en|km") String language,
+                                                 @RequestParam(required = false) List<ReportSection> sections) {
+        rateLimiter.check(RequestRateLimiter.Action.REPORT_EXPORT, "user:" + userScope.currentUser().getId());
+        return ManagementReportController.download(service.pdf(id, language, sections), ManagementReportController.PDF);
+    }
+
+    /** RM-FR-25: the report's downloads, newest first. */
+    @GetMapping("/{id}/exports")
+    public List<ReportExportResponse> exports(@PathVariable Long id) {
+        return service.exports(id);
+    }
+
+    /** RM-FR-46: the report's share links. */
+    @GetMapping("/{id}/shares")
+    public List<ReportShareResponse> shares(@PathVariable Long id) {
+        return shares.list(id);
+    }
+
+    /** RM-FR-46, RM-FR-48: a read-only link to a final report; 20 a day per account (RM-NFR-07). */
+    @PostMapping("/{id}/shares")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReportShareResponse share(@PathVariable Long id, @Valid @RequestBody ReportShareRequest request) {
+        rateLimiter.check(RequestRateLimiter.Action.REPORT_SHARE, "user:" + userScope.currentUser().getId());
+        return shares.create(id, request);
+    }
+
+    @PatchMapping("/{id}/shares/{shareId}/revoke")
+    public ReportShareResponse revokeShare(@PathVariable Long id, @PathVariable Long shareId) {
+        return shares.revoke(id, shareId);
     }
 
     @GetMapping("/{id}.pptx")

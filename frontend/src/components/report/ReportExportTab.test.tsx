@@ -52,6 +52,17 @@ describe('Management Report export tab (V18 MR-FR-15)', () => {
       { sections: ['COMMENTARY', 'SUMMARY', 'GOAL_HEALTH', 'DETAILS', 'CHANGES', 'NEXT_ACTIONS', 'SUPPORT'] }));
   });
 
+  it('downloads the PDF and says so to whoever keeps the download history (RM-FR-42, RM-FR-25)', async () => {
+    const blob = new Blob(['%PDF']);
+    downloadManagementReport.mockResolvedValue({ blob, fileName: 'report.pdf' });
+    const onDownloaded = vi.fn();
+    render(<ReportExportTab token="t" filter={{}} disabledReason="" onDownloaded={onDownloaded} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Export to PDF' }));
+    await waitFor(() => expect(saveBlob).toHaveBeenCalledWith(blob, 'report.pdf'));
+    expect(downloadManagementReport).toHaveBeenCalledWith('t', {}, 'pdf', 'en', {});
+    expect(onDownloaded).toHaveBeenCalledTimes(1);
+  });
+
   it('turns the buttons off until at least one section is chosen', async () => {
     render(<ReportExportTab token="t" filter={{}} disabledReason="" sections={['SUMMARY']} />);
     await userEvent.click(screen.getByRole('checkbox', { name: 'Summary' }));

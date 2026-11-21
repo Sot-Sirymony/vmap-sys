@@ -55,7 +55,9 @@ public final class ReportText {
         NOTHING_NEEDED, GOAL_NOTES, NOTE, SLIDE_CHANGES, COMPARED_WITH, CHANGE, CHANGE_SINCE, BEFORE, NOW, ITEM, NEW_GOAL,
         RENAMED, NO_LONGER_IN_REPORT, REMOVED_COMPLETED_ARCHIVED, REMOVED_ARCHIVED, REMOVED_MOVED, TARGET_MOVED, NO_CHANGES,
         CHANGE_GOAL_WORSE, CHANGE_DUE_LATER, CHANGE_NEW_BLOCKER, CHANGE_BLOCKER_CLOSED, CHANGE_GOAL_BETTER, CHANGE_TASK_COMPLETED,
-        GOAL_CHANGES, WHAT_CHANGED, NOTES_HIGHLIGHTS, NOTES_CHANGES, NOTES_GOAL_NOTES, YOUR_WORDS, POINTS
+        GOAL_CHANGES, WHAT_CHANGED, NOTES_HIGHLIGHTS, NOTES_CHANGES, NOTES_GOAL_NOTES, YOUR_WORDS, POINTS,
+        // V19 phase 4
+        PDF_STATUS_FINAL, PDF_STATUS_DRAFT, PDF_STATUS_LIVE, PDF_PAGE, PDF_NO_LONGER_SHARED
     }
 
     private static final Map<Key, String[]> TEXT = new EnumMap<>(Key.class);
@@ -232,6 +234,12 @@ public final class ReportText {
         put(Key.NOTES_CHANGES, "Changes since %s (frozen %s): %d in all.", "ការផ្លាស់ប្តូរតាំងពី %s (បង្កកថ្ងៃ %s)៖ សរុប %d។");
         put(Key.NOTES_GOAL_NOTES, "Goal notes:", "កំណត់ចំណាំគោលដៅ៖");
         put(Key.POINTS, "%s points", "%s ពិន្ទុ");
+        // V19 phase 4
+        put(Key.PDF_STATUS_FINAL, "Final · frozen %s", "ចុងក្រោយ · បង្កកថ្ងៃ %s");
+        put(Key.PDF_STATUS_DRAFT, "DRAFT · %s", "សេចក្តីព្រាង · %s");
+        put(Key.PDF_STATUS_LIVE, "Live report · %s", "របាយការណ៍បច្ចុប្បន្ន · %s");
+        put(Key.PDF_PAGE, "Page %d", "ទំព័រ %d");
+        put(Key.PDF_NO_LONGER_SHARED, "This report is no longer shared.", "របាយការណ៍នេះលែងបានចែករំលែកទៀតហើយ។");
         put(Key.YOUR_WORDS, "In the participant's words", "តាមពាក្យរបស់អ្នកចូលរួម");
     }
 

@@ -81,7 +81,9 @@ class AccessControlSweepTests {
             "POST /api/auth/forgot-password",
             "POST /api/auth/reset-password",
             "GET /api/ui-text",
-            "GET /api/shared-plans/{token}");
+            "GET /api/shared-plans/{token}",
+            "GET /api/public/reports/{token}",
+            "GET /api/public/reports/{token}.pdf");
 
     /**
      * Paths whose variable is not another user's record, so the cross-user
@@ -92,7 +94,9 @@ class AccessControlSweepTests {
             "/api/modules/{number}/completion", "always writes the caller's own completion for that module",
             "/api/ai/modules/{number}/help", "helps with the caller's own module work",
             "/api/attitude-checkins/{date}", "always the caller's own check-in for that date",
-            "/api/shared-plans/{token}", "public by design; the 256-bit token is the key (PlanShareFlowTests)");
+            "/api/shared-plans/{token}", "public by design; the 256-bit token is the key (PlanShareFlowTests)",
+            "/api/public/reports/{token}", "public by design; the 256-bit token is the key (ReportShareFlowTests)",
+            "/api/public/reports/{token}.pdf", "public by design; the 256-bit token is the key (ReportShareFlowTests)");
 
     /**
      * Admin-only actions that live outside /api/admin, so a plain user gets 403
@@ -183,6 +187,10 @@ class AccessControlSweepTests {
         create("plan-shares", Map.of("dreamId", dreamId, "expiresInDays", 7));
         // V19 RM-NFR-01: a saved Management Report.
         create("reports/saved", Map.of("dreamId", dreamId));
+        // V19 phase 4: the report is finalised so it can have a share link to probe.
+        postAndId("/api/reports/saved/" + ownerIds.get("reports/saved") + "/finalize", ownerToken, Map.of());
+        ownerIds.put("report-shares", postAndId("/api/reports/saved/" + ownerIds.get("reports/saved") + "/shares", ownerToken,
+                Map.of("expiresInDays", 7)));
         ownerIds.put("goals/synergy-links", postAndId("/api/goals/" + goalId + "/synergy-links", ownerToken,
                 Map.of("relatedGoalId", secondGoalId)));
 
@@ -506,6 +514,7 @@ class AccessControlSweepTests {
             case "stepId" -> ownerIds.get("steps");
             case "taskId" -> ownerIds.get("tasks");
             case "linkId" -> ownerIds.get("goals/synergy-links");
+            case "shareId" -> ownerIds.get("report-shares");
             case "id" -> ownerIds.get(pattern.substring("/api/".length(), pattern.indexOf("/{id}")));
             default -> null;
         };

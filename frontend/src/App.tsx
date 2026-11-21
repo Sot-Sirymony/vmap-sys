@@ -57,6 +57,7 @@ const AccountLinkingPage = lazy(() => import('./pages/AccountLinkingPage').then(
 const DreamCoachPage = lazy(() => import('./pages/DreamCoachPage').then((m) => ({ default: m.DreamCoachPage })));
 const AiSettingsPage = lazy(() => import('./pages/AiSettingsPage').then((m) => ({ default: m.AiSettingsPage })));
 const SharedPlanPage = lazy(() => import('./pages/SharedPlanPage').then((m) => ({ default: m.SharedPlanPage })));
+const SharedReportPage = lazy(() => import('./pages/SharedReportPage').then((m) => ({ default: m.SharedReportPage })));
 const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
 export function App() {
@@ -74,6 +75,8 @@ export function App() {
         <Route path="/oauth/google/link" element={<AccountLinkingPage />} />
         {/* Public: V9 (v0.1 FR-10) a partner opens a shared plan without an account. */}
         <Route path="/shared/:token" element={<SharedPlanPage />} />
+        {/* Public: V19 RM-FR-47 a reviewer opens a shared final report without an account. */}
+        <Route path="/shared-report/:token" element={<SharedReportPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />

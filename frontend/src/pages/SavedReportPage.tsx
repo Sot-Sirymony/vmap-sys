@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -22,6 +22,8 @@ import { Loading } from '../components/common/Loading';
 import { ReportCommentaryCard, type CommentarySection, type SaveState } from '../components/report/ReportCommentaryCard';
 import { ReportComparePicker, comparableReports } from '../components/report/ReportComparePicker';
 import { ReportControls } from '../components/report/ReportControls';
+import { ReportExportHistory } from '../components/report/ReportExportHistory';
+import { ReportShareCard } from '../components/report/ReportShareCard';
 import { ReportTabs, reportTabFrom, type ReportTab } from '../components/report/ReportTabs';
 import { useAuth } from '../context/AuthContext';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -49,7 +51,7 @@ export function filterOf(saved: SavedReport): ReportFilter {
   return filter;
 }
 
-type Pending = 'finalize' | 'delete' | null;
+type Pending = 'finalize' | 'delete' | 'archive' | null;
 
 /**
  * V19 (BRD 19.0.0, RM-FR-16 to RM-FR-31): one saved report. A draft shows
@@ -78,6 +80,9 @@ export function SavedReportPage() {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [suggested, setSuggested] = useState<Set<CommentarySection>>(new Set());
   const [suggesting, setSuggesting] = useState(false);
+  const [openLinks, setOpenLinks] = useState(0);
+  const [downloads, setDownloads] = useState(0);
+  const countOpenLinks = useCallback((count: number) => setOpenLinks(count), []);
   const lastSaved = useRef('');
   const debounced = useDebouncedValue(commentary, AUTOSAVE_MS);
   const isDraft = saved?.status === 'DRAFT';
@@ -177,8 +182,14 @@ export function SavedReportPage() {
     void run(async () => navigate(`/vision-map/reports/${(await copySavedReport(token, id)).id}`));
   }
 
-  function archive() {
+  /** RM-FR-51: archiving stops the report's share links, so it asks first when any are open. */
+  function archive(confirmed = false) {
     if (!token || !saved) return;
+    if (!saved.archived && openLinks > 0 && !confirmed) {
+      setPending('archive');
+      return;
+    }
+    setPending(null);
     void run(async () => show(await (saved.archived ? restoreSavedReport(token, id) : archiveSavedReport(token, id))));
   }
 
@@ -231,7 +242,7 @@ export function SavedReportPage() {
           <Button variant="secondary" onClick={() => navigate('/vision-map/reports')}>{tr('All saved reports')}</Button>
           {isDraft && <Button onClick={() => setPending('finalize')} disabled={busy}>{tr('Finalise')}</Button>}
           <Button variant="secondary" onClick={copy} disabled={busy}>{tr('New report from this')}</Button>
-          <Button variant="secondary" onClick={archive} disabled={busy}>{saved.archived ? tr('Restore') : tr('Archive')}</Button>
+          <Button variant="secondary" onClick={() => archive()} disabled={busy}>{saved.archived ? tr('Restore') : tr('Archive')}</Button>
           {isDraft && <Button variant="danger" onClick={() => setPending('delete')} disabled={busy}>{tr('Delete draft')}</Button>}
         </Stack>
       )}
@@ -269,6 +280,13 @@ export function SavedReportPage() {
 
       {error && <ErrorMessage message={error} />}
 
+      {saved.status === 'FINAL' && (
+        // RM-FR-46: only a final report can be shared (RMC-18).
+        <ReportShareCard token={token} reportId={saved.id} onOpenLinks={countOpenLinks} reloadKey={`${saved.archived}`}
+          disabledReason={saved.archived ? tr('Restore this report before you share it.')
+            : saved.verified === false ? tr('This report could not be verified, so it cannot be shared.') : ''} />
+      )}
+
       <ReportTabs
         report={report}
         filter={filter}
@@ -282,6 +300,8 @@ export function SavedReportPage() {
         reloadKey={`${saved.id}|${saved.updatedAt}|${saved.status}`}
         token={token}
         download={(format, fileLanguage, deck) => downloadSavedReport(token, id, format, fileLanguage, deck)}
+        belowExport={<ReportExportHistory token={token} reportId={saved.id} reloadKey={String(downloads)} />}
+        onDownloaded={() => setDownloads((count) => count + 1)}
         sections={saved.sections}
         onSectionsChange={changeSections}
         defaultLanguage={isDraft ? undefined : saved.language}
@@ -316,6 +336,15 @@ export function SavedReportPage() {
           message={tr('Figures will be frozen as of {date}. You can still archive it or make a new draft from it.', { date: reportDate(report?.asOf ?? new Date().toISOString().slice(0, 10)) })}
           confirmLabel={tr('Finalise')}
           onConfirm={finalize}
+          onClose={() => setPending(null)}
+        />
+      )}
+      {pending === 'archive' && (
+        <ConfirmDialog
+          title={tr('Archive this report?')}
+          message={tr('Its {count} open share link(s) will stop working at once. Restoring the report does not reopen them.', { count: openLinks })}
+          confirmLabel={tr('Archive')}
+          onConfirm={() => archive(true)}
           onClose={() => setPending(null)}
         />
       )}

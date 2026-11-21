@@ -1,6 +1,8 @@
 import { apiClient } from './apiClient';
 import { fetchReportFile, fileOptions, type DeckOptions, type ReportFilter, type ReportFormat } from './reportApi';
-import type { CommentaryDraft, ReportRow, ReportSection, SavedReport, SavedReportCommentary } from '../types/vision';
+import type {
+  CommentaryDraft, ReportExport, ReportRow, ReportSection, ReportShare, SavedReport, SavedReportCommentary,
+} from '../types/vision';
 
 /**
  * V19 (BRD 19.0.0, RM-FR-16 to RM-FR-31): saved Management Reports. A final
@@ -97,4 +99,26 @@ export async function getSavedReportRows(token: string, id: number, language: st
 /** RM-FR-38: files from a saved report; a final report's come from its snapshot. */
 export function downloadSavedReport(token: string, id: number, format: ReportFormat, language: string, deck: DeckOptions = {}) {
   return fetchReportFile(`/reports/saved/${id}.${format}?language=${language}${fileOptions(format, deck)}`, token, format);
+}
+
+/** RM-FR-25: the report's downloads, newest first. */
+export function listReportExports(token: string, id: number) {
+  return apiClient<ReportExport[]>(`/reports/saved/${id}/exports`, { token });
+}
+
+/** RM-FR-46: the report's share links. */
+export function listReportShares(token: string, id: number) {
+  return apiClient<ReportShare[]>(`/reports/saved/${id}/shares`, { token });
+}
+
+/** RM-FR-46, RM-FR-48: a read-only link to a final report; the answer holds the token, shown only this once. */
+export function createReportShare(token: string, id: number, expiresInDays: number, sections: ReportSection[]) {
+  return apiClient<ReportShare>(`/reports/saved/${id}/shares`, {
+    token, method: 'POST', body: JSON.stringify({ expiresInDays, sections }),
+  });
+}
+
+/** RM-FR-46: stop a link at once. */
+export function revokeReportShare(token: string, id: number, shareId: number) {
+  return apiClient<ReportShare>(`/reports/saved/${id}/shares/${shareId}/revoke`, { token, method: 'PATCH' });
 }

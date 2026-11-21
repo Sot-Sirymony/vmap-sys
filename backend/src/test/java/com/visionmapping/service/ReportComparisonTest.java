@@ -40,7 +40,7 @@ class ReportComparisonTest {
     private static final LocalDate NOVEMBER = LocalDate.of(2026, 11, 30);
     private static final LocalDate DECEMBER = LocalDate.of(2026, 12, 31);
     // toResponse uses none of the service's collaborators.
-    private final ManagementReportService service = new ManagementReportService(null, null, null, null, null, null, null, null, null);
+    private final ManagementReportService service = new ManagementReportService(null, null, null, null, null, null, null, null, null, null);
 
     /** The target experience: November, then December. */
     private Comparison compareNovemberWithDecember() {

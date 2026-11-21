@@ -66,10 +66,29 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [19.0.0] — Phases 1 to 3 of 5 built
+## [19.0.0] — Phases 1 to 4 of 5 built
 
-Implements phases 1 to 3 of [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations
-`V79__obstacle_resolved_at.sql` and `V80__management_reports.sql` (phase 3 needs none).
+Implements phases 1 to 4 of [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations
+`V79__obstacle_resolved_at.sql`, `V80__management_reports.sql` and `V81__report_exports_and_shares.sql`.
+
+### Added in phase 4
+- **PDF (RM-FR-42).** **Export to PDF** on the live report and on saved reports: A4 landscape, with the cover,
+  commentary, headline and period figures (and their changes), goal health with reasons and progress bars, What
+  changed, blockers, overdue work, next actions and the support needed; only the chosen sections; page numbers and
+  "Final · frozen …" or "DRAFT · …" in every footer. Khmer prints.
+- **Share links (RM-FR-46 to RM-FR-48, RM-FR-51).** A final report can be shared by a read-only link lasting 7, 30 or
+  90 days. Before making it, the participant sees exactly which sections the reviewer will see and when it ends; the
+  link is shown once. Each link shows its views and can be stopped at once; archiving a report stops them all.
+- **Shared page (RM-FR-47).** Reviewers open the report without an account: the frozen figures, the sections shared
+  and a PDF download, with no links into the plan. The page is kept out of search engines and sends no referrer. A
+  link that ended says only "This report is no longer shared".
+- **Download history (RM-FR-25).** A saved report lists its Excel, PowerPoint and PDF downloads under the Export tab.
+- **Audit and limits (RM-FR-52, RM-NFR-07).** Making and stopping links is in the security log; views are logged
+  with no visitor details. 20 links a day per account and 60 views a minute per link.
+
+### Changed in phase 4
+- The deck's lists (blockers, overdue, next actions, support, What changed) now come from one shared class that the
+  PDF uses too, so both always say the same thing. No visible change to the deck.
 
 ### Added in phase 3
 - **Compare and What changed (RM-FR-32 to RM-FR-37).** A report is compared with an earlier final report on the same

@@ -27,7 +27,7 @@ export function reportTabFrom(value: string | null): ReportTab {
  */
 export function ReportTabs({
   report, filter, tab, onTabChange, loadRows, reloadKey, token, download, exportNote, aboveSummary, comparisonHint, sections,
-  onSectionsChange, defaultLanguage,
+  onSectionsChange, defaultLanguage, belowExport, onDownloaded,
 }: Readonly<{
   report: ManagementReport | null;
   filter: ReportFilter;
@@ -45,6 +45,9 @@ export function ReportTabs({
   sections?: ReportSection[];
   onSectionsChange?: (sections: ReportSection[]) => void;
   defaultLanguage?: string;
+  /** V19 RM-FR-25: shown under the Export tab, e.g. a saved report's download history. */
+  belowExport?: ReactNode;
+  onDownloaded?: () => void;
 }>) {
   const navigate = useNavigate();
   const empty = report !== null && report.goals.length === 0;
@@ -88,9 +91,10 @@ export function ReportTabs({
       <Box role="tabpanel" id="report-panel-export" aria-labelledby="report-tab-export" hidden={tab !== 'export'}>
         {tab === 'export' && (
           <ReportExportTab token={token} filter={filter} download={download} note={exportNote} sections={sections}
-            onSectionsChange={onSectionsChange} defaultLanguage={defaultLanguage}
+            onSectionsChange={onSectionsChange} defaultLanguage={defaultLanguage} onDownloaded={onDownloaded}
             disabledReason={empty ? tr('Add goals to a dream first; there is nothing to export yet.') : ''} />
         )}
+        {tab === 'export' && belowExport && <Box sx={{ mt: 2 }}>{belowExport}</Box>}
       </Box>
     </>
   );

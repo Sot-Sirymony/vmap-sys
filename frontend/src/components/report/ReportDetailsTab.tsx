@@ -46,12 +46,14 @@ function RowState({ row }: Readonly<{ row: ReportRow }>) {
  * search, sorting, quick filters and 50 rows a page. The rows come from the
  * same server code as the Excel file, in the participant's language.
  */
-export function ReportDetailsTab({ loadRows, showDream, reloadKey }: Readonly<{
+export function ReportDetailsTab({ loadRows, showDream, reloadKey, noLinks = false }: Readonly<{
   loadRows: (language: string) => Promise<ReportRow[]>;
   /** False for a one-dream report, where the column would repeat one name. */
   showDream: boolean;
   /** Changes when the report's scope, period or filters change. */
   reloadKey: string;
+  /** V19 RM-FR-47: a shared report links nowhere into the plan. */
+  noLinks?: boolean;
 }>) {
   const { language } = useI18n();
   const [rows, setRows] = useState<ReportRow[] | null>(null);
@@ -93,7 +95,7 @@ export function ReportDetailsTab({ loadRows, showDream, reloadKey }: Readonly<{
       key: 'task',
       label: tr('Tasks'),
       sortValue: (row) => row.task,
-      render: (row) => (row.task && row.stepId ? <Link to={`/tasks?stepId=${row.stepId}`}>{row.task}</Link> : row.task || '—'),
+      render: (row) => (row.task && row.stepId && !noLinks ? <Link to={`/tasks?stepId=${row.stepId}`}>{row.task}</Link> : row.task || '—'),
     },
     { key: 'state', label: tr('State'), render: (row) => <RowState row={row} /> },
     {

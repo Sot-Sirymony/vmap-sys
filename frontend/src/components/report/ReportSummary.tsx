@@ -200,12 +200,18 @@ type GoalRow = ManagementReport['goals'][number] & { id: number };
  * a What changed card follows the period; without one, comparisonHint (if
  * given) says how to get one.
  */
-export function ReportSummary({ report, filter, onShowDetails, comparisonHint }: Readonly<{
+export function ReportSummary({ report, filter, onShowDetails, comparisonHint, shared = false }: Readonly<{
   report: ManagementReport;
   filter: ReportFilter;
   onShowDetails?: () => void;
   comparisonHint?: string;
+  /**
+   * V19 RM-FR-47: the reviewer's read-only view through a share link: no links into the plan, no "needs attention"
+   * list, and no goal health when it was not shared.
+   */
+  shared?: boolean;
 }>) {
+  const showGoals = !shared || report.goals.length > 0;
   const { headline } = report;
   const comparison = report.comparison ?? null;
   const goalRows: GoalRow[] = report.goals.map((goal) => ({ ...goal, id: goal.goalId }));
@@ -258,10 +264,10 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint }:
           )}
         />
         <DashboardCard label={tr('Overdue tasks')} value={headline.overdueTasks} tone={headline.overdueTasks > 0 ? 'critical' : 'neutral'}
-          to={headline.overdueTasks > 0 ? overdueTasksLink(filter) : undefined}
+          to={!shared && headline.overdueTasks > 0 ? overdueTasksLink(filter) : undefined}
           extra={comparison && change(comparison.headline.overdueTasks, changeWords('count', comparison.headline.overdueTasks, tr('overdue tasks')))} />
         <DashboardCard label={tr('Blocked tasks')} value={headline.blockedTasks} tone={headline.blockedTasks > 0 ? 'warning' : 'neutral'}
-          to={headline.blockedTasks > 0 ? blockedTasksLink(filter) : undefined}
+          to={!shared && headline.blockedTasks > 0 ? blockedTasksLink(filter) : undefined}
           extra={comparison && change(comparison.headline.blockedTasks, changeWords('count', comparison.headline.blockedTasks, tr('blocked tasks')))} />
         <DashboardCard label={tr('Open blockers')} value={headline.openBlockers} tone={headline.openBlockers > 0 ? 'warning' : 'neutral'}
           extra={comparison && change(comparison.headline.openBlockers, changeWords('count', comparison.headline.openBlockers, tr('open blockers')))} />
@@ -274,20 +280,21 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint }:
       {comparison && <WhatChangedCard comparison={comparison} onShowDetails={onShowDetails} />}
       {!comparison && comparisonHint && <Alert severity="info">{comparisonHint}</Alert>}
 
-      {report.unplacedObstacles > 0 && (
+      {!shared && report.unplacedObstacles > 0 && (
         <Alert severity="warning" action={<Link to={unplacedLink(filter)}>{tr('Show them')}</Link>}>
           {tr('{count} blocker(s) are not on a step yet, so they are not counted on any goal.', { count: report.unplacedObstacles })}
         </Alert>
       )}
 
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-        <GoalProgressChart report={report} />
+        {showGoals && <GoalProgressChart report={report} />}
         <TasksByStatusChart report={report} />
         <PriorityChart report={report} />
         <BlockersChart report={report} />
         <Box sx={{ gridColumn: '1 / -1' }}><ProgressTrendCard report={report} /></Box>
       </Box>
 
+      {showGoals && (
       <Card component="section" aria-label={tr('Goal health')}>
         <CardHeader title={tr('Goal health')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }}
           subheader={tr('Off track: overdue, or a blocked task or critical blocker. At risk: overdue work, an open blocker, or more than 20 points behind schedule. Done – open work: completed, but tasks are still open.')} />
@@ -295,7 +302,9 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint }:
           <DataTable rows={goalRows} columns={columns} emptyMessage={tr('No goals in this scope.')} defaultSortKey="health" />
         </CardContent>
       </Card>
+      )}
 
+      {!shared && (
       <Card component="section" aria-label={tr('Needs attention')}>
         <CardHeader title={tr('Needs attention')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }} />
         <CardContent sx={{ pt: 0 }}>
@@ -314,6 +323,7 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint }:
           )}
         </CardContent>
       </Card>
+      )}
     </Stack>
   );
 }
