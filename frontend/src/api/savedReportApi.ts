@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import { fetchReportFile, fileOptions, type DeckOptions, type ReportFilter, type ReportFormat } from './reportApi';
 import type {
-  CommentaryDraft, ReportExport, ReportRow, ReportSection, ReportShare, SavedReport, SavedReportCommentary,
+  CommentaryDraft, ReportExport, ReportReminderStatus, ReportRow, ReportSection, ReportShare, SavedReport, SavedReportCommentary,
 } from '../types/vision';
 
 /**
@@ -63,9 +63,14 @@ export function saveReportCommentary(token: string, id: number, commentary: Save
   return apiClient<SavedReport>(`/reports/saved/${id}/commentary`, { token, method: 'PUT', body: JSON.stringify(commentary) });
 }
 
-/** RM-FR-28: rule-based suggestions for the sections still empty. */
-export function draftReportCommentary(token: string, id: number, language: string) {
-  return apiClient<CommentaryDraft>(`/reports/saved/${id}/commentary-draft?language=${language}`, { token, method: 'POST' });
+/** RM-FR-28 rule-based, or RM-FR-29 AI, suggestions for the sections still empty. */
+export function draftReportCommentary(token: string, id: number, language: string, mode: 'RULES' | 'AI' = 'RULES') {
+  return apiClient<CommentaryDraft>(`/reports/saved/${id}/commentary-draft?language=${language}&mode=${mode}`, { token, method: 'POST' });
+}
+
+/** RM-FR-49: whether the report reminder is due, and the latest final report. */
+export function getReportReminder(token: string) {
+  return apiClient<ReportReminderStatus>('/reports/saved/reminder', { token });
 }
 
 /** RM-FR-19: freeze the figures. */

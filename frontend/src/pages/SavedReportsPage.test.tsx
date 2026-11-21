@@ -25,6 +25,7 @@ describe('SavedReportsPage (V19 RM-FR-17)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(savedReportApi.listSavedReports).mockResolvedValue(reports);
+    vi.mocked(savedReportApi.getReportReminder).mockResolvedValue({ due: false, cadence: 'NONE' });
   });
 
   it('lists reports with their status and comparison, and filters by status and name', async () => {

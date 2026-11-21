@@ -9,10 +9,14 @@ import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 import { getReminderSettings, sendTestReminder, updateReminderSettings } from '../../api/accountApi';
-import type { ReminderSettings } from '../../types/vision';
+import type { ReminderSettings, ReportReminderCadence } from '../../types/vision';
 import { useI18n } from '../../i18n/I18nContext';
 import { Button } from './Button';
 import { Input } from './Input';
+import { Select } from './Select';
+
+/** 1 = Monday to 7 = Sunday, as the server stores them (RM-FR-49). */
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -42,7 +46,8 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
       .catch((loadError: unknown) => setError(loadError instanceof Error ? loadError.message : t('Unable to load your reminder settings.')));
   }, [token]);
 
-  async function save(enabled: boolean, reminderEmail: string, savedNotice: string) {
+  async function save(enabled: boolean, reminderEmail: string, savedNotice: string,
+    report?: { reportReminder: ReportReminderCadence; reportReminderDay: number | null }) {
     if (!token) {
       return;
     }
@@ -50,7 +55,7 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
     setError('');
     setNotice('');
     try {
-      show(await updateReminderSettings(token, enabled, browserTimeZone(), reminderEmail.trim()));
+      show(await updateReminderSettings(token, enabled, browserTimeZone(), reminderEmail.trim(), report));
       setNotice(savedNotice);
     } catch (saveError) {
       setError(saveError instanceof Error ? t(saveError.message) : t('Unable to save your reminder settings.'));
@@ -84,6 +89,14 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
   }
 
   const unsavedEmail = reminders !== null && email.trim() !== (reminders.reminderEmail ?? '');
+
+  /** RM-FR-49: a weekly reminder starts on Friday until another day is chosen. */
+  function saveReport(cadence: ReportReminderCadence, day: number | null) {
+    if (reminders) {
+      void save(reminders.enabled, reminders.reminderEmail ?? '', t('Report reminder saved.'),
+        { reportReminder: cadence, reportReminderDay: cadence === 'WEEKLY' ? day ?? 5 : null });
+    }
+  }
 
   return (
     <Card>
@@ -134,6 +147,26 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
                   {t('Sent after {hour}:00, {zone} time.', { hour: reminders.sendHour, zone: reminders.timeZone })}
                 </Typography>
               )}
+              <Box sx={{ display: 'grid', gap: 1, pt: 1 }}>
+                <Typography variant="subtitle2" component="h3">{t('Report reminder')}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('A notice on the Dashboard and Reports page when it is time to prepare a report, and an email that day when mail is set up.')}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Select aria-label={t('Remind me to prepare a report')} disabled={busy} value={reminders.reportReminder ?? 'NONE'}
+                    onChange={(event) => saveReport(event.target.value as ReportReminderCadence, reminders.reportReminderDay ?? null)}>
+                    <option value="NONE">{t('No report reminder')}</option>
+                    <option value="WEEKLY">{t('Weekly')}</option>
+                    <option value="MONTHLY">{t('Monthly, on the last working day')}</option>
+                  </Select>
+                  {reminders.reportReminder === 'WEEKLY' && (
+                    <Select aria-label={t('Weekday')} disabled={busy} value={reminders.reportReminderDay ?? 5}
+                      onChange={(event) => saveReport('WEEKLY', Number(event.target.value))}>
+                      {WEEKDAYS.map((day, index) => <option key={day} value={index + 1}>{t(day)}</option>)}
+                    </Select>
+                  )}
+                </Box>
+              </Box>
               {!reminders.emailConfigured && (
                 <Alert severity="warning">
                   {t('This server has no mail server set up, so no reminder emails can be sent yet, even with this turned on.')}

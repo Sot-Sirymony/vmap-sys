@@ -3,6 +3,9 @@ package com.visionmapping.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.visionmapping.dto.response.ReportReminderResponse;
+import com.visionmapping.entity.AppUser;
+import com.visionmapping.service.report.ReportReminders;
 import com.visionmapping.dto.request.SavedReportCommentaryRequest;
 import com.visionmapping.dto.request.SavedReportRequest;
 import com.visionmapping.dto.response.CommentaryDraftResponse;
@@ -41,6 +44,7 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.IsoFields;
 import java.time.temporal.TemporalAdjusters;
@@ -281,13 +285,60 @@ public class SavedReportService {
      */
     @Transactional(readOnly = true)
     public CommentaryDraftResponse commentaryDraft(Long id, @Nullable String language) {
+        SavedReport report = editable(id);
+        Built content = content(report);
+        return suggestions(report, ReportCommentaryDrafter.draft(content.report(), ReportText.of(languageOf(report, language)),
+                content.summary().comparison()));
+    }
+
+    /**
+     * RM-FR-49: whether the participant's report reminder is due now, in their
+     * reminder time zone, and the latest final report to start the next from.
+     */
+    @Transactional(readOnly = true)
+    public ReportReminderResponse reminder() {
+        AppUser user = lookup.currentUser();
+        ZoneId zone = user.getReminderTimeZone() == null ? clock.getZone() : ZoneId.of(user.getReminderTimeZone());
+        LocalDate today = LocalDate.now(clock.withZone(zone));
+        LocalDate dueOn = ReportReminders.lastDue(user.getReportReminder(), user.getReportReminderDay(), today);
+        SavedReport latest = repository.findByUser_IdOrderByUpdatedAtDesc(user.getId()).stream()
+                .filter(report -> report.isFinal() && !report.isArchived() && report.getFinalizedAt() != null)
+                .max(Comparator.comparing(SavedReport::getFinalizedAt)).orElse(null);
+        boolean done = latest != null && dueOn != null && !latest.getFinalizedAt().atZone(zone).toLocalDate().isBefore(dueOn);
+        boolean due = dueOn != null && !done && ReportReminders.stillShown(dueOn, today);
+        return new ReportReminderResponse(due, user.getReportReminder().name(), dueOn,
+                latest == null ? null : latest.getId(), latest == null ? null : latest.getName());
+    }
+
+    /** RM-FR-29: the fact sheet the AI draft may read, and the language to answer in. */
+    public record DraftFacts(String language, String facts) {
+    }
+
+    /** RM-FR-29: the AI draft's input, for a draft the participant owns. */
+    @Transactional(readOnly = true)
+    public DraftFacts commentaryFacts(Long id, @Nullable String language) {
+        SavedReport report = editable(id);
+        Built content = content(report);
+        String fileLanguage = languageOf(report, language);
+        return new DraftFacts(fileLanguage, ReportCommentaryDrafter.facts(content.report(), ReportText.of(fileLanguage),
+                content.summary().comparison()));
+    }
+
+    /** RM-FR-29: the AI draft's text for the sections that are still empty, read again after Claude answered. */
+    @Transactional(readOnly = true)
+    public CommentaryDraftResponse commentarySuggestions(Long id, ReportCommentaryDrafter.Draft draft) {
+        return suggestions(editable(id), draft);
+    }
+
+    private SavedReport editable(Long id) {
         SavedReport report = owned(id);
         if (report.isFinal()) {
             throw new StateConflictException(FINAL_READ_ONLY);
         }
-        Built content = content(report);
-        ReportCommentaryDrafter.Draft draft = ReportCommentaryDrafter.draft(content.report(), ReportText.of(languageOf(report, language)),
-                content.summary().comparison());
+        return report;
+    }
+
+    private static CommentaryDraftResponse suggestions(SavedReport report, ReportCommentaryDrafter.Draft draft) {
         return new CommentaryDraftResponse(
                 suggestion(report.getHighlights(), draft.highlights()),
                 suggestion(report.getRisks(), draft.risks()),

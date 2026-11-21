@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as accountApi from '../api/accountApi';
+import * as savedReportApi from '../api/savedReportApi';
 import * as dashboardApi from '../api/dashboardApi';
 import * as visionAreaApi from '../api/visionAreaApi';
 import { setCurrentLanguage } from '../i18n/translate';
@@ -11,6 +12,7 @@ import type { DashboardSummary } from '../types/vision';
 import { DashboardPage } from './DashboardPage';
 
 vi.mock('../api/accountApi');
+vi.mock('../api/savedReportApi');
 vi.mock('../api/dashboardApi');
 vi.mock('../api/gratitudeEntryApi');
 vi.mock('../api/visionAreaApi');
@@ -56,6 +58,7 @@ describe('DashboardPage (CLAUDE.md page 1)', () => {
     // The account cards load on their own; they are tested with their components.
     vi.mocked(accountApi.getProgressMetrics).mockReturnValue(new Promise(() => undefined));
     vi.mocked(accountApi.getReminderSettings).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(savedReportApi.getReportReminder).mockReturnValue(new Promise(() => undefined));
   });
   afterEach(() => setCurrentLanguage('en'));
 

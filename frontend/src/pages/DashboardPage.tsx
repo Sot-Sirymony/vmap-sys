@@ -17,6 +17,7 @@ import { GettingStarted } from '../components/dashboard/GettingStarted';
 import { GratitudeCard } from '../components/dashboard/GratitudeCard';
 import { ProgressMetricsCard } from '../components/dashboard/ProgressMetricsCard';
 import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
+import { ReportReminderNotice } from '../components/report/ReportReminderNotice';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -247,6 +248,7 @@ export function DashboardPage() {
       <>
       {showOnboardingBanner && <GettingStarted hasArea={hasArea} hasDream={hasDream} hasGoal={hasGoal} />}
       {/* FR-25.3: what to DO comes before what IS — the feed leads the page. */}
+      <ReportReminderNotice token={token} />
       <AttentionPanel attention={summary?.attention} visionAreaId={filterVisionAreaId} />
       <DashboardSummary
         summary={summary}

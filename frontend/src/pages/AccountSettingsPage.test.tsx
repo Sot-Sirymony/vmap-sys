@@ -38,7 +38,29 @@ describe('AccountSettingsPage', () => {
 
     await userEvent.click(await screen.findByRole('switch', { name: 'Email me a daily reminder' }));
 
-    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), ''));
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), '', undefined));
+  });
+
+  it('saves a weekly report reminder on a chosen weekday, then a monthly one (V19 RM-FR-49)', async () => {
+    const base = { enabled: false, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: null, sendsTo: LOGIN };
+    vi.mocked(getReminderSettings).mockResolvedValue({ ...base, reportReminder: 'NONE', reportReminderDay: null });
+    vi.mocked(updateReminderSettings)
+      .mockResolvedValueOnce({ ...base, reportReminder: 'WEEKLY', reportReminderDay: 5 })
+      .mockResolvedValueOnce({ ...base, reportReminder: 'WEEKLY', reportReminderDay: 1 })
+      .mockResolvedValueOnce({ ...base, reportReminder: 'MONTHLY', reportReminderDay: null });
+    render(<AccountSettingsPage />);
+
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Remind me to prepare a report' }), 'WEEKLY');
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', false, expect.any(String), '',
+      { reportReminder: 'WEEKLY', reportReminderDay: 5 }));
+    expect(await screen.findByText('Report reminder saved.')).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Weekday' }), 'Monday');
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenLastCalledWith('token', false, expect.any(String), '',
+      { reportReminder: 'WEEKLY', reportReminderDay: 1 }));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Remind me to prepare a report' }), 'MONTHLY');
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenLastCalledWith('token', false, expect.any(String), '',
+      { reportReminder: 'MONTHLY', reportReminderDay: null }));
+    expect(screen.queryByRole('combobox', { name: 'Weekday' })).not.toBeInTheDocument();
   });
 
   it('saves a separate reminder address, then sends a test email to it', async () => {
@@ -52,7 +74,7 @@ describe('AccountSettingsPage', () => {
     await userEvent.type(screen.getByLabelText('Send reminders to'), ' inbox@example.org ');
     expect(screen.getByRole('button', { name: 'Send test email' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Save email' }));
-    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), 'inbox@example.org'));
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), 'inbox@example.org', undefined));
     expect(await screen.findByText('Reminder email saved.')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Send test email' }));

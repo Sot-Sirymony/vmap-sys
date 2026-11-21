@@ -27,9 +27,11 @@ export const MAX_GOAL_NOTE = 500;
 /**
  * V19 RM-FR-26 to RM-FR-31: the participant's own words on a report. Editable
  * on a draft (saved as they type, RM-FR-27), read-only on a final report.
- * Lines the rule-based draft filled in are marked "Suggested" until edited.
+ * Lines the rule-based or AI draft filled in are marked "Suggested" until edited.
  */
-export function ReportCommentaryCard({ commentary, goals, editable, onChange, onBlur, onSuggest, suggested, saveState, suggesting }: Readonly<{
+export function ReportCommentaryCard({
+  commentary, goals, editable, onChange, onBlur, onSuggest, onSuggestAi, suggested, saveState, suggesting,
+}: Readonly<{
   commentary: SavedReportCommentary;
   goals: { goalId: number; goalTitle: string }[];
   editable: boolean;
@@ -37,6 +39,8 @@ export function ReportCommentaryCard({ commentary, goals, editable, onChange, on
   /** Save at once when a field loses focus (RM-FR-27). */
   onBlur?: () => void;
   onSuggest?: () => void;
+  /** RM-FR-29: Draft with AI; left out when AI is off, which hides the button. */
+  onSuggestAi?: () => void;
   suggested?: Set<CommentarySection>;
   saveState?: SaveState;
   suggesting?: boolean;
@@ -92,6 +96,9 @@ export function ReportCommentaryCard({ commentary, goals, editable, onChange, on
             <Button variant="secondary" onClick={onSuggest} disabled={suggesting}>
               {suggesting ? tr('Preparing…') : tr('Suggest a draft')}
             </Button>
+            {onSuggestAi && (
+              <Button variant="secondary" onClick={onSuggestAi} disabled={suggesting}>{tr('Draft with AI')}</Button>
+            )}
           </Box>
         )}
       />

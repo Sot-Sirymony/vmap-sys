@@ -8,6 +8,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { FileBarChart, Lock, PencilLine } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
+import { ReportReminderNotice } from '../components/report/ReportReminderNotice';
 import { listSavedReports } from '../api/savedReportApi';
 import { Button } from '../components/common/Button';
 import { DataTable, type DataTableColumn } from '../components/common/DataTable';
@@ -101,6 +102,7 @@ export function SavedReportsPage() {
       subtitle={tr('Reports you saved from the Management Report. Final ones keep their figures.')}
       actions={<Button onClick={() => navigate('/vision-map/report')}>{tr('Open the Management Report')}</Button>}
     >
+      <ReportReminderNotice token={token} onReportsPage />
       {error && <ErrorMessage message={error} />}
       {reports === null && !error && <Loading />}
       {reports !== null && reports.length === 0 && !showArchived ? (

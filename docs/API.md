@@ -565,8 +565,22 @@ V19 phase 2, filters, Details rows and saved reports (BRD 19.0.0, RM-FR-10 to RM
   (anything else = 409). `PUT /reports/saved/{id}/commentary`: `highlights`,
   `risks`, `decisionsNeeded`, `nextFocus` (each up to 2,000 characters),
   `nothingNeeded`, `goalNotes` ({goalId: text up to 500}); 409 when final.
-- `POST /reports/saved/{id}/commentary-draft?language=`: rule-based text for
-  the sections still empty (null otherwise); nothing is saved.
+- `POST /reports/saved/{id}/commentary-draft?language=&mode=RULES|AI`: text
+  for the sections still empty (null otherwise); nothing is saved. `RULES`
+  (default) uses fixed rules (RM-FR-28). `AI` (V19 phase 5, RM-FR-29) asks
+  Claude, reading only the report's fact sheet (period; each goal's title,
+  progress, health and reasons; the rule-based draft), under the V15 rules:
+  400 without AI consent, 429 at the daily limit, 503 when AI is off or the
+  budget is reached. Lines are cut to "- " bullets, at most eight and 2,000
+  characters a section. Logged as `REPORT_DRAFT`. Another user's report
+  answers 404 and a final report 409, both before any AI check; any other
+  `mode` is 400.
+- `GET /reports/saved/reminder` (V19 phase 5, RM-FR-49): `{ "due",
+  "cadence": "NONE|WEEKLY|MONTHLY", "dueOn", "latestFinalId",
+  "latestFinalName" }`. `dueOn` is the latest reminder day on or before today
+  in the reminder time zone; `due` is true from that day for 7 days, until a
+  report is finalised on or after it. `latestFinal*` is the newest unarchived
+  final report (for **New report from this**), or null.
 - `POST /reports/saved/{id}/finalize?language=`: freezes the snapshot; 409
   when already final. `POST /reports/saved/{id}/copy` (201): a new draft for
   the next period with the commentary and `compareToReportId`.
@@ -761,7 +775,7 @@ Private to the account (BR-64); no coach endpoint reads them.
 |---|---|---|
 | GET | `/api/progress-metrics?date=` | BO-01 to BO-06 for this user |
 | GET | `/api/dreams/{id}/plan.pdf` | The dream's plan as a PDF |
-| GET, PUT | `/api/account/reminders` | Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh", "reminderEmail": "me@example.org" }`. A blank `reminderEmail` uses the login email; the reply's `sendsTo` says where mail goes |
+| GET, PUT | `/api/account/reminders` | Reminder setting: `{ "enabled": true, "timeZone": "Asia/Phnom_Penh", "reminderEmail": "me@example.org" }`. A blank `reminderEmail` uses the login email; the reply's `sendsTo` says where mail goes. V19 (RM-FR-49): optional `reportReminder` (`NONE`, `WEEKLY`, `MONTHLY`) and `reportReminderDay` (1 = Monday to 7 = Sunday, required for `WEEKLY`, cleared otherwise); left out, the report reminder is unchanged. The reply always carries both |
 | POST | `/api/account/reminders/test` | Sends a test reminder to `sendsTo` now; 400 when no mail server is set up |
 | GET | `/api/account/export` | All of this user's data as JSON. Never includes the password hash |
 | POST | `/api/account/delete` | Permanently delete the account: `{ "password": "..." }`. **400** if wrong |

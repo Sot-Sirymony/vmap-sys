@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as aiApi from '../api/aiApi';
 import * as dreamApi from '../api/dreamApi';
 import * as savedReportApi from '../api/savedReportApi';
 import * as visionAreaApi from '../api/visionAreaApi';
@@ -9,6 +10,7 @@ import type { ManagementReport, SavedReport } from '../types/vision';
 import { SavedReportPage, filterOf } from './SavedReportPage';
 
 vi.mock('../api/savedReportApi');
+vi.mock('../api/aiApi');
 vi.mock('../api/dreamApi');
 vi.mock('../api/visionAreaApi');
 
@@ -53,6 +55,7 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     vi.mocked(savedReportApi.listReportExports).mockResolvedValue([]);
     vi.mocked(dreamApi.listDreams).mockResolvedValue([{ id: 7, title: 'Publish a study', archived: false }] as never);
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue([]);
+    vi.mocked(aiApi.getAiStatus).mockResolvedValue({ available: false } as never);
     vi.mocked(savedReportApi.saveReportCommentary).mockImplementation(async (_token, _id, commentary) => saved({ commentary }));
   });
 
@@ -79,6 +82,26 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     expect(within(commentary).getAllByText('Suggested')).toHaveLength(2);
     await userEvent.type(within(commentary).getByLabelText('Highlights'), '!');
     expect(within(commentary).getAllByText('Suggested')).toHaveLength(1);
+  });
+
+  it('offers Draft with AI only while AI can run, and fills empty sections from it (RM-FR-29)', async () => {
+    open();
+    const commentary = await screen.findByRole('region', { name: 'Commentary' });
+    await waitFor(() => expect(aiApi.getAiStatus).toHaveBeenCalled());
+    expect(within(commentary).queryByRole('button', { name: 'Draft with AI' })).not.toBeInTheDocument();
+  });
+
+  it('asks the AI for a draft and shows why when it cannot (RM-FR-29)', async () => {
+    vi.mocked(aiApi.getAiStatus).mockResolvedValue({ available: true } as never);
+    vi.mocked(savedReportApi.draftReportCommentary).mockResolvedValueOnce({ highlights: '- Venue work started' })
+      .mockRejectedValueOnce(new Error('You have used today\'s AI requests. They reset tomorrow.'));
+    open();
+    const commentary = await screen.findByRole('region', { name: 'Commentary' });
+    await userEvent.click(await within(commentary).findByRole('button', { name: 'Draft with AI' }));
+    expect(await within(commentary).findByDisplayValue('- Venue work started')).toBeInTheDocument();
+    expect(savedReportApi.draftReportCommentary).toHaveBeenCalledWith('token', 3, expect.any(String), 'AI');
+    await userEvent.click(within(commentary).getByRole('button', { name: 'Draft with AI' }));
+    expect(await screen.findByText('You have used today\'s AI requests. They reset tomorrow.')).toBeInTheDocument();
   });
 
   it('finalises after confirmation, then shows the frozen report read-only (RM-FR-19, RM-FR-20)', async () => {

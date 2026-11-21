@@ -66,10 +66,27 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [19.0.0] — Phases 1 to 4 of 5 built
+## [19.0.0] — Phases 1 to 5 built
 
-Implements phases 1 to 4 of [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations
-`V79__obstacle_resolved_at.sql`, `V80__management_reports.sql` and `V81__report_exports_and_shares.sql`.
+Implements [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations `V79__obstacle_resolved_at.sql`,
+`V80__management_reports.sql`, `V81__report_exports_and_shares.sql` and `V82__report_reminders.sql`.
+
+### Added in phase 5
+- **Draft with AI (RM-FR-29).** Next to **Suggest a draft**, a draft report's commentary has **Draft with AI**, shown
+  only while AI can run for the participant. Claude reads only the facts the rule-based draft is built from (period,
+  each goal's progress, health and reasons, and the rule-based notes), under the V15 rules: consent, the daily limit
+  and the monthly cap. Like the rule-based draft it fills only empty sections, marked **Suggested**, and saves
+  nothing. Logged as `REPORT_DRAFT`.
+- **Report reminder (RM-FR-49).** The reminder card (Dashboard and Account) gains **Remind me to prepare a report**:
+  weekly on a chosen weekday, or monthly on the last working day. When it falls, a notice shows on the Dashboard
+  (with **Open Reports**) and on the Reports page (with **New report from this** for the latest final report) for a
+  week, until a report is finalised; and, when mail is set up, the reminder job emails the participant that day, even
+  with daily reminders off. `REMINDERS_REPORTS_URL` adds a link to the Reports page in that email.
+
+### Not built (waiting on decisions)
+- **Share with my coach (RM-FR-50)** waits for D-19-3 (Q-07) to be signed off; the `report_coach_shares` table is not
+  created.
+- **Native PowerPoint charts (RM-FR-45)** were not built: Q-05's draft answer is no, so the deck keeps drawn shapes.
 
 ### Added in phase 4
 - **PDF (RM-FR-42).** **Export to PDF** on the live report and on saved reports: A4 landscape, with the cover,

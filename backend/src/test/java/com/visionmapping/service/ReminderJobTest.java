@@ -30,7 +30,7 @@ class ReminderJobTest {
     @Test
     void aFailingUserDoesNotStopTheNextOne() {
         ReminderJob job = new ReminderJob(appUserRepository, reminderService, Clock.fixed(NOW, ZoneOffset.UTC));
-        when(appUserRepository.findByRemindersEnabledTrueAndStatus(UserStatus.ACTIVE))
+        when(appUserRepository.findWithRemindersOn(UserStatus.ACTIVE))
                 .thenReturn(List.of(AppUser.builder().id(1L).build(), AppUser.builder().id(2L).build()));
         doThrow(new IllegalStateException("mail server down")).when(reminderService).remindIfDue(eq(1L), eq(NOW));
 

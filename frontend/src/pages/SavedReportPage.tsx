@@ -6,6 +6,7 @@ import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { getAiStatus } from '../api/aiApi';
 import { listDreams } from '../api/dreamApi';
 import type { ReportFilter } from '../api/reportApi';
 import {
@@ -80,6 +81,7 @@ export function SavedReportPage() {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [suggested, setSuggested] = useState<Set<CommentarySection>>(new Set());
   const [suggesting, setSuggesting] = useState(false);
+  const [aiOn, setAiOn] = useState(false);
   const [openLinks, setOpenLinks] = useState(0);
   const [downloads, setDownloads] = useState(0);
   const countOpenLinks = useCallback((count: number) => setOpenLinks(count), []);
@@ -112,6 +114,8 @@ export function SavedReportPage() {
       .catch(() => undefined);
     // RM-FR-32: the final reports a draft can be compared with.
     void listSavedReports(token, true).then((list) => active && setOthers(list)).catch(() => undefined);
+    // RM-FR-29: Draft with AI shows only while AI can run for this participant.
+    void getAiStatus(token).then((status) => active && setAiOn(Boolean(status.available))).catch(() => undefined);
     return () => {
       active = false;
     };
@@ -202,11 +206,12 @@ export function SavedReportPage() {
     });
   }
 
-  async function suggest() {
+  async function suggest(mode: 'RULES' | 'AI' = 'RULES') {
     if (!token || !commentary) return;
     setSuggesting(true);
+    setError('');
     try {
-      const draft = await draftReportCommentary(token, id, language);
+      const draft = await draftReportCommentary(token, id, language, mode);
       const next = { ...commentary };
       const marked = new Set(suggested);
       (['highlights', 'risks', 'decisionsNeeded', 'nextFocus'] as CommentarySection[]).forEach((section) => {
@@ -219,7 +224,7 @@ export function SavedReportPage() {
       setCommentary(next);
       setSuggested(marked);
     } catch (suggestError) {
-      setError(suggestError instanceof Error ? suggestError.message : tr('Unable to suggest a draft.'));
+      setError(suggestError instanceof Error ? tr(suggestError.message) : tr('Unable to suggest a draft.'));
     } finally {
       setSuggesting(false);
     }
@@ -323,6 +328,7 @@ export function SavedReportPage() {
             }}
             onBlur={() => void saveCommentary(commentary)}
             onSuggest={() => void suggest()}
+            onSuggestAi={aiOn ? () => void suggest('AI') : undefined}
             suggested={suggested}
             saveState={saveState}
             suggesting={suggesting}

@@ -74,6 +74,16 @@ public class AppUser extends BaseAuditableEntity {
     @Column(name = "reminder_email")
     private String reminderEmail;
 
+    /** V19 (RM-FR-49): the report reminder, off by default. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "report_reminder", nullable = false, length = 10)
+    @Builder.Default
+    private com.visionmapping.entity.enums.ReportReminder reportReminder = com.visionmapping.entity.enums.ReportReminder.NONE;
+
+    /** V19 (RM-FR-49): the weekday of a weekly report reminder, 1 = Monday to 7 = Sunday. */
+    @Column(name = "report_reminder_day")
+    private Integer reportReminderDay;
+
     // V9 (D-7): the cohort this person joined with its code, if any.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cohort_id")

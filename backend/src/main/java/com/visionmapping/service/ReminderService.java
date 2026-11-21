@@ -4,9 +4,11 @@ import com.visionmapping.dto.request.ReminderSettingsRequest;
 import com.visionmapping.dto.response.DailyPlanResponse.Item;
 import com.visionmapping.dto.response.ReminderSettingsResponse;
 import com.visionmapping.entity.AppUser;
+import com.visionmapping.entity.enums.ReportReminder;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.service.mail.ReminderMailer;
+import com.visionmapping.service.report.ReportReminders;
 import com.visionmapping.util.UserScope;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -51,6 +53,10 @@ public class ReminderService {
     @Value("${app.reminders.today-url:}")
     private String todayUrl;
 
+    /** V19 (RM-FR-49): optional link to the Reports page in the report reminder. */
+    @Value("${app.reminders.reports-url:}")
+    private String reportsUrl;
+
     @Transactional(readOnly = true)
     public ReminderSettingsResponse settings() {
         return toResponse(userScope.currentUser());
@@ -70,6 +76,14 @@ public class ReminderService {
             throw new BusinessRuleException("That reminder email address does not look right.");
         }
         user.setReminderEmail(reminderEmail.isEmpty() ? null : reminderEmail);
+        if (request.reportReminder() != null) {
+            ReportReminder cadence = ReportReminder.valueOf(request.reportReminder());
+            if (cadence == ReportReminder.WEEKLY && request.reportReminderDay() == null) {
+                throw new BusinessRuleException("Choose the weekday for your weekly report reminder.");
+            }
+            user.setReportReminder(cadence);
+            user.setReportReminderDay(cadence == ReportReminder.WEEKLY ? request.reportReminderDay() : null);
+        }
         appUserRepository.save(user);
         return toResponse(user);
     }
@@ -87,7 +101,7 @@ public class ReminderService {
 
     private ReminderSettingsResponse toResponse(AppUser user) {
         return new ReminderSettingsResponse(user.isRemindersEnabled(), user.getReminderTimeZone(), reminderMailer.isConfigured(),
-                sendHour, user.getReminderEmail(), sendsTo(user));
+                sendHour, user.getReminderEmail(), sendsTo(user), user.getReportReminder().name(), user.getReportReminderDay());
     }
 
     private static String sendsTo(AppUser user) {
@@ -97,7 +111,8 @@ public class ReminderService {
     /** Called by the job once per user, so one user's failure stays theirs. */
     public void remindIfDue(Long userId, Instant now) {
         AppUser user = appUserRepository.findById(userId).orElse(null);
-        if (user == null || !user.isRemindersEnabled() || user.getReminderTimeZone() == null) {
+        if (user == null || (!user.isRemindersEnabled() && user.getReportReminder() == ReportReminder.NONE)
+                || user.getReminderTimeZone() == null) {
             return;
         }
         ZonedDateTime local = now.atZone(ZoneId.of(user.getReminderTimeZone()));
@@ -112,12 +127,18 @@ public class ReminderService {
         }
     }
 
+    /**
+     * The daily parts only when daily reminders are on; the V19 report
+     * reminder (RM-FR-49) on its own day, whether or not they are.
+     */
     @Nullable
     private String composeBody(AppUser user, LocalDate today, Instant now) {
-        List<Item> items = dailyPlanService.itemsFor(user.getId(), today);
-        boolean reviewDue = dailyPlanService.weeklyReviewDueFor(user.getId(), today);
-        boolean inactive = isInactive(user, now);
-        if (items.isEmpty() && !reviewDue && !inactive) {
+        boolean daily = user.isRemindersEnabled();
+        List<Item> items = daily ? dailyPlanService.itemsFor(user.getId(), today) : List.of();
+        boolean reviewDue = daily && dailyPlanService.weeklyReviewDueFor(user.getId(), today);
+        boolean inactive = daily && isInactive(user, now);
+        boolean reportDue = today.equals(ReportReminders.lastDue(user.getReportReminder(), user.getReportReminderDay(), today));
+        if (items.isEmpty() && !reviewDue && !inactive && !reportDue) {
             return null;
         }
         List<String> lines = new ArrayList<>();
@@ -138,12 +159,21 @@ public class ReminderService {
         if (inactive) {
             lines.add("You have not updated anything for %d days or more. One small step counts.".formatted(inactiveAfterDays));
         }
+        if (reportDue) {
+            lines.add(user.getReportReminder() == ReportReminder.WEEKLY
+                    ? "It is time to prepare your weekly report." : "It is time to prepare your monthly report.");
+            if (!reportsUrl.isBlank()) {
+                lines.add("Open your reports: " + reportsUrl);
+            }
+        }
         // AI-FR-15: only when the admin has switched it on and the participant consented.
-        aiReminderService.encouragement(user).ifPresent(line -> {
-            lines.add("");
-            lines.add(line);
-        });
-        if (!todayUrl.isBlank()) {
+        if (daily) {
+            aiReminderService.encouragement(user).ifPresent(line -> {
+                lines.add("");
+                lines.add(line);
+            });
+        }
+        if (daily && !todayUrl.isBlank()) {
             lines.add("");
             lines.add("Open your day: " + todayUrl);
         }

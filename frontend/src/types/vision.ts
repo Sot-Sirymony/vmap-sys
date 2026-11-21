@@ -808,6 +808,21 @@ export type ReminderSettings = {
   reminderEmail?: string | null;
   /** Where reminders actually go. */
   sendsTo: string;
+  /** V19 (RM-FR-49): the report reminder. */
+  reportReminder?: ReportReminderCadence;
+  /** 1 = Monday to 7 = Sunday, for a weekly report reminder. */
+  reportReminderDay?: number | null;
+};
+
+export type ReportReminderCadence = 'NONE' | 'WEEKLY' | 'MONTHLY';
+
+/** V19 (RM-FR-49): the in-app report reminder. */
+export type ReportReminderStatus = {
+  due: boolean;
+  cadence: ReportReminderCadence;
+  dueOn?: string | null;
+  latestFinalId?: number | null;
+  latestFinalName?: string | null;
 };
 
 // FR-65: the fear log.

@@ -62,6 +62,34 @@ class ReportCommentaryDrafterTest {
         assertThat(focus).hasSizeLessThanOrEqualTo(ReportCommentaryDrafter.MAX_CHARS).endsWith("…");
     }
 
+    @Test
+    void rmFr29_theFactSheetHoldsGoalFiguresAndTheRuleBasedNotesOnly() {
+        GoalNode stuck = goal(1L, "Collect the data", WorkStatus.IN_PROGRESS, TODAY.minusDays(2), new StepNode(stepInfo(null),
+                List.of(task("Run survey", WorkStatus.BLOCKED, null)), List.of(blocker("No budget", ObstacleType.MONEY, Severity.HIGH)), false));
+        String facts = ReportCommentaryDrafter.facts(report(List.of(stuck)), ReportText.of("en"), null);
+        assertThat(facts).startsWith("Report period: ").contains("- Collect the data: 0% done, Off track (Target date passed",
+                "Rule-based notes, Highlights:\n- nothing", "Rule-based notes, Risks and issues:\n- Collect the data is off track",
+                "No budget (Money, High)", "Rule-based notes, Focus for next period:\n- Collect the data: Run survey");
+        assertThat(ReportCommentaryDrafter.facts(report(List.of()), ReportText.of("en"), null)).contains("Goals:\n- none in scope");
+
+        List<GoalNode> many = new ArrayList<>();
+        for (long id = 1; id <= 60; id++) {
+            many.add(goal(id, "G".repeat(300), WorkStatus.IN_PROGRESS, TODAY.plusDays(30),
+                    new StepNode(stepInfo(null), List.of(task("T", WorkStatus.NOT_STARTED, null)), List.of(), false)));
+        }
+        assertThat(ReportCommentaryDrafter.facts(report(many), ReportText.of("en"), null)).hasSize(ReportCommentaryDrafter.MAX_FACTS);
+    }
+
+    @Test
+    void rmFr29_aiTextIsHeldToTheDraftShape() {
+        assertThat(ReportCommentaryDrafter.bullets(null)).isEmpty();
+        assertThat(ReportCommentaryDrafter.bullets("  \n")).isEmpty();
+        assertThat(ReportCommentaryDrafter.bullets("Plain line\n- dash\n* star\n• dot\n2) number\n3. number")).isEqualTo(
+                "- Plain line\n- dash\n- star\n- dot\n- number\n- number");
+        String many = String.join("\n", java.util.Collections.nCopies(12, "point"));
+        assertThat(ReportCommentaryDrafter.bullets(many).split("\n")).hasSize(ReportCommentaryDrafter.MAX_LINES);
+    }
+
     private static ManagementReport report(List<GoalNode> goals) {
         return new ManagementReport("ALL", null, null, null, TODAY, ReportPeriod.resolve(null, null, null, TODAY), goals, List.of(),
                 PeriodFigures.NONE, ReportFilters.NONE, List.of());

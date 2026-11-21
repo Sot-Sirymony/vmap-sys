@@ -12,7 +12,9 @@ import com.visionmapping.dto.request.ReportShareRequest;
 import com.visionmapping.dto.response.ReportExportResponse;
 import com.visionmapping.dto.response.ReportShareResponse;
 import com.visionmapping.service.ReportShareService;
+import com.visionmapping.dto.response.ReportReminderResponse;
 import com.visionmapping.service.SavedReportService;
+import com.visionmapping.service.ai.ReportCommentaryAiService;
 import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.util.UserScope;
 import jakarta.validation.Valid;
@@ -49,6 +51,7 @@ public class SavedReportController {
 
     private final SavedReportService service;
     private final ReportShareService shares;
+    private final ReportCommentaryAiService aiDrafts;
     private final RequestRateLimiter rateLimiter;
     private final UserScope userScope;
 
@@ -86,10 +89,18 @@ public class SavedReportController {
         return service.updateSections(id, request.sections());
     }
 
+    /** RM-FR-49: the in-app report reminder. */
+    @GetMapping("/reminder")
+    public ReportReminderResponse reminder() {
+        return service.reminder();
+    }
+
     @PostMapping("/{id}/commentary-draft")
     public CommentaryDraftResponse commentaryDraft(@PathVariable Long id,
-                                                   @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.commentaryDraft(id, language);
+                                                   @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
+                                                   @RequestParam(defaultValue = "RULES") @Pattern(regexp = "RULES|AI") String mode) {
+        // RM-FR-28 fixed rules, or RM-FR-29 Draft with AI.
+        return "AI".equals(mode) ? aiDrafts.draft(id, language) : service.commentaryDraft(id, language);
     }
 
     @PostMapping("/{id}/finalize")

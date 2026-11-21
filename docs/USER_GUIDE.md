@@ -208,6 +208,26 @@ address bar, so you can bookmark a view. Every view says what it covers and the 
 - Both files use the scope you chose and your language. Private notes, journals and partner contact details are never
   included.
 
+## Saved reports (V19)
+
+Press **Save as report** on the Management Report to keep it, with its scope, period and filters, as a **Draft**. A
+draft's figures follow your plan until you press **Finalise**, which freezes them; a final report can then only be
+renamed or archived. **New report from this** starts the next period's report with your commentary carried over and
+the last one as its comparison. All your reports are on the **Saved reports** page.
+
+**Commentary.** Write Highlights, Risks and issues, Decisions and support needed, and Focus for next period in your own
+words; it saves as you type. **Suggest a draft** fills the empty sections from your plan. When AI is available to you,
+**Draft with AI** does the same in fuller sentences, reading only the report's figures, goal health and the suggested
+notes. Either way, nothing is saved until you have read and edited it, and a section you already wrote is left alone.
+
+**Files and sharing.** Download Excel, PowerPoint or PDF from the Export tab. A final report can be shared by a
+read-only link for 7, 30 or 90 days, showing only the sections you tick; you can stop a link at any time.
+
+**Report reminder.** On the reminder card (Dashboard or Account), choose **Remind me to prepare a report**: weekly on a
+weekday you choose, or monthly on the last working day. On that day a notice appears on the Dashboard and the Saved
+reports page (with **New report from this** for your latest final report) and stays for a week or until you finalise a
+report. If the server can send mail, you also get an email that day, even with the daily reminder off.
+
 ## Appearance
 
 Open `Appearance` in the sidebar, or click the sun/moon icon in the header for

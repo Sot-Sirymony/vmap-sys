@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** FR-77: finds who has reminders on. Whether today's is due is ReminderService's call. */
+/** FR-77 and V19 RM-FR-49: finds who has daily or report reminders on. Whether today's is due is ReminderService's call. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -23,7 +23,7 @@ class ReminderJob {
     @Scheduled(cron = "${app.reminders.cron:0 */15 * * * *}")
     public void run() {
         Instant now = Instant.now(clock);
-        for (AppUser user : appUserRepository.findByRemindersEnabledTrueAndStatus(UserStatus.ACTIVE)) {
+        for (AppUser user : appUserRepository.findWithRemindersOn(UserStatus.ACTIVE)) {
             try {
                 reminderService.remindIfDue(user.getId(), now);
             } catch (RuntimeException exception) {

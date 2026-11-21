@@ -306,6 +306,39 @@ user, so it is not in a user's data export. Deleting a row restores the default.
 `lastReminderOn`. V50 adds `reminderEmail` (nullable): where reminders go, or the login
 email when it is null.
 
+## V19 Report Management
+
+**Obstacle** adds `resolvedAt` (`V79`, RM-FR-08): set on a move to Resolved or Accepted,
+cleared on reopening. Rows already closed before V79 were back-filled with `updatedAt`, so
+period figures before the release are approximate.
+
+**SavedReport** (`management_reports`, `V80`, RM-FR-16 to RM-FR-31) belongs to one user.
+`code` (`R-001`, unique per user), `name` (up to 120), `scopeKind` (ALL, AREA, DREAM) with
+`areaId` or `dreamId` (set to null if that record goes) and `scopeLabel` (the name on the
+day), `periodKind` with `periodFrom` and `periodTo`, `filters` (JSON), `status` (DRAFT,
+FINAL), `archived`, `compareToReportId` (an earlier final report, null if it goes), the
+commentary (`highlights`, `risks`, `decisionsNeeded`, `nextFocus`, each up to 2,000;
+`nothingNeeded`; `goalNotes` as JSON {goalId: text up to 500}), `sections` (JSON, the
+sections chosen for files), `language`, and, once final, `snapshot` (gzip JSON in base64
+TEXT), `snapshotVersion`, `snapshotChecksum` (SHA-256) and `finalizedAt`. A user keeps at
+most 200, archived ones included. The snapshot holds only allow-listed fields (D-19-2):
+never journals, conflict notes, criticism, partner contacts, AI conversations or coach
+comments.
+
+**ReportExport** (`report_exports`, `V81`, RM-FR-25): one row per download from a saved
+report: `format` (XLSX, PPTX, PDF), `language`, `createdAt`. Deleted with its report.
+
+**ReportShareLink** (`report_share_links`, `V81`, RM-FR-46 to RM-FR-48): a read-only link
+to a final report. Only `tokenHash` (SHA-256) is stored; `sections` (JSON), `expiresAt`
+(7, 30 or 90 days), `revokedAt`, `viewCount`, `lastViewedAt`. Deleted with its report.
+
+**AppUser** adds `reportReminder` (NONE, WEEKLY, MONTHLY; default NONE) and
+`reportReminderDay` (1 = Monday to 7 = Sunday, weekly only) (`V82`, RM-FR-49). The coach
+share table the BRD lists for V82 is not created until decision D-19-3 is signed off.
+
+Saved reports, download history and share links are deleted with the account. They are not
+yet in the account data export.
+
 ## Business Rules
 
 - A Dream must belong to a Vision Area.

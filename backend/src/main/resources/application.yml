@@ -165,6 +165,8 @@ app:
     inactive-after-days: ${REMINDERS_INACTIVE_AFTER_DAYS:3}
     # Optional link to the Today page in the email. Blank leaves the link out.
     today-url: ${REMINDERS_TODAY_URL:}
+    # V19 (RM-FR-49): optional link to the Reports page in the report reminder.
+    reports-url: ${REMINDERS_REPORTS_URL:}
 
 ---
 springdoc:

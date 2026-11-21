@@ -1,5 +1,5 @@
 import { apiClient, authorizedFetch, reportSessionEnded } from './apiClient';
-import type { ProgressMetrics, ReminderSettings } from '../types/vision';
+import type { ProgressMetrics, ReminderSettings, ReportReminderCadence } from '../types/vision';
 
 export function getProgressMetrics(token: string, date: string) {
   return apiClient<ProgressMetrics>(`/progress-metrics?date=${date}`, { token });
@@ -9,12 +9,16 @@ export function getReminderSettings(token: string) {
   return apiClient<ReminderSettings>('/account/reminders', { token });
 }
 
-/** A blank reminderEmail sends reminders to the login email. */
-export function updateReminderSettings(token: string, enabled: boolean, timeZone: string, reminderEmail = '') {
+/**
+ * A blank reminderEmail sends reminders to the login email. Without a
+ * report reminder (V19 RM-FR-49), the saved one is kept as it was.
+ */
+export function updateReminderSettings(token: string, enabled: boolean, timeZone: string, reminderEmail = '',
+  options?: { reportReminder: ReportReminderCadence; reportReminderDay: number | null }) {
   return apiClient<ReminderSettings>('/account/reminders', {
     method: 'PUT',
     token,
-    body: JSON.stringify({ enabled, timeZone, reminderEmail }),
+    body: JSON.stringify({ enabled, timeZone, reminderEmail, ...options }),
   });
 }
 

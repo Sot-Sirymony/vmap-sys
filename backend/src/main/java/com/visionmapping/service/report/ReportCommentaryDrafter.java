@@ -147,6 +147,64 @@ public final class ReportCommentaryDrafter {
         return ReportRules.health(goal, report.asOf());
     }
 
+    /** RM-FR-29: the longest fact sheet sent to Claude. */
+    static final int MAX_FACTS = 12_000;
+
+    /**
+     * RM-FR-29: the facts the AI draft may read, and nothing else: the period,
+     * each goal's title, progress, health and reasons, and the rule-based
+     * draft (task and blocker titles, blocker kinds, next actions). These all
+     * come from the report model, which holds only allow-listed fields
+     * (D-19-2), so journals, conflict notes, criticism, partner contacts, AI
+     * conversations and coach comments can never reach the request.
+     */
+    public static String facts(ManagementReport report, ReportText text,
+                               @org.springframework.lang.Nullable com.visionmapping.dto.response.ManagementReportResponse.Comparison comparison) {
+        StringBuilder facts = new StringBuilder("Report period: ").append(report.period().from()).append(" to ")
+                .append(report.period().to()).append(", figures as of ").append(report.asOf()).append(".\nGoals:\n");
+        if (report.goals().isEmpty()) {
+            facts.append("- none in scope\n");
+        }
+        for (GoalNode goal : report.goals()) {
+            Assessment assessment = ReportRules.assessmentOf(goal, report.asOf());
+            facts.append("- ").append(goal.goal().title()).append(": ")
+                    .append(goal.goal().progress().setScale(0, java.math.RoundingMode.HALF_UP).toPlainString()).append("% done, ")
+                    .append(text.health(assessment.health()));
+            if (!assessment.reasons().isEmpty()) {
+                List<HealthReason> reasons = assessment.reasons().stream()
+                        .map(reason -> new HealthReason(reason.code(), reason.value(), reason.elapsed(), reason.title())).toList();
+                facts.append(" (").append(text.reasons(reasons, "; ")).append(')');
+            }
+            facts.append('\n');
+        }
+        Draft rules = draft(report, text, comparison);
+        section(facts, "Highlights", rules.highlights());
+        section(facts, "Risks and issues", rules.risks());
+        section(facts, "Decisions and support needed", rules.decisionsNeeded());
+        section(facts, "Focus for next period", rules.nextFocus());
+        return facts.length() <= MAX_FACTS ? facts.toString() : facts.substring(0, MAX_FACTS);
+    }
+
+    private static void section(StringBuilder facts, String title, String lines) {
+        facts.append("Rule-based notes, ").append(title).append(":\n").append(lines.isEmpty() ? "- nothing" : lines).append('\n');
+    }
+
+    /**
+     * RM-FR-29: text Claude wrote for one section, held to the same shape as
+     * the rule-based draft: non-blank lines, each starting with "- ", at most
+     * eight, within 2,000 characters.
+     */
+    public static String bullets(@org.springframework.lang.Nullable String written) {
+        if (written == null) {
+            return "";
+        }
+        List<String> lines = written.lines().map(String::strip)
+                .map(line -> line.replaceFirst("^([-*•]|\\d+[.)])\\s*", "").strip())
+                .filter(line -> !line.isEmpty())
+                .map(line -> "- " + line).toList();
+        return join(lines);
+    }
+
     /** At most eight lines, cut to fit the 2,000-character section (RM-FR-26). */
     private static String join(List<String> lines) {
         String joined = String.join("\n", lines.stream().limit(MAX_LINES).toList());

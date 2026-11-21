@@ -554,4 +554,12 @@ public final class AiDrafts {
             @JsonPropertyDescription("The one next action for the participant, in a sentence") String nextAction,
             @JsonPropertyDescription("A short, polite reply for the participant to edit") String replyBody) {
     }
+
+    /** V19 (RM-FR-29): the four commentary sections of a saved report, each a few "- " lines. */
+    public record ReportCommentaryAiDraft(
+            @JsonPropertyDescription("What went well this period, one point per line starting with \"- \"") String highlights,
+            @JsonPropertyDescription("Risks and issues, one point per line starting with \"- \"") String risks,
+            @JsonPropertyDescription("Decisions and support needed from others, one point per line starting with \"- \"") String decisionsNeeded,
+            @JsonPropertyDescription("The focus for the next period, one point per line starting with \"- \"") String nextFocus) {
+    }
 }
