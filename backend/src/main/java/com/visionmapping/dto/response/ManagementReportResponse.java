@@ -32,7 +32,9 @@ public record ManagementReportResponse(
         List<DashboardSummaryResponse.TrendPoint> trend,
         // V19 RM-FR-10: the filters applied, and the owners in scope to choose from.
         Filters filters,
-        List<String> owners
+        List<String> owners,
+        // V19 RM-FR-32 to RM-FR-37: the changes since an earlier final report, or null when not compared.
+        Comparison comparison
 ) {
 
     public ManagementReportResponse {
@@ -43,6 +45,61 @@ public record ManagementReportResponse(
         attention = Copies.list(attention);
         trend = Copies.list(trend);
         owners = Copies.list(owners);
+    }
+
+    /** The same Summary, compared with an earlier report (or not, for null). */
+    public ManagementReportResponse withComparison(Comparison value) {
+        return new ManagementReportResponse(scope, asOf, period, periodFigures, headline, tasksByStatus, openTasksByPriority,
+                blockersByKind, unplacedObstacles, goals, attention, trend, filters, owners, value);
+    }
+
+    /**
+     * V19 RM-FR-32 to RM-FR-37: what changed since the final report {@code reportId}, frozen on {@code asOf}.
+     * Items are matched by id. changes is most important first; totalChanges counts them all.
+     */
+    public record Comparison(Long reportId, String code, String name, LocalDate asOf, HeadlineChange headline,
+                             List<GoalChange> goals, List<RemovedGoal> removed, List<ChangeItem> changes, int totalChanges) {
+
+        public Comparison {
+            goals = Copies.list(goals);
+            removed = Copies.list(removed);
+            changes = Copies.list(changes);
+        }
+
+        /** The change for one goal id, or null when the goal is not in this report. */
+        public GoalChange goal(Long goalId) {
+            return goals == null ? null : goals.stream().filter(change -> change.goalId().equals(goalId)).findFirst().orElse(null);
+        }
+    }
+
+    /** RM-FR-33: each headline figure now minus the compared report's. */
+    public record HeadlineChange(BigDecimal overallProgress, long totalTasks, long completedTasks, long overdueTasks,
+                                 long blockedTasks, long openBlockers, long dueSoonTasks) {
+    }
+
+    /**
+     * RM-FR-34, RM-FR-37: isNew when the goal was not in the compared report (the other fields are then null).
+     * healthBefore and progressChange (points); targetBefore only when the target date changed; previousTitle only
+     * when the goal was renamed.
+     */
+    public record GoalChange(Long goalId, boolean isNew, String healthBefore, BigDecimal progressChange, LocalDate targetBefore,
+                             String previousTitle) {
+    }
+
+    /**
+     * RM-FR-34: a goal in the compared report that is not in this one. reason is COMPLETED_ARCHIVED, ARCHIVED,
+     * MOVED (to a dream outside the scope) or null when not known.
+     */
+    public record RemovedGoal(Long goalId, String title, String reason) {
+    }
+
+    /**
+     * RM-FR-35: one line of What changed. kind is GOAL_WORSE, DUE_LATER, NEW_BLOCKER, BLOCKER_CLOSED, GOAL_BETTER or
+     * TASK_COMPLETED; itemType GOAL, STEP, TASK or OBSTACLE. before and after are a health or an ISO date, or null.
+     * renamed: the item's title changed since the compared report (RM-FR-37).
+     */
+    public record ChangeItem(String kind, String itemType, Long itemId, String title, String context, String before,
+                             String after, boolean renamed) {
     }
 
     /** V19 RM-FR-10: empty lists and a null owner mean "any". */

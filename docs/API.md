@@ -469,6 +469,44 @@ V18 phase 1, the Management Report (BRD 18.0.0, MR-FR-03 to MR-FR-13):
   `includeName=false` leaves the participant's name off the title slide. 8
   slides, or 7 when nothing needs a decision or support (MR-FR-24, MR-FR-26).
 
+V19 phase 3, comparison, What changed and file options (BRD 19.0.0, RM-FR-32 to RM-FR-44):
+- `GET /reports/management?…&compareTo={reportId}`: the live Summary compared
+  with one of the participant's FINAL saved reports on the same scope.
+  A draft or another scope = 400 "Choose a final report on the same scope to
+  compare with."; another user's report = 404.
+- The Summary adds `comparison` (null when not compared): `reportId`, `code`,
+  `name`, `asOf` (the compared report's frozen date); `headline` (each figure
+  now minus then); `goals` (`goalId`, `isNew`, `healthBefore`,
+  `progressChange` in points, `targetBefore` only when the date changed,
+  `previousTitle` only when renamed); `removed` (`goalId`, `title`, `reason`:
+  COMPLETED_ARCHIVED, ARCHIVED, MOVED or null); `changes` (most important
+  first: GOAL_WORSE, DUE_LATER, NEW_BLOCKER, BLOCKER_CLOSED, GOAL_BETTER,
+  TASK_COMPLETED; with `itemType`, `itemId`, `title`, `context`, `before`,
+  `after` and `renamed`; at most 500 kept) and `totalChanges`. Items are
+  matched by id.
+- A draft is compared with its `compareToReportId` (set by `POST` or `PUT
+  /reports/saved/{id}`, which must name a FINAL report of the participant's on
+  the same scope, else 400), or, when that is null or no longer fits, the
+  latest FINAL report on its scope. **Finalise** freezes the comparison in the
+  snapshot and sets `compareToReportId`; a final report answers 409 to a new
+  one. `POST /reports/saved/{id}/commentary-draft` adds "moved to On track"
+  lines to Highlights when compared.
+- `PUT /reports/saved/{id}/sections` with `{ "sections": [...] }` (COMMENTARY,
+  SUMMARY, GOAL_HEALTH, DETAILS, BLOCKERS, CHANGES, NEXT_ACTIONS, SUPPORT;
+  null or empty = all): the sections the report's files include, remembered
+  for the next download. Allowed on a final report. Saved reports add
+  `sections`.
+- All `.xlsx` and `.pptx` downloads (live and saved) take
+  `sections=A,B` (a saved report defaults to its remembered sections) and
+  `language=en|km` (a saved report defaults to its own language). Excel: a
+  **Commentary** sheet first when there is commentary, a **Changes** sheet
+  when compared, and a "Change since R-…" column on the Summary headline and a
+  Change column on the goal table. Deck: a **Highlights** slide second, a
+  **What changed** slide after the executive summary, the participant's own
+  text first on the support slide and goal notes in the progress slide's
+  notes. Files from a draft say "DRAFT" in the Excel title row and on the
+  title slide. The Report sheet's columns never change.
+
 V19 phase 2, filters, Details rows and saved reports (BRD 19.0.0, RM-FR-10 to RM-FR-31):
 - The live report endpoints also take `priority` (comma-separated: LOW,
   MEDIUM, HIGH, CRITICAL), `owner`, `health` (comma-separated health values)

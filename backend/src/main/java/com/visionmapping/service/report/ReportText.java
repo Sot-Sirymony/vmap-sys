@@ -49,7 +49,13 @@ public final class ReportText {
         // V19 phase 2
         FILTER_OWNER, FILTER_NO_COMPLETED,
         DRAFT_COMPLETED_TASKS, DRAFT_GOAL_DONE, DRAFT_RISK_GOAL, DRAFT_RISK_BLOCKER, DRAFT_SUPPORT_BLOCKER, DRAFT_SUPPORT_GAP,
-        DRAFT_FOCUS
+        DRAFT_FOCUS,
+        // V19 phase 3
+        DRAFT_MARK, DRAFT_GOAL_ON_TRACK, COMMENTARY_SHEET, CHANGES_SHEET, HIGHLIGHTS, RISKS, DECISIONS_NEEDED, NEXT_FOCUS,
+        NOTHING_NEEDED, GOAL_NOTES, NOTE, SLIDE_CHANGES, COMPARED_WITH, CHANGE, CHANGE_SINCE, BEFORE, NOW, ITEM, NEW_GOAL,
+        RENAMED, NO_LONGER_IN_REPORT, REMOVED_COMPLETED_ARCHIVED, REMOVED_ARCHIVED, REMOVED_MOVED, TARGET_MOVED, NO_CHANGES,
+        CHANGE_GOAL_WORSE, CHANGE_DUE_LATER, CHANGE_NEW_BLOCKER, CHANGE_BLOCKER_CLOSED, CHANGE_GOAL_BETTER, CHANGE_TASK_COMPLETED,
+        GOAL_CHANGES, WHAT_CHANGED, NOTES_HIGHLIGHTS, NOTES_CHANGES, NOTES_GOAL_NOTES, YOUR_WORDS, POINTS
     }
 
     private static final Map<Key, String[]> TEXT = new EnumMap<>(Key.class);
@@ -187,6 +193,46 @@ public final class ReportText {
         put(Key.DRAFT_SUPPORT_BLOCKER, "- %s (%s) on %s", "- %s (%s) លើ %s");
         put(Key.DRAFT_SUPPORT_GAP, "- %s: missing %s, no help planned yet", "- %s៖ ខ្វះ %s មិនទាន់មានផែនការជំនួយ");
         put(Key.DRAFT_FOCUS, "- %s: %s", "- %s៖ %s");
+        // V19 phase 3
+        put(Key.DRAFT_MARK, "DRAFT", "សេចក្តីព្រាង");
+        put(Key.DRAFT_GOAL_ON_TRACK, "- %s moved to On track", "- %s បានមកតាមផែនការវិញ");
+        put(Key.COMMENTARY_SHEET, "Commentary", "មតិយោបល់");
+        put(Key.CHANGES_SHEET, "Changes", "ការផ្លាស់ប្តូរ");
+        put(Key.HIGHLIGHTS, "Highlights", "ចំណុចលេចធ្លោ");
+        put(Key.RISKS, "Risks and issues", "ហានិភ័យ និងបញ្ហា");
+        put(Key.DECISIONS_NEEDED, "Decisions and support needed", "ការសម្រេចចិត្ត និងការគាំទ្រដែលត្រូវការ");
+        put(Key.NEXT_FOCUS, "Focus for next period", "ការផ្តោតសម្រាប់រយៈពេលបន្ទាប់");
+        put(Key.NOTHING_NEEDED, "Nothing needed this period.", "មិនត្រូវការអ្វីទេក្នុងរយៈពេលនេះ។");
+        put(Key.GOAL_NOTES, "Goal notes", "កំណត់ចំណាំគោលដៅ");
+        put(Key.NOTE, "Note", "កំណត់ចំណាំ");
+        put(Key.SLIDE_CHANGES, "What changed", "អ្វីដែលបានផ្លាស់ប្តូរ");
+        put(Key.COMPARED_WITH, "Compared with %s (%s, frozen %s)", "ប្រៀបធៀបជាមួយ %s (%s, បង្កកថ្ងៃ %s)");
+        put(Key.CHANGE, "Change", "ការផ្លាស់ប្តូរ");
+        put(Key.CHANGE_SINCE, "Change since %s", "ការផ្លាស់ប្តូរតាំងពី %s");
+        put(Key.BEFORE, "Before", "មុន");
+        put(Key.NOW, "Now", "ឥឡូវ");
+        put(Key.ITEM, "Item", "ធាតុ");
+        put(Key.NEW_GOAL, "New", "ថ្មី");
+        put(Key.RENAMED, "(renamed)", "(បានប្តូរឈ្មោះ)");
+        put(Key.NO_LONGER_IN_REPORT, "No longer in this report", "លែងមាននៅក្នុងរបាយការណ៍នេះ");
+        put(Key.REMOVED_COMPLETED_ARCHIVED, "Completed and archived", "បានបញ្ចប់ និងដាក់ក្នុងបណ្ណសារ");
+        put(Key.REMOVED_ARCHIVED, "Archived", "បានដាក់ក្នុងបណ្ណសារ");
+        put(Key.REMOVED_MOVED, "Moved to another dream", "បានផ្លាស់ទៅក្តីស្រមៃផ្សេង");
+        put(Key.TARGET_MOVED, "Target %s → %s", "កាលកំណត់ %s → %s");
+        put(Key.NO_CHANGES, "Nothing changed since the compared report.", "គ្មានអ្វីផ្លាស់ប្តូរតាំងពីរបាយការណ៍ដែលបានប្រៀបធៀបទេ។");
+        put(Key.CHANGE_GOAL_WORSE, "Health got worse", "សុខភាពធ្លាក់ចុះ");
+        put(Key.CHANGE_DUE_LATER, "Date moved later", "កាលបរិច្ឆេទត្រូវបានពន្យារ");
+        put(Key.CHANGE_NEW_BLOCKER, "New blocker", "ឧបសគ្គថ្មី");
+        put(Key.CHANGE_BLOCKER_CLOSED, "Blocker no longer open", "ឧបសគ្គលែងបើកទៀតហើយ");
+        put(Key.CHANGE_GOAL_BETTER, "Health got better", "សុខភាពប្រសើរឡើង");
+        put(Key.CHANGE_TASK_COMPLETED, "Task completed", "កិច្ចការបានបញ្ចប់");
+        put(Key.GOAL_CHANGES, "Goal changes", "ការផ្លាស់ប្តូរគោលដៅ");
+        put(Key.WHAT_CHANGED, "What changed", "អ្វីដែលបានផ្លាស់ប្តូរ");
+        put(Key.NOTES_HIGHLIGHTS, "The participant's own words for this period.", "ពាក្យផ្ទាល់ខ្លួនរបស់អ្នកចូលរួមសម្រាប់រយៈពេលនេះ។");
+        put(Key.NOTES_CHANGES, "Changes since %s (frozen %s): %d in all.", "ការផ្លាស់ប្តូរតាំងពី %s (បង្កកថ្ងៃ %s)៖ សរុប %d។");
+        put(Key.NOTES_GOAL_NOTES, "Goal notes:", "កំណត់ចំណាំគោលដៅ៖");
+        put(Key.POINTS, "%s points", "%s ពិន្ទុ");
+        put(Key.YOUR_WORDS, "In the participant's words", "តាមពាក្យរបស់អ្នកចូលរួម");
     }
 
     private static final Map<WorkStatus, String[]> STATUS = new EnumMap<>(Map.of(
@@ -364,6 +410,88 @@ public final class ReportText {
 
     public String reasons(List<HealthReason> reasons, String separator) {
         return String.join(separator, reasons.stream().map(this::reason).toList());
+    }
+
+    /** RM-FR-35: the kind of one What changed line. */
+    public String changeKind(String kind) {
+        return switch (kind) {
+            case "GOAL_WORSE" -> get(Key.CHANGE_GOAL_WORSE);
+            case "DUE_LATER" -> get(Key.CHANGE_DUE_LATER);
+            case "NEW_BLOCKER" -> get(Key.CHANGE_NEW_BLOCKER);
+            case "BLOCKER_CLOSED" -> get(Key.CHANGE_BLOCKER_CLOSED);
+            case "GOAL_BETTER" -> get(Key.CHANGE_GOAL_BETTER);
+            case "TASK_COMPLETED" -> get(Key.CHANGE_TASK_COMPLETED);
+            default -> kind;
+        };
+    }
+
+    /**
+     * RM-FR-34: one goal's change in words: "At risk → On track · +12 points ·
+     * Target 10 Jan 2027 → 24 Jan 2027 · (renamed)", "New", or "" when not
+     * compared or nothing changed.
+     */
+    public String goalChange(@Nullable com.visionmapping.dto.response.ManagementReportResponse.GoalChange change,
+                             com.visionmapping.dto.response.ManagementReportResponse.GoalHealthRow row) {
+        if (change == null) {
+            return "";
+        }
+        if (change.isNew()) {
+            return get(Key.NEW_GOAL);
+        }
+        List<String> parts = new java.util.ArrayList<>();
+        if (change.healthBefore() != null && !change.healthBefore().equals(row.health())) {
+            parts.add(health(ReportRules.Health.valueOf(change.healthBefore())) + " → " + health(ReportRules.Health.valueOf(row.health())));
+        }
+        if (change.progressChange() != null && change.progressChange().signum() != 0) {
+            parts.add(format(Key.POINTS, signed(change.progressChange())));
+        }
+        if (change.targetBefore() != null) {
+            parts.add(format(Key.TARGET_MOVED, date(change.targetBefore()), row.targetDate() == null ? "—" : date(row.targetDate())));
+        }
+        if (change.previousTitle() != null) {
+            parts.add(get(Key.RENAMED));
+        }
+        return String.join(" · ", parts);
+    }
+
+    /** RM-FR-34: why a goal left the report, or "" when not known. */
+    public String removedReason(@Nullable String reason) {
+        if (reason == null) {
+            return "";
+        }
+        return switch (reason) {
+            case "COMPLETED_ARCHIVED" -> get(Key.REMOVED_COMPLETED_ARCHIVED);
+            case "ARCHIVED" -> get(Key.REMOVED_ARCHIVED);
+            case "MOVED" -> get(Key.REMOVED_MOVED);
+            default -> "";
+        };
+    }
+
+    /**
+     * RM-FR-35: a change's before and after in words: a health name, a date,
+     * a severity, or "" when the kind has none.
+     */
+    public String changeValue(String kind, @Nullable String value) {
+        if (value == null) {
+            return "";
+        }
+        return switch (kind) {
+            case "GOAL_WORSE", "GOAL_BETTER" -> health(ReportRules.Health.valueOf(value));
+            case "DUE_LATER" -> date(LocalDate.parse(value));
+            case "NEW_BLOCKER" -> severity(Severity.valueOf(value));
+            default -> value;
+        };
+    }
+
+    /** RM-FR-33: "+12", "−2" or "0", with a true minus sign; one decimal place for progress points. */
+    public static String signed(java.math.BigDecimal value) {
+        java.math.BigDecimal scaled = value.setScale(1, java.math.RoundingMode.HALF_UP).stripTrailingZeros();
+        String plain = scaled.abs().toPlainString();
+        return scaled.signum() > 0 ? "+" + plain : scaled.signum() < 0 ? "−" + plain : "0";
+    }
+
+    public static String signed(long value) {
+        return value > 0 ? "+" + value : value < 0 ? "−" + Math.abs(value) : "0";
     }
 
     /** "16 Nov 2026" in English; ISO dates in Khmer, which reads them the same way. */

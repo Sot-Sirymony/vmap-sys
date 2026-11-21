@@ -24,7 +24,9 @@ public record SavedReportRequest(
         @Size(max = 120) String owner,
         @Size(max = 5) List<Health> healths,
         Boolean includeCompleted,
-        @Pattern(regexp = "en|km") String language
+        @Pattern(regexp = "en|km") String language,
+        // V19 RM-FR-32: a final report on the same scope to compare with; null for the latest one.
+        Long compareToReportId
 ) {
 
     public SavedReportRequest {

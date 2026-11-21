@@ -61,6 +61,8 @@ public final class ManagementReportDeckWriter {
     static final int MAX_OVERDUE = 8;
     static final int MAX_NEXT = 8;
     static final int MAX_SUPPORT = 6;
+    static final int MAX_CHANGES = 7;
+    static final int MAX_COMMENTARY_LINES = 5;
     private static final int MAX_TITLE = 80;
     private static final int MAX_LINE = 110;
     private static final double GOAL_ROW = 50;
@@ -86,13 +88,15 @@ public final class ManagementReportDeckWriter {
     private final ManagementReport report;
     private final ManagementReportResponse summary;
     private final ReportText text;
+    private final ReportExtras extras;
     private final String font;
     private final XMLSlideShow deck = new XMLSlideShow();
 
-    private ManagementReportDeckWriter(ManagementReport report, ManagementReportResponse summary, ReportText text) {
+    private ManagementReportDeckWriter(ManagementReport report, ManagementReportResponse summary, ReportText text, ReportExtras extras) {
         this.report = report;
         this.summary = summary;
         this.text = text;
+        this.extras = extras;
         this.font = text.isKhmer() ? ReportText.KHMER_FONT : "Calibri";
         deck.setPageSize(new Dimension((int) WIDTH, (int) HEIGHT));
     }
@@ -103,16 +107,47 @@ public final class ManagementReportDeckWriter {
      */
     public static byte[] write(ManagementReport report, ManagementReportResponse summary, ReportText text,
                                @Nullable String title, @Nullable String presenter) {
-        ManagementReportDeckWriter writer = new ManagementReportDeckWriter(report, summary, text);
+        return write(report, summary, text, title, presenter, ReportExtras.NONE);
+    }
+
+    /**
+     * V19 RM-FR-41: a Highlights slide after the title (the participant's
+     * own words), a What changed slide after the executive summary when
+     * compared, the participant's text first on the support slide, goal notes
+     * in the progress slide's notes; only the chosen sections (RM-FR-39) and
+     * "DRAFT" on a draft's title slide (RM-FR-43). Without commentary or a
+     * comparison, the deck has the V18 shape (RMC-15).
+     */
+    public static byte[] write(ManagementReport report, ManagementReportResponse summary, ReportText text,
+                               @Nullable String title, @Nullable String presenter, ReportExtras extras) {
+        ManagementReportDeckWriter writer = new ManagementReportDeckWriter(report, summary, text, extras);
         try (XMLSlideShow deck = writer.deck; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             writer.titleSlide(ReportRules.blank(title) ? text.get(Key.DECK_DEFAULT_TITLE) : title.strip(), presenter);
+            if (extras.includes(ReportSection.COMMENTARY)) {
+                writer.highlightsSlide();
+            }
             writer.summarySlide();
-            writer.progressSlide();
-            writer.prioritiesSlide();
-            writer.blockersSlide();
-            writer.overdueSlide();
-            writer.nextActionsSlide();
-            writer.supportSlide();
+            if (extras.includes(ReportSection.CHANGES) && summary.comparison() != null) {
+                writer.changesSlide();
+            }
+            if (extras.includes(ReportSection.GOAL_HEALTH)) {
+                writer.progressSlide();
+            }
+            if (extras.includes(ReportSection.SUMMARY)) {
+                writer.prioritiesSlide();
+            }
+            if (extras.includes(ReportSection.BLOCKERS)) {
+                writer.blockersSlide();
+            }
+            if (extras.includes(ReportSection.DETAILS)) {
+                writer.overdueSlide();
+            }
+            if (extras.includes(ReportSection.NEXT_ACTIONS)) {
+                writer.nextActionsSlide();
+            }
+            if (extras.includes(ReportSection.SUPPORT)) {
+                writer.supportSlide();
+            }
             writer.numberSlides();
             deck.write(out);
             return out.toByteArray();
@@ -137,10 +172,70 @@ public final class ManagementReportDeckWriter {
         subtitle.setAnchor(new Rectangle2D.Double(MARGIN + 24, 270, BODY_WIDTH - 24, 120));
         subtitle.clearText();
         line(subtitle, asOfLine(), 20, false, MUTED);
+        if (extras.draft()) {
+            // RM-FR-43: a reviewer cannot mistake a draft for a final report.
+            line(subtitle, text.get(Key.DRAFT_MARK), 24, true, HEALTH_COLOURS.get(Health.RED));
+        }
         if (!ReportRules.blank(presenter)) {
             line(subtitle, text.format(Key.DECK_PREPARED_BY, presenter.strip()), 18, false, MUTED);
         }
         notes(slide, text.format(Key.NOTES_TITLE, scopeName(), summary.goals().size(), summary.headline().totalTasks()));
+    }
+
+    /** RM-FR-41: Highlights, Risks and Focus in the participant's words; left out when all three are empty. */
+    private void highlightsSlide() {
+        List<String[]> parts = new ArrayList<>();
+        for (Object[] part : new Object[][] {{Key.HIGHLIGHTS, extras.highlights()}, {Key.RISKS, extras.risks()},
+                {Key.NEXT_FOCUS, extras.nextFocus()}}) {
+            String body = (String) part[1];
+            if (!body.isEmpty()) {
+                parts.add(new String[] {text.get((Key) part[0]), body});
+            }
+        }
+        if (parts.isEmpty()) {
+            return;
+        }
+        XSLFSlide slide = contentSlide(text.get(Key.HIGHLIGHTS));
+        double width = (BODY_WIDTH - 24.0 * (parts.size() - 1)) / parts.size();
+        double x = MARGIN;
+        for (String[] part : parts) {
+            XSLFTextBox box = box(slide, x, BODY_TOP, width, 370);
+            line(box, part[0], 18, true, PRIMARY);
+            commentaryLines(box, part[1], parts.size() == 1 ? MAX_LINE : 60);
+            x += width + 24;
+        }
+        notes(slide, text.get(Key.NOTES_HIGHLIGHTS));
+    }
+
+    /** Up to five bullet lines of the participant's text, clipped; "- " bullets become real bullets. */
+    private void commentaryLines(XSLFTextShape box, String body, int maxChars) {
+        List<String> lines = body.lines().map(String::strip).filter(line -> !line.isEmpty())
+                .map(line -> line.startsWith("- ") ? line.substring(2) : line).toList();
+        for (String value : lines.stream().limit(MAX_COMMENTARY_LINES).toList()) {
+            bullet(line(box, clip(value, maxChars), 15, false, INK));
+        }
+        if (lines.size() > MAX_COMMENTARY_LINES) {
+            line(box, text.format(Key.MORE_IN_EXCEL, lines.size() - MAX_COMMENTARY_LINES), 13, false, MUTED);
+        }
+    }
+
+    /** RM-FR-35, RM-FR-41: the most important changes since the compared report. */
+    private void changesSlide() {
+        ManagementReportResponse.Comparison comparison = summary.comparison();
+        XSLFSlide slide = contentSlide(text.get(Key.SLIDE_CHANGES));
+        List<Item> items = new ArrayList<>();
+        for (ManagementReportResponse.ChangeItem change : comparison.changes()) {
+            String before = text.changeValue(change.kind(), change.before());
+            String after = text.changeValue(change.kind(), change.after());
+            String values = before.isEmpty() && after.isEmpty() ? "" : " · " + (before.isEmpty() ? after : before + " → " + after);
+            items.add(new Item(change.title() + (change.renamed() ? " " + text.get(Key.RENAMED) : ""),
+                    text.changeKind(change.kind()) + values + (ReportRules.blank(change.context()) ? "" : " · " + change.context())));
+        }
+        // MR-FR-25: the overflow line counts every change, not only those kept in the comparison.
+        List<Item> shown = items.stream().limit(MAX_CHANGES).toList();
+        listItems(slide, shown, MAX_CHANGES, 50, text.get(Key.NO_CHANGES));
+        overflow(slide, BODY_TOP + 50.0 * shown.size(), comparison.totalChanges() - shown.size());
+        notes(slide, text.format(Key.NOTES_CHANGES, comparison.name(), text.date(comparison.asOf()), comparison.totalChanges()));
     }
 
     private void summarySlide() {
@@ -199,7 +294,22 @@ public final class ManagementReportDeckWriter {
             y += GOAL_ROW;
         }
         overflow(slide, y, goals.size() - shown);
-        notes(slide, text.get(Key.NOTES_PROGRESS));
+        notes(slide, text.get(Key.NOTES_PROGRESS) + goalNotes());
+    }
+
+    /** RM-FR-41: the participant's goal notes for the presenter, in the goal table's order; "" without any. */
+    private String goalNotes() {
+        if (!extras.includes(ReportSection.COMMENTARY) || extras.goalNotes().isEmpty()) {
+            return "";
+        }
+        StringBuilder notes = new StringBuilder();
+        for (GoalHealthRow goal : summary.goals()) {
+            String note = extras.goalNotes().get(goal.goalId());
+            if (!ReportRules.blank(note)) {
+                notes.append("\n").append(goal.goalTitle()).append(": ").append(note.strip());
+            }
+        }
+        return notes.isEmpty() ? "" : "\n\n" + text.get(Key.NOTES_GOAL_NOTES) + notes;
     }
 
     private void prioritiesSlide() {
@@ -325,14 +435,35 @@ public final class ManagementReportDeckWriter {
         notes(slide, text.get(Key.NOTES_NEXT));
     }
 
-    /** MR-FR-24 (8), MR-FR-26: left out when nothing needs a decision or support. */
+    /**
+     * MR-FR-24 (8), MR-FR-26: left out when nothing needs a decision or
+     * support. RM-FR-41: the participant's own text comes first, then the
+     * rule-based list below it.
+     */
     private void supportSlide() {
         List<Item> items = supportItems();
-        if (items.isEmpty()) {
+        String own = !extras.includes(ReportSection.COMMENTARY) ? ""
+                : extras.nothingNeeded() ? text.get(Key.NOTHING_NEEDED) : extras.decisionsNeeded();
+        if (items.isEmpty() && own.isEmpty()) {
             return;
         }
         XSLFSlide slide = contentSlide(text.get(Key.SLIDE_SUPPORT));
-        listItems(slide, items, MAX_SUPPORT, 58, "");
+        if (own.isEmpty()) {
+            listItems(slide, items, MAX_SUPPORT, 58, "");
+        } else {
+            XSLFTextBox box = box(slide, MARGIN, BODY_TOP, BODY_WIDTH, 150);
+            line(box, text.get(Key.YOUR_WORDS), 16, true, PRIMARY);
+            commentaryLines(box, own, MAX_LINE);
+            double y = BODY_TOP + 160;
+            int room = items.isEmpty() ? 0 : Math.max(1, (int) ((HEIGHT - 80 - y) / 58));
+            for (Item item : items.stream().limit(room).toList()) {
+                XSLFTextBox row = box(slide, MARGIN, y, BODY_WIDTH, 58);
+                line(row, clip(item.heading(), MAX_TITLE), 16, true, INK);
+                line(row, clip(item.detail(), MAX_LINE), 14, false, MUTED);
+                y += 58;
+            }
+            overflow(slide, y, items.size() - room);
+        }
         notes(slide, text.get(Key.NOTES_SUPPORT));
     }
 

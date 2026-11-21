@@ -26,7 +26,9 @@ public record ReportQuery(
         @Size(max = 4) List<Priority> priority,
         @Size(max = 120) String owner,
         @Size(max = 5) List<Health> health,
-        Boolean includeCompleted
+        Boolean includeCompleted,
+        // V19 RM-FR-32: a final saved report on the same scope to compare with.
+        Long compareTo
 ) {
 
     public ReportQuery {

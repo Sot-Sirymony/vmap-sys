@@ -3,6 +3,7 @@ package com.visionmapping.dto.response;
 import com.visionmapping.util.Copies;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,13 +29,20 @@ public record SavedReportResponse(
         ManagementReportResponse.Filters filters,
         Commentary commentary,
         String language,
+        // The chosen comparison, or null for automatic (the latest final report on the scope); fixed once final.
         Long compareToReportId,
+        // V19 RM-FR-39: the sections the files include, remembered per report.
+        List<String> sections,
         Instant finalizedAt,
         Instant createdAt,
         Instant updatedAt,
         Boolean verified,
         ManagementReportResponse report
 ) {
+
+    public SavedReportResponse {
+        sections = Copies.list(sections);
+    }
 
     /** RM-FR-26: the four sections, "Nothing needed" and a note per goal id. */
     public record Commentary(String highlights, String risks, String decisionsNeeded, boolean nothingNeeded, String nextFocus,

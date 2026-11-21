@@ -1,13 +1,14 @@
 import { apiClient } from './apiClient';
-import { fetchReportFile, type DeckOptions, type ReportFilter, type ReportFormat } from './reportApi';
-import type { CommentaryDraft, ReportRow, SavedReport, SavedReportCommentary } from '../types/vision';
+import { fetchReportFile, fileOptions, type DeckOptions, type ReportFilter, type ReportFormat } from './reportApi';
+import type { CommentaryDraft, ReportRow, ReportSection, SavedReport, SavedReportCommentary } from '../types/vision';
 
 /**
  * V19 (BRD 19.0.0, RM-FR-16 to RM-FR-31): saved Management Reports. A final
  * report answers 409 to any change but a rename, and to delete.
  */
 
-export type SavedReportSettings = ReportFilter & { name?: string; language?: string };
+/** compareToReportId: a final report on the same scope; null or left out for the latest one (RM-FR-32). */
+export type SavedReportSettings = ReportFilter & { name?: string; language?: string; compareToReportId?: number | null };
 
 /** RM-FR-17: newest change first; archived ones only when asked for. */
 export function listSavedReports(token: string, includeArchived = false) {
@@ -27,6 +28,7 @@ function body(settings: SavedReportSettings) {
     healths: settings.healths ?? [],
     includeCompleted: settings.includeCompleted ?? true,
     language: settings.language,
+    compareToReportId: settings.compareToReportId ?? undefined,
   };
 }
 
@@ -47,6 +49,11 @@ export function updateSavedReport(token: string, id: number, settings: SavedRepo
 /** RM-FR-23: rename, the one change a final report allows. */
 export function renameSavedReport(token: string, id: number, name: string) {
   return apiClient<SavedReport>(`/reports/saved/${id}`, { token, method: 'PUT', body: JSON.stringify({ name }) });
+}
+
+/** RM-FR-39: the sections the report's files include, remembered for the next download; an empty list means all. */
+export function saveReportSections(token: string, id: number, sections: ReportSection[]) {
+  return apiClient<SavedReport>(`/reports/saved/${id}/sections`, { token, method: 'PUT', body: JSON.stringify({ sections }) });
 }
 
 /** RM-FR-27: autosave of the commentary. */
@@ -89,8 +96,5 @@ export async function getSavedReportRows(token: string, id: number, language: st
 
 /** RM-FR-38: files from a saved report; a final report's come from its snapshot. */
 export function downloadSavedReport(token: string, id: number, format: ReportFormat, language: string, deck: DeckOptions = {}) {
-  const extra = format === 'pptx'
-    ? `${deck.title?.trim() ? `&title=${encodeURIComponent(deck.title.trim())}` : ''}${deck.includeName === false ? '&includeName=false' : ''}`
-    : '';
-  return fetchReportFile(`/reports/saved/${id}.${format}?language=${language}${extra}`, token, format);
+  return fetchReportFile(`/reports/saved/${id}.${format}?language=${language}${fileOptions(format, deck)}`, token, format);
 }

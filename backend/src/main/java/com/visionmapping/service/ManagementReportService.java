@@ -40,6 +40,8 @@ import com.visionmapping.service.report.ManagementReport.TaskInfo;
 import com.visionmapping.service.report.ManagementReport.TaskNode;
 import com.visionmapping.service.report.ManagementReportDeckWriter;
 import com.visionmapping.service.report.ManagementReportExcelWriter;
+import com.visionmapping.service.report.ReportComparison;
+import com.visionmapping.service.report.ReportExtras;
 import com.visionmapping.service.report.ReportFilters;
 import com.visionmapping.service.report.ReportPeriod;
 import com.visionmapping.service.report.ReportRows;
@@ -195,7 +197,13 @@ public class ManagementReportService {
 
     /** The Excel file for a given model and Summary: live, or frozen in a final report (RM-FR-20). */
     public ReportFile excel(ManagementReport report, ManagementReportResponse summary, @Nullable String language, String fileName) {
-        return new ReportFile(fileName, ManagementReportExcelWriter.write(report, summary, ReportText.of(language)));
+        return excel(report, summary, language, fileName, ReportExtras.NONE);
+    }
+
+    /** V19 phase 3: with the commentary, the chosen sections and the draft mark (RM-FR-39, RM-FR-40, RM-FR-43). */
+    public ReportFile excel(ManagementReport report, ManagementReportResponse summary, @Nullable String language, String fileName,
+                            ReportExtras extras) {
+        return new ReportFile(fileName, ManagementReportExcelWriter.write(report, summary, ReportText.of(language), extras));
     }
 
     /**
@@ -211,15 +219,58 @@ public class ManagementReportService {
     /** The deck for a given model and Summary: live, or frozen in a final report (RM-FR-20). */
     public ReportFile deck(ManagementReport report, ManagementReportResponse summary, @Nullable String language, @Nullable String title,
                            boolean includeName, String fileName) {
+        return deck(report, summary, language, title, includeName, fileName, ReportExtras.NONE);
+    }
+
+    /** V19 phase 3: with the commentary, the chosen sections and the draft mark (RM-FR-39, RM-FR-41, RM-FR-43). */
+    public ReportFile deck(ManagementReport report, ManagementReportResponse summary, @Nullable String language, @Nullable String title,
+                           boolean includeName, String fileName, ReportExtras extras) {
         String presenter = includeName ? lookup.currentUser().getFullName() : null;
-        return new ReportFile(fileName, ManagementReportDeckWriter.write(report, summary, ReportText.of(language), title, presenter));
+        return new ReportFile(fileName, ManagementReportDeckWriter.write(report, summary, ReportText.of(language), title, presenter, extras));
+    }
+
+    /**
+     * V19 RM-FR-32 to RM-FR-37: the Summary compared with an earlier final
+     * report. The comparison itself never queries the plan; one query here
+     * says why goals of the earlier report left the scope (RM-FR-34).
+     */
+    public ManagementReportResponse compared(Built now, ReportComparison.Earlier earlier) {
+        Set<Long> current = now.summary().goals().stream().map(GoalHealthRow::goalId).collect(Collectors.toSet());
+        List<Long> gone = earlier.summary().goals().stream().map(GoalHealthRow::goalId).filter(id -> !current.contains(id)).toList();
+        return now.summary().withComparison(ReportComparison.compare(earlier, now.report(), now.summary(), removedReasons(gone, now.report())));
+    }
+
+    /**
+     * Archived (or its dream archived): COMPLETED_ARCHIVED when it was
+     * Completed, else ARCHIVED. Still active but under a dream outside the
+     * scope: MOVED. Otherwise not known (for example a filter left it out).
+     */
+    private Map<Long, String> removedReasons(List<Long> goalIds, ManagementReport report) {
+        if (goalIds.isEmpty()) {
+            return Map.of();
+        }
+        Long userId = lookup.userId();
+        Map<Long, String> reasons = new LinkedHashMap<>();
+        for (Goal goal : goalRepository.findAllById(goalIds)) {
+            if (!goal.getUser().getId().equals(userId)) {
+                continue;
+            }
+            Dream dream = goal.getDream();
+            if (goal.isArchived() || dream.isArchived()) {
+                reasons.put(goal.getId(), goal.getStatus() == WorkStatus.COMPLETED ? "COMPLETED_ARCHIVED" : "ARCHIVED");
+            } else if ("DREAM".equals(report.scopeKind()) && !dream.getId().equals(report.dreamId())
+                    || "AREA".equals(report.scopeKind()) && !Objects.equals(dream.visionAreaId(), report.areaId())) {
+                reasons.put(goal.getId(), "MOVED");
+            }
+        }
+        return reasons;
     }
 
     /**
      * "Management_Report_Dream_12_2026-11-16.xlsx": built from the scope's kind
      * and id, never from free text, so it is always a safe file name.
      */
-    static String fileName(ManagementReport report, String extension) {
+    public static String fileName(ManagementReport report, String extension) {
         String scope = switch (report.scopeKind()) {
             case "DREAM" -> "Dream_" + report.dreamId();
             case "AREA" -> "Area_" + report.areaId();
@@ -576,7 +627,7 @@ public class ManagementReportService {
                 new ManagementReportResponse.PeriodFigures(figures.tasksCompleted(), figures.progressGained(), figures.blockersOpened(),
                         figures.blockersClosed(), figures.tasksBecameOverdue()),
                 headline, tasksByStatus, byPriority, blockersByKind, report.unplaced().size(), rows, attention(report), trend,
-                filters(report.filters()), report.owners());
+                filters(report.filters()), report.owners(), null);
     }
 
     private static ManagementReportResponse.Filters filters(ReportFilters filters) {

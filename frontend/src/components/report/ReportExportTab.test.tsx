@@ -38,6 +38,27 @@ describe('Management Report export tab (V18 MR-FR-15)', () => {
     expect(downloadManagementReport).toHaveBeenCalledWith('t', {}, 'pptx', 'en', { title: 'Quarterly review', includeName: false });
   });
 
+  it('sends only the sections chosen and the file language picked (RM-FR-39, RM-FR-44)', async () => {
+    const blob = new Blob(['xlsx']);
+    downloadManagementReport.mockResolvedValue({ blob, fileName: 'report.xlsx' });
+    const onSectionsChange = vi.fn();
+    render(<ReportExportTab token="t" filter={{}} disabledReason="" onSectionsChange={onSectionsChange} />);
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Blockers' }));
+    expect(onSectionsChange).toHaveBeenLastCalledWith(['COMMENTARY', 'SUMMARY', 'GOAL_HEALTH', 'DETAILS', 'CHANGES', 'NEXT_ACTIONS', 'SUPPORT']);
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'File language' }), 'km');
+    await userEvent.click(screen.getByRole('button', { name: 'Export to Excel' }));
+    await waitFor(() => expect(downloadManagementReport).toHaveBeenCalledWith('t', {}, 'xlsx', 'km',
+      { sections: ['COMMENTARY', 'SUMMARY', 'GOAL_HEALTH', 'DETAILS', 'CHANGES', 'NEXT_ACTIONS', 'SUPPORT'] }));
+  });
+
+  it('turns the buttons off until at least one section is chosen', async () => {
+    render(<ReportExportTab token="t" filter={{}} disabledReason="" sections={['SUMMARY']} />);
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Summary' }));
+    expect(screen.getByText('Choose at least one section.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export to Excel' })).toBeDisabled();
+  });
+
   it('shows the server\'s reason when a download fails', async () => {
     downloadManagementReport.mockRejectedValue(new Error('Too many report downloads in a short time. Try again in a few minutes.'));
     render(<ReportExportTab token="t" filter={{}} disabledReason="" />);

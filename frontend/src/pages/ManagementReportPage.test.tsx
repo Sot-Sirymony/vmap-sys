@@ -71,6 +71,7 @@ const dreams = [{ id: 7, title: 'Publish a study', archived: false }, { id: 8, t
 describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(savedReportApi.listSavedReports).mockResolvedValue([]);
     vi.mocked(reportApi.getManagementReport).mockResolvedValue(report());
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue(areas);
     vi.mocked(dreamApi.listDreams).mockResolvedValue(dreams);
@@ -295,6 +296,83 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save as report' }));
     await waitFor(() => expect(currentLocation()).toBe('/vision-map/reports/42'));
     expect(savedReportApi.createSavedReport).toHaveBeenCalledWith('token', { dreamId: 7, period: 'LAST_MONTH', language: 'en' });
+  });
+
+  it('rmFr32: compares with a final report on the same scope, kept in the URL, and shows what changed (RMC-12, RMC-13)', async () => {
+    vi.mocked(savedReportApi.listSavedReports).mockResolvedValue([
+      { id: 4, code: 'R-004', name: 'October', status: 'FINAL', scopeKind: 'DREAM', dreamId: 7, areaId: null, finalizedAt: '2026-10-31T09:00:00Z' },
+      { id: 5, code: 'R-005', name: 'Other dream', status: 'FINAL', scopeKind: 'DREAM', dreamId: 9, areaId: null, finalizedAt: '2026-10-31T09:00:00Z' },
+      { id: 6, code: 'R-006', name: 'Draft', status: 'DRAFT', scopeKind: 'DREAM', dreamId: 7, areaId: null },
+    ] as never);
+    const changes = Array.from({ length: 16 }, (_, index) => ({
+      kind: 'TASK_COMPLETED' as const, itemType: 'TASK' as const, itemId: 100 + index, title: `Task ${index}`, context: 'Goal › Step',
+      before: null, after: null, renamed: false,
+    }));
+    vi.mocked(reportApi.getManagementReport).mockResolvedValue(report({
+      scope: { kind: 'DREAM', dreamId: 7, label: 'Publish a study' },
+      comparison: {
+        reportId: 4, code: 'R-004', name: 'October', asOf: '2026-10-31',
+        headline: { overallProgress: 12, totalTasks: 3, completedTasks: 9, overdueTasks: -2, blockedTasks: 0, openBlockers: 1, dueSoonTasks: 0 },
+        goals: [
+          { goalId: 1, isNew: false, healthBefore: 'AMBER', progressChange: 12, targetBefore: '2026-10-15', previousTitle: 'Collect data' },
+          { goalId: 2, isNew: true },
+        ],
+        removed: [{ goalId: 9, title: 'Old goal', reason: 'ARCHIVED' }, { goalId: 10, title: 'Filtered goal', reason: null }],
+        changes: [
+          { kind: 'GOAL_WORSE', itemType: 'GOAL', itemId: 1, title: 'Collect the data', context: 'Publish a study', before: 'AMBER',
+            after: 'RED', renamed: true },
+          { kind: 'DUE_LATER', itemType: 'TASK', itemId: 11, title: 'Print forms', context: null, before: '2026-11-10', after: '2026-11-24',
+            renamed: false },
+          { kind: 'NEW_BLOCKER', itemType: 'OBSTACLE', itemId: 9, title: 'No budget', before: null, after: 'CRITICAL', renamed: false },
+          ...changes,
+        ],
+        totalChanges: 25,
+      },
+    }));
+    renderPage(<ManagementReportPage />, { route: '/vision-map/report?dreamId=7', path: '/vision-map/report' });
+
+    const picker = await screen.findByRole('combobox', { name: 'Compare with' });
+    expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      "Don't compare", 'October (R-004, Oct 31, 2026)']);
+    await userEvent.selectOptions(picker, '4');
+    await waitFor(() => expect(currentLocation()).toContain('compareTo=4'));
+    expect(reportApi.getManagementReport).toHaveBeenLastCalledWith('token', { dreamId: 7, compareTo: 4 });
+
+    // RM-FR-33: each tile shows its change, and says it in words.
+    expect(screen.getByText('up 12 points')).toBeInTheDocument();
+    expect(screen.getByText('2 fewer overdue tasks')).toBeInTheDocument();
+    expect(screen.getByText('1 more open blockers')).toBeInTheDocument();
+    expect(screen.getAllByText('no change since the compared report').length).toBeGreaterThan(0);
+    // RM-FR-34: a Change column.
+    const health = screen.getByRole('region', { name: 'Goal health' });
+    expect(within(health).getByText('At risk → Off track · +12 points · Target Oct 15, 2026 → Nov 1, 2026 · (renamed)')).toBeInTheDocument();
+    expect(within(health).getByText('New')).toBeInTheDocument();
+    // RM-FR-35: up to 15 lines, most important first, and the rest on the Details tab.
+    const changed = screen.getByRole('region', { name: 'What changed' });
+    expect(within(changed).getByText('Since October (R-004), frozen Oct 31, 2026')).toBeInTheDocument();
+    expect(within(changed).getAllByRole('listitem')).toHaveLength(15 + 2);
+    expect(within(changed).getByText(/Collect the data \(renamed\) · At risk → Off track/)).toBeInTheDocument();
+    expect(within(changed).getByText(/Print forms · Nov 10, 2026 → Nov 24, 2026/)).toBeInTheDocument();
+    expect(within(changed).getByText(/No budget · Critical/)).toBeInTheDocument();
+    expect(within(changed).getByText('Archived', { exact: false })).toBeInTheDocument();
+    expect(within(changed).getByText('Filtered goal')).toBeInTheDocument();
+    await userEvent.click(within(changed).getByRole('button', { name: 'and 10 more: see the Details tab' }));
+    await waitFor(() => expect(currentLocation()).toContain('tab=details'));
+
+    // Saving keeps the comparison; a new scope drops it.
+    vi.mocked(savedReportApi.createSavedReport).mockResolvedValue({ id: 42 } as never);
+    await userEvent.click(screen.getByRole('button', { name: 'Save as report' }));
+    await waitFor(() => expect(savedReportApi.createSavedReport).toHaveBeenCalledWith('token',
+      { dreamId: 7, compareTo: 4, compareToReportId: 4, language: 'en' }));
+  });
+
+  it('rmFr32: a new scope drops the comparison', async () => {
+    renderPage(<ManagementReportPage />, { route: '/vision-map/report?dreamId=7&compareTo=4', path: '/vision-map/report' });
+    await screen.findByRole('region', { name: 'This period' });
+    expect(screen.getByRole('combobox', { name: 'Compare with' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Report on' }));
+    await userEvent.click(screen.getByRole('option', { name: 'All dreams' }));
+    await waitFor(() => expect(reportApi.getManagementReport).toHaveBeenLastCalledWith('token', {}));
   });
 
   it('shows why the report could not load', async () => {

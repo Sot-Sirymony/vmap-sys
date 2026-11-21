@@ -45,7 +45,10 @@ describe('report filter in the URL (V19 RM-FR-06, RM-FR-10)', () => {
     expect(filterFromSearch(new URLSearchParams('areaId=3&period=THIS_MONTH'))).toEqual({ areaId: 3 });
     expect(filterFromSearch(new URLSearchParams('period=CUSTOM&from=bad'))).toEqual({});
     expect(filterToSearch(filter)).toEqual({ dreamId: '7', areaId: '', period: 'CUSTOM', from: '2026-11-01', to: '2026-11-05',
-      priority: 'HIGH', owner: 'Dara', health: 'RED', completed: '0' });
+      priority: 'HIGH', owner: 'Dara', health: 'RED', completed: '0', compareTo: '' });
+    // V19 RM-FR-32: the report to compare with is kept in the URL too.
+    expect(filterFromSearch(new URLSearchParams('dreamId=7&compareTo=4'))).toEqual({ dreamId: 7, compareTo: 4 });
+    expect(filterToSearch({ dreamId: 7, compareTo: 4 })).toMatchObject({ compareTo: '4' });
     expect(filterToSearch({ areaId: 3, period: 'LAST_WEEK' })).toMatchObject({ areaId: '3', period: 'LAST_WEEK', from: '', completed: '' });
   });
 });

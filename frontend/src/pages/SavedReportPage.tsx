@@ -10,7 +10,8 @@ import { listDreams } from '../api/dreamApi';
 import type { ReportFilter } from '../api/reportApi';
 import {
   archiveSavedReport, copySavedReport, deleteSavedReport, downloadSavedReport, draftReportCommentary, finalizeSavedReport,
-  getSavedReport, getSavedReportRows, renameSavedReport, restoreSavedReport, saveReportCommentary, updateSavedReport,
+  getSavedReport, getSavedReportRows, listSavedReports, renameSavedReport, restoreSavedReport, saveReportCommentary, saveReportSections,
+  updateSavedReport,
 } from '../api/savedReportApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import { Button } from '../components/common/Button';
@@ -19,12 +20,13 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { ReportCommentaryCard, type CommentarySection, type SaveState } from '../components/report/ReportCommentaryCard';
+import { ReportComparePicker, comparableReports } from '../components/report/ReportComparePicker';
 import { ReportControls } from '../components/report/ReportControls';
 import { ReportTabs, reportTabFrom, type ReportTab } from '../components/report/ReportTabs';
 import { useAuth } from '../context/AuthContext';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useI18n } from '../i18n/I18nContext';
-import type { Dream, SavedReport, SavedReportCommentary, VisionArea } from '../types/vision';
+import type { Dream, ReportSection, SavedReport, SavedReportCommentary, VisionArea } from '../types/vision';
 import { periodLabel, reportDate } from '../utils/managementReport';
 import { PageSection } from './PageSection';
 import { ReportStatusChip } from './SavedReportsPage';
@@ -67,6 +69,7 @@ export function SavedReportPage() {
   const [saved, setSaved] = useState<SavedReport | null>(null);
   const [areas, setAreas] = useState<VisionArea[]>([]);
   const [dreams, setDreams] = useState<Dream[]>([]);
+  const [others, setOthers] = useState<SavedReport[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Pending>(null);
@@ -102,6 +105,8 @@ export function SavedReportPage() {
         setDreams(dreamData.filter((dream) => !dream.archived));
       })
       .catch(() => undefined);
+    // RM-FR-32: the final reports a draft can be compared with.
+    void listSavedReports(token, true).then((list) => active && setOthers(list)).catch(() => undefined);
     return () => {
       active = false;
     };
@@ -138,9 +143,19 @@ export function SavedReportPage() {
     }
   }
 
-  function changeSettings(next: ReportFilter) {
+  /** RM-FR-18, RM-FR-32: a draft's settings; a comparison holds only within one scope, so a new scope drops it. */
+  function changeSettings(next: ReportFilter, compareToReportId = saved?.compareToReportId) {
     if (!token || !saved) return;
-    void run(async () => show(await updateSavedReport(token, id, { ...next, name: saved.name })));
+    const sameScope = (next.dreamId ?? null) === (saved.dreamId ?? null) && (next.areaId ?? null) === (saved.areaId ?? null);
+    void run(async () => show(await updateSavedReport(token, id, {
+      ...next, name: saved.name, compareToReportId: sameScope ? compareToReportId : null,
+    })));
+  }
+
+  /** RM-FR-39: remembered for the next download; a failure only means the choice is not kept. */
+  function changeSections(sections: ReportSection[]) {
+    if (!token) return;
+    void saveReportSections(token, id, sections).catch(() => undefined);
   }
 
   function rename() {
@@ -244,7 +259,10 @@ export function SavedReportPage() {
             <Alert severity="warning">{tr('This report could not be verified. Its stored figures may have been changed.')}</Alert>
           )}
           {isDraft && (
-            <ReportControls value={filter} onChange={changeSettings} areas={areas} dreams={dreams} owners={report?.owners ?? []} />
+            <ReportControls value={filter} onChange={(next) => changeSettings(next)} areas={areas} dreams={dreams} owners={report?.owners ?? []}>
+              <ReportComparePicker reports={comparableReports(others, filter, saved.id)} value={saved.compareToReportId}
+                onChange={(compareTo) => changeSettings(filter, compareTo ?? null)} emptyLabel={tr('The latest final report')} />
+            </ReportControls>
           )}
         </CardContent>
       </Card>
@@ -264,7 +282,11 @@ export function SavedReportPage() {
         reloadKey={`${saved.id}|${saved.updatedAt}|${saved.status}`}
         token={token}
         download={(format, fileLanguage, deck) => downloadSavedReport(token, id, format, fileLanguage, deck)}
-        exportNote={isDraft ? tr('These files show the draft\'s live figures.')
+        sections={saved.sections}
+        onSectionsChange={changeSections}
+        defaultLanguage={isDraft ? undefined : saved.language}
+        comparisonHint={tr('Finalise this report to compare the next one with it.')}
+        exportNote={isDraft ? tr('These files show the draft\'s live figures and are marked DRAFT.')
           : tr('These files show the figures frozen on {date}.', { date: reportDate((saved.finalizedAt ?? '').slice(0, 10) || saved.updatedAt.slice(0, 10)) })}
         aboveSummary={(
           <ReportCommentaryCard

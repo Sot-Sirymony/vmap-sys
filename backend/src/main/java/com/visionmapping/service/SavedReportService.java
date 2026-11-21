@@ -18,6 +18,9 @@ import com.visionmapping.service.ManagementReportService.ReportFile;
 import com.visionmapping.service.ManagementReportService.ReportScope;
 import com.visionmapping.service.report.ManagementReport;
 import com.visionmapping.service.report.ReportCommentaryDrafter;
+import com.visionmapping.service.report.ReportComparison;
+import com.visionmapping.service.report.ReportExtras;
+import com.visionmapping.service.report.ReportSection;
 import com.visionmapping.service.report.ReportFilters;
 import com.visionmapping.service.report.ReportPeriod;
 import com.visionmapping.service.report.ReportPeriod.Kind;
@@ -36,10 +39,15 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.IsoFields;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +72,7 @@ public class SavedReportService {
     static final String FINAL_NOT_DELETED = "A final report cannot be deleted. You can archive it.";
     static final String ALREADY_FINAL = "This report is already final.";
     static final String SCOPE_GONE = "The vision area or dream this report covers no longer exists.";
+    static final String BAD_COMPARISON = "Choose a final report on the same scope to compare with.";
 
     private final SavedReportRepository repository;
     private final ManagementReportService reports;
@@ -105,7 +114,7 @@ public class SavedReportService {
             Decoded decoded = decode(report);
             return toResponse(report, decoded.snapshot().summary(), decoded.verified());
         }
-        return toResponse(report, live(report).summary(), null);
+        return toResponse(report, content(report).summary(), null);
     }
 
     /** RM-FR-13, RM-FR-15: the Details rows, from the snapshot once final. */
@@ -117,18 +126,50 @@ public class SavedReportService {
     /** RM-FR-38 (brought forward): the Excel file, from the snapshot once final. */
     @Transactional(readOnly = true)
     public ReportFile excel(Long id, @Nullable String language) {
+        return excel(id, language, null);
+    }
+
+    /** RM-FR-39 to RM-FR-44: with the commentary, the chosen (or remembered) sections and, for a draft, "DRAFT". */
+    @Transactional(readOnly = true)
+    public ReportFile excel(Long id, @Nullable String language, @Nullable List<ReportSection> sections) {
         SavedReport saved = owned(id);
         Built content = content(saved);
-        return reports.excel(content.report(), content.summary(), languageOf(saved, language), fileName(saved, content.report(), "xlsx"));
+        return reports.excel(content.report(), content.summary(), languageOf(saved, language), fileName(saved, content.report(), "xlsx"),
+                extras(saved, sections));
     }
 
     /** RM-FR-38 (brought forward): the deck, from the snapshot once final. */
     @Transactional(readOnly = true)
     public ReportFile deck(Long id, @Nullable String language, @Nullable String title, boolean includeName) {
+        return deck(id, language, title, includeName, null);
+    }
+
+    /** RM-FR-39 to RM-FR-44: with the commentary, the chosen (or remembered) sections and, for a draft, "DRAFT". */
+    @Transactional(readOnly = true)
+    public ReportFile deck(Long id, @Nullable String language, @Nullable String title, boolean includeName,
+                           @Nullable List<ReportSection> sections) {
         SavedReport saved = owned(id);
         Built content = content(saved);
         return reports.deck(content.report(), content.summary(), languageOf(saved, language), title, includeName,
-                fileName(saved, content.report(), "pptx"));
+                fileName(saved, content.report(), "pptx"), extras(saved, sections));
+    }
+
+    /**
+     * RM-FR-32: the live report compared with one of the participant's final
+     * reports on the same scope, or not compared when {@code compareTo} is null.
+     */
+    @Transactional(readOnly = true)
+    public Built live(ReportScope scope, @Nullable Long compareTo) {
+        Built live = reports.live(scope);
+        if (compareTo == null) {
+            return live;
+        }
+        SavedReport target = owned(compareTo);
+        ManagementReport report = live.report();
+        if (!target.isFinal() || !sameScope(target, report.scopeKind(), report.areaId(), report.dreamId())) {
+            throw new BusinessRuleException(BAD_COMPARISON);
+        }
+        return new Built(report, reports.compared(live, earlierOf(target)));
     }
 
     // ---------- lifecycle ----------
@@ -148,7 +189,7 @@ public class SavedReportService {
                 .build();
         applySettings(report, request);
         // Checks the scope is the participant's and the period is valid, and gives the default name.
-        Built built = live(report);
+        Built built = content(report);
         report.setName(isBlank(request.name()) ? defaultName(built.report(), ReportText.of(language)) : request.name().strip());
         return toResponse(repository.save(report), built.summary(), null);
     }
@@ -165,8 +206,7 @@ public class SavedReportService {
         }
         applySettings(report, request);
         rename(report, request.name());
-        Built built = live(report);
-        return toResponse(report, built.summary(), null);
+        return toResponse(report, content(report).summary(), null);
     }
 
     /** RM-FR-26, RM-FR-27, RM-FR-30: the commentary, saved as the participant types. */
@@ -198,7 +238,9 @@ public class SavedReportService {
         if (report.isFinal()) {
             throw new StateConflictException(FINAL_READ_ONLY);
         }
-        ReportCommentaryDrafter.Draft draft = ReportCommentaryDrafter.draft(live(report).report(), ReportText.of(languageOf(report, language)));
+        Built content = content(report);
+        ReportCommentaryDrafter.Draft draft = ReportCommentaryDrafter.draft(content.report(), ReportText.of(languageOf(report, language)),
+                content.summary().comparison());
         return new CommentaryDraftResponse(
                 suggestion(report.getHighlights(), draft.highlights()),
                 suggestion(report.getRisks(), draft.risks()),
@@ -212,9 +254,13 @@ public class SavedReportService {
         if (report.isFinal()) {
             throw new StateConflictException(ALREADY_FINAL);
         }
-        Built built = live(report);
+        // RM-FR-19: the comparison is frozen with the figures.
+        Built built = content(report);
         // MR-NFR-05: the same row limit as the Excel report.
         reports.rows(built.report(), language);
+        if (built.summary().comparison() != null) {
+            report.setCompareToReportId(built.summary().comparison().reportId());
+        }
         Encoded encoded = codec.encode(new Snapshot(built.report(), built.summary()));
         ReportPeriod period = built.report().period();
         report.setPeriodKind(period.kind().name());
@@ -268,9 +314,21 @@ public class SavedReportService {
                 .sections(source.getSections())
                 .compareToReportId(source.isFinal() ? source.getId() : source.getCompareToReportId())
                 .build();
-        Built built = live(copy);
+        Built built = content(copy);
         copy.setName(defaultName(built.report(), ReportText.of(copy.getLanguage())));
         return toResponse(repository.save(copy), built.summary(), null);
+    }
+
+    /**
+     * RM-FR-39: the sections to put in this report's files, remembered for
+     * its next download. Allowed on a final report too: it changes how the
+     * files are cut, never the frozen figures.
+     */
+    public SavedReportResponse updateSections(Long id, @Nullable List<ReportSection> sections) {
+        SavedReport report = owned(id);
+        Set<ReportSection> chosen = sections == null || sections.isEmpty() ? ReportSection.all() : EnumSet.copyOf(sections);
+        report.setSections(chosen.equals(ReportSection.all()) ? null : writeJson(new TreeSet<>(chosen)));
+        return toResponse(report, null, null);
     }
 
     /** RM-FR-22 (business rule 12). */
@@ -364,7 +422,8 @@ public class SavedReportService {
                 || request.to() != null && !request.to().equals(report.getPeriodTo());
         boolean filtersChanged = !orEmpty(request.priorities()).isEmpty() || !isBlank(request.owner()) || !orEmpty(request.healths()).isEmpty()
                 || Boolean.FALSE.equals(request.includeCompleted());
-        return scopeChanged || periodChanged || filtersChanged;
+        boolean comparisonChanged = request.compareToReportId() != null && !request.compareToReportId().equals(report.getCompareToReportId());
+        return scopeChanged || periodChanged || filtersChanged || comparisonChanged;
     }
 
     // ---------- helpers ----------
@@ -393,6 +452,73 @@ public class SavedReportService {
         ReportFilters filters = new ReportFilters(new HashSet<>(orEmpty(request.priorities())), request.owner(), new HashSet<>(orEmpty(request.healths())),
                 request.includeCompleted() == null || request.includeCompleted());
         report.setFilters(filters.isEmpty() ? null : writeJson(filters));
+        report.setCompareToReportId(comparisonTarget(report, request.compareToReportId()));
+    }
+
+    /** RM-FR-32: a chosen comparison must be another final report of the participant's, on the same scope. Null means automatic. */
+    @Nullable
+    private Long comparisonTarget(SavedReport report, @Nullable Long compareTo) {
+        if (compareTo == null) {
+            return null;
+        }
+        SavedReport target = repository.findByIdAndUser_Id(compareTo, lookup.userId()).orElseThrow(() -> new BusinessRuleException(BAD_COMPARISON));
+        if (!target.isFinal() || target.getId().equals(report.getId())
+                || !sameScope(target, report.getScopeKind(), report.getAreaId(), report.getDreamId())) {
+            throw new BusinessRuleException(BAD_COMPARISON);
+        }
+        return compareTo;
+    }
+
+    private static boolean sameScope(SavedReport target, String scopeKind, @Nullable Long areaId, @Nullable Long dreamId) {
+        return target.getScopeKind().equals(scopeKind) && Objects.equals(target.getAreaId(), areaId) && Objects.equals(target.getDreamId(), dreamId);
+    }
+
+    /**
+     * RM-FR-32: the final report a draft is compared with: the one chosen, if
+     * it is still a final report on the same scope, else the latest final
+     * report on that scope; null when there is none (RM-FR-36).
+     */
+    @Nullable
+    private ReportComparison.Earlier earlier(SavedReport report) {
+        Long userId = lookup.userId();
+        SavedReport target = report.getCompareToReportId() == null ? null
+                : repository.findByIdAndUser_Id(report.getCompareToReportId(), userId)
+                        .filter(SavedReport::isFinal)
+                        .filter(found -> sameScope(found, report.getScopeKind(), report.getAreaId(), report.getDreamId()))
+                        .orElse(null);
+        if (target == null) {
+            target = repository.findByUser_IdOrderByUpdatedAtDesc(userId).stream()
+                    .filter(SavedReport::isFinal)
+                    .filter(found -> !found.getId().equals(report.getId()))
+                    .filter(found -> sameScope(found, report.getScopeKind(), report.getAreaId(), report.getDreamId()))
+                    .max(Comparator.comparing(SavedReport::getFinalizedAt).thenComparing(SavedReport::getId))
+                    .orElse(null);
+        }
+        return target == null ? null : earlierOf(target);
+    }
+
+    private ReportComparison.Earlier earlierOf(SavedReport target) {
+        Snapshot snapshot = decode(target).snapshot();
+        return new ReportComparison.Earlier(target.getId(), target.getCode(), target.getName(), snapshot.report(), snapshot.summary());
+    }
+
+    /** RM-FR-31, RM-FR-39, RM-FR-43: what the files add for a saved report. */
+    private ReportExtras extras(SavedReport report, @Nullable List<ReportSection> sections) {
+        Set<ReportSection> chosen = sections == null || sections.isEmpty() ? sectionsOf(report) : EnumSet.copyOf(sections);
+        return new ReportExtras(commentaryOf(report), chosen, !report.isFinal());
+    }
+
+    private Set<ReportSection> sectionsOf(SavedReport report) {
+        if (report.getSections() == null) {
+            return ReportSection.all();
+        }
+        List<ReportSection> stored = readJson(report.getSections(), new TypeReference<>() { });
+        return stored.isEmpty() ? ReportSection.all() : EnumSet.copyOf(stored);
+    }
+
+    private SavedReportResponse.Commentary commentaryOf(SavedReport report) {
+        return new SavedReportResponse.Commentary(report.getHighlights(), report.getRisks(), report.getDecisionsNeeded(),
+                report.isNothingNeeded(), report.getNextFocus(), goalNotesOf(report));
     }
 
     private static void rename(SavedReport report, @Nullable String name) {
@@ -414,10 +540,12 @@ public class SavedReportService {
         return built;
     }
 
-    /** What a report shows: live for a draft, frozen for a final report. */
+    /** What a report shows: live (and compared, RM-FR-32) for a draft, frozen for a final report. */
     private Built content(SavedReport report) {
         if (!report.isFinal()) {
-            return live(report);
+            Built live = live(report);
+            ReportComparison.Earlier earlier = earlier(report);
+            return earlier == null ? live : new Built(live.report(), reports.compared(live, earlier));
         }
         Snapshot snapshot = decode(report).snapshot();
         return new Built(snapshot.report(), snapshot.summary());
@@ -446,9 +574,8 @@ public class SavedReportService {
                 report.getPeriodFrom(), report.getPeriodTo(),
                 new ManagementReportResponse.Filters(filters.priorities().stream().sorted().map(Enum::name).toList(), filters.owner(),
                         filters.healths().stream().sorted().map(Enum::name).toList(), filters.includeCompleted()),
-                new SavedReportResponse.Commentary(report.getHighlights(), report.getRisks(), report.getDecisionsNeeded(),
-                        report.isNothingNeeded(), report.getNextFocus(), goalNotesOf(report)),
-                report.getLanguage(), report.getCompareToReportId(), report.getFinalizedAt(), report.getCreatedAt(), report.getUpdatedAt(),
+                commentaryOf(report),
+                report.getLanguage(), report.getCompareToReportId(), sectionsOf(report).stream().map(Enum::name).toList(), report.getFinalizedAt(), report.getCreatedAt(), report.getUpdatedAt(),
                 verified, summary);
     }
 

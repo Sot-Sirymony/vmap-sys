@@ -2015,7 +2015,57 @@ export type ManagementReport = {
   // V19 RM-FR-10: the filters applied (empty lists and a null owner mean "any"), and the owners in scope.
   filters: ReportFiltersApplied;
   owners: string[];
+  // V19 RM-FR-32 to RM-FR-37: the changes since an earlier final report, or null when not compared.
+  comparison?: ReportComparison | null;
 };
+
+/** V19 RM-FR-35: the kind of one What changed line, most important first. */
+export type ReportChangeKind = 'GOAL_WORSE' | 'DUE_LATER' | 'NEW_BLOCKER' | 'BLOCKER_CLOSED' | 'GOAL_BETTER' | 'TASK_COMPLETED';
+
+/**
+ * V19 RM-FR-32 to RM-FR-37: what changed since the final report reportId, frozen on asOf. Items are matched by id.
+ * headline holds each figure's change (now minus then).
+ */
+export type ReportComparison = {
+  reportId: number;
+  code: string;
+  name: string;
+  asOf: string;
+  headline: {
+    overallProgress: number;
+    totalTasks: number;
+    completedTasks: number;
+    overdueTasks: number;
+    blockedTasks: number;
+    openBlockers: number;
+    dueSoonTasks: number;
+  };
+  // isNew: not in the compared report. targetBefore only when the date changed; previousTitle only when renamed.
+  goals: {
+    goalId: number;
+    isNew: boolean;
+    healthBefore?: ReportHealth | null;
+    progressChange?: number | null;
+    targetBefore?: string | null;
+    previousTitle?: string | null;
+  }[];
+  removed: { goalId: number; title: string; reason?: 'COMPLETED_ARCHIVED' | 'ARCHIVED' | 'MOVED' | null }[];
+  // before and after: a health, an ISO date or a severity, by kind.
+  changes: {
+    kind: ReportChangeKind;
+    itemType: 'GOAL' | 'STEP' | 'TASK' | 'OBSTACLE';
+    itemId: number;
+    title: string;
+    context?: string | null;
+    before?: string | null;
+    after?: string | null;
+    renamed: boolean;
+  }[];
+  totalChanges: number;
+};
+
+/** V19 RM-FR-39: the parts of a report file that can be left out. */
+export type ReportSection = 'COMMENTARY' | 'SUMMARY' | 'GOAL_HEALTH' | 'DETAILS' | 'BLOCKERS' | 'CHANGES' | 'NEXT_ACTIONS' | 'SUPPORT';
 
 export type ReportFiltersApplied = { priorities: Priority[]; owner?: string | null; healths: ReportHealth[]; includeCompleted: boolean };
 
@@ -2066,7 +2116,10 @@ export type SavedReport = {
   filters: ReportFiltersApplied;
   commentary: SavedReportCommentary;
   language: string;
+  // RM-FR-32: the chosen comparison, or null for the latest final report on the scope.
   compareToReportId?: number | null;
+  // RM-FR-39: the sections its files include.
+  sections: ReportSection[];
   finalizedAt?: string | null;
   createdAt: string;
   updatedAt: string;

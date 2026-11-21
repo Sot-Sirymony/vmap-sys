@@ -6,16 +6,17 @@ import Typography from '@mui/material/Typography';
 import { useNavigate, useSearchParams } from 'react-router';
 import { listDreams } from '../api/dreamApi';
 import { getManagementReport, getReportRows } from '../api/reportApi';
-import { createSavedReport } from '../api/savedReportApi';
+import { createSavedReport, listSavedReports } from '../api/savedReportApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
+import { ReportComparePicker, comparableReports } from '../components/report/ReportComparePicker';
 import { ReportControls } from '../components/report/ReportControls';
 import { ReportTabs, reportTabFrom, type ReportTab } from '../components/report/ReportTabs';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
-import type { Dream, ManagementReport, VisionArea } from '../types/vision';
+import type { Dream, ManagementReport, SavedReport, VisionArea } from '../types/vision';
 import { filterFromSearch, filterToSearch, periodLabel, reportDate } from '../utils/managementReport';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
@@ -42,6 +43,7 @@ export function ManagementReportPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
 
   useEffect(() => {
     if (!token) return;
@@ -51,6 +53,8 @@ export function ManagementReportPage() {
         setDreams(dreamData.filter((dream) => !dream.archived));
       })
       .catch(() => undefined);
+    // RM-FR-32: the final reports the live report can be compared with.
+    void listSavedReports(token, true).then(setSavedReports).catch(() => undefined);
   }, [token]);
 
   useEffect(() => {
@@ -80,12 +84,17 @@ export function ManagementReportPage() {
     setSaving(true);
     setError('');
     try {
-      const saved = await createSavedReport(token, { ...filter, language });
+      const saved = await createSavedReport(token, { ...filter, language, compareToReportId: filter.compareTo });
       navigate(`/vision-map/reports/${saved.id}`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : tr('Unable to save the report.'));
       setSaving(false);
     }
+  }
+
+  /** A comparison only holds within one scope (RM-FR-32), so changing the scope drops it. */
+  function sameScope(next: typeof filter) {
+    return next.dreamId === filter.dreamId && next.areaId === filter.areaId;
   }
 
   const scopeName = report?.scope.kind === 'ALL' || !report ? tr('All dreams') : report.scope.label ?? '';
@@ -103,8 +112,10 @@ export function ManagementReportPage() {
     >
       <Card>
         <CardContent>
-          <ReportControls value={filter} onChange={(next) => update(filterToSearch(next))} areas={areas} dreams={dreams}
-            owners={report?.owners ?? []}>
+          <ReportControls value={filter} onChange={(next) => update(filterToSearch(sameScope(next) ? next : { ...next, compareTo: undefined }))}
+            areas={areas} dreams={dreams} owners={report?.owners ?? []}>
+            <ReportComparePicker reports={comparableReports(savedReports, filter)} value={filter.compareTo}
+              onChange={(compareTo) => update({ compareTo: compareTo ? String(compareTo) : '' })} emptyLabel={tr("Don't compare")} />
             {report && (
               // MR-FR-04, RM-FR-07: the scope, the period and the date, on every view.
               <Typography variant="body2" color="text.secondary" sx={{ ml: { md: 'auto' } }} role="status">

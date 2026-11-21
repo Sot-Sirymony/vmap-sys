@@ -6,18 +6,22 @@ import CardHeader from '@mui/material/CardHeader';
 import Stack from '@mui/material/Stack';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { CircleCheck, CircleDashed, CircleX, ListChecks, TriangleAlert, type LucideIcon } from 'lucide-react';
+import {
+  ArrowDown, ArrowUp, CircleCheck, CircleDashed, CircleX, ListChecks, Minus, TriangleAlert, type LucideIcon,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import type { ReportFilter } from '../../api/reportApi';
 import { statusColors } from '../../theme';
 import type { ManagementReport, ReportHealth, ReportHealthReason } from '../../types/vision';
 import {
-  ATTENTION_LABELS, HEALTH_LABELS, attentionLink, blockedTasksLink, healthParts, healthReasonText, overdueTasksLink, periodLabel,
-  reportDate, unplacedLink,
+  ATTENTION_LABELS, CHANGE_LABELS, HEALTH_LABELS, REMOVED_REASON_LABELS, attentionLink, blockedTasksLink, changeValue, changeWords,
+  goalChangeText, healthParts, healthReasonText, overdueTasksLink, periodLabel, reportDate, signed, unplacedLink,
 } from '../../utils/managementReport';
+import type { ReportComparison } from '../../types/vision';
 import { DashboardCard } from '../dashboard/DashboardCard';
 import { DataTable, type DataTableColumn } from '../common/DataTable';
 import { ProgressBar } from '../common/ProgressBar';
+import { Button } from '../common/Button';
 import { BlockersChart, GoalProgressChart, PriorityChart, ProgressTrendCard, TasksByStatusChart } from './ReportCharts';
 import { tr } from '../../i18n/translate';
 
@@ -104,12 +108,108 @@ function PeriodCard({ report }: Readonly<{ report: ManagementReport }>) {
   );
 }
 
+/** RM-FR-35: the What changed card shows this many lines; the rest are counted. */
+export const MAX_CHANGES_SHOWN = 15;
+
+/**
+ * RM-FR-33, RM-NFR-09: a headline change as an arrow and signed text, with
+ * the change in words for screen readers ("2 fewer overdue tasks").
+ */
+function ChangeLine({ value, words }: Readonly<{ value: number; words: string }>) {
+  const Icon = value > 0 ? ArrowUp : value < 0 ? ArrowDown : Minus;
+  return (
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+      <Icon size={12} aria-hidden="true" />
+      <span aria-hidden="true">{signed(value)}</span>
+      <Box component="span" sx={visuallyHidden}>{words}</Box>
+    </Typography>
+  );
+}
+
+const visuallyHidden = {
+  position: 'absolute', width: 1, height: 1, p: 0, m: -1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+} as const;
+
+/**
+ * RM-FR-35, RM-FR-36: what changed since the compared report, most important
+ * first, up to 15 lines and "and N more" opening the Details tab. Goals no
+ * longer in the report are listed with why, when known (RM-FR-34).
+ */
+function WhatChangedCard({ comparison, onShowDetails }: Readonly<{ comparison: ReportComparison; onShowDetails?: () => void }>) {
+  const shown = comparison.changes.slice(0, MAX_CHANGES_SHOWN);
+  const more = comparison.totalChanges - shown.length;
+  return (
+    <Card component="section" aria-label={tr('What changed')}>
+      <CardHeader title={tr('What changed')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }}
+        subheader={tr('Since {name} ({code}), frozen {date}', { name: comparison.name, code: comparison.code, date: reportDate(comparison.asOf) })} />
+      <CardContent sx={{ pt: 0, display: 'grid', gap: 1.5 }}>
+        {shown.length === 0 ? (
+          <Typography variant="body2">{tr('Nothing changed since the compared report.')}</Typography>
+        ) : (
+          <Box component="ol" sx={{ m: 0, pl: 3, display: 'grid', gap: 1 }}>
+            {shown.map((change) => {
+              const before = changeValue(change.kind, change.before);
+              const after = changeValue(change.kind, change.after);
+              const values = before && after ? `${before} → ${after}` : before || after;
+              return (
+                <li key={`${change.kind}-${change.itemType}-${change.itemId}`}>
+                  <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>{tr(CHANGE_LABELS[change.kind])}: </Typography>
+                  <Typography variant="body2" component="span">
+                    {change.title}{change.renamed ? ` ${tr('(renamed)')}` : ''}{values ? ` · ${values}` : ''}
+                  </Typography>
+                  {change.context && <Typography variant="body2" component="span" color="text.secondary"> · {change.context}</Typography>}
+                </li>
+              );
+            })}
+          </Box>
+        )}
+        {more > 0 && (
+          <Box>
+            {onShowDetails ? (
+              <Button variant="secondary" onClick={onShowDetails}>{tr('and {count} more: see the Details tab', { count: more })}</Button>
+            ) : (
+              <Typography variant="body2" color="text.secondary">{tr('and {count} more', { count: more })}</Typography>
+            )}
+          </Box>
+        )}
+        {comparison.removed.length > 0 && (
+          <Box>
+            <Typography variant="subtitle2" component="h4">{tr('No longer in this report')}</Typography>
+            <Box component="ul" sx={{ m: 0, pl: 3 }}>
+              {comparison.removed.map((goal) => (
+                <li key={goal.goalId}>
+                  <Typography variant="body2" component="span">{goal.title}</Typography>
+                  {goal.reason && (
+                    <Typography variant="body2" component="span" color="text.secondary"> · {tr(REMOVED_REASON_LABELS[goal.reason])}</Typography>
+                  )}
+                </li>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 type GoalRow = ManagementReport['goals'][number] & { id: number };
 
-/** V18 MR-FR-07 to MR-FR-13: the Summary tab. */
-export function ReportSummary({ report, filter }: Readonly<{ report: ManagementReport; filter: ReportFilter }>) {
+/**
+ * V18 MR-FR-07 to MR-FR-13: the Summary tab. V19 RM-FR-33 to RM-FR-36: with a
+ * comparison, each tile shows its change, the goal table a Change column, and
+ * a What changed card follows the period; without one, comparisonHint (if
+ * given) says how to get one.
+ */
+export function ReportSummary({ report, filter, onShowDetails, comparisonHint }: Readonly<{
+  report: ManagementReport;
+  filter: ReportFilter;
+  onShowDetails?: () => void;
+  comparisonHint?: string;
+}>) {
   const { headline } = report;
+  const comparison = report.comparison ?? null;
   const goalRows: GoalRow[] = report.goals.map((goal) => ({ ...goal, id: goal.goalId }));
+  const change = (value: number, words: string) => (comparison ? <ChangeLine value={value} words={words} /> : undefined);
   const columns: DataTableColumn<GoalRow>[] = [
     ...(report.scope.kind === 'DREAM' ? [] : [{
       key: 'dream', label: tr('Dream'), sortValue: (row: GoalRow) => row.dreamTitle, render: (row: GoalRow) => row.dreamTitle,
@@ -136,12 +236,18 @@ export function ReportSummary({ report, filter }: Readonly<{ report: ManagementR
     { key: 'overdue', label: tr('Overdue tasks'), sortValue: (row) => row.overdueTasks, render: (row) => row.overdueTasks },
     { key: 'blocked', label: tr('Blocked items'), sortValue: (row) => row.blockedItems, render: (row) => row.blockedItems },
     { key: 'next', label: tr('Next action'), render: (row) => row.nextAction ?? '—' },
+    ...(comparison ? [{
+      key: 'change',
+      label: tr('Change'),
+      render: (row: GoalRow) => goalChangeText(comparison.goals.find((goal) => goal.goalId === row.goalId), row) || '—',
+    }] : []),
   ];
 
   return (
     <Stack spacing={2}>
       <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' } }}>
-        <DashboardCard label={tr('Overall progress')} value={`${headline.overallProgress}%`} />
+        <DashboardCard label={tr('Overall progress')} value={`${headline.overallProgress}%`}
+          extra={comparison && change(comparison.headline.overallProgress, changeWords('progress', comparison.headline.overallProgress, ''))} />
         <DashboardCard
           label={tr('Goals by health')}
           value={report.goals.length}
@@ -152,14 +258,21 @@ export function ReportSummary({ report, filter }: Readonly<{ report: ManagementR
           )}
         />
         <DashboardCard label={tr('Overdue tasks')} value={headline.overdueTasks} tone={headline.overdueTasks > 0 ? 'critical' : 'neutral'}
-          to={headline.overdueTasks > 0 ? overdueTasksLink(filter) : undefined} />
+          to={headline.overdueTasks > 0 ? overdueTasksLink(filter) : undefined}
+          extra={comparison && change(comparison.headline.overdueTasks, changeWords('count', comparison.headline.overdueTasks, tr('overdue tasks')))} />
         <DashboardCard label={tr('Blocked tasks')} value={headline.blockedTasks} tone={headline.blockedTasks > 0 ? 'warning' : 'neutral'}
-          to={headline.blockedTasks > 0 ? blockedTasksLink(filter) : undefined} />
-        <DashboardCard label={tr('Open blockers')} value={headline.openBlockers} tone={headline.openBlockers > 0 ? 'warning' : 'neutral'} />
-        <DashboardCard label={tr('Due in 14 days')} value={headline.dueSoonTasks} />
+          to={headline.blockedTasks > 0 ? blockedTasksLink(filter) : undefined}
+          extra={comparison && change(comparison.headline.blockedTasks, changeWords('count', comparison.headline.blockedTasks, tr('blocked tasks')))} />
+        <DashboardCard label={tr('Open blockers')} value={headline.openBlockers} tone={headline.openBlockers > 0 ? 'warning' : 'neutral'}
+          extra={comparison && change(comparison.headline.openBlockers, changeWords('count', comparison.headline.openBlockers, tr('open blockers')))} />
+        <DashboardCard label={tr('Due in 14 days')} value={headline.dueSoonTasks}
+          extra={comparison && change(comparison.headline.dueSoonTasks, changeWords('count', comparison.headline.dueSoonTasks, tr('tasks due soon')))} />
       </Box>
 
       <PeriodCard report={report} />
+
+      {comparison && <WhatChangedCard comparison={comparison} onShowDetails={onShowDetails} />}
+      {!comparison && comparisonHint && <Alert severity="info">{comparisonHint}</Alert>}
 
       {report.unplacedObstacles > 0 && (
         <Alert severity="warning" action={<Link to={unplacedLink(filter)}>{tr('Show them')}</Link>}>

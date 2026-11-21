@@ -59,26 +59,51 @@ public final class ManagementReportExcelWriter {
     private final ManagementReport report;
     private final ManagementReportResponse summary;
     private final ReportText text;
+    private final ReportExtras extras;
+    @Nullable
+    private final ManagementReportResponse.Comparison comparison;
     private final Workbook workbook = new XSSFWorkbook();
     private final Styles styles;
 
-    private ManagementReportExcelWriter(ManagementReport report, ManagementReportResponse summary, ReportText text) {
+    private ManagementReportExcelWriter(ManagementReport report, ManagementReportResponse summary, ReportText text, ReportExtras extras) {
         this.report = report;
         this.summary = summary;
         this.text = text;
+        this.extras = extras;
+        this.comparison = summary.comparison();
         this.styles = new Styles(workbook, text.isKhmer() ? ReportText.KHMER_FONT : "Calibri");
     }
 
     public static byte[] write(ManagementReport report, ManagementReportResponse summary, ReportText text) {
+        return write(report, summary, text, ReportExtras.NONE);
+    }
+
+    /**
+     * V19 phase 3: with the participant's commentary first (RM-FR-40), a
+     * Changes sheet when compared, only the chosen sections (RM-FR-39) and
+     * "DRAFT" in the title row of a draft (RM-FR-43). The Report sheet's
+     * columns never change (MRC-05).
+     */
+    public static byte[] write(ManagementReport report, ManagementReportResponse summary, ReportText text, ReportExtras extras) {
         List<ReportRows.Row> rows = ReportRows.build(report, text);
         if (rows.size() > MAX_ROWS) {
             throw new BusinessRuleException(TOO_MANY_ROWS);
         }
-        ManagementReportExcelWriter writer = new ManagementReportExcelWriter(report, summary, text);
+        ManagementReportExcelWriter writer = new ManagementReportExcelWriter(report, summary, text, extras);
         try (Workbook workbook = writer.workbook; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            if (extras.includes(ReportSection.COMMENTARY) && extras.hasCommentary()) {
+                writer.commentarySheet();
+            }
             writer.summarySheet();
-            writer.reportSheet(rows);
-            writer.blockersSheet();
+            if (extras.includes(ReportSection.DETAILS)) {
+                writer.reportSheet(rows);
+            }
+            if (extras.includes(ReportSection.BLOCKERS)) {
+                writer.blockersSheet();
+            }
+            if (extras.includes(ReportSection.CHANGES) && writer.comparison != null) {
+                writer.changesSheet();
+            }
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException exception) {
@@ -91,9 +116,108 @@ public final class ManagementReportExcelWriter {
         return text.asOfLine(report);
     }
 
+    /** The title (with "DRAFT" for a draft, RM-FR-43), the as-of line, and what the report is compared with. */
     private void titleRows(Sheet sheet) {
-        cell(sheet.createRow(0), 0, text.get(Key.TITLE), styles.title);
+        String title = text.get(Key.TITLE) + (extras.draft() ? " – " + text.get(Key.DRAFT_MARK) : "");
+        cell(sheet.createRow(0), 0, title, styles.title);
         cell(sheet.createRow(1), 0, asOfLine(), styles.subtitle);
+        if (comparison != null) {
+            cell(sheet.createRow(2), 0, comparedLine(), styles.subtitle);
+        }
+    }
+
+    private String comparedLine() {
+        return text.format(Key.COMPARED_WITH, comparison.name(), comparison.code(), text.date(comparison.asOf()));
+    }
+
+    // ---------- Commentary (RM-FR-31, RM-FR-40) ----------
+
+    /** The participant's four sections and goal notes; empty sections are left out. */
+    private void commentarySheet() {
+        Sheet sheet = workbook.createSheet(text.get(Key.COMMENTARY_SHEET));
+        titleRows(sheet);
+        int index = HEADER_ROW;
+        index = section(sheet, index, Key.HIGHLIGHTS, extras.highlights());
+        index = section(sheet, index, Key.RISKS, extras.risks());
+        index = section(sheet, index, Key.DECISIONS_NEEDED, extras.nothingNeeded() ? text.get(Key.NOTHING_NEEDED) : extras.decisionsNeeded());
+        index = section(sheet, index, Key.NEXT_FOCUS, extras.nextFocus());
+        if (!extras.goalNotes().isEmpty()) {
+            List<List<Object>> notes = new ArrayList<>();
+            for (ManagementReportResponse.GoalHealthRow goal : summary.goals()) {
+                String note = extras.goalNotes().get(goal.goalId());
+                if (note != null && !note.isBlank()) {
+                    notes.add(List.of(goal.goalTitle(), note.strip()));
+                }
+            }
+            if (!notes.isEmpty()) {
+                cell(sheet.createRow(index), 0, text.get(Key.GOAL_NOTES), styles.boldText);
+                table(sheet, index + 1, List.of(text.get(Key.GOAL), text.get(Key.NOTE)), notes);
+            }
+        }
+        sheet.setColumnWidth(0, WIDE_TEXT_WIDTH * 256);
+        sheet.setColumnWidth(1, (WIDE_TEXT_WIDTH + 20) * 256);
+        printSetup(sheet, -1);
+    }
+
+    /** A bold heading and one row per line of text; returns the next free row (after a blank one). */
+    private int section(Sheet sheet, int start, Key heading, String body) {
+        if (body.isEmpty()) {
+            return start;
+        }
+        int index = start;
+        cell(sheet.createRow(index++), 0, text.get(heading), styles.header);
+        for (String line : body.split("\\R")) {
+            if (!line.isBlank()) {
+                cell(sheet.createRow(index++), 0, line.strip(), styles.wrap);
+            }
+        }
+        return index + 1;
+    }
+
+    // ---------- Changes (RM-FR-34, RM-FR-35, RM-FR-40) ----------
+
+    private void changesSheet() {
+        Sheet sheet = workbook.createSheet(text.get(Key.CHANGES_SHEET));
+        titleRows(sheet);
+        List<List<Object>> lines = new ArrayList<>();
+        for (ManagementReportResponse.ChangeItem change : comparison.changes()) {
+            lines.add(List.of(text.changeKind(change.kind()), change.title() + (change.renamed() ? " " + text.get(Key.RENAMED) : ""),
+                    change.context() == null ? "" : change.context(), text.changeValue(change.kind(), change.before()),
+                    text.changeValue(change.kind(), change.after())));
+        }
+        List<String> headers = List.of(text.get(Key.CHANGE), text.get(Key.ITEM), text.get(Key.WHERE), text.get(Key.BEFORE), text.get(Key.NOW));
+        int row;
+        if (lines.isEmpty()) {
+            Row header = sheet.createRow(HEADER_ROW);
+            for (int column = 0; column < headers.size(); column++) {
+                cell(header, column, headers.get(column), styles.header);
+            }
+            cell(sheet.createRow(HEADER_ROW + 1), 0, text.get(Key.NO_CHANGES), styles.text);
+            row = HEADER_ROW + 2;
+        } else {
+            row = table(sheet, HEADER_ROW, headers, lines);
+        }
+        List<List<Object>> goals = new ArrayList<>();
+        for (ManagementReportResponse.GoalHealthRow goal : summary.goals()) {
+            String change = text.goalChange(comparison.goal(goal.goalId()), goal);
+            if (!change.isEmpty()) {
+                goals.add(List.of(goal.goalTitle(), change));
+            }
+        }
+        for (ManagementReportResponse.RemovedGoal removed : comparison.removed()) {
+            String reason = text.removedReason(removed.reason());
+            goals.add(List.of(removed.title(), text.get(Key.NO_LONGER_IN_REPORT) + (reason.isEmpty() ? "" : " · " + reason)));
+        }
+        if (!goals.isEmpty()) {
+            cell(sheet.createRow(row + 1), 0, text.get(Key.GOAL_CHANGES), styles.boldText);
+            table(sheet, row + 2, List.of(text.get(Key.GOAL), text.get(Key.CHANGE)), goals);
+        }
+        sheet.createFreezePane(0, HEADER_ROW + 1);
+        for (int column = 0; column < headers.size(); column++) {
+            sheet.autoSizeColumn(column);
+            capWidth(sheet, column, column == 1 || column == 2 ? WIDE_TEXT_WIDTH : TEXT_WIDTH);
+        }
+        printSetup(sheet, HEADER_ROW);
     }
 
     // ---------- Summary (MR-FR-20) ----------
@@ -103,15 +227,29 @@ public final class ManagementReportExcelWriter {
         titleRows(sheet);
         ManagementReportResponse.Headline headline = summary.headline();
         int row = HEADER_ROW;
-        row = table(sheet, row, List.of(text.get(Key.HEADLINE), text.get(Key.VALUE)), List.of(
-                List.of(text.get(Key.OVERALL_PROGRESS), headline.overallProgress()),
-                List.of(text.get(Key.GOALS_IN_SCOPE), (long) summary.goals().size()),
-                List.of(text.get(Key.TOTAL_TASKS), headline.totalTasks()),
-                List.of(text.get(Key.COMPLETED_TASKS), headline.completedTasks()),
-                List.of(text.get(Key.OVERDUE_TASKS), headline.overdueTasks()),
-                List.of(text.get(Key.BLOCKED_TASKS), headline.blockedTasks()),
-                List.of(text.get(Key.OPEN_BLOCKERS), headline.openBlockers()),
-                List.of(text.get(Key.DUE_SOON), headline.dueSoonTasks())));
+        List<List<Object>> headlineRows = new ArrayList<>(List.of(
+                new ArrayList<>(List.of(text.get(Key.OVERALL_PROGRESS), headline.overallProgress())),
+                new ArrayList<>(List.of(text.get(Key.GOALS_IN_SCOPE), (long) summary.goals().size())),
+                new ArrayList<>(List.of(text.get(Key.TOTAL_TASKS), headline.totalTasks())),
+                new ArrayList<>(List.of(text.get(Key.COMPLETED_TASKS), headline.completedTasks())),
+                new ArrayList<>(List.of(text.get(Key.OVERDUE_TASKS), headline.overdueTasks())),
+                new ArrayList<>(List.of(text.get(Key.BLOCKED_TASKS), headline.blockedTasks())),
+                new ArrayList<>(List.of(text.get(Key.OPEN_BLOCKERS), headline.openBlockers())),
+                new ArrayList<>(List.of(text.get(Key.DUE_SOON), headline.dueSoonTasks()))));
+        List<String> headlineHeaders = new ArrayList<>(List.of(text.get(Key.HEADLINE), text.get(Key.VALUE)));
+        if (comparison != null) {
+            // RM-FR-33, RM-FR-40: the change since the compared report, as signed text.
+            ManagementReportResponse.HeadlineChange change = comparison.headline();
+            headlineHeaders.add(text.format(Key.CHANGE_SINCE, comparison.code()));
+            List<String> changes = List.of(ReportText.signed(change.overallProgress()), "", ReportText.signed(change.totalTasks()),
+                    ReportText.signed(change.completedTasks()), ReportText.signed(change.overdueTasks()),
+                    ReportText.signed(change.blockedTasks()), ReportText.signed(change.openBlockers()),
+                    ReportText.signed(change.dueSoonTasks()));
+            for (int index = 0; index < headlineRows.size(); index++) {
+                headlineRows.get(index).add(changes.get(index));
+            }
+        }
+        row = table(sheet, row, headlineHeaders, headlineRows);
         // RM-FR-08: what happened in the period, under its dates.
         ManagementReport.PeriodFigures period = report.periodFigures();
         row = table(sheet, row + 1, List.of(text.format(Key.THIS_PERIOD, text.periodDates(report.period())), text.get(Key.VALUE)), List.of(
@@ -120,6 +258,22 @@ public final class ManagementReportExcelWriter {
                 List.of(text.get(Key.PERIOD_BLOCKERS_OPENED), period.blockersOpened()),
                 List.of(text.get(Key.PERIOD_BLOCKERS_CLOSED), period.blockersClosed()),
                 List.of(text.get(Key.PERIOD_BECAME_OVERDUE), period.tasksBecameOverdue())));
+        if (extras.includes(ReportSection.SUMMARY)) {
+            row = breakdownTables(sheet, row, headline);
+        }
+        if (extras.includes(ReportSection.GOAL_HEALTH)) {
+            goalTable(sheet, row);
+        }
+        for (int column = 0; column < 10; column++) {
+            sheet.autoSizeColumn(column);
+            capWidth(sheet, column, WIDE_TEXT_WIDTH);
+        }
+        printSetup(sheet, -1);
+    }
+
+    /** Goals by health, tasks by status and open tasks by priority; returns the next free row. */
+    private int breakdownTables(Sheet sheet, int start, ManagementReportResponse.Headline headline) {
+        int row = start;
         List<List<Object>> health = new ArrayList<>();
         for (ReportRules.Health value : ReportRules.Health.values()) {
             health.add(List.of(text.health(value), headline.goalsByHealth().getOrDefault(value.name(), 0L)));
@@ -131,22 +285,28 @@ public final class ManagementReportExcelWriter {
         List<List<Object>> priorities = new ArrayList<>();
         summary.openTasksByPriority().forEach(count -> priorities.add(List.of(text.priority(Priority.valueOf(count.priority())),
                 count.onTrack(), count.overdue())));
-        row = table(sheet, row + 1, List.of(text.get(Key.OPEN_BY_PRIORITY), text.get(Key.ON_TRACK), text.get(Key.OVERDUE)), priorities);
+        return table(sheet, row + 1, List.of(text.get(Key.OPEN_BY_PRIORITY), text.get(Key.ON_TRACK), text.get(Key.OVERDUE)), priorities);
+    }
+
+    /** RM-FR-01: the goal table with a Why column; RM-FR-34: a Change column when compared. */
+    private void goalTable(Sheet sheet, int row) {
         List<List<Object>> goals = new ArrayList<>();
         for (ManagementReportResponse.GoalHealthRow goal : summary.goals()) {
-            goals.add(List.of(goal.dreamTitle(), goal.goalTitle(), text.health(ReportRules.Health.valueOf(goal.health())), goal.progress(),
-                    goal.targetDate() == null ? "" : goal.targetDate(), goal.overdueTasks(), goal.blockedItems(),
+            List<Object> values = new ArrayList<>(List.of(goal.dreamTitle(), goal.goalTitle(), text.health(ReportRules.Health.valueOf(goal.health())),
+                    goal.progress(), goal.targetDate() == null ? "" : goal.targetDate(), goal.overdueTasks(), goal.blockedItems(),
                     goal.nextAction() == null ? "" : goal.nextAction(), text.reasons(goal.reasons(), "\n")));
+            if (comparison != null) {
+                values.add(text.goalChange(comparison.goal(goal.goalId()), goal));
+            }
+            goals.add(values);
         }
-        // RM-FR-01: a Why column with the rules that set each goal's health.
-        table(sheet, row + 1, List.of(text.get(Key.DREAM), text.get(Key.GOAL), text.get(Key.HEALTH), text.get(Key.PROGRESS),
+        List<String> headers = new ArrayList<>(List.of(text.get(Key.DREAM), text.get(Key.GOAL), text.get(Key.HEALTH), text.get(Key.PROGRESS),
                 text.get(Key.TARGET_DATE), text.get(Key.OVERDUE_TASKS), text.get(Key.BLOCKED_ITEMS), text.get(Key.NEXT_ACTION),
-                text.get(Key.WHY)), goals);
-        for (int column = 0; column < 9; column++) {
-            sheet.autoSizeColumn(column);
-            capWidth(sheet, column, WIDE_TEXT_WIDTH);
+                text.get(Key.WHY)));
+        if (comparison != null) {
+            headers.add(text.get(Key.CHANGE));
         }
-        printSetup(sheet, -1);
+        table(sheet, row + 1, headers, goals);
     }
 
     /** A header row and its rows from {@code start}; returns the next free row. */

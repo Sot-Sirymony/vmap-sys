@@ -1,5 +1,5 @@
 import { apiClient, authorizedFetch, reportSessionEnded } from './apiClient';
-import type { ManagementReport, Priority, ReportHealth, ReportPeriodKind, ReportRow } from '../types/vision';
+import type { ManagementReport, Priority, ReportHealth, ReportPeriodKind, ReportRow, ReportSection } from '../types/vision';
 
 /**
  * V18 MR-FR-03: at most one of areaId and dreamId; neither means all dreams.
@@ -17,6 +17,8 @@ export type ReportFilter = {
   owner?: string;
   healths?: ReportHealth[];
   includeCompleted?: boolean;
+  /** V19 RM-FR-32: a final saved report on the same scope to compare with. */
+  compareTo?: number;
 };
 
 function query(filter: ReportFilter) {
@@ -32,6 +34,7 @@ function query(filter: ReportFilter) {
   if (filter.owner?.trim()) params.set('owner', filter.owner.trim());
   if (filter.healths?.length) params.set('health', filter.healths.join(','));
   if (filter.includeCompleted === false) params.set('includeCompleted', 'false');
+  if (filter.compareTo) params.set('compareTo', String(filter.compareTo));
   const text = params.toString();
   return text ? `?${text}` : '';
 }
@@ -47,8 +50,19 @@ export async function getReportRows(token: string, filter: ReportFilter, languag
   return result.rows;
 }
 
-/** V18 MR-FR-31: the deck's title (default "Progress report") and whether the title slide names the participant. */
-export type DeckOptions = { title?: string; includeName?: boolean };
+/**
+ * V18 MR-FR-31: the deck's title (default "Progress report") and whether the title slide names the participant.
+ * V19 RM-FR-39: the sections to include in either file; left out means the default (all, or a saved report's choice).
+ */
+export type DeckOptions = { title?: string; includeName?: boolean; sections?: ReportSection[] };
+
+/** The query string a file download adds: the deck options for a deck, and the sections for both. */
+export function fileOptions(format: ReportFormat, options: DeckOptions) {
+  const deck = format === 'pptx'
+    ? `${options.title?.trim() ? `&title=${encodeURIComponent(options.title.trim())}` : ''}${options.includeName === false ? '&includeName=false' : ''}`
+    : '';
+  return `${deck}${options.sections?.length ? `&sections=${options.sections.join(',')}` : ''}`;
+}
 
 /** V18 MR-FR-15, MR-FR-23: the report's files. */
 export type ReportFormat = 'xlsx' | 'pptx';
@@ -66,10 +80,8 @@ export async function downloadManagementReport(
   deck: DeckOptions = {},
 ) {
   const separator = query(filter) ? '&' : '?';
-  const extra = format === 'pptx'
-    ? `${deck.title?.trim() ? `&title=${encodeURIComponent(deck.title.trim())}` : ''}${deck.includeName === false ? '&includeName=false' : ''}`
-    : '';
-  return fetchReportFile(`/reports/management.${format}${query(filter)}${separator}language=${language}${extra}`, token, format);
+  return fetchReportFile(`/reports/management.${format}${query(filter)}${separator}language=${language}${fileOptions(format, deck)}`,
+    token, format);
 }
 
 /**

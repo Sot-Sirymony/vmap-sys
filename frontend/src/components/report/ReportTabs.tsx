@@ -6,7 +6,7 @@ import Tabs from '@mui/material/Tabs';
 import { FileBarChart } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import type { DeckOptions, ReportFilter, ReportFormat } from '../../api/reportApi';
-import type { ManagementReport, ReportRow } from '../../types/vision';
+import type { ManagementReport, ReportRow, ReportSection } from '../../types/vision';
 import { Button } from '../common/Button';
 import { EmptyState } from '../common/EmptyState';
 import { ReportDetailsTab } from './ReportDetailsTab';
@@ -25,7 +25,10 @@ export function reportTabFrom(value: string | null): ReportTab {
  * shared by the live report and saved reports. The Summary can show content
  * above it, such as a saved report's commentary.
  */
-export function ReportTabs({ report, filter, tab, onTabChange, loadRows, reloadKey, token, download, exportNote, aboveSummary }: Readonly<{
+export function ReportTabs({
+  report, filter, tab, onTabChange, loadRows, reloadKey, token, download, exportNote, aboveSummary, comparisonHint, sections,
+  onSectionsChange, defaultLanguage,
+}: Readonly<{
   report: ManagementReport | null;
   filter: ReportFilter;
   tab: ReportTab;
@@ -36,6 +39,12 @@ export function ReportTabs({ report, filter, tab, onTabChange, loadRows, reloadK
   download?: (format: ReportFormat, language: string, deck: DeckOptions) => Promise<{ blob: Blob; fileName: string }>;
   exportNote?: string;
   aboveSummary?: ReactNode;
+  /** V19 RM-FR-36: shown on the Summary when there is no comparison. */
+  comparisonHint?: string;
+  /** V19 RM-FR-39, RM-FR-44: the Export tab's remembered sections and starting file language. */
+  sections?: ReportSection[];
+  onSectionsChange?: (sections: ReportSection[]) => void;
+  defaultLanguage?: string;
 }>) {
   const navigate = useNavigate();
   const empty = report !== null && report.goals.length === 0;
@@ -65,7 +74,9 @@ export function ReportTabs({ report, filter, tab, onTabChange, loadRows, reloadK
           <Stack spacing={2}>
             {aboveSummary}
             {empty && emptyState}
-            {report && !empty && <ReportSummary report={report} filter={filter} />}
+            {report && !empty && (
+              <ReportSummary report={report} filter={filter} onShowDetails={() => onTabChange('details')} comparisonHint={comparisonHint} />
+            )}
           </Stack>
         )}
       </Box>
@@ -76,7 +87,8 @@ export function ReportTabs({ report, filter, tab, onTabChange, loadRows, reloadK
       </Box>
       <Box role="tabpanel" id="report-panel-export" aria-labelledby="report-tab-export" hidden={tab !== 'export'}>
         {tab === 'export' && (
-          <ReportExportTab token={token} filter={filter} download={download} note={exportNote}
+          <ReportExportTab token={token} filter={filter} download={download} note={exportNote} sections={sections}
+            onSectionsChange={onSectionsChange} defaultLanguage={defaultLanguage}
             disabledReason={empty ? tr('Add goals to a dream first; there is nothing to export yet.') : ''} />
         )}
       </Box>

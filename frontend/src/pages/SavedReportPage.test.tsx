@@ -36,7 +36,7 @@ const saved = (overrides: Partial<SavedReport> = {}): SavedReport => ({
   scopeLabel: 'Publish a study', periodKind: 'THIS_MONTH', periodFrom: null, periodTo: null,
   filters: { priorities: [], owner: null, healths: [], includeCompleted: true },
   commentary: { highlights: null, risks: '- Venue may cancel', decisionsNeeded: null, nothingNeeded: false, nextFocus: null, goalNotes: {} },
-  language: 'en', compareToReportId: null, finalizedAt: null, createdAt: '2026-11-17T08:00:00Z', updatedAt: '2026-11-17T08:00:00Z',
+  language: 'en', compareToReportId: null, sections: [], finalizedAt: null, createdAt: '2026-11-17T08:00:00Z', updatedAt: '2026-11-17T08:00:00Z',
   verified: null, report: summary, ...overrides,
 });
 
@@ -48,6 +48,7 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(savedReportApi.getSavedReport).mockResolvedValue(saved());
+    vi.mocked(savedReportApi.listSavedReports).mockResolvedValue([]);
     vi.mocked(dreamApi.listDreams).mockResolvedValue([{ id: 7, title: 'Publish a study', archived: false }] as never);
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue([]);
     vi.mocked(savedReportApi.saveReportCommentary).mockImplementation(async (_token, _id, commentary) => saved({ commentary }));
@@ -127,6 +128,44 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete draft' }));
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete draft' }));
     await waitFor(() => expect(currentLocation()).toBe('/vision-map/reports'));
+  });
+
+  it('rmFr32: picks the report a draft is compared with, and drops it for a new scope; says how to get one (RM-FR-36)', async () => {
+    vi.mocked(savedReportApi.listSavedReports).mockResolvedValue([
+      saved({ id: 1, code: 'R-001', name: 'September', status: 'FINAL', finalizedAt: '2026-09-30T09:00:00Z' }),
+      saved({ id: 2, code: 'R-002', name: 'October', status: 'FINAL', finalizedAt: '2026-10-31T09:00:00Z' }),
+      saved({ id: 3, code: 'R-003', name: 'Itself', status: 'FINAL' }),
+      saved({ id: 4, code: 'R-004', name: 'All dreams', status: 'FINAL', scopeKind: 'ALL', dreamId: null }),
+    ]);
+    vi.mocked(savedReportApi.updateSavedReport).mockResolvedValue(saved({ compareToReportId: 1 }));
+    open();
+    expect(await screen.findByText('Finalise this report to compare the next one with it.')).toBeInTheDocument();
+    const picker = await screen.findByRole('combobox', { name: 'Compare with' });
+    await waitFor(() => expect(within(picker).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'The latest final report', 'October (R-002, Oct 31, 2026)', 'September (R-001, Sep 30, 2026)']));
+    await userEvent.selectOptions(picker, '1');
+    await waitFor(() => expect(savedReportApi.updateSavedReport).toHaveBeenCalledWith('token', 3,
+      expect.objectContaining({ dreamId: 7, compareToReportId: 1 })));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Compare with' })).toHaveValue('1'));
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Report on' }));
+    await userEvent.click(screen.getByRole('option', { name: 'All dreams' }));
+    await waitFor(() => expect(savedReportApi.updateSavedReport).toHaveBeenLastCalledWith('token', 3,
+      expect.objectContaining({ compareToReportId: null })));
+  });
+
+  it('rmFr39: remembers the sections chosen for the files, and starts a final report in its own language (RM-FR-44)', async () => {
+    vi.mocked(savedReportApi.getSavedReport).mockResolvedValue(saved({ status: 'FINAL', finalizedAt: '2026-11-17T09:00:00Z',
+      language: 'km', sections: ['SUMMARY', 'DETAILS'] }));
+    vi.mocked(savedReportApi.saveReportSections).mockResolvedValue(saved());
+    renderPage(<SavedReportPage />, { route: '/vision-map/reports/3?tab=export', path: '/vision-map/reports/:id' });
+    const include = await screen.findByRole('region', { name: 'What the files include' });
+    expect(within(include).getByRole('combobox', { name: 'File language' })).toHaveValue('km');
+    expect(within(include).getByRole('checkbox', { name: 'Summary' })).toBeChecked();
+    expect(within(include).getByRole('checkbox', { name: 'Blockers' })).not.toBeChecked();
+    await userEvent.click(within(include).getByRole('checkbox', { name: 'Blockers' }));
+    expect(savedReportApi.saveReportSections).toHaveBeenCalledWith('token', 3, ['SUMMARY', 'DETAILS', 'BLOCKERS']);
+    expect(screen.getByText(/These files show the figures frozen on/)).toBeInTheDocument();
   });
 
   it('opens the new report made from this one (RM-FR-21)', async () => {

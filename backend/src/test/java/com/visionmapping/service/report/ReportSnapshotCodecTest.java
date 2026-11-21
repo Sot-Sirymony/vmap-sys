@@ -85,6 +85,8 @@ class ReportSnapshotCodecTest {
         assertThat(decoded.snapshot().report().goals().get(0).assessment().health()).isEqualTo(ReportRules.Health.RED);
         assertThat(decoded.snapshot().summary().headline().overallProgress()).isEqualByComparingTo("40.0");
         assertThat(decoded.snapshot().report().filters().priorities()).containsExactly(Priority.HIGH);
+        // Phase 3 added the comparison; a version 1 snapshot simply has none.
+        assertThat(decoded.snapshot().summary().comparison()).isNull();
     }
 
     /** A small report with every kind of value the model holds. */
@@ -106,7 +108,7 @@ class ReportSnapshotCodecTest {
                 new ManagementReportResponse.PeriodFigures(2, new BigDecimal("12.5"), 1, 0, 1),
                 new ManagementReportResponse.Headline(new BigDecimal("40.0"), Map.of("RED", 1L), 1, 0, 1, 1, 1, 0),
                 Map.of("BLOCKED", 1L), List.of(), Map.of("MONEY", 1L), 0, List.of(), List.of(), List.of(),
-                new ManagementReportResponse.Filters(List.of("HIGH"), null, List.of(), true), List.of("Dara"));
+                new ManagementReportResponse.Filters(List.of("HIGH"), null, List.of(), true), List.of("Dara"), null);
         return new Snapshot(report, summary);
     }
 }

@@ -2,6 +2,8 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.SavedReportCommentaryRequest;
 import com.visionmapping.dto.request.SavedReportRequest;
+import com.visionmapping.dto.request.SavedReportSectionsRequest;
+import com.visionmapping.service.report.ReportSection;
 import com.visionmapping.dto.response.CommentaryDraftResponse;
 import com.visionmapping.dto.response.ReportRowsResponse;
 import com.visionmapping.dto.response.SavedReportResponse;
@@ -73,6 +75,12 @@ public class SavedReportController {
         return service.updateCommentary(id, request);
     }
 
+    /** RM-FR-39: the sections the report's files include, remembered for the next download; allowed on a final report. */
+    @PutMapping("/{id}/sections")
+    public SavedReportResponse updateSections(@PathVariable Long id, @Valid @RequestBody SavedReportSectionsRequest request) {
+        return service.updateSections(id, request.sections());
+    }
+
     @PostMapping("/{id}/commentary-draft")
     public CommentaryDraftResponse commentaryDraft(@PathVariable Long id,
                                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
@@ -116,17 +124,20 @@ public class SavedReportController {
 
     @GetMapping("/{id}.xlsx")
     public ResponseEntity<ByteArrayResource> excel(@PathVariable Long id,
-                                                   @RequestParam(required = false) @Pattern(regexp = "en|km") String language) {
+                                                   @RequestParam(required = false) @Pattern(regexp = "en|km") String language,
+                                                   @RequestParam(required = false) List<ReportSection> sections) {
         rateLimiter.check(RequestRateLimiter.Action.REPORT_EXPORT, "user:" + userScope.currentUser().getId());
-        return ManagementReportController.download(service.excel(id, language), ManagementReportController.XLSX);
+        return ManagementReportController.download(service.excel(id, language, sections), ManagementReportController.XLSX);
     }
 
     @GetMapping("/{id}.pptx")
     public ResponseEntity<ByteArrayResource> deck(@PathVariable Long id,
                                                   @RequestParam(required = false) @Pattern(regexp = "en|km") String language,
                                                   @RequestParam(required = false) @Size(max = 80) String title,
-                                                  @RequestParam(defaultValue = "true") boolean includeName) {
+                                                  @RequestParam(defaultValue = "true") boolean includeName,
+                                                  @RequestParam(required = false) List<ReportSection> sections) {
         rateLimiter.check(RequestRateLimiter.Action.REPORT_EXPORT, "user:" + userScope.currentUser().getId());
-        return ManagementReportController.download(service.deck(id, language, title, includeName), ManagementReportController.PPTX);
+        return ManagementReportController.download(service.deck(id, language, title, includeName, sections),
+                ManagementReportController.PPTX);
     }
 }

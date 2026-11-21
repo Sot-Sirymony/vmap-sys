@@ -1,4 +1,6 @@
-import type { ManagementReport, ReportAttentionKind, ReportHealth, ReportHealthReason, ReportPeriodKind } from '../types/vision';
+import type {
+  ManagementReport, ReportAttentionKind, ReportChangeKind, ReportComparison, ReportHealth, ReportHealthReason, ReportPeriodKind, ReportSection,
+} from '../types/vision';
 import type { ReportFilter } from '../api/reportApi';
 import { tr } from '../i18n/translate';
 import { formatDate } from '../i18n/formatDate';
@@ -145,6 +147,8 @@ export function filterFromSearch(params: URLSearchParams): ReportFilter {
   const healths = (params.get('health') ?? '').split(',').filter((value) => value in HEALTH_LABELS) as ReportHealth[];
   if (healths.length) filter.healths = healths;
   if (params.get('completed') === '0') filter.includeCompleted = false;
+  const compareTo = Number(params.get('compareTo'));
+  if (compareTo > 0) filter.compareTo = compareTo;
   return filter;
 }
 
@@ -161,5 +165,89 @@ export function filterToSearch(filter: ReportFilter): Record<string, string> {
     owner: filter.owner ?? '',
     health: filter.healths?.join(',') ?? '',
     completed: filter.includeCompleted === false ? '0' : '',
+    compareTo: filter.compareTo ? String(filter.compareTo) : '',
   };
+}
+
+// ---------- V19 phase 3: comparison and sections ----------
+
+/** RM-FR-35: the kind of one What changed line. */
+export const CHANGE_LABELS: Record<ReportChangeKind, string> = {
+  GOAL_WORSE: 'Health got worse',
+  DUE_LATER: 'Date moved later',
+  NEW_BLOCKER: 'New blocker',
+  BLOCKER_CLOSED: 'Blocker no longer open',
+  GOAL_BETTER: 'Health got better',
+  TASK_COMPLETED: 'Task completed',
+};
+
+/** RM-FR-34: why a goal left the report. */
+export const REMOVED_REASON_LABELS: Record<NonNullable<ReportComparison['removed'][number]['reason']>, string> = {
+  COMPLETED_ARCHIVED: 'Completed and archived',
+  ARCHIVED: 'Archived',
+  MOVED: 'Moved to another dream',
+};
+
+/** RM-FR-39: the file sections, in the order they are offered. */
+export const SECTION_LABELS: Record<ReportSection, string> = {
+  COMMENTARY: 'Commentary',
+  SUMMARY: 'Summary',
+  GOAL_HEALTH: 'Goal health',
+  DETAILS: 'Details / Report rows',
+  BLOCKERS: 'Blockers',
+  CHANGES: 'What changed',
+  NEXT_ACTIONS: 'Next actions',
+  SUPPORT: 'Decisions and support',
+};
+
+export const ALL_SECTIONS = Object.keys(SECTION_LABELS) as ReportSection[];
+
+/** RM-FR-33: "+12", "−2" (a true minus sign) or "0", to at most one decimal place. */
+export function signed(value: number) {
+  const rounded = Math.round(value * 10) / 10;
+  if (rounded > 0) return `+${rounded}`;
+  if (rounded < 0) return `−${Math.abs(rounded)}`;
+  return '0';
+}
+
+/**
+ * RM-FR-33, RM-NFR-09: a headline change in words for screen readers. For
+ * progress and completed tasks up is good; for overdue, blocked and blockers
+ * fewer is good, so the words say "fewer" or "more" rather than up or down.
+ */
+export function changeWords(kind: 'progress' | 'count', value: number, noun: string) {
+  const amount = Math.abs(Math.round(value * 10) / 10);
+  if (amount === 0) return tr('no change since the compared report');
+  if (kind === 'progress') {
+    return value > 0 ? tr('up {count} points', { count: amount }) : tr('down {count} points', { count: amount });
+  }
+  return value > 0 ? tr('{count} more {noun}', { count: amount, noun }) : tr('{count} fewer {noun}', { count: amount, noun });
+}
+
+/** RM-FR-35: a change's before or after value in words: a health, a date or a severity. */
+export function changeValue(kind: ReportChangeKind, value?: string | null) {
+  if (!value) return '';
+  if (kind === 'GOAL_WORSE' || kind === 'GOAL_BETTER') return tr(HEALTH_LABELS[value as ReportHealth] ?? value);
+  if (kind === 'DUE_LATER') return reportDate(value);
+  if (kind === 'NEW_BLOCKER') return tr(value.charAt(0) + value.slice(1).toLowerCase());
+  return value;
+}
+
+/**
+ * RM-FR-34: one goal's change: "At risk → On track · +12 points · Target 10
+ * Jan → 24 Jan · (renamed)", "New", or '' when nothing changed.
+ */
+export function goalChangeText(change: ReportComparison['goals'][number] | undefined, row: ManagementReport['goals'][number]) {
+  if (!change) return '';
+  if (change.isNew) return tr('New');
+  const parts: string[] = [];
+  if (change.healthBefore && change.healthBefore !== row.health) {
+    parts.push(`${tr(HEALTH_LABELS[change.healthBefore])} → ${tr(HEALTH_LABELS[row.health])}`);
+  }
+  if (change.progressChange) parts.push(tr('{points} points', { points: signed(Number(change.progressChange)) }));
+  if (change.targetBefore) {
+    parts.push(tr('Target {from} → {to}', { from: reportDate(change.targetBefore), to: row.targetDate ? reportDate(row.targetDate) : '—' }));
+  }
+  if (change.previousTitle) parts.push(tr('(renamed)'));
+  return parts.join(' · ');
 }

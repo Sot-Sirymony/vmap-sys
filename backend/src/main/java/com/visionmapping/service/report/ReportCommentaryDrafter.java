@@ -23,7 +23,8 @@ import java.util.stream.Stream;
  * a bullet. A section with nothing to say is empty.
  *
  * <ul>
- *   <li>Highlights: tasks completed in the period, by goal, and goals done.</li>
+ *   <li>Highlights: tasks completed in the period, by goal, goals that moved
+ *       to On track since the compared report (phase 3), and goals done.</li>
  *   <li>Risks and issues: goals off track with their reasons, then open
  *       Critical and High blockers.</li>
  *   <li>Decisions and support: open Decision, Money and Partner blockers, then
@@ -46,10 +47,17 @@ public final class ReportCommentaryDrafter {
     }
 
     public static Draft draft(ManagementReport report, ReportText text) {
-        return new Draft(highlights(report, text), risks(report, text), support(report, text), focus(report, text));
+        return draft(report, text, null);
     }
 
-    private static String highlights(ManagementReport report, ReportText text) {
+    /** With a comparison, Highlights also names the goals that moved to On track since it. */
+    public static Draft draft(ManagementReport report, ReportText text,
+                              @org.springframework.lang.Nullable com.visionmapping.dto.response.ManagementReportResponse.Comparison comparison) {
+        return new Draft(highlights(report, text, comparison), risks(report, text), support(report, text), focus(report, text));
+    }
+
+    private static String highlights(ManagementReport report, ReportText text,
+                                     @org.springframework.lang.Nullable com.visionmapping.dto.response.ManagementReportResponse.Comparison comparison) {
         List<String> lines = new ArrayList<>();
         for (GoalNode goal : report.goals()) {
             List<String> done = goal.tasks().map(TaskNode::task)
@@ -58,6 +66,15 @@ public final class ReportCommentaryDrafter {
             if (!done.isEmpty()) {
                 String titles = String.join(", ", done.stream().limit(MAX_TITLES).toList()) + (done.size() > MAX_TITLES ? ", …" : "");
                 lines.add(text.format(ReportText.Key.DRAFT_COMPLETED_TASKS, goal.goal().title(), done.size(), titles));
+            }
+        }
+        if (comparison != null) {
+            for (GoalNode goal : report.goals()) {
+                var change = comparison.goal(goal.goal().id());
+                if (health(goal, report) == Health.GREEN && change != null && change.healthBefore() != null
+                        && Health.valueOf(change.healthBefore()).compareTo(Health.GREEN) < 0) {
+                    lines.add(text.format(ReportText.Key.DRAFT_GOAL_ON_TRACK, goal.goal().title()));
+                }
             }
         }
         for (GoalNode goal : report.goals()) {

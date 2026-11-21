@@ -66,10 +66,28 @@ requirement; it is internal quality and UX work.
 
 ---
 
-## [19.0.0] — Phases 1 and 2 of 5 built
+## [19.0.0] — Phases 1 to 3 of 5 built
 
-Implements phases 1 and 2 of [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations
-`V79__obstacle_resolved_at.sql` and `V80__management_reports.sql`.
+Implements phases 1 to 3 of [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations
+`V79__obstacle_resolved_at.sql` and `V80__management_reports.sql` (phase 3 needs none).
+
+### Added in phase 3
+- **Compare and What changed (RM-FR-32 to RM-FR-37).** A report is compared with an earlier final report on the same
+  scope: by default a draft uses the latest one, and both drafts and the live report can pick one. Each headline tile
+  shows its change ("+12", with "up 12 points" for screen readers); the goal health table gains a Change column ("At
+  risk → On track · +12 points · Target 10 Jan → 24 Jan"); a **What changed** card lists, most important first, goals
+  that got worse, dates moved later, new Critical and High blockers, blockers closed, goals that got better and tasks
+  completed, and the goals no longer in the report with why. Items are matched by id, so a renamed item is still the
+  same item. Finalise freezes the comparison with the figures.
+- **Files (RM-FR-39 to RM-FR-41, RM-FR-43, RM-FR-44).** Excel gains a Commentary sheet and a Changes sheet; the deck
+  gains a Highlights slide, a What changed slide and the participant's own words on the support slide, with goal
+  notes in the speaker notes. Draft files are marked **DRAFT**. The Export tab chooses which sections go in the files
+  (remembered per saved report) and the file language.
+- **Suggest a draft** now lists goals that moved to On track since the compared report.
+
+### Fixed in phase 3
+- On a saved draft, choosing a report to compare with no longer resets itself because an empty area was read as a
+  change of scope.
 
 ### Added in phase 2
 - **Filters (RM-FR-10 to RM-FR-12).** Priority, owner, goal health and "Include completed goals" below the scope and
