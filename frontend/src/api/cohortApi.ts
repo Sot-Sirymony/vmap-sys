@@ -4,10 +4,12 @@ import type { AssistantPage,
   CoachCommentTarget,
   CoachParticipant,
   CoachParticipantDetail,
+  CoachSharedReportSummary,
   Cohort,
   CohortMember,
   MyCohort,
   PitchReview,
+  SharedReport,
 } from '../types/vision';
 
 // V9: the participant's own cohort (D-7, D-8).
@@ -44,6 +46,16 @@ export function listCoachParticipants(token: string) {
 
 export function getCoachParticipant(token: string, userId: number) {
   return apiClient<CoachParticipantDetail>(`/coach/participants/${userId}`, { token });
+}
+
+/** V19 RM-FR-50: the final reports this participant shared with the coach. */
+export function listCoachSharedReports(token: string, userId: number) {
+  return apiClient<CoachSharedReportSummary[]>(`/coach/participants/${userId}/reports`, { token });
+}
+
+/** V19 RM-FR-50: one shared report, read-only, with only the shared sections. */
+export function getCoachSharedReport(token: string, userId: number, reportId: number) {
+  return apiClient<SharedReport>(`/coach/participants/${userId}/reports/${reportId}`, { token });
 }
 
 export function addCoachComment(token: string, userId: number, targetType: CoachCommentTarget, targetId: number | null, body: string) {

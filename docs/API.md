@@ -575,6 +575,23 @@ V19 phase 2, filters, Details rows and saved reports (BRD 19.0.0, RM-FR-10 to RM
   characters a section. Logged as `REPORT_DRAFT`. Another user's report
   answers 404 and a final report 409, both before any AI check; any other
   `mode` is 400.
+- `GET`, `PUT`, `DELETE /reports/saved/{id}/coach-share` (V19 phase 5,
+  RM-FR-50, D-19-3): `{ "available", "coachName", "shared", "sections",
+  "sharedAt" }`. `available` is false outside an active cohort with a coach.
+  `PUT { "sections": [...] }` shares the report with the coach of the
+  participant's active cohort, or changes the sections (default
+  `COMMENTARY`, `GOAL_HEALTH`, `CHANGES`): 400 without a coach, 409 for a
+  draft, an archived report or one that fails its check. `DELETE` stops
+  sharing at once. Archiving the report, leaving the cohort or joining
+  another also stops it.
+- `GET /coach/participants/{id}/reports` (coach or admin): the final reports
+  this participant shared with the current coach, newest first: `{ reportId,
+  code, name, scopeLabel, periodKind, periodFrom, periodTo, finalizedAt,
+  sharedAt }`. `GET /coach/participants/{id}/reports/{reportId}`: the same
+  read-only view as `GET /api/public/reports/{token}`, with `expiresAt` null.
+  Both follow the V9 D-6 check; a participant outside the coach's active
+  cohorts, or a report not shared with this coach, archived or unverified,
+  answers 404. Logged as a coach view of the participant.
 - `GET /reports/saved/reminder` (V19 phase 5, RM-FR-49): `{ "due",
   "cadence": "NONE|WEEKLY|MONTHLY", "dueOn", "latestFinalId",
   "latestFinalName" }`. `dueOn` is the latest reminder day on or before today

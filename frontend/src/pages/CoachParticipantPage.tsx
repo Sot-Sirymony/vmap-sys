@@ -15,6 +15,7 @@ import { addCoachComment, getCoachParticipant, ratePitch } from '../api/cohortAp
 import { draftCoachFeedback } from '../api/aiCoachApi';
 import { ParticipantSummaryCard } from '../components/ai/CoachSummaryCards';
 import { WhenAiOn } from '../components/ai/WhenAiOn';
+import { CoachSharedReportsCard } from '../components/report/CoachSharedReportsCard';
 import { useI18n } from '../i18n/I18nContext';
 import { Breadcrumbs } from '../components/common/Breadcrumbs';
 import { Button } from '../components/common/Button';
@@ -79,6 +80,7 @@ export function CoachParticipantPage() {
               <ParticipantSummaryCard token={token} userId={userId} aiConsent={detail.summary.aiConsent} />
             </WhenAiOn>
           )}
+          {token && <CoachSharedReportsCard token={token} userId={userId} />}
           <PlanCard detail={detail} />
           <JournalsCard detail={detail} />
           <PitchCard detail={detail} token={token} userId={userId} onRated={() => void load()} />

@@ -66,6 +66,7 @@ public class AccountService {
             // dreams (ON DELETE SET NULL) and each other, so first.
             "report_exports",
             "report_share_links",
+            "report_coach_shares",
             "management_reports",
             "plan_builder_drafts",
             "client_error_logs",

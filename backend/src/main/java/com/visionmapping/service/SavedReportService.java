@@ -15,6 +15,7 @@ import com.visionmapping.dto.response.ReportExportResponse;
 import com.visionmapping.entity.ReportExport;
 import com.visionmapping.entity.SavedReport;
 import com.visionmapping.repository.ReportExportRepository;
+import com.visionmapping.repository.ReportCoachShareRepository;
 import com.visionmapping.repository.ReportShareLinkRepository;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
@@ -86,6 +87,7 @@ public class SavedReportService {
     private final SavedReportRepository repository;
     private final ReportExportRepository exports;
     private final ReportShareLinkRepository shareLinks;
+    private final ReportCoachShareRepository coachShares;
     private final ManagementReportService reports;
     private final EntityLookup lookup;
     private final ObjectMapper mapper;
@@ -93,10 +95,12 @@ public class SavedReportService {
     private final Clock clock;
 
     public SavedReportService(SavedReportRepository repository, ReportExportRepository exports, ReportShareLinkRepository shareLinks,
+                              ReportCoachShareRepository coachShares,
                               ManagementReportService reports, EntityLookup lookup, ObjectMapper mapper, Clock clock) {
         this.repository = repository;
         this.exports = exports;
         this.shareLinks = shareLinks;
+        this.coachShares = coachShares;
         this.reports = reports;
         this.lookup = lookup;
         this.mapper = mapper;
@@ -429,7 +433,7 @@ public class SavedReportService {
         return toResponse(report, null, null);
     }
 
-    /** RM-FR-22 (business rule 12); RM-FR-51: archiving stops the report's open share links. */
+    /** RM-FR-22 (business rule 12); RM-FR-51: archiving stops the report's open share links and its coach share. */
     public SavedReportResponse archive(Long id, boolean archived) {
         SavedReport report = owned(id);
         report.setArchived(archived);
@@ -438,6 +442,7 @@ public class SavedReportService {
             shareLinks.findByReport_IdAndUser_IdOrderByCreatedAtDescIdDesc(report.getId(), lookup.userId()).stream()
                     .filter(link -> link.isOpenAt(now))
                     .forEach(link -> link.setRevokedAt(now));
+            coachShares.deleteByReportId(report.getId());
         }
         return toResponse(report, null, null);
     }

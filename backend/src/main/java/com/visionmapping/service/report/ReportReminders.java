@@ -35,7 +35,8 @@ public final class ReportReminders {
 
     public static LocalDate lastWorkingDay(YearMonth month) {
         LocalDate day = month.atEndOfMonth();
-        while (day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY) {
+        // Saturday is 6 and Sunday 7 (ISO day numbers).
+        while (day.getDayOfWeek().getValue() > DayOfWeek.FRIDAY.getValue()) {
             day = day.minusDays(1);
         }
         return day;

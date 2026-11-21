@@ -6,7 +6,10 @@ import com.visionmapping.dto.response.CoachCommentResponse;
 import com.visionmapping.dto.response.CoachParticipantDetailResponse;
 import com.visionmapping.dto.response.CoachParticipantResponse;
 import com.visionmapping.dto.response.PitchReviewResponse;
+import com.visionmapping.dto.response.CoachSharedReportResponse;
+import com.visionmapping.dto.response.SharedReportResponse;
 import com.visionmapping.service.CoachService;
+import com.visionmapping.service.ReportCoachShareService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class CoachController {
 
     private final CoachService service;
+    private final ReportCoachShareService reportShares;
+
+    /** V19 RM-FR-50: the final reports this participant shared with the coach. */
+    @GetMapping("/{id}/reports")
+    public List<CoachSharedReportResponse> sharedReports(@PathVariable Long id) {
+        return reportShares.sharedWithMe(id);
+    }
+
+    /** V19 RM-FR-50: one shared report, read-only, with only the shared sections. */
+    @GetMapping("/{id}/reports/{reportId}")
+    public SharedReportResponse sharedReport(@PathVariable Long id, @PathVariable Long reportId) {
+        return reportShares.view(id, reportId);
+    }
 
     @GetMapping
     public List<CoachParticipantResponse> participants() {

@@ -2170,11 +2170,35 @@ export type SharedReport = {
   sharedBy: string;
   language: string;
   finalizedAt?: string | null;
-  expiresAt: string;
+  /** When the share link ends; null for a report shared with a coach (RM-FR-50). */
+  expiresAt?: string | null;
   sections: ReportSection[];
   report: ManagementReport;
   commentary?: SavedReportCommentary | null;
   rows?: ReportRow[] | null;
+};
+
+/** V19 RM-FR-50: whether a final report is shared with the participant's coach. */
+export type CoachShareStatus = {
+  /** False outside an active cohort with a coach. */
+  available: boolean;
+  coachName?: string | null;
+  shared: boolean;
+  sections: ReportSection[];
+  sharedAt?: string | null;
+};
+
+/** V19 RM-FR-50: a report a participant shared with their coach, as the coach's list shows it. */
+export type CoachSharedReportSummary = {
+  reportId: number;
+  code: string;
+  name: string;
+  scopeLabel?: string | null;
+  periodKind: string;
+  periodFrom?: string | null;
+  periodTo?: string | null;
+  finalizedAt?: string | null;
+  sharedAt: string;
 };
 
 /** V19 RM-FR-28: suggested text for the sections still empty; null where there is none. */

@@ -23,6 +23,7 @@ const AccountSettingsPage = lazy(() => import('./pages/AccountSettingsPage').the
 const ModuleContentPage = lazy(() => import('./pages/ModuleContentPage').then((m) => ({ default: m.ModuleContentPage })));
 const CoachPage = lazy(() => import('./pages/CoachPage').then((m) => ({ default: m.CoachPage })));
 const CoachParticipantPage = lazy(() => import('./pages/CoachParticipantPage').then((m) => ({ default: m.CoachParticipantPage })));
+const CoachSharedReportPage = lazy(() => import('./pages/CoachSharedReportPage').then((m) => ({ default: m.CoachSharedReportPage })));
 const CohortsPage = lazy(() => import('./pages/CohortsPage').then((m) => ({ default: m.CohortsPage })));
 const SecurityLogPage = lazy(() => import('./pages/SecurityLogPage').then((m) => ({ default: m.SecurityLogPage })));
 const InterfaceTextPage = lazy(() => import('./pages/InterfaceTextPage').then((m) => ({ default: m.InterfaceTextPage })));
@@ -120,6 +121,8 @@ export function App() {
             <Route path="/dream-coach" element={<DreamCoachPage />} />
             <Route path="/coach" element={<CoachPage />} />
             <Route path="/coach/participants/:userId" element={<CoachParticipantPage />} />
+            {/* V19 RM-FR-50 */}
+            <Route path="/coach/participants/:userId/reports/:reportId" element={<CoachSharedReportPage />} />
             <Route path="/settings/account" element={<AccountSettingsPage />} />
             <Route path="/settings/security" element={<SecuritySettingsPage />} />
           </Route>

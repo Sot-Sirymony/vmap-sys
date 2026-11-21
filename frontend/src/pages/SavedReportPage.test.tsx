@@ -56,6 +56,7 @@ describe('SavedReportPage (V19 RM-FR-16 to RM-FR-31)', () => {
     vi.mocked(dreamApi.listDreams).mockResolvedValue([{ id: 7, title: 'Publish a study', archived: false }] as never);
     vi.mocked(visionAreaApi.listVisionAreas).mockResolvedValue([]);
     vi.mocked(aiApi.getAiStatus).mockResolvedValue({ available: false } as never);
+    vi.mocked(savedReportApi.getCoachShare).mockResolvedValue({ available: false, shared: false, sections: [] });
     vi.mocked(savedReportApi.saveReportCommentary).mockImplementation(async (_token, _id, commentary) => saved({ commentary }));
   });
 

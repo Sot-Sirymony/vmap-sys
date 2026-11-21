@@ -8,6 +8,7 @@ import com.visionmapping.entity.Cohort;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.CohortRepository;
+import com.visionmapping.repository.ReportCoachShareRepository;
 import com.visionmapping.service.support.EntityLookup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class CohortService {
     private final EntityLookup lookup;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
+    private final ReportCoachShareRepository reportCoachShares;
 
     @Transactional(readOnly = true)
     public MyCohortResponse mine() {
@@ -30,12 +32,19 @@ public class CohortService {
 
     public MyCohortResponse join(JoinCohortRequest request) {
         AppUser user = lookup.currentUser();
-        user.setCohort(cohortByCode(request.joinCode()));
+        Cohort cohort = cohortByCode(request.joinCode());
+        if (user.getCohort() == null || !user.getCohort().getId().equals(cohort.getId())) {
+            // V19 RM-FR-50: reports shared with the old coach stop being shared.
+            reportCoachShares.deleteByUserId(user.getId());
+        }
+        user.setCohort(cohort);
         return toResponse(appUserRepository.save(user));
     }
 
     public MyCohortResponse leave() {
         AppUser user = lookup.currentUser();
+        // V19 RM-FR-50: leaving the cohort stops sharing reports with its coach.
+        reportCoachShares.deleteByUserId(user.getId());
         user.setCohort(null);
         return toResponse(appUserRepository.save(user));
     }

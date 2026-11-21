@@ -223,6 +223,14 @@ notes. Either way, nothing is saved until you have read and edited it, and a sec
 **Files and sharing.** Download Excel, PowerPoint or PDF from the Export tab. A final report can be shared by a
 read-only link for 7, 30 or 90 days, showing only the sections you tick; you can stop a link at any time.
 
+**Share with my coach.** If you are in a cohort with a coach, a final report has a **Share with my coach** card. Tick
+what your coach may see and confirm; your coach then finds it under **Shared reports** on your page in the coaching
+area. They can read it but never change it, and they never see drafts. **Stop sharing** removes it at once, and so does
+archiving the report or leaving the cohort.
+
+*For coaches:* open a participant from **Coaching**; **Shared reports** lists what they shared with you. Each opens
+read-only, with only the sections they chose.
+
 **Report reminder.** On the reminder card (Dashboard or Account), choose **Remind me to prepare a report**: weekly on a
 weekday you choose, or monthly on the last working day. On that day a notice appears on the Dashboard and the Saved
 reports page (with **New report from this** for your latest final report) and stays for a week or until you finalise a

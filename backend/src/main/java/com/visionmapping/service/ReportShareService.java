@@ -91,21 +91,12 @@ public class ReportShareService {
     @SecurityAudit(value = SecurityEventType.SHARE_LINK_CREATED, target = TARGET)
     public ReportShareResponse create(Long reportId, ReportShareRequest request) {
         SavedReport report = savedReports.owned(reportId);
-        if (!report.isFinal()) {
-            throw new StateConflictException(ONLY_FINAL);
-        }
-        if (report.isArchived()) {
-            throw new StateConflictException(ARCHIVED);
-        }
-        if (!savedReports.decode(report).verified()) {
-            throw new StateConflictException(UNVERIFIED);
-        }
+        requireShareable(report);
         int days = request.expiresInDays() == null ? DEFAULT_EXPIRY_DAYS : request.expiresInDays();
         if (!EXPIRY_CHOICES.contains(days)) {
             throw new BusinessRuleException(BAD_EXPIRY);
         }
-        Set<ReportSection> sections = request.sections() == null || request.sections().isEmpty()
-                ? DEFAULT_SECTIONS : EnumSet.copyOf(request.sections());
+        Set<ReportSection> sections = chosen(request.sections());
         byte[] raw = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(raw);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);
@@ -113,7 +104,7 @@ public class ReportShareService {
                 .user(report.getUser())
                 .report(report)
                 .tokenHash(hash(token))
-                .sections(writeJson(new TreeSet<>(sections)))
+                .sections(writeSections(sections))
                 .expiresAt(Instant.now(clock).plus(Duration.ofDays(days)))
                 .build());
         return toResponse(link, token);
@@ -140,15 +131,52 @@ public class ReportShareService {
         link.setViewCount(link.getViewCount() + 1);
         link.setLastViewedAt(now);
         securityEvents.recordAnonymous(SecurityEventType.SHARE_LINK_OPENED, SecurityOutcome.SUCCESS, TARGET, link.getId(), "view");
-        SavedReport report = link.getReport();
+        return sharedView(link.getReport(), sectionsOf(link), link.getExpiresAt());
+    }
+
+    /**
+     * RM-FR-47, and RM-FR-50 for a coach: a final report with only the chosen
+     * sections, from its snapshot. expiresAt is null for a coach share.
+     */
+    SharedReportResponse sharedView(SavedReport report, Set<ReportSection> sections, @Nullable Instant expiresAt) {
         Built content = savedReports.content(report);
-        Set<ReportSection> sections = sectionsOf(link);
         ManagementReportResponse summary = shared(content.summary(), sections);
         return new SharedReportResponse(report.getName(), report.getCode(), firstName(report.getUser().getFullName()), report.getLanguage(),
-                report.getFinalizedAt(), link.getExpiresAt(), sections.stream().map(Enum::name).toList(), summary,
+                report.getFinalizedAt(), expiresAt, sections.stream().map(Enum::name).toList(), summary,
                 sections.contains(ReportSection.COMMENTARY) ? savedReports.commentaryOf(report) : null,
                 sections.contains(ReportSection.DETAILS)
                         ? ReportRowsMapper.toResponse(reports.rows(content.report(), report.getLanguage())).rows() : null);
+    }
+
+    /** RM-FR-48, RM-FR-50: only a final, unarchived, verified report can be shared, by link or with a coach. */
+    void requireShareable(SavedReport report) {
+        if (!report.isFinal()) {
+            throw new StateConflictException(ONLY_FINAL);
+        }
+        if (report.isArchived()) {
+            throw new StateConflictException(ARCHIVED);
+        }
+        if (!savedReports.decode(report).verified()) {
+            throw new StateConflictException(UNVERIFIED);
+        }
+    }
+
+    /** The sections chosen, or Commentary, Goal health and What changed when none were. */
+    static Set<ReportSection> chosen(@Nullable List<ReportSection> requested) {
+        return requested == null || requested.isEmpty() ? DEFAULT_SECTIONS : EnumSet.copyOf(requested);
+    }
+
+    Set<ReportSection> readSections(String json) {
+        try {
+            List<ReportSection> stored = mapper.readValue(json, new TypeReference<>() { });
+            return stored.isEmpty() ? DEFAULT_SECTIONS : EnumSet.copyOf(stored);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to read the shared sections.", exception);
+        }
+    }
+
+    String writeSections(Set<ReportSection> sections) {
+        return writeJson(new TreeSet<>(sections));
     }
 
     /** RM-FR-47: the shared report as a PDF, with only the shared sections. */
@@ -198,12 +226,7 @@ public class ReportShareService {
     }
 
     private Set<ReportSection> sectionsOf(ReportShareLink link) {
-        try {
-            List<ReportSection> stored = mapper.readValue(link.getSections(), new TypeReference<>() { });
-            return stored.isEmpty() ? DEFAULT_SECTIONS : EnumSet.copyOf(stored);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Unable to read the share link's sections.", exception);
-        }
+        return readSections(link.getSections());
     }
 
     private String writeJson(Object value) {

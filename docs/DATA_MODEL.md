@@ -333,11 +333,17 @@ to a final report. Only `tokenHash` (SHA-256) is stored; `sections` (JSON), `exp
 (7, 30 or 90 days), `revokedAt`, `viewCount`, `lastViewedAt`. Deleted with its report.
 
 **AppUser** adds `reportReminder` (NONE, WEEKLY, MONTHLY; default NONE) and
-`reportReminderDay` (1 = Monday to 7 = Sunday, weekly only) (`V82`, RM-FR-49). The coach
-share table the BRD lists for V82 is not created until decision D-19-3 is signed off.
+`reportReminderDay` (1 = Monday to 7 = Sunday, weekly only) (`V82`, RM-FR-49).
 
-Saved reports, download history and share links are deleted with the account. They are not
-yet in the account data export.
+**ReportCoachShare** (`report_coach_shares`, `V83`, RM-FR-50, D-19-3): a final report the
+participant (`userId`) shares with `coachId`, the coach of their active cohort at the time,
+with the `sections` they chose (JSON) and `createdAt`. At most one per report. The coach reads
+it only while the V9 D-6 check passes and the share names them. Deleted on unshare, on
+archiving the report, when the participant leaves or changes cohort, and with the report,
+the participant or the coach.
+
+Saved reports, download history, share links and coach shares are deleted with the account.
+They are not yet in the account data export.
 
 ## Business Rules
 

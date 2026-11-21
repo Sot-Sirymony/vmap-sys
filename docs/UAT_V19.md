@@ -30,9 +30,9 @@ and one Completed goal. Tick each line and note anything that differs.
 | RMC-22 | Check CI on the release commit | Backend, frontend, SonarQube and security jobs pass, coverage minimums met | CI | ☐ |
 | RM-FR-29 | With AI on and consent given, press **Draft with AI** on a draft with Risks written | Empty sections fill with "- " lines marked Suggested; Risks unchanged; nothing saved until edited. Hidden with AI off | `ReportPhase5FlowTests`, `SavedReportPage.test.tsx` | ☐ |
 | RM-FR-49 | Choose a weekly report reminder for today's weekday | Notice on Dashboard (**Open Reports**) and Saved reports (**New report from this**); gone after Finalise; email that day when mail is set up | `ReportPhase5FlowTests`, `ReportRemindersTest`, `ReportReminderNotice.test.tsx` | ☐ |
+| RM-FR-50 | In a cohort with a coach, finalise a report, **Share with my coach** with only Commentary ticked; sign in as the coach | Coach sees it under **Shared reports** and opens it read-only with only the commentary and headline; another coach gets "not found"; after **Stop sharing**, archiving or leaving the cohort the coach gets "not found" | `ReportCoachShareFlowTests`, `ReportCoachShareCard.test.tsx`, `CoachSharedReportPage.test.tsx` | ☐ |
 | RM-FR-04 | Open a V19 deck in **PowerPoint** and **LibreOffice Impress** | No repair prompt (carried over from MRC-09) | manual | ☐ PowerPoint ☐ LibreOffice |
 
-Not in this release: **Share with my coach** (RM-FR-50, waiting on D-19-3) and native PowerPoint charts (RM-FR-45,
-Q-05 answered no).
+Not in this release: native PowerPoint charts (RM-FR-45, Q-05 answered no).
 
 Khmer wording: review [km-review-v19.csv](km-review-v19.csv) (fill the "Reviewed Khmer" column where a draft is wrong).

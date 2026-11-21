@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import { fetchReportFile, fileOptions, type DeckOptions, type ReportFilter, type ReportFormat } from './reportApi';
 import type {
-  CommentaryDraft, ReportExport, ReportReminderStatus, ReportRow, ReportSection, ReportShare, SavedReport, SavedReportCommentary,
+  CoachShareStatus, CommentaryDraft, ReportExport, ReportReminderStatus, ReportRow, ReportSection, ReportShare, SavedReport, SavedReportCommentary,
 } from '../types/vision';
 
 /**
@@ -66,6 +66,21 @@ export function saveReportCommentary(token: string, id: number, commentary: Save
 /** RM-FR-28 rule-based, or RM-FR-29 AI, suggestions for the sections still empty. */
 export function draftReportCommentary(token: string, id: number, language: string, mode: 'RULES' | 'AI' = 'RULES') {
   return apiClient<CommentaryDraft>(`/reports/saved/${id}/commentary-draft?language=${language}&mode=${mode}`, { token, method: 'POST' });
+}
+
+/** RM-FR-50: whether this report is shared with the participant's coach. */
+export function getCoachShare(token: string, id: number) {
+  return apiClient<CoachShareStatus>(`/reports/saved/${id}/coach-share`, { token });
+}
+
+/** RM-FR-50: share a final report with the coach, read-only, with the chosen sections. */
+export function shareReportWithCoach(token: string, id: number, sections: ReportSection[]) {
+  return apiClient<CoachShareStatus>(`/reports/saved/${id}/coach-share`, { token, method: 'PUT', body: JSON.stringify({ sections }) });
+}
+
+/** RM-FR-50: stop sharing with the coach at once. */
+export function unshareReportWithCoach(token: string, id: number) {
+  return apiClient<CoachShareStatus>(`/reports/saved/${id}/coach-share`, { token, method: 'DELETE' });
 }
 
 /** RM-FR-49: whether the report reminder is due, and the latest final report. */

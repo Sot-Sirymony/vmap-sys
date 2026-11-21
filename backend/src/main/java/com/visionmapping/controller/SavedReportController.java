@@ -8,9 +8,12 @@ import com.visionmapping.dto.response.CommentaryDraftResponse;
 import com.visionmapping.dto.response.ReportRowsResponse;
 import com.visionmapping.dto.response.SavedReportResponse;
 import com.visionmapping.mapper.ReportRowsMapper;
+import com.visionmapping.dto.request.CoachShareRequest;
 import com.visionmapping.dto.request.ReportShareRequest;
+import com.visionmapping.dto.response.CoachShareResponse;
 import com.visionmapping.dto.response.ReportExportResponse;
 import com.visionmapping.dto.response.ReportShareResponse;
+import com.visionmapping.service.ReportCoachShareService;
 import com.visionmapping.service.ReportShareService;
 import com.visionmapping.dto.response.ReportReminderResponse;
 import com.visionmapping.service.SavedReportService;
@@ -51,6 +54,7 @@ public class SavedReportController {
 
     private final SavedReportService service;
     private final ReportShareService shares;
+    private final ReportCoachShareService coachShares;
     private final ReportCommentaryAiService aiDrafts;
     private final RequestRateLimiter rateLimiter;
     private final UserScope userScope;
@@ -162,6 +166,24 @@ public class SavedReportController {
     }
 
     /** RM-FR-46: the report's share links. */
+    /** RM-FR-50: whether this report is shared with the participant's coach. */
+    @GetMapping("/{id}/coach-share")
+    public CoachShareResponse coachShare(@PathVariable Long id) {
+        return coachShares.status(id);
+    }
+
+    /** RM-FR-50: share a final report with the coach, or change the sections shared. */
+    @PutMapping("/{id}/coach-share")
+    public CoachShareResponse shareWithCoach(@PathVariable Long id, @Valid @RequestBody CoachShareRequest request) {
+        return coachShares.share(id, request);
+    }
+
+    /** RM-FR-50: stop sharing with the coach at once. */
+    @DeleteMapping("/{id}/coach-share")
+    public CoachShareResponse unshareWithCoach(@PathVariable Long id) {
+        return coachShares.unshare(id);
+    }
+
     @GetMapping("/{id}/shares")
     public List<ReportShareResponse> shares(@PathVariable Long id) {
         return shares.list(id);

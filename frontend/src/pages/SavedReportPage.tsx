@@ -24,6 +24,7 @@ import { ReportCommentaryCard, type CommentarySection, type SaveState } from '..
 import { ReportComparePicker, comparableReports } from '../components/report/ReportComparePicker';
 import { ReportControls } from '../components/report/ReportControls';
 import { ReportExportHistory } from '../components/report/ReportExportHistory';
+import { ReportCoachShareCard } from '../components/report/ReportCoachShareCard';
 import { ReportShareCard } from '../components/report/ReportShareCard';
 import { ReportTabs, reportTabFrom, type ReportTab } from '../components/report/ReportTabs';
 import { useAuth } from '../context/AuthContext';
@@ -83,6 +84,7 @@ export function SavedReportPage() {
   const [suggesting, setSuggesting] = useState(false);
   const [aiOn, setAiOn] = useState(false);
   const [openLinks, setOpenLinks] = useState(0);
+  const [coachShared, setCoachShared] = useState(false);
   const [downloads, setDownloads] = useState(0);
   const countOpenLinks = useCallback((count: number) => setOpenLinks(count), []);
   const lastSaved = useRef('');
@@ -186,10 +188,10 @@ export function SavedReportPage() {
     void run(async () => navigate(`/vision-map/reports/${(await copySavedReport(token, id)).id}`));
   }
 
-  /** RM-FR-51: archiving stops the report's share links, so it asks first when any are open. */
+  /** RM-FR-51: archiving stops the report's share links and coach share, so it asks first when any are on. */
   function archive(confirmed = false) {
     if (!token || !saved) return;
-    if (!saved.archived && openLinks > 0 && !confirmed) {
+    if (!saved.archived && (openLinks > 0 || coachShared) && !confirmed) {
       setPending('archive');
       return;
     }
@@ -291,6 +293,12 @@ export function SavedReportPage() {
           disabledReason={saved.archived ? tr('Restore this report before you share it.')
             : saved.verified === false ? tr('This report could not be verified, so it cannot be shared.') : ''} />
       )}
+      {saved.status === 'FINAL' && (
+        // RM-FR-50: a final report can be shared with the participant's coach.
+        <ReportCoachShareCard token={token} reportId={saved.id} onShared={setCoachShared} reloadKey={`${saved.archived}`}
+          disabledReason={saved.archived ? tr('Restore this report before you share it.')
+            : saved.verified === false ? tr('This report could not be verified, so it cannot be shared.') : ''} />
+      )}
 
       <ReportTabs
         report={report}
@@ -348,7 +356,10 @@ export function SavedReportPage() {
       {pending === 'archive' && (
         <ConfirmDialog
           title={tr('Archive this report?')}
-          message={tr('Its {count} open share link(s) will stop working at once. Restoring the report does not reopen them.', { count: openLinks })}
+          message={[
+            openLinks > 0 ? tr('Its {count} open share link(s) will stop working at once. Restoring the report does not reopen them.', { count: openLinks }) : '',
+            coachShared ? tr('Your coach will no longer see it. Restoring the report does not share it again.') : '',
+          ].filter(Boolean).join(' ')}
           confirmLabel={tr('Archive')}
           onConfirm={() => archive(true)}
           onClose={() => setPending(null)}

@@ -2,19 +2,15 @@ import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useParams } from 'react-router';
 import { downloadSharedReportPdf, getSharedReport } from '../api/sharedReportApi';
 import { BrandMark } from '../components/common/BrandMark';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
-import { ReportCommentaryCard } from '../components/report/ReportCommentaryCard';
-import { ReportDetailsTab } from '../components/report/ReportDetailsTab';
-import { ReportSummary } from '../components/report/ReportSummary';
+import { SharedReportView } from '../components/report/SharedReportView';
 import { tr } from '../i18n/translate';
 import type { SharedReport } from '../types/vision';
-import { periodLabel, reportDate } from '../utils/managementReport';
 import { saveBlob } from '../utils/saveBlob';
 
 /**
@@ -69,9 +65,6 @@ export function SharedReportPage() {
     }
   }
 
-  const report = shared?.report;
-  const scope = report?.scope.kind === 'ALL' || !report ? tr('All dreams') : report.scope.label ?? '';
-
   return (
     <Box component="main" sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
       <Container maxWidth="lg">
@@ -81,40 +74,9 @@ export function SharedReportPage() {
         </Box>
         {gone && <Alert severity="info">{tr('This report is no longer shared.')}</Alert>}
         {!shared && !gone && <Loading />}
-        {shared && report && (
-          <Stack spacing={2}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <Box sx={{ flex: 1, minWidth: 260 }}>
-                <Typography variant="overline" color="text.secondary">
-                  {tr('{name} shared this report with you', { name: shared.sharedBy })}
-                </Typography>
-                <Typography variant="h4" component="h1">{shared.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {`${shared.code} · ${scope} · ${periodLabel(report.period)}`}
-                </Typography>
-                {shared.finalizedAt && (
-                  <Typography variant="body2" role="status">
-                    {tr('Final · frozen {date}', { date: reportDate(shared.finalizedAt.slice(0, 10)) })}
-                  </Typography>
-                )}
-              </Box>
-              <Button onClick={() => void downloadPdf()} disabled={busy}>{busy ? tr('Preparing…') : tr('Download PDF')}</Button>
-            </Box>
-            {error && <Alert severity="error">{error}</Alert>}
-            {shared.commentary && (
-              <ReportCommentaryCard commentary={shared.commentary} editable={false}
-                goals={report.goals.map((goal) => ({ goalId: goal.goalId, goalTitle: goal.goalTitle }))} />
-            )}
-            <ReportSummary report={report} filter={{}} shared />
-            {shared.rows && (
-              // The Details table is its own "Details" card.
-              <ReportDetailsTab loadRows={() => Promise.resolve(shared.rows ?? [])} showDream={report.scope.kind !== 'DREAM'}
-                reloadKey={shareToken} noLinks />
-            )}
-            <Typography variant="caption" color="text.secondary">
-              {tr('This link stops working on {date}.', { date: reportDate(shared.expiresAt.slice(0, 10)) })}
-            </Typography>
-          </Stack>
+        {shared && (
+          <SharedReportView shared={shared} reloadKey={shareToken} error={error}
+            action={<Button onClick={() => void downloadPdf()} disabled={busy}>{busy ? tr('Preparing…') : tr('Download PDF')}</Button>} />
         )}
       </Container>
     </Box>

@@ -44,8 +44,27 @@ describe('CoachParticipantPage (V9 FR-17; BR-14, D-6)', () => {
     vi.mocked(cohortApi.getCoachParticipant).mockResolvedValue(detail());
     vi.mocked(aiApi.getAiStatus).mockResolvedValue({ reason: 'OFF' } as never);
     vi.mocked(aiCoachApi.getParticipantSummary).mockResolvedValue(null as never);
+    vi.mocked(cohortApi.listCoachSharedReports).mockResolvedValue([]);
   });
   afterEach(() => setCurrentLanguage('en'));
+
+  it('lists the reports the participant shared, linking to each, read-only (V19 RM-FR-50)', async () => {
+    vi.mocked(cohortApi.listCoachSharedReports).mockResolvedValue([{ reportId: 4, code: 'R-002', name: 'October progress',
+      scopeLabel: null, periodKind: 'LAST_MONTH', finalizedAt: '2026-11-01T09:00:00Z', sharedAt: '2026-11-02T09:00:00Z' }]);
+    open();
+    const card = await screen.findByRole('region', { name: 'Shared reports' });
+    expect(await within(card).findByRole('link', { name: 'R-002 · October progress' })).toHaveAttribute('href', '/coach/participants/11/reports/4');
+    expect(within(card).getByText(/All dreams · Final · frozen/)).toBeInTheDocument();
+  });
+
+  it('says when nothing is shared, and why the list could not load (V19 RM-FR-50)', async () => {
+    const { unmount } = open();
+    expect(await screen.findByText('No reports shared with you yet.')).toBeInTheDocument();
+    unmount();
+    vi.mocked(cohortApi.listCoachSharedReports).mockRejectedValue(new Error('Participant not found: 11'));
+    open();
+    expect(await screen.findByText('Participant not found: 11')).toBeInTheDocument();
+  });
 
   it('shows the participant’s objectives and plan, read-only', async () => {
     open();

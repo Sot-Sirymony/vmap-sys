@@ -69,7 +69,8 @@ requirement; it is internal quality and UX work.
 ## [19.0.0] — Phases 1 to 5 built
 
 Implements [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations `V79__obstacle_resolved_at.sql`,
-`V80__management_reports.sql`, `V81__report_exports_and_shares.sql` and `V82__report_reminders.sql`.
+`V80__management_reports.sql`, `V81__report_exports_and_shares.sql`, `V82__report_reminders.sql` and
+`V83__report_coach_shares.sql`.
 
 ### Added in phase 5
 - **Draft with AI (RM-FR-29).** Next to **Suggest a draft**, a draft report's commentary has **Draft with AI**, shown
@@ -83,9 +84,17 @@ Implements [BRD 19.0.0](VMS_BRD_V19.0.0.md) (Report Management). Migrations `V79
   week, until a report is finalised; and, when mail is set up, the reminder job emails the participant that day, even
   with daily reminders off. `REMINDERS_REPORTS_URL` adds a link to the Reports page in that email.
 
-### Not built (waiting on decisions)
-- **Share with my coach (RM-FR-50)** waits for D-19-3 (Q-07) to be signed off; the `report_coach_shares` table is not
-  created.
+- **Share with my coach (RM-FR-50, D-19-3 approved 21 Nov 2026).** A participant in an active cohort can share a final
+  report with their coach from the report page, choosing the sections the coach sees. The coach finds it under
+  **Shared reports** on the participant's page and reads it read-only, the same view as a share link. **Stop
+  sharing**, archiving the report, or leaving the cohort removes access at once. `CLAUDE.md` Core Business Rule 14 now
+  includes these reports.
+
+### Changed in phase 5
+- The shared report view is now one component used by the public share link and the coach view.
+- Archiving a report that is shared with the coach asks first and says the coach will lose it.
+
+### Not built
 - **Native PowerPoint charts (RM-FR-45)** were not built: Q-05's draft answer is no, so the deck keeps drawn shapes.
 
 ### Added in phase 4
