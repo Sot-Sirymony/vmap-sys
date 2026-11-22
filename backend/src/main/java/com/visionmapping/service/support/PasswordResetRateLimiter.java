@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
@@ -28,10 +29,9 @@ import org.springframework.stereotype.Component;
  * unregistered addresses, which is precisely the disclosure the 204-either-way
  * response exists to prevent.
  *
- * <p>In memory, so the limits are per instance rather than per cluster. That is
- * honest for the current single-instance deployment; behind more than one
- * replica the effective limit multiplies by the replica count and this should
- * move to Redis, which the app already runs.
+ * <p>ASVS F-04: in Redis when it is configured ({@link SharedCounters}), so the
+ * limits survive restarts and hold across instances. Without Redis, or while it
+ * does not answer, they fall back to the in-memory table below.
  *
  * <p>The table is bounded. This instance has 512MB and was being OOM-killed
  * recently, so an unbounded map keyed by attacker-supplied strings is not
@@ -49,6 +49,7 @@ public class PasswordResetRateLimiter {
 
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final SharedCounters sharedCounters;
 
     @Value("${app.password-reset.rate-limit.per-email:3}")
     private int perEmailLimit;
@@ -62,8 +63,15 @@ public class PasswordResetRateLimiter {
     @Value("${app.password-reset.rate-limit.per-ip-window-minutes:60}")
     private long perIpWindowMinutes;
 
-    public PasswordResetRateLimiter(Clock clock) {
+    @Autowired
+    public PasswordResetRateLimiter(Clock clock, SharedCounters sharedCounters) {
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.sharedCounters = Objects.requireNonNull(sharedCounters, "sharedCounters");
+    }
+
+    /** For unit tests: in-memory counts only. */
+    PasswordResetRateLimiter(Clock clock) {
+        this(clock, SharedCounters.disabled());
     }
 
     /**
@@ -82,6 +90,16 @@ public class PasswordResetRateLimiter {
     }
 
     private void consume(String key, int limit, Duration window, String message) {
+        if (sharedCounters.enabled()) {
+            try {
+                if (sharedCounters.hit("reset:" + key, window).count() > limit) {
+                    throw new TooManyRequestsException(message);
+                }
+                return;
+            } catch (SharedCounters.Unavailable unavailable) {
+                // Fall back to this instance's own counts below.
+            }
+        }
         Instant now = clock.instant();
 
         Window current = windows.compute(key, (ignored, existing) -> {

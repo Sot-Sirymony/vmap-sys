@@ -81,11 +81,19 @@ app:
     # for remember-me-days; otherwise it lasts session-hours (and the browser
     # forgets it when the tab closes). A replaced refresh token used again
     # within refresh-grace-seconds is two tabs racing (409, retry); later, the
-    # session is ended as stolen.
+    # session is ended as stolen. ASVS F-05: a session not used (refreshed) for
+    # idle-days ends even before its lifetime is up.
     session:
       remember-me-days: ${SESSION_REMEMBER_ME_DAYS:30}
       session-hours: ${SESSION_HOURS:12}
       refresh-grace-seconds: ${SESSION_REFRESH_GRACE_SECONDS:30}
+      idle-days: ${SESSION_IDLE_DAYS:14}
+    # ASVS F-04: where sign-in lockouts and rate-limit counts live. "redis" keeps
+    # them in Redis (they survive restarts and are shared between instances),
+    # falling back to memory while Redis does not answer; anything else keeps
+    # them in memory. Follows CACHE_TYPE unless RATE_LIMIT_STORE is set.
+    counters:
+      store: ${RATE_LIMIT_STORE:${CACHE_TYPE:memory}}
     # Encrypts secrets stored in the database, such as the Claude API key an
     # admin enters on the AI settings page. Locally, blank falls back to
     # JWT_SECRET. Changing it later makes saved secrets unreadable until they

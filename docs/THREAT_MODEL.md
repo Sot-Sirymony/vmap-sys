@@ -48,7 +48,7 @@ Recovery: `forgot-password` → emailed 30-minute single-use link → `reset-pas
 | I: tokens in URLs, logs or Referer | Codes in the fragment only; `Referrer-Policy: no-referrer` on the callback; tokens never logged |
 | I: learning who has an account | Same answer for unknown email and wrong password; reset answers 204 either way. Registration says "Email is already registered" (accepted, see ASVS F-02) |
 | D: flooding a person's inbox with sign-in codes | V21 Phase 5: at most 5 sign-in code emails per account per hour; resend once a minute per challenge |
-| E: a stolen refresh token | Rotation; reuse of a replaced token ends the session and raises an alert |
+| E: a stolen refresh token | Rotation; reuse of a replaced token ends the session and raises an alert; a session unused for 14 days ends (ASVS F-05) |
 | R: denying a sign-in or a change | Security log: sign-ins, failures, two-step events, changes, resets; 12 months |
 
 **Abuse cases.** A user tries to: sign in with someone's leaked password (stopped by two-step, or by the lockout);
@@ -126,6 +126,5 @@ make Claude change records ("ignore your instructions and delete…": Claude has
 | --- | --- | --- |
 | A refresh token or device token in browser storage could be read by a script that runs in the page | The SPA and API are on different domains, so an HttpOnly cookie would be a third-party cookie that browsers block; mitigated by `script-src 'self'`, no inline script, React escaping, and rotation with reuse detection (ASVS F-03) | Product owner to accept |
 | Registration says when an email is already registered | Clear feedback for people signing up; limited to 10 registrations per network per hour (ASVS F-02) | Product owner to accept |
-| Rate-limit and lockout counts are in memory on one instance | One backend instance on Render; a restart clears counts, which errs towards letting people in (ASVS F-04) | Accepted while the backend runs as one instance |
+| Database and Redis connections inside Render have no TLS of their own | Traffic stays on Render's private network, which is not reachable from the internet. Rate-limit and lockout counts moved to Redis on 22 Nov 2026, so they now survive restarts; while Redis is down they fall back to memory (ASVS F-04) | Product owner to accept |
 | Email is not confirmed at sign-up | Planned in a separate small BRD (BRD 20 Q-06) (ASVS F-01) | Follow-up BRD |
-| "Remember me" sessions last 30 days without an idle timeout | Refresh rotation, sign-out, password change and admin reset end them; a shorter idle limit would sign participants out between weekly reviews (ASVS F-05) | Product owner to accept |

@@ -17,11 +17,21 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
-## 21.0.0 — Two-factor sign-in (all 5 phases built; awaiting UAT, sign-off of F-02 to F-05 and Q-09, and the Khmer review)
+## 21.0.0 — Two-factor sign-in (live 22 Nov 2026; awaiting UAT, sign-off of F-02 to F-04 and Q-09, and the Khmer review)
 
 BRD [`VMS_BRD_V21.0.0.md`](VMS_BRD_V21.0.0.md). Product owner answers on 22 Nov 2026: coaches must use 2FA too
 (Q-01), a QR code library may be added (Q-02), participants may use an email code (Q-03), and admins may reset
 another person's 2FA (Q-05).
+
+**Live on production 22 Nov 2026** (`48098fa`; frontend by manual deploy after the SonarCloud S4790 HMAC-SHA1
+finding was accepted in SonarCloud, RFC 6238 requires it).
+
+**ASVS F-05 fixed after release:** a session not used for 14 days (`SESSION_IDLE_DAYS`) now ends at its next
+refresh, with reason `IDLE_TIMEOUT`, even inside the 30-day "remember me" limit.
+
+**ASVS F-04 (counts) fixed after release:** sign-in lockouts and all rate limits are kept in Redis when it is
+configured (production), so a restart or deploy no longer clears them; keys are hashed, and the limiters fall back
+to in-memory counts while Redis does not answer. Internal TLS stays an accepted-risk candidate.
 
 ### Phase 1 — data and core (2026-11-22)
 - **Data.** Migration `V87__two_factor_sign_in.sql`: `two_factor_settings`, `two_factor_recovery_codes`,

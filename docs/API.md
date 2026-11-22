@@ -193,7 +193,8 @@ Body:
 }
 ```
 
-`rememberMe` (optional, default `true`) keeps the session for 30 days; `false`
+`rememberMe` (optional, default `true`) keeps the session for 30 days, ending it
+earlier if it goes unused for 14 days (`SESSION_IDLE_DAYS`); `false`
 keeps it for 12 hours and the client stores it only for the browser tab. After 5
 wrong passwords in 15 minutes the email is locked for 15 minutes (429 with
 `Retry-After`).

@@ -17,8 +17,9 @@ import org.springframework.stereotype.Component;
  * Excel import. Sign-in, password reset and AI requests keep their own
  * limiters. Over a limit, the caller gets 429 with how long to wait.
  *
- * <p>Counts live in memory on this one instance, like the other limiters; a
- * restart clears them, which errs towards letting real users back in.
+ * <p>ASVS F-04: counts live in Redis when it is configured ({@link SharedCounters}),
+ * so a restart does not clear them. Without Redis, or while it does not answer,
+ * they live in memory on this instance as before.
  */
 @Slf4j
 @Component
@@ -57,9 +58,11 @@ public class RequestRateLimiter {
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
     private final Clock clock;
     private final Map<Action, Limit> limits;
+    private final SharedCounters sharedCounters;
 
     public RequestRateLimiter(
             Clock clock,
+            SharedCounters sharedCounters,
             @Value("${app.security.rate-limit.registration-per-ip:10}") int registrationLimit,
             @Value("${app.security.rate-limit.registration-window-minutes:60}") long registrationWindow,
             @Value("${app.security.rate-limit.join-code-per-key:10}") int joinCodeLimit,
@@ -83,6 +86,7 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.two-factor-email-per-user:5}") int twoFactorEmailLimit,
             @Value("${app.security.rate-limit.two-factor-email-window-minutes:60}") long twoFactorEmailWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.sharedCounters = Objects.requireNonNull(sharedCounters, "sharedCounters");
         this.limits = Map.ofEntries(
                 Map.entry(Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow))),
                 Map.entry(Action.JOIN_CODE, new Limit(joinCodeLimit, Duration.ofMinutes(joinCodeWindow))),
@@ -110,6 +114,17 @@ public class RequestRateLimiter {
         Limit limit = limits.get(action);
         Instant now = clock.instant();
         String compositeKey = action.name() + ":" + key;
+        if (sharedCounters.enabled()) {
+            try {
+                SharedCounters.Hit hit = sharedCounters.hit("rate:" + compositeKey, limit.window());
+                if (hit.count() > limit.max()) {
+                    throw new TooManyRequestsException(action.message, Math.max(1, hit.remaining().toSeconds()));
+                }
+                return;
+            } catch (SharedCounters.Unavailable unavailable) {
+                // Fall back to this instance's own counts below.
+            }
+        }
         if (!windows.containsKey(compositeKey) && windows.size() >= MAX_TRACKED_KEYS) {
             windows.values().removeIf(window -> !window.endsAt().isAfter(now));
             if (windows.size() >= MAX_TRACKED_KEYS) {

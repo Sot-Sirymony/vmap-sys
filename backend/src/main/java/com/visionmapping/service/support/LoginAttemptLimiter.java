@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,9 @@ import org.springframework.stereotype.Component;
  * keeps working during a lock, so a real user locked out by someone else
  * guessing at their email always has a way back in.
  *
- * <p>In memory, so limits are per instance — honest for the single-instance
- * Render deployment (see {@link PasswordResetRateLimiter}). The table is
+ * <p>ASVS F-04: in Redis when it is configured ({@link SharedCounters}), so a
+ * restart or deploy does not lift a lock. Without Redis, or while it does not
+ * answer, the in-memory table below is used, as before. That table is
  * bounded for the 512MB instance. When it is full, new keys are not tracked
  * (existing locks keep working). That trades perfect tracking during a flood of
  * distinct keys for keeping sign-in available to everyone else; failing closed
@@ -46,6 +48,7 @@ public class LoginAttemptLimiter {
 
     private final Map<String, Entry> entries = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final SharedCounters sharedCounters;
 
     @Value("${app.security.login.max-failures-per-account:5}")
     private int maxFailuresPerAccount;
@@ -60,17 +63,23 @@ public class LoginAttemptLimiter {
     private long lockMinutes;
 
     @Autowired
-    public LoginAttemptLimiter() {
-        this(Clock.systemUTC());
+    public LoginAttemptLimiter(SharedCounters sharedCounters) {
+        this(Clock.systemUTC(), sharedCounters);
     }
 
-    LoginAttemptLimiter(Clock clock) {
+    LoginAttemptLimiter(Clock clock, SharedCounters sharedCounters) {
         this.clock = clock;
+        this.sharedCounters = sharedCounters;
     }
 
-    /** For unit tests, which build the limiter without Spring. */
+    /** For unit tests, which build the limiter without Spring (in-memory counts). */
     LoginAttemptLimiter(Clock clock, int maxFailuresPerAccount, int maxFailuresPerIp, long windowMinutes, long lockMinutes) {
-        this(clock);
+        this(clock, maxFailuresPerAccount, maxFailuresPerIp, windowMinutes, lockMinutes, SharedCounters.disabled());
+    }
+
+    LoginAttemptLimiter(Clock clock, int maxFailuresPerAccount, int maxFailuresPerIp, long windowMinutes, long lockMinutes,
+                        SharedCounters sharedCounters) {
+        this(clock, sharedCounters);
         this.maxFailuresPerAccount = maxFailuresPerAccount;
         this.maxFailuresPerIp = maxFailuresPerIp;
         this.windowMinutes = windowMinutes;
@@ -102,20 +111,54 @@ public class LoginAttemptLimiter {
 
     /** Clears the email's failures. The IP counter is left alone on purpose. */
     public void recordSuccess(String email) {
-        entries.remove(accountKey(email));
+        String key = accountKey(email);
+        entries.remove(key);
+        if (sharedCounters.enabled()) {
+            try {
+                sharedCounters.delete(failKey(key), lockKey(key));
+            } catch (SharedCounters.Unavailable unavailable) {
+                // Nothing more to clear; the in-memory entry is gone.
+            }
+        }
     }
 
     private void refuseIfLocked(String key, Instant now, String messageTemplate) {
+        if (sharedCounters.enabled()) {
+            try {
+                Optional<Duration> left = sharedCounters.remaining(lockKey(key));
+                if (left.isPresent()) {
+                    refuse(left.get().toSeconds(), messageTemplate);
+                }
+                return;
+            } catch (SharedCounters.Unavailable unavailable) {
+                // Fall back to this instance's own entries below.
+            }
+        }
         Entry entry = entries.get(key);
         if (entry == null || entry.lockedUntil == null || !entry.lockedUntil.isAfter(now)) {
             return;
         }
-        long seconds = Math.max(1, Duration.between(now, entry.lockedUntil).toSeconds());
+        refuse(Duration.between(now, entry.lockedUntil).toSeconds(), messageTemplate);
+    }
+
+    private static void refuse(long secondsLeft, String messageTemplate) {
+        long seconds = Math.max(1, secondsLeft);
         long minutes = Math.max(1, (seconds + 59) / 60);
         throw new TooManyRequestsException(String.format(messageTemplate, minutes), seconds);
     }
 
     private void fail(String key, int maxFailures, Duration lock, Instant now) {
+        if (sharedCounters.enabled()) {
+            try {
+                if (sharedCounters.hit(failKey(key), Duration.ofMinutes(windowMinutes)).count() >= maxFailures) {
+                    sharedCounters.set(lockKey(key), lock);
+                    sharedCounters.delete(failKey(key));
+                }
+                return;
+            } catch (SharedCounters.Unavailable unavailable) {
+                // Fall back to this instance's own entries below.
+            }
+        }
         if (!entries.containsKey(key) && entries.size() >= MAX_TRACKED_KEYS && !purgeExpired(now)) {
             log.warn("Sign-in attempt table is full; a new key is not being tracked");
             return;
@@ -139,6 +182,14 @@ public class LoginAttemptLimiter {
         int before = entries.size();
         entries.entrySet().removeIf(item -> item.getValue().isExpired(now));
         return entries.size() < before;
+    }
+
+    private static String failKey(String key) {
+        return "login-fail:" + key;
+    }
+
+    private static String lockKey(String key) {
+        return "login-lock:" + key;
     }
 
     private static String accountKey(@Nullable String email) {

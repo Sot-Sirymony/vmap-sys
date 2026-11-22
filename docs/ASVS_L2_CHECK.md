@@ -15,12 +15,12 @@ misses as a new finding.
 | Status | Rows |
 | --- | --- |
 | Met | 70 |
-| Partly met | 5 (F-02, F-03, F-04 twice, F-05) |
-| Partly met, fixed in this phase | 1 (F-08) |
+| Partly met | 3 (F-02, F-03, F-04 internal TLS) |
+| Partly met, fixed | 3 (F-08 in this phase; F-05 and F-04 counts after release) |
 | Not met | 2 (F-01, F-07) |
 | N/A | 4 |
 
-Findings F-06 and F-08 were found and fixed in this phase. Every other finding is either an accepted risk waiting for
+Findings F-06 and F-08 were found and fixed in this phase; F-05 and the counts half of F-04 were fixed on 22 Nov 2026 after the V21 release. Every other finding is either an accepted risk waiting for
 the product owner's signature, or a follow-up with a date (TF-FR-45).
 
 ## V1 Encoding and Sanitization
@@ -95,7 +95,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | Server-side sessions that can be ended | Met | `auth_sessions`; every request checks the session is open |
 | Token rotation and theft detection | Met | Refresh token rotated on use; reuse ends the session and alerts |
 | Sessions end on sign-out, password change, reset and admin reset | Met | `AuthSessionService` |
-| Absolute and idle timeouts | Partly met | 30-minute access token, 12-hour tab session, 30-day "remember me"; no idle timeout on remembered sessions (F-05) |
+| Absolute and idle timeouts | Met | 30-minute access token, 12-hour tab session, 30-day "remember me"; a session unused for 14 days ends (`SESSION_IDLE_DAYS`, F-05 fixed) |
 | Re-authentication before sensitive actions | Met | V20 step-up |
 | See and end other sessions | Not met | No session list in the app (F-07) |
 
@@ -181,7 +181,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | Security events logged with who, what, when and outcome | Met | `security_events` (sign-in, two-step, changes, refusals, admin actions), 12 months |
 | Logs protected and free of secrets | Met | Append-only table; no secrets in details |
 | Alerts | Met | `SecurityAlertService` (sign-in failures, refusals, token reuse, admin changes, two-step resets) |
-| Rate-limit and lockout state | Partly met | In memory on one instance (F-04) |
+| Rate-limit and lockout state | Met | In Redis when configured (production), so restarts do not clear them and instances share them; in memory while Redis does not answer (F-04 counts fixed) |
 | Errors fail closed | Met | Session check failure answers 503; Google and mail failures refuse cleanly |
 
 ## V17 WebRTC
@@ -197,15 +197,15 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | F-01 | Email address not confirmed at sign-up, so step-up and sign-in codes may go to an address the person does not own | Not met | Follow-up: the separate small BRD agreed in BRD 20 Q-06. **Target: written by 31 Jan 2027** |
 | F-02 | Registration reveals that an email is registered | Partly met | **Accepted risk candidate**: clear feedback at sign-up; 10 registrations per network per hour. Product owner to sign |
 | F-03 | Refresh and device tokens in browser storage are readable by script in the page | Partly met | **Accepted risk candidate**: HttpOnly cookies would be third-party (frontend and API on different domains); mitigated by `script-src 'self'`, no inline script, React escaping, rotation and reuse detection. Revisit if the frontend and API move under one domain. Product owner to sign |
-| F-04 | Rate-limit and lockout counts are in memory on one instance; internal database and cache connections rely on Render's private network without TLS | Partly met | **Accepted risk candidate** while the backend runs as one Render instance; revisit before scaling out (move counts to Redis, enable TLS). Product owner to sign |
-| F-05 | "Remember me" sessions last 30 days without an idle timeout | Partly met | **Accepted risk candidate**: participants sign in weekly; sessions end on sign-out, password change, reset and admin reset, and two-step sign-in protects new sign-ins. Product owner to sign |
+| F-04 | Rate-limit and lockout counts were in memory on one instance; internal database and cache connections rely on Render's private network without TLS | Counts fixed 22 Nov 2026; TLS partly met | **Counts:** sign-in lockouts and every rate limit are kept in Redis (`SharedCounters`, `RATE_LIMIT_STORE`, follows `CACHE_TYPE`), keys hashed, falling back to memory while Redis does not answer; `SharedCountersTest`. Note: the free Key Value uses `allkeys-lru`, so under memory pressure a counter could be evicted early. **Internal TLS: accepted risk candidate** while the services talk over Render's private network; revisit before moving any of them off it. Product owner to sign |
+| F-05 | "Remember me" sessions last 30 days without an idle timeout | Fixed 22 Nov 2026 | A session not refreshed for 14 days (`SESSION_IDLE_DAYS`) is ended with reason `IDLE_TIMEOUT` at its next refresh, inside the 30-day limit; weekly users are not affected. `SessionFlowTests` |
 | F-06 | A known password could be used to flood a person's mailbox with sign-in codes | Fixed in this phase | At most 5 sign-in code emails per account per hour (`RATE_LIMIT_TWO_FACTOR_EMAIL_*`); `TwoFactorSignInFlowTests` |
 | F-07 | People cannot see or end their other sessions | Not met | Follow-up: a "Signed-in devices" list with "Sign out everywhere else" in the next security BRD. **Target: written by 31 Jan 2027** |
 | F-08 | Step-up and two-step code hashes used `JWT_SECRET` in production | Fixed in this phase | `STEP_UP_SECRET` and `TWO_FACTOR_SECRET` generated in `render.yaml` |
 
 ## Sign-off
 
-| Role | Name | Decision on F-02 to F-05 | Date |
+| Role | Name | Decision on F-02 to F-04 | Date |
 | --- | --- | --- | --- |
 | Product owner | | | |
 | Security reviewer | | | |

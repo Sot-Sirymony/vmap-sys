@@ -57,6 +57,7 @@ public class AuthSessionService {
     static final String REASON_PASSWORD_CHANGED = "PASSWORD_CHANGED";
     static final String REASON_PASSWORD_RESET = "PASSWORD_RESET";
     static final String REASON_REUSED = "REFRESH_TOKEN_REUSED";
+    static final String REASON_IDLE = "IDLE_TIMEOUT";
 
     private static final int TOKEN_BYTES = 32;
 
@@ -68,6 +69,7 @@ public class AuthSessionService {
     private final Duration rememberedLifetime;
     private final Duration sessionLifetime;
     private final Duration refreshGrace;
+    private final Duration idleLimit;
 
     public AuthSessionService(
             AuthSessionRepository repository,
@@ -76,7 +78,8 @@ public class AuthSessionService {
             Clock clock,
             @Value("${app.security.session.remember-me-days:30}") long rememberMeDays,
             @Value("${app.security.session.session-hours:12}") long sessionHours,
-            @Value("${app.security.session.refresh-grace-seconds:30}") long refreshGraceSeconds) {
+            @Value("${app.security.session.refresh-grace-seconds:30}") long refreshGraceSeconds,
+            @Value("${app.security.session.idle-days:14}") long idleDays) {
         this.repository = repository;
         this.jwtService = jwtService;
         this.securityEvents = securityEvents;
@@ -84,6 +87,7 @@ public class AuthSessionService {
         this.rememberedLifetime = Duration.ofDays(rememberMeDays);
         this.sessionLifetime = Duration.ofHours(sessionHours);
         this.refreshGrace = Duration.ofSeconds(refreshGraceSeconds);
+        this.idleLimit = Duration.ofDays(idleDays);
     }
 
     /** The two tokens a sign-in or refresh hands back. */
@@ -119,6 +123,13 @@ public class AuthSessionService {
         if (current.isPresent()) {
             AuthSession session = current.get();
             if (!session.isActive(now) || session.getUser().getStatus() != UserStatus.ACTIVE) {
+                throw new SessionEndedException();
+            }
+            if (isIdle(session, now)) {
+                // ASVS F-05: a remembered session nobody has used for idle-days ends,
+                // even if its 30 days are not up.
+                session.setRevokedAt(now);
+                session.setRevokedReason(REASON_IDLE);
                 throw new SessionEndedException();
             }
             String next = newToken();
@@ -200,6 +211,14 @@ public class AuthSessionService {
         if (deleted > 0) {
             log.info("Deleted {} ended sign-in sessions", deleted);
         }
+    }
+
+    /**
+     * ASVS F-05: unused for longer than {@code idle-days}. The client refreshes at
+     * least every 30 minutes while the app is open, so {@code lastUsedAt} tracks use.
+     */
+    private boolean isIdle(AuthSession session, Instant now) {
+        return session.getLastUsedAt().plus(idleLimit).isBefore(now);
     }
 
     private Tokens tokens(AuthSession session, String refreshToken) {

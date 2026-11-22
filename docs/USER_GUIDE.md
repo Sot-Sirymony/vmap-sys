@@ -246,6 +246,7 @@ When the server has Google sign-in set up, the Sign In and Sign Up pages show **
   to prove it is yours. After that, Google signs you straight in. A wrong password counts like a wrong password on the
   Sign In page.
 - **Remember me** on the Sign In page works for Google too: unticked, you are signed out when you close the browser.
+  Ticked, you stay signed in for up to 30 days, but if you don't open the app for 14 days you are asked to sign in again.
 - If you press **Cancel** at Google, or something goes wrong, you see a short reason with **Try again** and **Sign in
   with email instead**.
 - **Account → Sign-in methods** shows "Google: connected as …" and whether you have a password.

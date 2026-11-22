@@ -177,6 +177,36 @@ class SessionFlowTests {
                 .isBefore(Instant.now().plus(Duration.ofHours(13)));
     }
 
+    @Test
+    void aRememberedSessionUnusedForFourteenDaysEnds() throws Exception {
+        JsonNode session = register(uniqueEmail());
+        AuthSession row = sessionOf(session.get("token").asText());
+        row.setLastUsedAt(Instant.now().minus(Duration.ofDays(15)));
+        authSessionRepository.save(row);
+
+        refresh(session.get("refreshToken").asText())
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Your session has ended. Please sign in again."));
+
+        AuthSession ended = sessionOf(session.get("token").asText());
+        assertThat(ended.getRevokedAt()).isNotNull();
+        assertThat(ended.getRevokedReason()).isEqualTo("IDLE_TIMEOUT");
+        assertRefused(session.get("token").asText());
+    }
+
+    @Test
+    void aRememberedSessionUsedWithinFourteenDaysKeepsGoing() throws Exception {
+        JsonNode session = register(uniqueEmail());
+        AuthSession row = sessionOf(session.get("token").asText());
+        row.setLastUsedAt(Instant.now().minus(Duration.ofDays(13)));
+        authSessionRepository.save(row);
+
+        JsonNode next = read(refresh(session.get("refreshToken").asText()).andExpect(status().isOk()));
+
+        assertThat(sessionOf(next.get("token").asText()).getLastUsedAt())
+                .isAfter(Instant.now().minus(Duration.ofMinutes(1)));
+    }
+
     // ---------- SEC-07-09: strict token checks ----------
 
     @Test
