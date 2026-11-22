@@ -2,6 +2,7 @@ package com.visionmapping.config;
 
 import com.visionmapping.security.AppUserDetailsService;
 import com.visionmapping.security.PasswordHashUpgrader;
+import com.visionmapping.service.stepup.StepUpService;
 import com.visionmapping.security.JwtAuthenticationFilter;
 import com.visionmapping.security.RestAccessDeniedHandler;
 import com.visionmapping.security.RestAuthenticationEntryPoint;
@@ -208,7 +209,9 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(corsAllowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // V20: "Verify it's you" codes travel in their own headers; without them here the
+        // browser's preflight is refused (403) and every protected action fails cross-site.
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", StepUpService.HEADER, StepUpService.CONFIRM_HEADER));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(false);
 
