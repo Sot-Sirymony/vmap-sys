@@ -34,6 +34,9 @@ public interface SecurityEventRepository extends Repository<SecurityEvent, Long>
 
     long countByEventTypeAndActorIdAndOccurredAtAfter(SecurityEventType type, Long actorId, Instant after);
 
+    /** V10 SEC-09-04: whether this AI budget warning (by its detail prefix) was already raised. */
+    boolean existsByEventTypeAndDetailStartingWith(SecurityEventType type, String detailPrefix);
+
     @Modifying
     @Query("delete from SecurityEvent e where e.occurredAt < :before")
     int deleteOlderThan(@Param("before") Instant before);

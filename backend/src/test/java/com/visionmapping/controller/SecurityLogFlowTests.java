@@ -60,6 +60,9 @@ class SecurityLogFlowTests {
     @Autowired
     private SecurityEventService securityEvents;
 
+    @Autowired
+    private com.visionmapping.repository.SecurityEventRepository securityEventRepository;
+
     // ---------- SEC-09-01, SEC-09-02: what is recorded, and what never is ----------
 
     @Test
@@ -178,6 +181,19 @@ class SecurityLogFlowTests {
     }
 
     // ---------- SEC-09-04: alerts ----------
+
+    @Test
+    void anAiBudgetWarningIsLoggedOnceFindableAndRaisesAnAlert() {
+        String key = "monthly-80 test-" + java.util.UUID.randomUUID();
+
+        securityEvents.recordAnonymous(com.visionmapping.security.audit.SecurityEventType.AI_BUDGET_WARNING,
+                com.visionmapping.security.audit.SecurityOutcome.SUCCESS, null, null,
+                key + ": spend this month $16.40 is 82% of the $20.00 budget");
+
+        assertThat(securityEventRepository.existsByEventTypeAndDetailStartingWith(
+                com.visionmapping.security.audit.SecurityEventType.AI_BUDGET_WARNING, key)).isTrue();
+        assertThat(alerts.recentAlerts()).anyMatch(alert -> alert.contains("AI spending: " + key));
+    }
 
     @Test
     void tenFailedSignInsOnOneAccountRaiseOneAlertWithoutTheEmail() throws Exception {

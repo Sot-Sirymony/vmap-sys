@@ -104,7 +104,9 @@ export function ImportExportPage() {
               </p>
             )}
             {summary.backupFile && (
-              <p className="field-hint">A backup snapshot was saved before the import: {summary.backupFile}</p>
+              <p className="field-hint">
+                {tr('A copy of your data from before the import was saved on the server as {file}. It is kept for 30 days; ask an admin if you need it restored.', { file: summary.backupFile })}
+              </p>
             )}
             {summary.createdRecords > 0 && (
               <p className="field-hint">{tr('Open Goals, Steps, or Tasks to see the imported records.')}</p>

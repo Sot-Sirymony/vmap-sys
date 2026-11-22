@@ -33,6 +33,34 @@ refresh, with reason `IDLE_TIMEOUT`, even inside the 30-day "remember me" limit.
 configured (production), so a restart or deploy no longer clears them; keys are hashed, and the limiters fall back
 to in-memory counts while Redis does not answer. Internal TLS stays an accepted-risk candidate.
 
+**BRD 10 close-out, step 1 (SEC-04-02):** passwords are hashed with BCrypt at cost 12 (`BCRYPT_COST`; production
+refuses to start below 12). Hashes made at the old cost 10 are replaced at the person's next successful sign-in, from
+the password they typed, so nobody has to change their password.
+
+**BRD 10 close-out, step 2 (SEC-04-06):** pre-import Excel snapshots are deleted daily after 30 days
+(`EXCEL_BACKUP_RETENTION_DAYS`), are readable by the server's user only, and get a random part in their name so two
+imports in the same second no longer overwrite each other. The import answer now gives only the file name instead of
+the server's full path, and the Import page says how long the copy is kept.
+
+**BRD 10 close-out, step 3 (SEC-09-04):** AI spending alerts. Every 15 minutes `AiBudgetWatch` checks the month's
+spend against the budget (warnings at 80% and 100%, once each per month) and the last hour against the week's average
+(at least $1 and 5 times the average). Each warning is an `AI_BUDGET_WARNING` security event, raised once even across
+restarts, and goes to the server log and the alert email like the other alerts.
+
+**BRD 10 close-out, step 4 (SAC-06, SAC-17):** a weekly OWASP ZAP baseline scan of the production frontend and API
+(`.github/workflows/zap-baseline.yml`, also run on demand). It is passive and fails on a Medium or High finding that is
+not accepted, with a reason, in `.zap/rules.tsv`. The action and the ZAP image are pinned; no GitHub issues are
+created.
+
+**BRD 10 close-out, step 5:**
+- SEC-04-04: secrets can be rotated without losing data. `SETTINGS_ENCRYPTION_KEY_PREVIOUS` keeps the Claude key and
+  every authenticator secret readable while `SecretResealJob` re-seals them at start-up; `TWO_FACTOR_SECRET_PREVIOUS`
+  keeps recovery codes working. Before this, rotating the encryption key would have broken everyone's authenticator
+  app. The incident plan is corrected and `SECURITY.md` has a rotation table.
+- SEC-05-08: each Claude request carries a random check value that Claude is told never to repeat; a reply containing
+  it (the instructions being repeated) is withheld as a refusal, and streaming stops before it is shown.
+- SEC-02-08: a hardening checklist per environment in `SECURITY.md`.
+
 ### Phase 1 — data and core (2026-11-22)
 - **Data.** Migration `V87__two_factor_sign_in.sql`: `two_factor_settings`, `two_factor_recovery_codes`,
   `sign_in_challenges`, `trusted_devices`, and `app_users.two_factor_due_at`. Deleting an account removes them.

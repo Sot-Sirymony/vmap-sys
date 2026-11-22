@@ -26,7 +26,7 @@ them emailed as well.
 
 | Area | Control |
 | --- | --- |
-| Sign-in | BCrypt passwords; 5 wrong passwords lock an email for 15 minutes; disabled accounts refused |
+| Sign-in | BCrypt passwords at cost 12 (`BCRYPT_COST`; production refuses to start below 12), older hashes upgraded at the next sign-in; 5 wrong passwords lock an email for 15 minutes; disabled accounts refused |
 | Passwords | At least 8 characters; common and breached passwords, the account's own email and the app's name are refused (NIST 800-63B, no other composition rules) |
 | Rate limits | 429 with `Retry-After` for sign-in, password reset, registration, join codes, share link openings, Excel import and AI requests (daily limit; the monthly budget cap stays) |
 | Join codes | 8 characters from a 31-letter alphabet (about 40 bits); an admin can replace one; they stop working when the cohort is archived |
@@ -41,7 +41,9 @@ them emailed as well.
 | Headers | CSP, HSTS, frame protection, nosniff, Referrer-Policy and Permissions-Policy on the API and the frontend |
 | Input | Size limits on every request field; Excel import refuses macros, unreadable and oversized files and checks each row; formula-safe Excel export |
 | AI | Records sent to Claude as escaped data that cannot pose as instructions; Claude never saves or sends on its own |
-| Secrets | `JWT_SECRET` and `SETTINGS_ENCRYPTION_KEY` required and separate in production; the Claude key is stored encrypted (AES-256-GCM) |
+| Excel backups | The snapshot saved before each import is readable by the server's user only and deleted after 30 days (`EXCEL_BACKUP_RETENTION_DAYS`); the browser is told only its file name. Restoring one is an admin task on the server |
+| Secrets | `JWT_SECRET` and `SETTINGS_ENCRYPTION_KEY` required and separate in production; the Claude key is stored encrypted (AES-256-GCM); every secret can be rotated without losing data (see *Rotating secrets*) |
+| Claude replies | Each request carries a random check value Claude is told never to repeat; a reply containing it is withheld as a refusal and stops streaming (SEC-05-08, OWASP LLM07). Prompts hold only the signed-in person's records |
 | Logging | Security event log (12 months, append-only) and alerts; see below |
 
 ## Supply chain
@@ -150,6 +152,24 @@ These cannot be set from the code; the repository owner sets them:
 3. **Dependabot alerts and security updates**: Settings → Code security → turn
    both on.
 
+## ZAP baseline scan (SAC-06, SAC-17)
+
+`.github/workflows/zap-baseline.yml` runs the OWASP ZAP baseline scan against production every Tuesday at 04:00 UTC,
+and on demand (GitHub → Actions → **ZAP baseline** → **Run workflow**). It scans the frontend and the API separately.
+
+- **Passive only:** ZAP's spider visits pages for about a minute and ZAP reads the answers (headers, cookies, content).
+  It sends no attack payloads and signs in to nothing, so it is safe to run against production. Do not switch it to
+  the full (active) scan against production; run that only against a test deployment.
+- **Pass or fail:** the job fails when a Medium or High finding remains. Low and informational findings are in the
+  report but do not fail it.
+- **Reports:** each run keeps `zap-frontend` and `zap-api` artifacts (HTML, Markdown and JSON).
+
+### Scanner exceptions
+
+A finding that is accepted rather than fixed is listed in `.zap/rules.tsv` as `<plugin id> IGNORE <reason>`. Each one
+needs the security lead's (until named, the product owner's) agreement, a reason a reviewer can check, and a line in the
+ASVS check. Review the list at each release; remove an entry as soon as its cause is fixed.
+
 ## Threat model, ASVS check and abuse cases
 
 - [THREAT_MODEL.md](THREAT_MODEL.md) (SEC-06-01): data flows, trust boundaries, threats and abuse cases for sign-in and
@@ -190,9 +210,12 @@ Raised at once, at most once an hour for the same thing:
 - 20 refused requests by one user within 15 minutes;
 - a refresh token used again after it was replaced (likely theft);
 - the admin role granted;
-- the Claude API key changed or removed.
+- the Claude API key changed or removed;
+- AI spending (checked every 15 minutes, each warning once): 80% and 100% of the monthly budget, and an hour costing
+  at least $1 and 5 times the average hour of the week before (a bug, a stuck loop or abuse). Each is also an
+  `AI_BUDGET_WARNING` row in the security log.
 
-The numbers are environment variables (`SECURITY_ALERT_*`, see the README).
+The numbers are environment variables (`SECURITY_ALERT_*` and `AI_BUDGET_*`, see the README).
 
 ## Incident response
 
@@ -214,10 +237,45 @@ Follow these steps in order. Write down what you do and when, as you go.
 | One account taken over | Disable it (`app_users.status = 'DISABLED'`); every request with its tokens is refused at once. Ask the owner to reset the password, then re-enable. |
 | Many accounts, or unsure | End every session: `UPDATE auth_sessions SET revoked_at = now(), revoked_reason = 'INCIDENT' WHERE revoked_at IS NULL;` Everyone signs in again. |
 | `JWT_SECRET` leaked | Generate a new value in Render and redeploy. All access tokens stop working; also end every session as above. |
-| `SETTINGS_ENCRYPTION_KEY` leaked | Generate a new value and redeploy, then have an admin enter the Claude key again (the old encrypted value cannot be read with the new key). Rotate the Claude key at Anthropic too. |
+| `SETTINGS_ENCRYPTION_KEY` leaked | Rotate it as in *Rotating secrets* below (old value in `SETTINGS_ENCRYPTION_KEY_PREVIOUS`, wait for the re-seal log line, then remove it). Do **not** simply replace it: every authenticator secret and the Claude key would become unreadable. Rotate the Claude key at Anthropic too. |
+| `TWO_FACTOR_SECRET` leaked | Set a new value **without** `TWO_FACTOR_SECRET_PREVIOUS`. Recovery codes stop working (authenticator apps are not affected); ask admins and coaches to make new recovery codes on the Security page. |
 | Claude API key leaked | Revoke it in the Anthropic console, enter a new one under Settings → AI settings. |
 | Database password leaked | Rotate it in Render (the backend reads it from the Blueprint), then rotate `JWT_SECRET` and end all sessions. |
 | A dependency vulnerability is being exploited | Upgrade or remove it, redeploy; if a fix is not available, turn off the affected feature. |
+
+### Rotating secrets (SEC-04-04)
+
+Planned rotation (for example yearly, or when someone with access leaves). Generate each new value with
+`openssl rand -base64 48` and set it in the Render dashboard (backend service → Environment), then redeploy.
+
+| Secret | What it protects | How to rotate without losing data |
+| --- | --- | --- |
+| `JWT_SECRET` | Signs 30-minute access tokens | Replace it. Access tokens stop working, and the app renews them at once with the refresh token (refresh tokens are stored as plain SHA-256, not keyed), so nobody is signed out. |
+| `SETTINGS_ENCRYPTION_KEY` | Seals the Claude key and every authenticator secret | 1. Copy the current value into `SETTINGS_ENCRYPTION_KEY_PREVIOUS`. 2. Set a new `SETTINGS_ENCRYPTION_KEY` (32+ characters, not equal to `JWT_SECRET`). 3. Redeploy; the log says "Re-sealed N stored secrets with the current SETTINGS_ENCRYPTION_KEY" (`SecretResealJob`). 4. Remove `SETTINGS_ENCRYPTION_KEY_PREVIOUS` and redeploy. |
+| `TWO_FACTOR_SECRET` | HMAC of recovery codes and emailed sign-in codes | 1. Copy the current value into `TWO_FACTOR_SECRET_PREVIOUS`. 2. Set a new `TWO_FACTOR_SECRET`. Old recovery codes keep working; new ones use the new secret. 3. Remove the previous value once people have made new recovery codes (it cannot be re-hashed, because only the hash is stored). |
+| `STEP_UP_SECRET` | HMAC of "Verify it's you" codes (10 minutes) | Replace it. Codes already sent stop working; people ask for a new one. |
+| `GOOGLE_CLIENT_SECRET` | Google sign-in | Add a new secret in Google Cloud, set it in Render, redeploy, then delete the old one in Google Cloud. |
+| Database password | PostgreSQL | Rotate it in Render; the backend reads it from the Blueprint. |
+| Claude API key | AI features | Create a new key at Anthropic, enter it under Settings → AI settings, then revoke the old one. |
+
+### Hardening checklist (SEC-02-08)
+
+Check at every release; record the date and who checked in the release notes. Values live in the Render dashboard and
+the local `docs/production_env.md`, which git ignores and must never be committed.
+
+| Check | Local | Test (CI) | Production |
+| --- | --- | --- | --- |
+| Profile | `local` | `test` | `prod` |
+| `JWT_SECRET`, `SETTINGS_ENCRYPTION_KEY`, `STEP_UP_SECRET`, `TWO_FACTOR_SECRET` | Dev defaults allowed | Test values | Set, random, all different; the app refuses to start otherwise |
+| `*_PREVIOUS` secrets | Unset | Unset | Unset, except during a rotation |
+| `BCRYPT_COST` | Any (4+) | 5 | 12 or more (the app refuses less) |
+| `CORS_ALLOWED_ORIGINS` | Local dev servers (default) | n/a | Only the production frontend origin |
+| Mail (`MAIL_HOST`) and `SECURITY_ALERT_EMAIL` | Optional (links go to the log) | Off | Set; alerts reach a person |
+| `CACHE_TYPE` / Redis | Optional | `simple` | `redis` (shared rate-limit counts, F-04) |
+| H2 console, devtools, API docs | Allowed | n/a | Off |
+| HTTPS, HSTS, CSP and other headers | n/a | Header tests | Confirmed by the weekly ZAP baseline scan |
+| Dependencies | n/a | Trivy, Dependabot, SonarQube pass | Deployed only from `main` after checks pass |
+| Backups | n/a | n/a | Excel snapshots deleted after 30 days; database backups per the Render plan |
 
 ### 3. Investigate
 

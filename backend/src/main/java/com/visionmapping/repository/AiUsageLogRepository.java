@@ -16,6 +16,10 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, Long> {
 
     long countByCreatedAtGreaterThanEqual(Instant from);
 
+    /** V10 SEC-09-04: spend in a time range, for the AI budget spike alert. */
+    @Query("select coalesce(sum(log.costUsd), 0) from AiUsageLog log where log.createdAt >= :from and log.createdAt < :to")
+    BigDecimal totalCostBetween(Instant from, Instant to);
+
     /**
      * V11 (PB-FR-36): per feature since a time: feature, requests, suggested
      * items, added, edited, ratings, thumbs up, cost.

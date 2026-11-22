@@ -55,6 +55,8 @@ public enum SecurityEventType {
     AI_SETTINGS_CHANGED,
     AI_KEY_CHANGED,
     AI_KEY_REMOVED,
+    // V10 SEC-09-04: AI spending passed 80% or 100% of the monthly budget, or jumped in one hour.
+    AI_BUDGET_WARNING,
     APPROVED_RESOURCE_CHANGED,
     MODULE_CONTENT_CHANGED,
     INTERFACE_TEXT_CHANGED,

@@ -1,0 +1,81 @@
+# V10 (SAC-06, SAC-17): OWASP ZAP baseline scan of production, weekly and on demand.
+#
+# The baseline scan is passive: ZAP's spider visits pages for about a minute and
+# ZAP only reads the answers (headers, cookies, content). It sends no attack
+# payloads and signs in to nothing, so it is safe against production.
+#
+# The job fails when a Medium or High finding remains that is not accepted in
+# .zap/rules.tsv (each acceptance has a reason; see docs/SECURITY.md). Reports
+# are kept as workflow artifacts. No GitHub issues are created.
+name: ZAP baseline
+
+on:
+  schedule:
+    - cron: "0 4 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zap-baseline
+  cancel-in-progress: false
+
+env:
+  ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af
+
+jobs:
+  scan:
+    name: ZAP baseline (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: frontend
+            target: https://vision-mapping-frontend.onrender.com/
+          - name: api
+            target: https://vision-mapping-backend.onrender.com/api/health
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Render may need a moment to wake a service; wait up to about 3 minutes.
+      - name: Wake the target
+        run: |
+          for attempt in $(seq 1 18); do
+            if curl -fsS -o /dev/null --max-time 20 "${{ matrix.target }}"; then
+              echo "Target is up"; exit 0
+            fi
+            echo "Not up yet (attempt $attempt)"; sleep 10
+          done
+          echo "Target did not answer"; exit 1
+
+      - name: ZAP baseline scan
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: ${{ matrix.target }}
+          docker_name: ${{ env.ZAP_IMAGE }}
+          rules_file_name: .zap/rules.tsv
+          cmd_options: -a
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: zap-${{ matrix.name }}
+
+      - name: Fail on Medium or High findings
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          with open("report_json.json") as handle:
+              report = json.load(handle)
+          serious = []
+          for site in report.get("site", []):
+              for alert in site.get("alerts", []):
+                  if int(alert.get("riskcode", 0)) >= 2:
+                      serious.append(f'{alert.get("pluginid")} {alert.get("riskdesc")}: {alert.get("name")} ({alert.get("count")} URLs)')
+          if serious:
+              print("Medium or High findings not accepted in .zap/rules.tsv:")
+              print("\n".join(serious))
+              sys.exit(1)
+          print("No Medium or High findings.")
+          PY

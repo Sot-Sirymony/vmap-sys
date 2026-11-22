@@ -34,6 +34,12 @@ import org.springframework.stereotype.Component;
  * Decryption tries that legacy key when the current one fails, so the stored
  * Claude key keeps working after the new variable is set; it is sealed with the
  * new key the next time an admin saves it. New values always use the new key.
+ *
+ * <p>V10 (SEC-04-04): to rotate the key without losing anything, set the old
+ * value as SETTINGS_ENCRYPTION_KEY_PREVIOUS and the new one as
+ * SETTINGS_ENCRYPTION_KEY. Values still open with the previous key, and
+ * {@link SecretResealJob} re-seals them with the new key at start-up; after
+ * that the previous key can be removed (docs/SECURITY.md, "Rotating secrets").
  */
 @Slf4j
 @Component
@@ -46,6 +52,9 @@ public class SecretCipher {
     private static final Set<String> PROFILES_ALLOWING_FALLBACK = Set.of("local", "test");
 
     private final SecretKeySpec key;
+    /** SEC-04-04: the key before the last rotation, while values are re-sealed. */
+    @Nullable
+    private final SecretKeySpec previousKey;
     /** Null when the current key already is the JWT-derived one. */
     @Nullable
     private final SecretKeySpec legacyKey;
@@ -53,17 +62,29 @@ public class SecretCipher {
 
     @Autowired
     public SecretCipher(@Value("${app.security.settings-encryption-key:}") String settingsKey,
+                        @Value("${app.security.settings-encryption-key-previous:}") String previousSettingsKey,
                         @Value("${app.security.jwt-secret}") String jwtSecret,
                         Environment environment) {
-        this(settingsKey, jwtSecret, allowsFallback(environment));
+        this(settingsKey, previousSettingsKey, jwtSecret, allowsFallback(environment));
+    }
+
+    /** For tests: the profile rules of the given environment, no previous key. */
+    public SecretCipher(String settingsKey, String jwtSecret, Environment environment) {
+        this(settingsKey, null, jwtSecret, allowsFallback(environment));
     }
 
     /** For tests: behaves like the local profile. */
     public SecretCipher(String settingsKey, String jwtSecret) {
-        this(settingsKey, jwtSecret, true);
+        this(settingsKey, null, jwtSecret, true);
     }
 
-    private SecretCipher(@Nullable String settingsKey, @Nullable String jwtSecret, boolean allowFallback) {
+    /** For tests: behaves like the local profile, with a previous key (SEC-04-04). */
+    public SecretCipher(String settingsKey, @Nullable String previousSettingsKey, String jwtSecret) {
+        this(settingsKey, previousSettingsKey, jwtSecret, true);
+    }
+
+    private SecretCipher(@Nullable String settingsKey, @Nullable String previousSettingsKey, @Nullable String jwtSecret,
+                         boolean allowFallback) {
         boolean hasSettingsKey = settingsKey != null && !settingsKey.isBlank();
         if (!allowFallback) {
             validateForProduction(settingsKey, jwtSecret);
@@ -73,6 +94,14 @@ public class SecretCipher {
         }
         this.key = derive(hasSettingsKey ? settingsKey : jwtSecret);
         this.legacyKey = hasSettingsKey && jwtSecret != null && !jwtSecret.isBlank() ? derive(jwtSecret) : null;
+        boolean hasPrevious = previousSettingsKey != null && !previousSettingsKey.isBlank();
+        if (hasPrevious && previousSettingsKey.equals(settingsKey)) {
+            throw new IllegalStateException("SETTINGS_ENCRYPTION_KEY_PREVIOUS must differ from SETTINGS_ENCRYPTION_KEY.");
+        }
+        this.previousKey = hasPrevious ? derive(previousSettingsKey) : null;
+        if (hasPrevious) {
+            log.info("SETTINGS_ENCRYPTION_KEY_PREVIOUS is set: stored secrets sealed with it are re-sealed at start-up.");
+        }
     }
 
     private static boolean allowsFallback(Environment environment) {
@@ -120,10 +149,24 @@ public class SecretCipher {
     /** Empty when there is no value, or it was sealed with another key, or it is damaged (Item 55). */
     public Optional<String> decrypt(@Nullable String sealed) {
         String plain = decryptWith(key, sealed);
+        if (plain == null && previousKey != null) {
+            plain = decryptWith(previousKey, sealed);
+        }
         if (plain == null && legacyKey != null) {
             plain = decryptWith(legacyKey, sealed);
         }
         return Optional.ofNullable(plain);
+    }
+
+    /**
+     * SEC-04-04: the value sealed again with the current key, or empty when it
+     * already uses the current key, is empty, or cannot be opened at all.
+     */
+    public Optional<String> reseal(@Nullable String sealed) {
+        if (sealed == null || decryptWith(key, sealed) != null) {
+            return Optional.empty();
+        }
+        return decrypt(sealed).map(this::encrypt);
     }
 
     @Nullable

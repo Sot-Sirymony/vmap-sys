@@ -1,0 +1,6 @@
+# ZAP baseline rules for .github/workflows/zap-baseline.yml (V10 SAC-17).
+#
+# Format: <plugin id><TAB><IGNORE|INFO|WARN|FAIL><TAB><reason>
+# A Medium or High finding fails the scan unless its rule is listed here as IGNORE
+# with a reason the security lead accepts (docs/SECURITY.md, "Scanner exceptions").
+# Keep this list short and review it at each release.

@@ -1,6 +1,7 @@
 package com.visionmapping.config;
 
 import com.visionmapping.security.AppUserDetailsService;
+import com.visionmapping.security.PasswordHashUpgrader;
 import com.visionmapping.security.JwtAuthenticationFilter;
 import com.visionmapping.security.RestAccessDeniedHandler;
 import com.visionmapping.security.RestAuthenticationEntryPoint;
@@ -10,6 +11,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -53,9 +55,12 @@ public class SecurityConfig {
     static final String[] DOCS_PATHS = {"/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**"};
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()";
     static final long HSTS_MAX_AGE_SECONDS = 31_536_000L;
+    static final int MIN_PRODUCTION_BCRYPT_COST = 12;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
+    private final PasswordHashUpgrader passwordHashUpgrader;
+    private final int bcryptCost;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
     private final List<String> corsAllowedOrigins;
@@ -63,11 +68,17 @@ public class SecurityConfig {
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             AppUserDetailsService appUserDetailsService,
+            PasswordHashUpgrader passwordHashUpgrader,
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
-            @Value("${app.cors.allowed-origins}") String corsAllowedOrigins) {
+            @Value("${app.cors.allowed-origins}") String corsAllowedOrigins,
+            @Value("${app.security.bcrypt-cost:12}") int bcryptCost,
+            Environment environment) {
+        checkBcryptCost(bcryptCost, environment.getActiveProfiles());
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.appUserDetailsService = appUserDetailsService;
+        this.passwordHashUpgrader = passwordHashUpgrader;
+        this.bcryptCost = bcryptCost;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.corsAllowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
@@ -176,6 +187,8 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(appUserDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
+        // SEC-04-02: a hash made at a lower cost is replaced at the next sign-in.
+        provider.setUserDetailsPasswordService(passwordHashUpgrader);
         return provider;
     }
 
@@ -184,9 +197,10 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
+    /** V10 (SEC-04-02): BCrypt at an explicit cost, 12 by default (`BCRYPT_COST`). */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(bcryptCost);
     }
 
     @Bean
@@ -201,6 +215,17 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
+    }
+
+    /** SEC-04-02: 4 to 31 anywhere (BCrypt's range), and at least 12 outside the local and test profiles. */
+    static void checkBcryptCost(int cost, String[] activeProfiles) {
+        if (cost < 4 || cost > 31) {
+            throw new IllegalStateException("BCRYPT_COST must be between 4 and 31.");
+        }
+        boolean relaxed = Arrays.stream(activeProfiles).anyMatch(profile -> profile.equals("local") || profile.equals("test"));
+        if (cost < MIN_PRODUCTION_BCRYPT_COST && !relaxed) {
+            throw new IllegalStateException("BCRYPT_COST must be at least 12 outside the local/test profiles (SEC-04-02).");
+        }
     }
 
     private static RequestMatcher docsPaths() {

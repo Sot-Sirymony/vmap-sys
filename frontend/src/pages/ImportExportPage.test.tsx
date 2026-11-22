@@ -17,7 +17,7 @@ const summary = (overrides: Partial<ExcelImportSummary> = {}): ExcelImportSummar
   skippedRecords: 2,
   validationErrors: ['Tasks row 4: owner is required', 'Tasks row 9: due date is not a date'],
   rowsBySheet: { 'Vision Areas': 2, Tasks: 10 },
-  backupFile: 'backup-2026-11-07.json',
+  backupFile: 'vision-mapping-backup-20261107-101010-0a1b2c3d.xlsx',
   ...overrides,
 } as ExcelImportSummary);
 
@@ -47,7 +47,7 @@ describe('ImportExportPage (CLAUDE.md page 11)', () => {
     expect(screen.getByText('Rows skipped').nextSibling).toHaveTextContent('2');
     expect(screen.getByText('Errors').nextSibling).toHaveTextContent('2');
     expect(screen.getByText('Vision Areas: 2 · Tasks: 10')).toBeInTheDocument();
-    expect(screen.getByText(/backup snapshot was saved before the import: backup-2026-11-07\.json/)).toBeInTheDocument();
+    expect(screen.getByText(/saved on the server as vision-mapping-backup-20261107-101010-0a1b2c3d\.xlsx\. It is kept for 30 days/)).toBeInTheDocument();
     expect(screen.getByText('Tasks row 4: owner is required')).toBeInTheDocument();
     expect(screen.getByText('Tasks row 9: due date is not a date')).toBeInTheDocument();
     expect(screen.getByText('Open Goals, Steps, or Tasks to see the imported records.')).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('ImportExportPage (CLAUDE.md page 11)', () => {
     await userEvent.upload(fileInput(), workbook());
     expect(await screen.findByText('Import Summary')).toBeInTheDocument();
     expect(screen.queryByText('Open Goals, Steps, or Tasks to see the imported records.')).not.toBeInTheDocument();
-    expect(screen.queryByText(/backup snapshot/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/saved on the server as/)).not.toBeInTheDocument();
   });
 
   it('shows why an import failed', async () => {

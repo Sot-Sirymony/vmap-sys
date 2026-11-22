@@ -71,8 +71,16 @@ springdoc:
   paths-to-match: /api/**
 
 app:
+  # BRD C-7 / V10 SEC-04-06: the snapshot saved before each Excel import, and how
+  # long it is kept before the daily clean-up deletes it.
+  excel:
+    backup-dir: ${EXCEL_BACKUP_DIR:data/backup}
+    backup-retention-days: ${EXCEL_BACKUP_RETENTION_DAYS:30}
   security:
     jwt-secret: ${JWT_SECRET:vision-mapping-development-secret-key-change-before-production}
+    # V10 (SEC-04-02): BCrypt cost for password hashes (at least 12 in production).
+    # Hashes made at a lower cost are upgraded at the person's next sign-in.
+    bcrypt-cost: ${BCRYPT_COST:12}
     # V10 (SEC-07-04): the access token's lifetime. Short, because it cannot be
     # recalled once handed out except by ending its session; the client renews
     # it in the background with the refresh token.
@@ -101,6 +109,9 @@ app:
     # different from JWT_SECRET. Values saved earlier with the JWT-derived key
     # still decrypt, and are re-sealed with this key when next saved.
     settings-encryption-key: ${SETTINGS_ENCRYPTION_KEY:}
+    # V10 (SEC-04-04): during a rotation, the old SETTINGS_ENCRYPTION_KEY. Stored
+    # secrets are re-sealed with the new key at start-up; then remove this.
+    settings-encryption-key-previous: ${SETTINGS_ENCRYPTION_KEY_PREVIOUS:}
     # V10 (SEC-07-01): failed sign-ins. After max-failures-per-account wrong
     # passwords within window-minutes, that email is refused for lock-minutes.
     # A caller with max-failures-per-ip failures is refused for the rest of the
@@ -170,6 +181,9 @@ app:
   two-factor:
     enabled: ${TWO_FACTOR_ENABLED:true}
     secret: ${TWO_FACTOR_SECRET:${app.security.jwt-secret}}
+    # V10 (SEC-04-04): during a rotation, the old TWO_FACTOR_SECRET, so recovery
+    # codes made before it keep working until they are used or replaced.
+    secret-previous: ${TWO_FACTOR_SECRET_PREVIOUS:}
     challenge-minutes: ${TWO_FACTOR_CHALLENGE_MINUTES:5}
     trusted-device-days: ${TWO_FACTOR_TRUSTED_DEVICE_DAYS:30}
     grace-days: ${TWO_FACTOR_GRACE_DAYS:14}
@@ -195,6 +209,13 @@ app:
     # V9: optional fallback Claude API key. A key saved on the AI settings page
     # takes priority, so it can be changed without a restart.
     api-key: ${ANTHROPIC_API_KEY:}
+    # V10 SEC-09-04: alerts (security log, server log, alert email) when AI spend
+    # reaches warn-percent and 100% of the monthly budget, or when one hour costs
+    # at least spike-min-usd and spike-factor times the week's average hour.
+    budget-alerts:
+      warn-percent: ${AI_BUDGET_WARN_PERCENT:80}
+      spike-min-usd: ${AI_BUDGET_SPIKE_MIN_USD:1.00}
+      spike-factor: ${AI_BUDGET_SPIKE_FACTOR:5}
   progress:
     # FR-75: the targets the personal progress card measures against.
     target-improvement-percent: ${PROGRESS_TARGET_IMPROVEMENT_PERCENT:25}
@@ -370,6 +391,9 @@ app:
   step-up:
     enabled: false
   security:
+    # Cost 12 would make the suite's hundreds of sign-ups slow; PasswordHashUpgradeFlowTests
+    # checks the upgrade from a lower cost to this one.
+    bcrypt-cost: 5
     rate-limit:
       registration-per-ip: 1000000
       join-code-per-key: 1000000

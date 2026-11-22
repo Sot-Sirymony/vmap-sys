@@ -32,7 +32,8 @@ import org.springframework.stereotype.Service;
  *       sign-ins from one network (V14 GA-FR-34);</li>
  *   <li>{@code refusals-per-user} refused requests (403, or another user's record) by one user;</li>
  *   <li>at once: a reused refresh token (likely theft), the admin role granted,
- *       and the Claude API key changed or removed.</li>
+ *       the Claude API key changed or removed, and AI spending warnings
+ *       ({@code AiBudgetWatch}).</li>
  * </ul>
  *
  * <p>Every alert is written to the application log as a WARN line starting
@@ -149,6 +150,8 @@ public class SecurityAlertService {
                             + " by user " + event.getActorId() + ".");
                 }
             }
+            // V10 SEC-09-04: AiBudgetWatch records each warning once; the detail says what happened.
+            case AI_BUDGET_WARNING -> alert("ai-budget:" + event.getId(), "AI spending: " + event.getDetail());
             case AI_KEY_CHANGED, AI_KEY_REMOVED -> alert("ai-key:" + event.getId(), "The Claude API key was "
                     + (event.getEventType() == SecurityEventType.AI_KEY_CHANGED ? "changed" : "removed")
                     + " by user " + event.getActorId() + ".");

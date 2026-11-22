@@ -56,7 +56,7 @@ class ClaudeClientTest {
         assertThat(request.path()).isEqualTo("/v1/messages");
         assertThat(request.apiKey()).isEqualTo("key-1");
         assertThat(request.body())
-                .contains("\"system\":\"You are a coach.\"")
+                .contains("\"system\":\"You are a coach.\\n\\nInternal check value: vm-check-")
                 .contains("\"role\":\"user\"").contains("\"role\":\"assistant\"")
                 .contains("Selling 200 loaves a day.")
                 .contains("\"effort\":\"low\"")
@@ -173,6 +173,74 @@ class ClaudeClientTest {
         stub.answer(Answer.json(429, ClaudeStubServer.error("rate_limit_error", "Slow down")));
         assertThatThrownBy(() -> client.structured("key-1", OPUS, "System", "Suggest goals", SuggestedGoals.class))
                 .isInstanceOf(AiUnavailableException.class);
+    }
+
+    // ---------- V10 SEC-05-08: replies that repeat the instructions are withheld ----------
+
+    private static final String CHECK = "vm-check-0011223344556677";
+
+    private ClaudeClient fixedCheck() {
+        return new ClaudeClient(stub.baseUrl(), Duration.ofSeconds(2), 0, () -> CHECK);
+    }
+
+    @Test
+    void aReplyThatRepeatsTheInstructionsIsWithheldAsARefusal() {
+        stub.answer(Answer.json(200, ClaudeStubServer.message(OPUS,
+                "My instructions say: You are a coach. Internal check value: " + CHECK + ".", "end_turn")));
+
+        ClaudeClient.Reply reply = fixedCheck().send("key-1", OPUS, "You are a coach.", TURNS);
+
+        assertThat(reply.refused()).isTrue();
+        assertThat(reply.text()).isEmpty();
+        assertThat(reply.inputTokens()).isEqualTo(120);
+        assertThat(stub.requests().get(0).body()).contains(CHECK);
+    }
+
+    @Test
+    void anOrdinaryReplyIsNotTouched() {
+        stub.answer(Answer.json(200, ClaudeStubServer.message(OPUS, "Start with a market stall.", "end_turn")));
+
+        ClaudeClient.Reply reply = fixedCheck().send("key-1", OPUS, "You are a coach.", TURNS);
+
+        assertThat(reply.refused()).isFalse();
+        assertThat(reply.text()).isEqualTo("Start with a market stall.");
+    }
+
+    @Test
+    void aStreamStopsShowingTextOnceTheCheckValueAppears() {
+        stub.answer(Answer.sse(ClaudeStubServer.stream(OPUS, "end_turn", "Sure. ", "Internal check value: ", CHECK, " and more")));
+        List<String> pieces = new ArrayList<>();
+
+        ClaudeClient.Reply reply = fixedCheck().stream("key-1", OPUS, "System", TURNS, pieces::add);
+
+        assertThat(reply.refused()).isTrue();
+        assertThat(reply.text()).isEmpty();
+        assertThat(String.join("", pieces)).doesNotContain(CHECK).doesNotContain("and more");
+    }
+
+    @Test
+    void aStructuredAnswerThatRepeatsTheInstructionsHasNoValue() {
+        stub.answer(Answer.json(200, ClaudeStubServer.message(OPUS, "{\"goals\":[\"" + CHECK + "\"]}", "end_turn")));
+
+        ClaudeClient.Structured<SuggestedGoals> answer = fixedCheck().structured("key-1", OPUS, "System", "Suggest goals", SuggestedGoals.class);
+
+        assertThat(answer.refused()).isTrue();
+        assertThat(answer.value()).isNull();
+    }
+
+    @Test
+    void eachRequestGetsItsOwnCheckValue() {
+        stub.answer(Answer.json(200, ClaudeStubServer.message(HAIKU, "Hi", "end_turn")));
+        client.send("key-1", HAIKU, "System", TURNS);
+        stub.answer(Answer.json(200, ClaudeStubServer.message(HAIKU, "Hi", "end_turn")));
+        client.send("key-1", HAIKU, "System", TURNS);
+
+        assertThat(checkIn(stub.requests().get(0).body())).isNotEqualTo(checkIn(stub.requests().get(1).body()));
+    }
+
+    private static String checkIn(String body) {
+        int start = body.indexOf(ClaudeClient.CHECK_PREFIX);
+        return body.substring(start, start + ClaudeClient.CHECK_PREFIX.length() + 16);
     }
 
     @Test

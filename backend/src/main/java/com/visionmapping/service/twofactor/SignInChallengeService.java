@@ -178,7 +178,7 @@ public class SignInChallengeService {
         if (challenge.getMethod() == TwoFactorMethod.EMAIL) {
             String typed = StepUpCodes.normalise(code);
             return typed != null && challenge.getCodeHash() != null
-                    && TwoFactorCodes.sameHash(challenge.getCodeHash(), properties.hash(typed));
+                    && properties.matches(challenge.getCodeHash(), typed);
         }
         Long userId = challenge.getUser().getId();
         Optional<UserTwoFactor> settings = settingsRepository.findById(userId).filter(UserTwoFactor::isEnabled);
@@ -198,10 +198,9 @@ public class SignInChallengeService {
         if (clean == null) {
             return false;
         }
-        String hash = properties.hash(clean);
         Long match = null;
         for (TwoFactorRecoveryCode candidate : recoveryRepository.findByUser_IdAndUsedAtIsNull(userId)) {
-            if (TwoFactorCodes.sameHash(candidate.getCodeHash(), hash)) {
+            if (properties.matches(candidate.getCodeHash(), clean)) {
                 match = candidate.getId();
             }
         }

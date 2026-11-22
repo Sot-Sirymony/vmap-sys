@@ -1011,6 +1011,8 @@ export const km: Record<string, string> = {
   'Records created': 'កំណត់ត្រាបានបង្កើត',
   'Rows skipped': 'ជួរបានរំលង',
   'Errors': 'កំហុស',
+  'A copy of your data from before the import was saved on the server as {file}. It is kept for 30 days; ask an admin if you need it restored.':
+    'ច្បាប់ចម្លងទិន្នន័យរបស់អ្នកពីមុនការនាំចូល ត្រូវបានរក្សាទុកនៅលើម៉ាស៊ីនមេជា {file}។ វាត្រូវបានរក្សាទុករយៈពេល 30 ថ្ងៃ។ សូមសួរអ្នកគ្រប់គ្រង ប្រសិនបើអ្នកត្រូវការស្ដារវាឡើងវិញ។',
   'Open Goals, Steps, or Tasks to see the imported records.': 'បើកគោលដៅ ជំហាន ឬកិច្ចការ ដើម្បីមើលកំណត់ត្រាដែលបាននាំចូល។',
   'Move Vision Mapping data between the system and Excel.': 'ផ្លាស់ទីទិន្នន័យ Vision Mapping រវាងប្រព័ន្ធ និង Excel។',
   'Import Excel': 'នាំចូល Excel',

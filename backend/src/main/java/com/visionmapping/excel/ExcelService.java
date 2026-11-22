@@ -6,6 +6,10 @@ import com.visionmapping.service.support.ArchiveFilter;
 import org.apache.poi.openxml4j.util.ZipSecureFile;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Locale;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.security.SecureRandom;
+import java.util.HexFormat;
 import jakarta.validation.Validator;
 import static com.visionmapping.excel.WorkbookSchema.CODE;
 import static com.visionmapping.excel.WorkbookSchema.DREAMS;
@@ -100,6 +104,8 @@ public class ExcelService {
         ZipSecureFile.setMinInflateRatio(0.01);
         ZipSecureFile.setMaxEntrySize(MAX_UNZIPPED_ENTRY_BYTES);
     }
+
+    private static final SecureRandom BACKUP_NAMES = new SecureRandom();
 
     private static final List<String> REQUIRED_SHEETS = List.of(
             "Dashboard",
@@ -313,15 +319,36 @@ public class ExcelService {
         return null;
     }
 
+    /**
+     * Saves the snapshot and returns only its file name: the server's folders are
+     * not the browser's business (V10 SEC-10-02). A random part keeps two imports
+     * in the same second from overwriting each other, and the file is readable by
+     * the server's user only where the file system allows it. Snapshots are
+     * deleted after {@code app.excel.backup-retention-days} (SEC-04-06,
+     * {@link ExcelBackupCleanupJob}).
+     */
     private String saveBackupSnapshot() throws IOException {
         Path directory = Path.of(backupDirectory);
         Files.createDirectories(directory);
-        String fileName = "vision-mapping-backup-"
+        byte[] random = new byte[4];
+        BACKUP_NAMES.nextBytes(random);
+        String fileName = ExcelBackupCleanupJob.FILE_PREFIX
                 + LocalDateTime.now(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-                + ".xlsx";
+                + "-" + HexFormat.of().formatHex(random)
+                + ExcelBackupCleanupJob.FILE_SUFFIX;
         Path target = directory.resolve(fileName);
-        Files.write(target, exportWorkbook());
-        return target.toAbsolutePath().toString();
+        Files.write(target, exportWorkbook(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        ownerOnly(target);
+        log.info("Saved the pre-import backup snapshot {}", target.toAbsolutePath());
+        return fileName;
+    }
+
+    private static void ownerOnly(Path file) {
+        try {
+            Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+        } catch (UnsupportedOperationException | IOException exception) {
+            // Not a POSIX file system (for example Windows): keep the default permissions.
+        }
     }
 
     private void validateStructure(Workbook workbook, List<String> errors) {

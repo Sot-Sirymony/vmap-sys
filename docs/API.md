@@ -1188,4 +1188,7 @@ Form field:
 file
 ```
 
-Current import behavior validates sheet structure and reports row counts. It does not yet insert rows.
+The import checks the workbook, saves a snapshot of the person's current data, then creates the valid rows for the
+signed-in person and reports created and skipped rows, errors and warnings. `backupFile` is the snapshot's file name
+only (for example `vision-mapping-backup-20261122-101010-0a1b2c3d.xlsx`), never a server path; snapshots are deleted
+after 30 days (`EXCEL_BACKUP_RETENTION_DAYS`).

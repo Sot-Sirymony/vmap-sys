@@ -77,7 +77,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | Control area | Status | Evidence |
 | --- | --- | --- |
 | Password rules | Met | At least 8, up to 100 characters; common and breached passwords, the email and the app name refused; no composition rules (NIST 800-63B) |
-| Password storage | Met | BCrypt |
+| Password storage | Met | BCrypt at cost 12, older hashes upgraded at the next sign-in (SEC-04-02, 22 Nov 2026) |
 | Brute-force protection | Met | 5 failures per email, 50 per network, 15-minute lock; second-step failures count too |
 | No user enumeration on sign-in and reset | Met | Same answer for unknown email and wrong password; reset always 204 |
 | No user enumeration on registration | Partly met | "Email is already registered" (F-02, accepted risk candidate; rate limited) |
@@ -132,6 +132,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 
 | Control area | Status | Evidence |
 | --- | --- | --- |
+| Key rotation | Met | Every secret can be rotated without data loss: previous-key settings for the encryption and two-factor secrets, start-up re-seal (`SecretResealJob`), procedure in `SECURITY.md` (SEC-04-04, 22 Nov 2026) |
 | Approved algorithms | Met | BCrypt, AES-256-GCM, HMAC-SHA256, SHA-256, RS256 (Google), HMAC-SHA1 only inside TOTP as RFC 6238 requires |
 | Secure random | Met | `SecureRandom` for tokens, codes, secrets and recovery codes |
 | Secrets at rest | Met | Claude key, PKCE verifier and authenticator secrets sealed with `SETTINGS_ENCRYPTION_KEY` |
@@ -164,6 +165,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | Data export and deletion | Met | Full export (step-up); permanent deletion of every table with a user id (test checks the list) |
 | Data sent to outside services only with consent | Met | Claude only after AI consent |
 | Data minimisation | Met | Google: `openid email profile` only; no network address in notices |
+| Backups kept only as long as needed | Met | Pre-import Excel snapshots are owner-only files, deleted after 30 days (`EXCEL_BACKUP_RETENTION_DAYS`, `ExcelBackupCleanupJob`); the import answer names the file, never the server folder (SEC-04-06, 22 Nov 2026). A deleted account's data can stay in a snapshot until it ages out |
 
 ## V15 Secure Coding and Architecture
 
@@ -180,7 +182,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | --- | --- | --- |
 | Security events logged with who, what, when and outcome | Met | `security_events` (sign-in, two-step, changes, refusals, admin actions), 12 months |
 | Logs protected and free of secrets | Met | Append-only table; no secrets in details |
-| Alerts | Met | `SecurityAlertService` (sign-in failures, refusals, token reuse, admin changes, two-step resets) |
+| Alerts | Met | `SecurityAlertService` (sign-in failures, refusals, token reuse, admin changes, two-step resets); AI spending at 80% and 100% of the budget and one-hour spikes (`AiBudgetWatch`, SEC-09-04, 22 Nov 2026) |
 | Rate-limit and lockout state | Met | In Redis when configured (production), so restarts do not clear them and instances share them; in memory while Redis does not answer (F-04 counts fixed) |
 | Errors fail closed | Met | Session check failure answers 503; Google and mail failures refuse cleanly |
 
@@ -203,6 +205,10 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | F-07 | People cannot see or end their other sessions | Not met | Follow-up: a "Signed-in devices" list with "Sign out everywhere else" in the next security BRD. **Target: written by 31 Jan 2027** |
 | F-08 | Step-up and two-step code hashes used `JWT_SECRET` in production | Fixed in this phase | `STEP_UP_SECRET` and `TWO_FACTOR_SECRET` generated in `render.yaml` |
 
+
+**ZAP baseline (SAC-06, SAC-17):** `.github/workflows/zap-baseline.yml` scans the production frontend and API weekly
+(passive); a Medium or High finding fails it unless accepted in `.zap/rules.tsv`. Added 22 Nov 2026; the first run's
+result is to be recorded here.
 ## Sign-off
 
 | Role | Name | Decision on F-02 to F-04 | Date |

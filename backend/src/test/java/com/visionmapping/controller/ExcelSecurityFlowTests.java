@@ -79,6 +79,24 @@ class ExcelSecurityFlowTests {
         assertThat(areaNames(importer)).contains(FORMULA_NAME);
     }
 
+    // ---------- SEC-04-06, SEC-10-02: the pre-import snapshot ----------
+
+    @Test
+    void theImportNamesItsSnapshotWithoutTheServerFolder() throws Exception {
+        String owner = register();
+        createArea(owner, "Health");
+        byte[] workbook = export(owner);
+
+        JsonNode first = importFile(owner, "export.xlsx", workbook);
+        JsonNode second = importFile(owner, "export.xlsx", workbook);
+
+        String name = first.get("backupFile").asText();
+        assertThat(name).matches("vision-mapping-backup-\\d{8}-\\d{6}-[0-9a-f]{8}\\.xlsx");
+        assertThat(java.nio.file.Path.of("target/test-excel-backups", name)).exists();
+        // Two imports in the same second keep two snapshots.
+        assertThat(second.get("backupFile").asText()).isNotEqualTo(name);
+    }
+
     // ---------- SEC-05-05, SEC-08-02: what may be imported ----------
 
     @Test

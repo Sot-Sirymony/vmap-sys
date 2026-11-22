@@ -2,6 +2,7 @@ package com.visionmapping.service.twofactor;
 
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,12 +16,21 @@ public class TwoFactorProperties {
 
     private final boolean enabled;
     private final String secret;
+    /** SEC-04-04: the secret before the last rotation, or null. */
+    private final String previousSecret;
     private final Duration challengeLifetime;
     private final Duration trustedDeviceLifetime;
     private final Duration gracePeriod;
 
+    /** For tests: no previous secret. */
+    public TwoFactorProperties(boolean enabled, String secret, long challengeMinutes, long trustedDeviceDays, long graceDays) {
+        this(enabled, secret, "", challengeMinutes, trustedDeviceDays, graceDays);
+    }
+
+    @Autowired
     public TwoFactorProperties(@Value("${app.two-factor.enabled:true}") boolean enabled,
                                @Value("${app.two-factor.secret}") String secret,
+                               @Value("${app.two-factor.secret-previous:}") String previousSecret,
                                @Value("${app.two-factor.challenge-minutes:5}") long challengeMinutes,
                                @Value("${app.two-factor.trusted-device-days:30}") long trustedDeviceDays,
                                @Value("${app.two-factor.grace-days:14}") long graceDays) {
@@ -29,6 +39,8 @@ public class TwoFactorProperties {
         }
         this.enabled = enabled;
         this.secret = secret;
+        this.previousSecret = previousSecret == null || previousSecret.isBlank() || previousSecret.equals(secret)
+                ? null : previousSecret;
         this.challengeLifetime = Duration.ofMinutes(challengeMinutes);
         this.trustedDeviceLifetime = Duration.ofDays(trustedDeviceDays);
         this.gracePeriod = Duration.ofDays(graceDays);
@@ -60,6 +72,17 @@ public class TwoFactorProperties {
     /** HMAC of a short code (recovery or email) with the server secret. */
     public String hash(String code) {
         return TwoFactorCodes.hmac(code, secret);
+    }
+
+    /**
+     * SEC-04-04: whether a stored hash belongs to this code, with the current
+     * secret or, during a rotation, the previous one. Both are always compared,
+     * in constant time.
+     */
+    public boolean matches(String storedHash, String code) {
+        boolean current = TwoFactorCodes.sameHash(storedHash, hash(code));
+        boolean previous = previousSecret != null && TwoFactorCodes.sameHash(storedHash, TwoFactorCodes.hmac(code, previousSecret));
+        return current | previous;
     }
 
     @Override
