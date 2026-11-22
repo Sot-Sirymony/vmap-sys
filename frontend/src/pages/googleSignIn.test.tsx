@@ -84,7 +84,8 @@ describe('Google sign-in (V10)', () => {
 
       expect(oauthApi.linkGoogleAccount).toHaveBeenCalledWith({ linkToken: 'link-123', password: 'my-password' });
       await waitFor(() => expect(auth.setSession).toHaveBeenCalledWith(session, true));
-      expect(currentLocation()).toBe('/');
+      // Navigation renders after the session is set; wait for it (flaky on slow CI otherwise).
+      await waitFor(() => expect(currentLocation()).toBe('/'));
     });
 
     it('shows why linking failed and keeps the person on the page', async () => {

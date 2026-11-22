@@ -52,7 +52,8 @@ describe('LoginPage', () => {
 
     expect(authApi.login).toHaveBeenCalledWith({ email: 'chan@example.com', password: 'Password123', rememberMe: true });
     await waitFor(() => expect(auth.setSession).toHaveBeenCalledWith(session, true));
-    expect(currentLocation()).toBe('/tasks');
+    // Navigation renders after the session is set; wait for it (flaky on slow CI otherwise).
+    await waitFor(() => expect(currentLocation()).toBe('/tasks'));
     expect(localStorage.getItem(REMEMBERED_EMAIL_KEY)).toBe('chan@example.com');
     // The password is never written to the browser's storage.
     expect(JSON.stringify({ ...localStorage })).not.toContain('Password123');
@@ -68,7 +69,8 @@ describe('LoginPage', () => {
 
     await waitFor(() => expect(auth.setSession).toHaveBeenCalledWith(session, false));
     expect(localStorage.getItem(REMEMBERED_EMAIL_KEY)).toBeNull();
-    expect(currentLocation()).toBe('/');
+    // Navigation renders after the session is set; wait for it (flaky on slow CI otherwise).
+    await waitFor(() => expect(currentLocation()).toBe('/'));
   });
 
   it('shows why sign-in failed and stays on the form, without opening a session', async () => {

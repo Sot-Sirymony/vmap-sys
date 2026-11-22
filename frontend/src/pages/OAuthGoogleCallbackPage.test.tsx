@@ -29,7 +29,7 @@ describe('OAuthGoogleCallbackPage', () => {
     await waitFor(() => expect(auth.setSession).toHaveBeenCalledWith(session, false));
     expect(oauthApi.exchangeGoogleCode).toHaveBeenCalledTimes(1);
     expect(oauthApi.exchangeGoogleCode).toHaveBeenCalledWith('one-time', undefined);
-    expect(currentLocation()).toBe('/dreams?tab=all');
+    await waitFor(() => expect(currentLocation()).toBe('/dreams?tab=all'));
   });
 
   it('opens the linking screen with the link code', async () => {
