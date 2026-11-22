@@ -55,11 +55,13 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m
 const OAuthGoogleStartPage = lazy(() => import('./pages/OAuthGoogleStartPage').then((m) => ({ default: m.OAuthGoogleStartPage })));
 const OAuthGoogleErrorPage = lazy(() => import('./pages/OAuthGoogleErrorPage').then((m) => ({ default: m.OAuthGoogleErrorPage })));
 const OAuthGoogleCallbackPage = lazy(() => import('./pages/OAuthGoogleCallbackPage').then((m) => ({ default: m.OAuthGoogleCallbackPage })));
+const TwoFactorChallengePage = lazy(() => import('./pages/TwoFactorChallengePage').then((m) => ({ default: m.TwoFactorChallengePage })));
 const AccountLinkingPage = lazy(() => import('./pages/AccountLinkingPage').then((m) => ({ default: m.AccountLinkingPage })));
 const DreamCoachPage = lazy(() => import('./pages/DreamCoachPage').then((m) => ({ default: m.DreamCoachPage })));
 const AiSettingsPage = lazy(() => import('./pages/AiSettingsPage').then((m) => ({ default: m.AiSettingsPage })));
 const SharedPlanPage = lazy(() => import('./pages/SharedPlanPage').then((m) => ({ default: m.SharedPlanPage })));
 const SharedReportPage = lazy(() => import('./pages/SharedReportPage').then((m) => ({ default: m.SharedReportPage })));
+const TwoFactorAdminPage = lazy(() => import('./pages/TwoFactorAdminPage').then((m) => ({ default: m.TwoFactorAdminPage })));
 const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
 export function App() {
@@ -76,6 +78,8 @@ export function App() {
         <Route path="/oauth/google/callback" element={<OAuthGoogleCallbackPage />} />
         <Route path="/oauth/google/error" element={<OAuthGoogleErrorPage />} />
         <Route path="/oauth/google/link" element={<AccountLinkingPage />} />
+        {/* V21: the second step of signing in, before a session exists. */}
+        <Route path="/sign-in/two-factor" element={<TwoFactorChallengePage />} />
         {/* Public: V9 (v0.1 FR-10) a partner opens a shared plan without an account. */}
         <Route path="/shared/:token" element={<SharedPlanPage />} />
         {/* Public: V19 RM-FR-47 a reviewer opens a shared final report without an account. */}
@@ -119,6 +123,7 @@ export function App() {
             {/* V9: coaches and cohorts */}
             <Route path="/settings/cohorts" element={<CohortsPage />} />
             <Route path="/settings/security-log" element={<SecurityLogPage />} />
+            <Route path="/settings/two-factor" element={<TwoFactorAdminPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/dream-coach" element={<DreamCoachPage />} />
             <Route path="/coach" element={<CoachPage />} />

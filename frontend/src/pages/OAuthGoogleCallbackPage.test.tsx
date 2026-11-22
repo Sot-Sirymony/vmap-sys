@@ -28,7 +28,7 @@ describe('OAuthGoogleCallbackPage', () => {
     expect(window.location.hash).toBe('');
     await waitFor(() => expect(auth.setSession).toHaveBeenCalledWith(session, false));
     expect(oauthApi.exchangeGoogleCode).toHaveBeenCalledTimes(1);
-    expect(oauthApi.exchangeGoogleCode).toHaveBeenCalledWith('one-time');
+    expect(oauthApi.exchangeGoogleCode).toHaveBeenCalledWith('one-time', undefined);
     expect(currentLocation()).toBe('/dreams?tab=all');
   });
 

@@ -13,6 +13,8 @@ export type LoginRequest = {
   password: string;
   /** V10: a 30-day session, or one that ends with the browser tab. */
   rememberMe?: boolean;
+  /** V21 (TF-FR-22): this browser's token from an earlier "Remember this device". */
+  deviceToken?: string;
 };
 
 /**
@@ -67,6 +69,8 @@ export type AuthResponse = {
   refreshToken?: string;
   /** Seconds until `token` runs out. */
   expiresIn?: number;
+  /** V21 (TF-FR-21): present only right after a second step with "Remember this device". */
+  deviceToken?: string;
 };
 
 export type AuthUser = {
@@ -81,3 +85,25 @@ export type AuthState = {
   token: string | null;
   user: AuthUser | null;
 };
+
+/**
+ * V21 (TF-FR-10): the answer to a correct password (or Google) when two-factor
+ * sign-in is on: no session yet, only the second step.
+ */
+export type TwoFactorChallenge = {
+  status: 'TWO_FACTOR_REQUIRED';
+  challengeToken: string;
+  method: 'TOTP' | 'EMAIL';
+  /** The masked account email, for the email method. */
+  sentTo?: string;
+  /** True when the email code could not be sent; only a recovery code can finish. */
+  emailUnavailable: boolean;
+  expiresAt: string;
+};
+
+/** What a first factor answers: the session, or the second step. */
+export type SignInAnswer = AuthResponse | TwoFactorChallenge;
+
+export function isTwoFactorChallenge(answer: SignInAnswer): answer is TwoFactorChallenge {
+  return (answer as TwoFactorChallenge).status === 'TWO_FACTOR_REQUIRED';
+}

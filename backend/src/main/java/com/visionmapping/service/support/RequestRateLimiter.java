@@ -38,7 +38,12 @@ public class RequestRateLimiter {
         // V20 SV-NFR-06: code checks per person; the hourly and daily send limits are counted in the database.
         STEP_UP_VERIFY("Too many code attempts. Wait a few minutes and ask for a new code."),
         // V14 GA-SEC-09: each Google sign-in step, per network.
-        GOOGLE_SIGN_IN("Too many Google sign-in attempts from this network. Try again in a few minutes.");
+        GOOGLE_SIGN_IN("Too many Google sign-in attempts from this network. Try again in a few minutes."),
+        // V21 TF-NFR-04: second-step checks per network, and a new email code once a minute per challenge.
+        TWO_FACTOR_VERIFY("Too many sign-in code attempts from this network. Try again in a few minutes."),
+        TWO_FACTOR_RESEND("Wait a minute before asking for a new code."),
+        // V21 Phase 5 (threat model, sign-in D): sign-in code emails per account, so a known password cannot flood a mailbox.
+        TWO_FACTOR_EMAIL("Too many sign-in codes were emailed. Use a recovery code or try again later.");
 
         private final String message;
 
@@ -72,18 +77,25 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.step-up-verify-per-user:20}") int stepUpVerifyLimit,
             @Value("${app.security.rate-limit.step-up-verify-window-minutes:10}") long stepUpVerifyWindow,
             @Value("${app.security.rate-limit.google-sign-in-per-ip:60}") int googleLimit,
-            @Value("${app.security.rate-limit.google-sign-in-window-minutes:15}") long googleWindow) {
+            @Value("${app.security.rate-limit.google-sign-in-window-minutes:15}") long googleWindow,
+            @Value("${app.security.rate-limit.two-factor-verify-per-ip:30}") int twoFactorVerifyLimit,
+            @Value("${app.security.rate-limit.two-factor-verify-window-minutes:15}") long twoFactorVerifyWindow,
+            @Value("${app.security.rate-limit.two-factor-email-per-user:5}") int twoFactorEmailLimit,
+            @Value("${app.security.rate-limit.two-factor-email-window-minutes:60}") long twoFactorEmailWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
-        this.limits = Map.of(
-                Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow)),
-                Action.JOIN_CODE, new Limit(joinCodeLimit, Duration.ofMinutes(joinCodeWindow)),
-                Action.SHARED_PLAN, new Limit(sharedPlanLimit, Duration.ofMinutes(sharedPlanWindow)),
-                Action.EXCEL_IMPORT, new Limit(importLimit, Duration.ofMinutes(importWindow)),
-                Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow)),
-                Action.REPORT_SHARE, new Limit(shareLimit, Duration.ofMinutes(shareWindow)),
-                Action.SHARED_REPORT, new Limit(sharedReportLimit, Duration.ofMinutes(sharedReportWindow)),
-                Action.STEP_UP_VERIFY, new Limit(stepUpVerifyLimit, Duration.ofMinutes(stepUpVerifyWindow)),
-                Action.GOOGLE_SIGN_IN, new Limit(googleLimit, Duration.ofMinutes(googleWindow)));
+        this.limits = Map.ofEntries(
+                Map.entry(Action.REGISTRATION, new Limit(registrationLimit, Duration.ofMinutes(registrationWindow))),
+                Map.entry(Action.JOIN_CODE, new Limit(joinCodeLimit, Duration.ofMinutes(joinCodeWindow))),
+                Map.entry(Action.SHARED_PLAN, new Limit(sharedPlanLimit, Duration.ofMinutes(sharedPlanWindow))),
+                Map.entry(Action.EXCEL_IMPORT, new Limit(importLimit, Duration.ofMinutes(importWindow))),
+                Map.entry(Action.REPORT_EXPORT, new Limit(reportLimit, Duration.ofMinutes(reportWindow))),
+                Map.entry(Action.REPORT_SHARE, new Limit(shareLimit, Duration.ofMinutes(shareWindow))),
+                Map.entry(Action.SHARED_REPORT, new Limit(sharedReportLimit, Duration.ofMinutes(sharedReportWindow))),
+                Map.entry(Action.STEP_UP_VERIFY, new Limit(stepUpVerifyLimit, Duration.ofMinutes(stepUpVerifyWindow))),
+                Map.entry(Action.GOOGLE_SIGN_IN, new Limit(googleLimit, Duration.ofMinutes(googleWindow))),
+                Map.entry(Action.TWO_FACTOR_VERIFY, new Limit(twoFactorVerifyLimit, Duration.ofMinutes(twoFactorVerifyWindow))),
+                Map.entry(Action.TWO_FACTOR_RESEND, new Limit(1, Duration.ofMinutes(1))),
+                Map.entry(Action.TWO_FACTOR_EMAIL, new Limit(twoFactorEmailLimit, Duration.ofMinutes(twoFactorEmailWindow))));
     }
 
     /**

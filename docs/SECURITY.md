@@ -36,6 +36,7 @@ them emailed as well.
 | Sessions | 30-minute access tokens in memory; rotating refresh tokens; reuse ends the session; logout, password change and reset end sessions on the server |
 | Verify it's you (V20) | Changing the password, downloading all data, deleting the account, a new reminder address, and the admin changes to roles, the AI key and cohort coaches need a 6-digit code emailed to the account (a new reminder address also gets one). Codes last 10 minutes, work once, stop after 5 wrong tries, are tied to the person, session and action, and are kept only as an HMAC (`STEP_UP_SECRET`, defaulting to `JWT_SECRET`). 5 codes an hour and 20 a day per person; 10 wrong tries in an hour end the person's other sessions. Settings actions share a 10-minute window per session; delete and admin actions never do. The code is checked before the password, so these endpoints are no password oracle. A notice goes to the account email after each change. No one, an admin included, can verify for someone else or switch it off for one person; `STEP_UP_ENABLED=false` turns it off for everyone and is logged at start-up. Without a mail server in production, no code is sent, the password checks still apply, each such action is logged as `STEP_UP_SKIPPED_NO_MAIL`, and admins see a warning |
 | Google sign-in (V14) | Authorization code flow with PKCE (S256) and the client secret on the server; a 10-minute, single-use `state` kept only as a hash; Google's ID token verified (RS256 against Google's keys, re-fetched when a key ID is new; issuer, audience, expiry with 2 minutes' leeway, nonce, `email_verified`) before anything in it is used; the account is found by Google's `sub`, never by email alone. An existing account is never taken over: Google is linked only after its password is confirmed once, with the normal sign-in lock. Tokens never appear in a URL: the browser gets a 60-second, single-use code in the URL fragment (a link code lasts 10 minutes). Calls to Google time out after 5 seconds and fail closed. Every step is limited per network; disabled accounts are refused. `GOOGLE_CLIENT_SECRET` is a secret like `JWT_SECRET`: set only in the Render dashboard. Accounts created with Google get a random, unknown password hash and use the "Verify it's you" code where a password would be asked (D-14-3). Because that code is their only proof, **Google sign-in stays off until codes can be sent** (mail set up and `STEP_UP_ENABLED` on, D-14-5); a start-up warning says so |
+| Two-step sign-in (V21) | Optional for participants, required for admins and coaches (14 days from release or from getting the role, then every API call except setup answers `TWO_FACTOR_SETUP_REQUIRED`). Authenticator app (RFC 6238, secret sealed with `SecretCipher`, one step of drift, no code accepted twice) or, for participants, an email code; ten single-use recovery codes (HMAC only). A correct password opens no session while a second step is pending, and the sign-in failure count is reset only after the second step, so a known password cannot be used to guess codes without limit; five wrong codes end the step and count as failed sign-ins. Remembered devices last 30 days, are stored as a hash and are dropped on a password change or reset. Every change needs a fresh "Verify it's you" code and sends a notice. An admin may reset another person's two-step sign-in (never their own) with a reason and their own fresh code: the person's sessions end, they are emailed, an alert is raised. **Before a reset, confirm the person outside the app, for example by calling a phone number already on file** (BRD 21 Q-09 asks the product owner to confirm the procedure). `TWO_FACTOR_ENABLED=false` switches it off for everyone and is logged |
 | Access control | Every record checked against its owner (another user's record answers 404); admin and coach routes refused by role; automatic sweep test over every route |
 | Headers | CSP, HSTS, frame protection, nosniff, Referrer-Policy and Permissions-Policy on the API and the frontend |
 | Input | Size limits on every request field; Excel import refuses macros, unreadable and oversized files and checks each row; formula-safe Excel export |
@@ -149,6 +150,16 @@ These cannot be set from the code; the repository owner sets them:
 3. **Dependabot alerts and security updates**: Settings → Code security → turn
    both on.
 
+## Threat model, ASVS check and abuse cases
+
+- [THREAT_MODEL.md](THREAT_MODEL.md) (SEC-06-01): data flows, trust boundaries, threats and abuse cases for sign-in and
+  recovery, coach access, share links, Excel import and Claude. **Update it whenever a feature crosses one of its trust
+  boundaries.**
+- [ASVS_L2_CHECK.md](ASVS_L2_CHECK.md): the OWASP ASVS 5.0 Level 2 check, with findings F-01 to F-08 and their
+  decisions. Repeat it for each major version.
+- **Every BRD's acceptance criteria include at least one abuse case** ("a user tries to …", SEC-06-04, BRD 21
+  TF-FR-46). BRD 21 is the first to follow it (TFC-14 to TFC-20).
+
 ## The security log
 
 Every sign-in (success, failure, lock), logout, password change and reset,
@@ -174,6 +185,8 @@ Raised at once, at most once an hour for the same thing:
 - 10 failed sign-ins for one email within 15 minutes;
 - 50 failed sign-ins from one network within 15 minutes;
 - 50 failed Google sign-ins (callbacks and code exchanges) from one network within 15 minutes (V14);
+- 10 failed two-step codes for one email, or 50 from one network, within 15 minutes; at once: an admin reset, an admin or
+  coach turning it off, and a recovery code used on an admin account (V21);
 - 20 refused requests by one user within 15 minutes;
 - a refresh token used again after it was replaced (likely theft);
 - the admin role granted;

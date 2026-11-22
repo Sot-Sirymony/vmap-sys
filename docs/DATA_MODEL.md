@@ -357,6 +357,31 @@ by a newer code) and `createdAt`. Removed by a daily clean-up after 7 days and w
 **AuthSession** adds `verifiedUntil` (`V84`, D-20-3): the end of the session's 10-minute verified window for the
 settings actions. Cleared when the password is changed or reset.
 
+## V14 Sign in with Google
+
+**ExternalIdentity** (`external_identities`, `V85`): a Google account linked to one app account, found by Google's
+permanent `subject`; `emailAtLink`, `lastEmail`, `linkedAt`, `lastUsedAt`. Unique on (provider, subject) and (user,
+provider). **OAuthLoginAttempt** and **OAuthHandoff** (`V85`) hold the 10-minute sign-in attempt (state hash, sealed
+PKCE verifier, nonce) and the one-time codes (hash only). **AppUser** adds `passwordSet` (`V86`): false for an account
+created with Google until it sets a password.
+
+## V21 Two-step sign-in
+
+**UserTwoFactor** (`two_factor_settings`, `V87`, `V88`): one row per account that has it on or is setting it up, keyed
+by the account id. `method` (TOTP or EMAIL), `totpSecret` (Base32, sealed with SecretCipher), `lastTotpStep` (stops a
+code being used twice), `enabledAt` (null while setup is unfinished), `pendingTotpSecret` and `pendingCreatedAt` (a new
+authenticator waiting for its first code; the settings in use stay unchanged).
+
+**TwoFactorRecoveryCode** (`two_factor_recovery_codes`): ten per account, HMAC-SHA256 only, `usedAt` once used.
+**SignInChallenge** (`sign_in_challenges`): the 5-minute step between the first factor and the second (token hash,
+method, emailed code hash, attempts, remember-me choice, return path, origin PASSWORD or GOOGLE, `completedAt`).
+**TrustedDevice** (`trusted_devices`): a browser remembered for 30 days (token hash, label from the User-Agent, dates,
+`removedAt`). **AppUser** adds `twoFactorDueAt`: the set-up-by date for admins and coaches.
+
+All are deleted with the account. The export shows status, method, codes left and device labels and dates, never a
+secret, code or token. A daily clean-up removes unfinished setups after 15 minutes, challenges a day after they end, and
+devices a week after they expire or are removed.
+
 ## Business Rules
 
 - A Dream must belong to a Vision Area.

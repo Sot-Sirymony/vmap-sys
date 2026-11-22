@@ -39,6 +39,12 @@ class GoogleSignInOutcomeFlowTests extends GoogleSignInTestSupport {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private com.visionmapping.repository.UserTwoFactorRepository twoFactorRepository;
+
+    @Autowired
+    private com.visionmapping.service.twofactor.TotpSecretVault vault;
+
     @Test
     void gac01_gaFr16_gaFr25_aNewEmailCreatesAnAccountWithNoKnownPassword_andTheCodeWorksOnce() throws Exception {
         String sub = sub();
@@ -211,6 +217,33 @@ class GoogleSignInOutcomeFlowTests extends GoogleSignInTestSupport {
                         .contentType(MediaType.APPLICATION_JSON).content(json(Map.of("newPassword", "Quiet-River-Stone-77"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Current password is incorrect."));
+    }
+
+    @Test
+    void v21_tfc06_withTwoFactorOnGoogleIsOnlyTheFirstFactor() throws Exception {
+        String sub = sub();
+        String email = unique("google-2fa") + "@gmail.com";
+        exchange(fragment(googleAnswers(true, "/", sub, email, "Two Step")).get("code")).andExpect(status().isOk());
+        Long userId = appUserRepository.findByEmail(email).orElseThrow().getId();
+        String secret = com.visionmapping.service.twofactor.TotpCodes.newSecret();
+        twoFactorRepository.saveAndFlush(com.visionmapping.entity.UserTwoFactor.builder().userId(userId)
+                .method(com.visionmapping.entity.enums.TwoFactorMethod.TOTP).totpSecret(vault.seal(secret))
+                .enabledAt(java.time.Instant.now()).build());
+
+        Map<String, String> again = fragment(googleAnswers(false, "/tasks", sub, email, "Two Step"));
+        JsonNode challenge = read(exchange(again.get("code")).andExpect(status().isOk()));
+        assertThat(challenge.get("status").asText()).isEqualTo("TWO_FACTOR_REQUIRED");
+        assertThat(challenge.has("token")).isFalse();
+
+        String code = com.visionmapping.service.twofactor.TotpCodes.code(secret,
+                com.visionmapping.service.twofactor.TotpCodes.step(java.time.Instant.now()));
+        JsonNode session = read(mockMvc.perform(post("/api/auth/two-factor/verify").contentType(MediaType.APPLICATION_JSON)
+                .content(json(Map.of("challengeToken", challenge.get("challengeToken").asText(), "code", code))))
+                .andExpect(status().isOk()));
+        assertThat(session.get("userId").asLong()).isEqualTo(userId);
+        assertThat(events(userId, "GOOGLE_SIGN_IN_SUCCEEDED")).contains("this tab only, two-factor");
+        assertThat(jdbcTemplate.queryForObject("select remember_me from auth_sessions where user_id = ? order by id desc limit 1",
+                Boolean.class, userId)).isFalse();
     }
 
     @Test

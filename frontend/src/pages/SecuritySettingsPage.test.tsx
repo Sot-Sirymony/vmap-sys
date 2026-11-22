@@ -15,6 +15,8 @@ vi.mock('../api/oauthApi', () => ({
   getSignInMethods: (...args: unknown[]) => getSignInMethodsMock(...args),
 }));
 
+vi.mock('../components/security/TwoFactorCard', () => ({ TwoFactorCard: () => null }));
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ token: 'a-token', user: { id: 1, email: 'pat@example.com', fullName: 'Pat', role: 'USER' } }),
 }));

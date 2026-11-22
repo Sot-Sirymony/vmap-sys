@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Size;
 /** V14 (GA-FR-23): the link code from the Google callback and the account's password. */
 public record GoogleLinkRequest(
         @NotBlank @Size(max = 100) String linkToken,
-        @NotBlank @Size(max = 100) String password
+        @NotBlank @Size(max = 100) String password,
+        // V21 (TF-FR-22): the token of a browser remembered after an earlier second step.
+        @Size(max = 100) String deviceToken
 ) {
 }

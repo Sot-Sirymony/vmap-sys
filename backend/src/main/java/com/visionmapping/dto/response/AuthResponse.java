@@ -1,5 +1,8 @@
 package com.visionmapping.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import org.springframework.lang.Nullable;
+
 /**
  * The session handed back by register/login.
  *
@@ -11,7 +14,12 @@ package com.visionmapping.dto.response;
  * <p>V10 (SEC-07-04): {@code token} is the short-lived access token, kept in
  * memory by the client; {@code refreshToken} renews it and is kept in browser
  * storage; {@code expiresIn} is the access token's lifetime in seconds.
+ *
+ * <p>V21 (TF-FR-21): {@code deviceToken} is present only right after a second
+ * step with "Remember this device"; the browser keeps it and sends it with
+ * later sign-ins.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record AuthResponse(
         String token,
         String tokenType,
@@ -21,6 +29,7 @@ public record AuthResponse(
         String role,
         AppearancePreferencesResponse appearance,
         String refreshToken,
-        long expiresIn
-) {
+        long expiresIn,
+        @Nullable String deviceToken
+) implements SignInAnswer {
 }

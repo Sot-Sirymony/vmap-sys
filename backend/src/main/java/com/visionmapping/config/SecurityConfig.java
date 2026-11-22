@@ -131,6 +131,10 @@ public class SecurityConfig {
                                 // person is not signed in yet; state, PKCE and the
                                 // one-time codes are the keys.
                                 "/api/auth/oauth/google/**",
+                                // V21 (BRD 21.0.0): the second step of signing in;
+                                // the challenge token is the key.
+                                "/api/auth/two-factor/verify",
+                                "/api/auth/two-factor/resend",
                                 // FR-20: interface text changes, needed before
                                 // sign-in to draw the sign-in page. Read-only.
                                 "/api/ui-text"

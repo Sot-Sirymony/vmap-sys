@@ -103,6 +103,27 @@ describe('LoginPage', () => {
     expect(currentLocation()).toBe('/oauth/google');
   });
 
+  it('goes to the second step when two-step sign-in is on (V21 TF-FR-10)', async () => {
+    vi.mocked(authApi.login).mockResolvedValue({
+      status: 'TWO_FACTOR_REQUIRED', challengeToken: 'c', method: 'TOTP', emailUnavailable: false, expiresAt: '2026-11-22T10:05:00Z',
+    } as never);
+    const { auth } = renderPage(<LoginPage />, { route: '/login', state: { from: { pathname: '/tasks' } } });
+    await userEvent.type(email(), 'chan@example.com');
+    await userEvent.type(password(), 'Password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(currentLocation()).toBe('/sign-in/two-factor'));
+    expect(auth.setSession).not.toHaveBeenCalled();
+  });
+
+  it('sends the remembered-device token of this browser with the sign-in (V21 TF-FR-22)', async () => {
+    localStorage.setItem('vms.deviceToken', 'device-1');
+    renderPage(<LoginPage />, { route: '/login' });
+    await userEvent.type(email(), 'chan@example.com');
+    await userEvent.type(password(), 'Password123');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(authApi.login).toHaveBeenCalledWith(expect.objectContaining({ deviceToken: 'device-1' })));
+  });
+
   it('hides Google sign-in when the server has not set it up (V14 GA-FR-03)', async () => {
     vi.mocked(oauthApi.getGoogleSignInStatus).mockResolvedValue({ enabled: false });
     renderPage(<LoginPage />, { route: '/login' });

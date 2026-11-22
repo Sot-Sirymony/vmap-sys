@@ -11,6 +11,8 @@ import { GoogleSignInSection } from '../components/common/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
+import { continueSignIn } from '../utils/continueSignIn';
+import { readDeviceToken } from '../utils/deviceToken';
 
 // Only the email is stored. The password is never written to disk by this app —
 // the autoComplete attributes below hand that job to the browser's own password
@@ -62,7 +64,7 @@ export function LoginPage() {
     // will request the same module again on navigation and get the cached one.
     void import('./DashboardPage').catch(() => undefined);
     try {
-      const response = await login({ email, password, rememberMe: remember });
+      const response = await login({ email, password, rememberMe: remember, deviceToken: readDeviceToken() });
 
       if (remember) {
         localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
@@ -70,8 +72,8 @@ export function LoginPage() {
         localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       }
 
-      setSession(response, remember);
-      navigate(from, { replace: true });
+      // V21 (TF-FR-10): the session, or the second step when two-factor sign-in is on.
+      continueSignIn(response, { remember, from, navigate, setSession });
     } catch (error) {
       setError(error instanceof Error ? error.message : tr('Login failed. Check your email and password.'));
     } finally {

@@ -77,7 +77,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        service = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy(), Clock.systemUTC());
+        service = new PasswordResetService(appUserRepository, org.mockito.Mockito.mock(com.visionmapping.service.twofactor.TrustedDeviceService.class), tokenRepository, passwordEncoder, mailer, rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy(), Clock.systemUTC());
         ReflectionTestUtils.setField(service, "ttlMinutes", TTL_MINUTES);
         ReflectionTestUtils.setField(service, "resetUrl", "https://app.example.com/reset-password");
         user = AppUser.builder()
@@ -270,7 +270,7 @@ class PasswordResetServiceTest {
     @DisplayName("uses the injected clock for expiry and for the time the token was spent")
     void usesTheInjectedClock() {
         Instant now = Instant.parse("2026-11-01T09:00:00Z");
-        PasswordResetService fixed = new PasswordResetService(appUserRepository, tokenRepository, passwordEncoder, mailer,
+        PasswordResetService fixed = new PasswordResetService(appUserRepository, org.mockito.Mockito.mock(com.visionmapping.service.twofactor.TrustedDeviceService.class), tokenRepository, passwordEncoder, mailer,
                 rateLimiter, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy(), Clock.fixed(now, ZoneOffset.UTC));
         PasswordResetToken expiresNow = storedTokenFor("the-token", now);
         PasswordResetToken expiresLater = storedTokenFor("other-token", now.plusSeconds(1));

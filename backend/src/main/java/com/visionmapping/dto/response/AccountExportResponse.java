@@ -48,8 +48,24 @@ public record AccountExportResponse(
         List<SelfAssessmentItemResponse> selfAssessmentItems,
         List<SelfAssessmentSnapshot> selfAssessmentSnapshots,
         // V14 (GA-FR-32): provider, email and link date of each linked sign-in, never the provider's user ID.
-        List<SignInMethodsResponse.LinkedAccount> linkedAccounts
+        List<SignInMethodsResponse.LinkedAccount> linkedAccounts,
+        // V21 (TF-FR-41): status and remembered devices; never the secret, a code or a token.
+        TwoFactor twoFactor
 ) {
+
+    /** V21 (TF-FR-41). */
+    public record TwoFactor(boolean enabled, @org.springframework.lang.Nullable String method,
+                            @org.springframework.lang.Nullable java.time.Instant enabledAt, long recoveryCodesLeft,
+                            List<TrustedDevice> trustedDevices) {
+        public TwoFactor {
+            trustedDevices = Copies.list(trustedDevices);
+        }
+    }
+
+    /** V21 (TF-FR-41): a remembered browser, by its label and dates. */
+    public record TrustedDevice(String label, java.time.Instant createdAt, java.time.Instant lastUsedAt) {
+    }
+
 
     public AccountExportResponse {
         coachComments = Copies.list(coachComments);

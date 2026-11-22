@@ -17,7 +17,73 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
-## 14.0.0 — Sign in with Google (in progress)
+## 21.0.0 — Two-factor sign-in (all 5 phases built; awaiting UAT, sign-off of F-02 to F-05 and Q-09, and the Khmer review)
+
+BRD [`VMS_BRD_V21.0.0.md`](VMS_BRD_V21.0.0.md). Product owner answers on 22 Nov 2026: coaches must use 2FA too
+(Q-01), a QR code library may be added (Q-02), participants may use an email code (Q-03), and admins may reset
+another person's 2FA (Q-05).
+
+### Phase 1 — data and core (2026-11-22)
+- **Data.** Migration `V87__two_factor_sign_in.sql`: `two_factor_settings`, `two_factor_recovery_codes`,
+  `sign_in_challenges`, `trusted_devices`, and `app_users.two_factor_due_at`. Deleting an account removes them.
+- **Authenticator codes (TF-FR-02, TF-FR-13).** `TotpCodes`: RFC 6238 (HMAC-SHA1, 6 digits, 30 seconds) on the JDK,
+  one step of drift either side, no reuse of an accepted step, Base32 keys and `otpauth://` addresses. Tested with the
+  RFC's Appendix B vectors.
+- **Recovery codes and tokens (TF-FR-04, TF-NFR-01).** `TwoFactorCodes`: ten `ABCDE-FGHJK` codes, 256-bit tokens,
+  keyed hashes apart from V20's; authenticator secrets sealed with `SecretCipher` (`TotpSecretVault`).
+- **Settings.** `TWO_FACTOR_ENABLED`, `TWO_FACTOR_SECRET`, `TWO_FACTOR_CHALLENGE_MINUTES`,
+  `TWO_FACTOR_TRUSTED_DEVICE_DAYS`, `TWO_FACTOR_GRACE_DAYS`; a daily clean-up at 03:55.
+- Signing in does not change yet (phase 2).
+
+### Phase 2 — the second step at sign-in (2026-11-22)
+- **Challenge (TF-FR-10, TF-FR-11, TF-FR-18).** With 2FA on, `POST /api/auth/login`, Google `exchange` and `link`
+  answer `{ "status": "TWO_FACTOR_REQUIRED", "challengeToken", … }` instead of a session (5 minutes, used once).
+- **Verify (TF-FR-13 to TF-FR-17).** `POST /api/auth/two-factor/verify` takes an authenticator code (one step of drift,
+  never twice), an email code or a recovery code (once each). Five wrong codes end the challenge, and each counts as a
+  failed sign-in; the count resets only after the full sign-in.
+- **Email method (TF-FR-14, TF-FR-38).** The code is emailed; `POST /api/auth/two-factor/resend` once a minute;
+  without mail the answer says so and a recovery code is needed.
+- **Trusted devices (TF-FR-21 to TF-FR-26).** "Remember this device" returns a `deviceToken`; later sign-ins with it
+  skip the second step for 30 days; at most 10 per account; password change and reset remove them.
+- **Audit.** 13 new security events; alerts for many failed codes and for a recovery code used on an admin account;
+  an email notice when a recovery code is used.
+
+### Phase 3 — setup and the second-step page (2026-11-22)
+- **Setup (TF-FR-01 to TF-FR-09).** `GET /api/account/two-factor`; `POST …/totp` and `…/totp/confirm` (a pending
+  authenticator until its first code, migration `V88__two_factor_pending_setup.sql`); `POST …/email` (participants);
+  `POST …/recovery-codes`; `POST …/disable` (not for an admin or coach past their date). Each change needs a fresh
+  "Verify it's you" code (`TWO_FACTOR_SETTINGS`) and sends a notice. Both methods get ten recovery codes.
+- **Trusted devices (TF-FR-23).** Listed on the Security page; `DELETE /api/account/trusted-devices/{id}` and
+  `DELETE /api/account/trusted-devices`.
+- **Frontend.** `/sign-in/two-factor` after password, Google sign-in and linking; the Security page panel with a QR
+  code (`qrcode` 1.5.4, approved in Q-02) and the key as text; recovery codes shown once with Download and Copy;
+  remembered devices. 65 Khmer entries.
+
+### Phase 4 — admins and coaches, admin reset (2026-11-22)
+- **Required for admins and coaches (TF-FR-32 to TF-FR-37).** A set-up-by date 14 days ahead at start-up and when
+  someone is made a coach; before it, "Set up now / Skip for now (N days left)"; from it, every API call except setup
+  answers `403 TWO_FACTOR_SETUP_REQUIRED` and the app opens the Security page.
+- **Admin page (TF-FR-28 to TF-FR-30, TF-FR-36).** **Settings → Two-step sign-in** lists admins, coaches and anyone
+  with it on; **Reset** needs a reason and the admin's own fresh code, ends the person's sessions, emails them, raises
+  an alert and gives an admin or coach 3 days. Never for the admin's own account.
+- **"Verify it's you" with an authenticator (TF-FR-40).** A current app code works instead of the emailed one.
+- **Export (TF-FR-41).** A `twoFactor` section with status, method, codes left and devices; never a secret or code.
+- **Alerts.** An admin reset, and an admin or coach turning it off, raise an alert at once.
+- **Docs.** `API.md`, `DATA_MODEL.md`, `USER_GUIDE.md`, `SECURITY.md`, README, `UAT_V21.md`, `km-review-v21.csv`.
+
+### Phase 5 — threat model and ASVS Level 2 check (2026-11-22)
+- **Threat model (TF-FR-43, SEC-06-01).** `docs/THREAT_MODEL.md`: trust boundaries, threats, abuse cases and
+  residual risks for sign-in and recovery, coach access, share links, Excel import and Claude.
+- **ASVS 5.0 Level 2 (TF-FR-44).** `docs/ASVS_L2_CHECK.md`: 82 control areas across V1–V17; 70 met; findings F-01
+  to F-08.
+- **Fixed (TF-FR-45).** F-06: at most 5 sign-in code emails per account per hour. F-08: `STEP_UP_SECRET` and
+  `TWO_FACTOR_SECRET` generated in `render.yaml` instead of falling back to `JWT_SECRET`.
+- **Abuse cases (TF-FR-46, SEC-06-04).** Every BRD's acceptance criteria include at least one; rule in `SECURITY.md`.
+- Closes BRD 10 Phase 7 except the items above that wait for the product owner.
+
+---
+
+## 14.0.0 — Sign in with Google (live on production since 22 Nov 2026)
 
 BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 

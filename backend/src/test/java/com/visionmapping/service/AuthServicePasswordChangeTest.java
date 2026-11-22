@@ -62,7 +62,9 @@ class AuthServicePasswordChangeTest {
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
         authService = new AuthService(appUserRepository, passwordEncoder, authenticationManager, userScope, cohortService, loginAttemptLimiter, authSessionService, securityEvents, new PasswordPolicy(), org.mockito.Mockito.mock(com.visionmapping.service.stepup.StepUpService.class),
-                org.mockito.Mockito.mock(com.visionmapping.service.notice.AccountNotices.class));
+                org.mockito.Mockito.mock(com.visionmapping.service.notice.AccountNotices.class),
+                org.mockito.Mockito.mock(com.visionmapping.service.twofactor.SignInChallengeService.class),
+                org.mockito.Mockito.mock(com.visionmapping.service.twofactor.TrustedDeviceService.class));
         user = AppUser.builder()
                 .id(7L)
                 .fullName("Pat Owner")

@@ -9,6 +9,12 @@ import com.visionmapping.dto.request.ChangePasswordRequest;
 import com.visionmapping.dto.request.LoginRequest;
 import com.visionmapping.dto.request.RegisterRequest;
 import com.visionmapping.dto.response.AuthResponse;
+import com.visionmapping.dto.response.SignInAnswer;
+import com.visionmapping.dto.response.TwoFactorChallengeResponse;
+import com.visionmapping.entity.enums.SignInOrigin;
+import com.visionmapping.service.twofactor.SignInChallengeService;
+import com.visionmapping.service.twofactor.TrustedDeviceService;
+import java.util.Optional;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Cohort;
 import com.visionmapping.entity.enums.UserRole;
@@ -56,6 +62,8 @@ public class AuthService {
     private final PasswordPolicy passwordPolicy;
     private final StepUpService stepUpService;
     private final AccountNotices accountNotices;
+    private final SignInChallengeService signInChallenges;
+    private final TrustedDeviceService trustedDevices;
 
     public AuthResponse register(RegisterRequest request) {
         String email = request.email().trim().toLowerCase();
@@ -86,7 +94,7 @@ public class AuthService {
      * it has an account. A disabled account fails here too (SEC-01-05), with the
      * same "Invalid email or password." answer as a wrong password.
      */
-    public AuthResponse login(LoginRequest request, String clientIp) {
+    public SignInAnswer login(LoginRequest request, String clientIp) {
         String email = request.email().trim().toLowerCase();
         try {
             loginAttemptLimiter.checkAllowed(email, clientIp);
@@ -103,9 +111,16 @@ public class AuthService {
                     SecurityEventType.LOGIN_FAILED, SecurityOutcome.DENIED, exception.getClass().getSimpleName());
             throw exception;
         }
-        loginAttemptLimiter.recordSuccess(email);
         AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessRuleException("Invalid email or password."));
+        // V21 (TF-FR-10, TF-FR-16): with 2FA on, the password alone opens no session, and the failure count is
+        // reset only after the second step, so a known password cannot be used to guess codes without limit.
+        Optional<TwoFactorChallengeResponse> challenge = signInChallenges.start(user, request.remember(), "/",
+                SignInOrigin.PASSWORD, request.deviceToken());
+        if (challenge.isPresent()) {
+            return challenge.get();
+        }
+        loginAttemptLimiter.recordSuccess(email);
         securityEvents.recordFor(user.getId(), SecurityEventType.LOGIN_SUCCEEDED, SecurityOutcome.SUCCESS,
                 request.remember() ? "remember me" : "this tab only");
         return response(authSessionService.open(user, request.remember()));
@@ -169,6 +184,8 @@ public class AuthService {
         // V10 (SEC-07-03): every other session ends, so a device someone else
         // signed in on loses access. The session making the change stays open.
         authSessionService.endOtherSessions(user.getId(), currentSessionId());
+        // V21 (TF-FR-24): remembered browsers must pass the second step again.
+        trustedDevices.removeAll(user.getId(), "password changed");
         // V20 SV-FR-28: a notice to the account email once this is saved.
         accountNotices.changed(AccountNotice.Kind.PASSWORD_CHANGED, user);
     }
@@ -182,6 +199,11 @@ public class AuthService {
 
     /** The sign-in answer for an opened session; also used by Google sign-in (V14 GA-FR-20). */
     public static AuthResponse response(AuthSessionService.Tokens tokens) {
+        return response(tokens, null);
+    }
+
+    /** V21 (TF-FR-21): the same answer, with the device token after "Remember this device". */
+    public static AuthResponse response(AuthSessionService.Tokens tokens, @Nullable String deviceToken) {
         AppUser user = tokens.user();
         return new AuthResponse(
                 tokens.accessToken(),
@@ -194,7 +216,8 @@ public class AuthService {
                 // after signing in is already the user's own appearance.
                 AppearancePreferenceService.toResponse(user),
                 tokens.refreshToken(),
-                tokens.expiresInSeconds()
+                tokens.expiresInSeconds(),
+                deviceToken
         );
     }
 }

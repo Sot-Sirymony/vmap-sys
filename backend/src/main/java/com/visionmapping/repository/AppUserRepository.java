@@ -6,6 +6,26 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
+    /**
+     * V21 (TF-FR-32): gives every admin and coach without two-step sign-in a
+     * set-up-by date, if they have none yet.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update AppUser u set u.twoFactorDueAt = :due where u.role <> com.visionmapping.entity.enums.UserRole.USER"
+            + " and u.twoFactorDueAt is null and not exists (select t from UserTwoFactor t where t.userId = u.id and t.enabledAt is not null)")
+    int assignTwoFactorDueDates(@org.springframework.data.repository.query.Param("due") java.time.Instant due);
+
+    /** V21 (TF-FR-37): a participant has no set-up-by date. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update AppUser u set u.twoFactorDueAt = null"
+            + " where u.role = com.visionmapping.entity.enums.UserRole.USER and u.twoFactorDueAt is not null")
+    int clearParticipantTwoFactorDueDates();
+
+    /** V21 (TF-FR-36): admins and coaches, for the two-step sign-in report. */
+    java.util.List<AppUser> findByRoleNotOrderByRoleAscFullNameAsc(com.visionmapping.entity.enums.UserRole role);
+
     Optional<AppUser> findByEmail(String email);
 
     /** V9 (AI-FR-24): true when this person's active cohort has AI switched off. */

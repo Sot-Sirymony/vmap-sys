@@ -5,6 +5,8 @@ import { GoogleGlyph } from '../components/common/GoogleSignInButton';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
+import { continueSignIn } from '../utils/continueSignIn';
+import { readDeviceToken } from '../utils/deviceToken';
 
 /** What each failure reason from the server means to the person (GA-FR-21). */
 export const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
@@ -69,10 +71,10 @@ export function OAuthGoogleCallbackPage() {
       showError(GOOGLE_ERROR_MESSAGES[fragment.reason]);
       return;
     }
-    exchangeGoogleCode(fragment.code)
+    exchangeGoogleCode(fragment.code, readDeviceToken())
       .then((response) => {
-        setSession(response, fragment.remember);
-        navigate(fragment.from, { replace: true });
+        // V21 (TF-FR-18): with two-factor sign-in on, Google is only the first factor.
+        continueSignIn(response, { remember: fragment.remember, from: fragment.from, navigate, setSession });
       })
       .catch((error: unknown) => showError(error instanceof Error ? error.message : undefined));
   }, [navigate, setSession]);

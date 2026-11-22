@@ -41,6 +41,7 @@ public class CohortAdminService {
     private static final int CODE_LENGTH = 8;
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    private final com.visionmapping.service.twofactor.TwoFactorRequirementService twoFactorRequirement;
     private final EntityLookup lookup;
     private final SecurityEventService securityEvents;
     private final CohortRepository cohortRepository;
@@ -139,6 +140,8 @@ public class CohortAdminService {
         }
         if (coach.getRole() == UserRole.USER) {
             coach.setRole(UserRole.COACH);
+            // V21 (TF-FR-32, TF-FR-35): a new coach must set up two-step sign-in within the grace period.
+            twoFactorRequirement.roleGiven(coach);
             appUserRepository.save(coach);
             securityEvents.record(SecurityEventType.ROLE_CHANGED, SecurityOutcome.SUCCESS, "user", coach.getId(), "USER -> COACH");
         }

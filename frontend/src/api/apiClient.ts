@@ -36,6 +36,9 @@ export class ApiError extends Error {
   }
 }
 
+/** V21 (TF-FR-34): the code, and the window event the app listens for. */
+export const TWO_FACTOR_SETUP_REQUIRED = 'TWO_FACTOR_SETUP_REQUIRED';
+
 /** V20: the ApiError for a refused file download, so pages can act on its code like any other request. */
 export async function apiErrorFrom(response: Response): Promise<ApiError> {
   const { message, code, triesLeft, action } = await readError(response);
@@ -263,6 +266,10 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
     reportSessionEnded(response, retryToken ?? options.token);
     const { message, reference, code, triesLeft, action } = await readError(response);
     reportFailure({ method, path, status: response.status, message, reference });
+    if (code === TWO_FACTOR_SETUP_REQUIRED) {
+      // V21 (TF-FR-34): an admin or coach past their date; the app opens the setup page.
+      window.dispatchEvent(new Event(TWO_FACTOR_SETUP_REQUIRED));
+    }
     throw new ApiError(message, response.status, code, triesLeft, action);
   }
 

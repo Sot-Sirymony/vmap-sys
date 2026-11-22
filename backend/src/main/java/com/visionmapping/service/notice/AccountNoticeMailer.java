@@ -66,6 +66,8 @@ public class AccountNoticeMailer {
             case DATA_EXPORTED -> "Your Vision Map data was downloaded";
             case REMINDER_EMAIL_CHANGED -> "Your Vision Map reminder email was changed";
             case ACCOUNT_DELETED -> "Your Vision Map account was deleted";
+            case RECOVERY_CODE_USED -> "Your Vision Map recovery code was used";
+            case TWO_FACTOR_CHANGED -> "Your Vision Map two-factor sign-in was changed";
         };
     }
 
@@ -76,6 +78,12 @@ public class AccountNoticeMailer {
             case DATA_EXPORTED -> "All the data in your Vision Map account was downloaded";
             case REMINDER_EMAIL_CHANGED -> "Your Vision Map reminders now go to " + notice.detail();
             case ACCOUNT_DELETED -> "Your Vision Map account and all its data were deleted";
+            // V21 TF-FR-15: detail is how many recovery codes are left.
+            case RECOVERY_CODE_USED -> "A recovery code was used to sign in to your Vision Map account"
+                    + (notice.detail() == null ? "" : " (" + notice.detail() + " left)");
+            // V21 TF-FR-09: detail says what changed, for example "turned on with an authenticator app".
+            case TWO_FACTOR_CHANGED -> "Two-factor sign-in for your Vision Map account was "
+                    + (notice.detail() == null ? "changed" : notice.detail());
         };
         String advice = notice.kind() == AccountNotice.Kind.ACCOUNT_DELETED
                 ? "If this was not you, contact your coach or administrator straight away."

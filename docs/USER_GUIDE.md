@@ -253,6 +253,28 @@ When the server has Google sign-in set up, the Sign In and Sign Up pages show **
   no current password), and you can delete your account with the emailed code alone.
 - Signing up with Google does not join a cohort. Enter your join code on the Account page afterwards.
 
+## Two-step sign-in (V21)
+
+After your password (or Google), the app can ask for a second proof, so someone who learns your password still
+cannot get in. Turn it on at **Security → Two-step sign-in**.
+
+- **Authenticator app** (recommended): scan the QR code with Google Authenticator, Microsoft Authenticator or a similar
+  app, then type the 6-digit code it shows. When signing in, type the app's current code.
+- **Email code** (participants): the app emails you a code each time you sign in on a new browser.
+- **Recovery codes**: you get ten when you turn it on. Keep them safe (Download or Copy). Each works once if you lose
+  your phone. Make new ones on the Security page at any time.
+- **Remember this device for 30 days**: tick it on your own phone or computer to skip the code there. The Security page
+  lists remembered devices; remove any you do not recognise.
+- Lost your phone and your recovery codes? Contact your administrator. After checking it is really you (outside the
+  app), they can reset it, and you set it up again.
+- Turning it on or off, switching method and making new codes each ask for a "Verify it's you" code first. If you use
+  an authenticator app, you can type its code in that window instead of waiting for the email.
+
+**Coaches and admins** must use an authenticator app. When the role is given you have 14 days: the app offers **Set
+up now** or **Skip for now**. After that, only the Security page works until it is set up. *For administrators:* the
+**Two-step sign-in** page lists admins, coaches and everyone who uses it, with **Reset** for a lost device (give a
+reason; you cannot reset your own).
+
 ## Verify it's you (V20)
 
 Some changes are risky enough that the app checks it is really you, even though you are signed in: changing your

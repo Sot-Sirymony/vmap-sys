@@ -3,14 +3,16 @@ import { stepUpHeader } from './stepUpApi';
 import type {
   AuthResponse,
   ChangePasswordRequest,
+  SignInAnswer,
   ForgotPasswordRequest,
   LoginRequest,
   RegisterRequest,
   ResetPasswordRequest,
 } from '../types/auth';
 
+/** V21: the session, or the second step when two-factor sign-in is on. */
 export function login(request: LoginRequest) {
-  return apiClient<AuthResponse>('/auth/login', {
+  return apiClient<SignInAnswer>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(request),
   });

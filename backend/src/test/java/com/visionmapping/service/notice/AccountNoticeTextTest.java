@@ -27,6 +27,9 @@ class AccountNoticeTextTest {
             assertThat(body).contains("on 21 Nov 2026 at 07:05 (Not/AZone)");
             assertThat(AccountNoticeMailer.subject(kind)).startsWith("Your Vision Map");
         }
+        assertThat(AccountNoticeMailer.body(new AccountNotice(AccountNotice.Kind.RECOVERY_CODE_USED, List.of("x@y.z"), "Me", AT, "UTC",
+                "Safari", "9"))).contains("A recovery code was used to sign in to your Vision Map account (9 left)",
+                "If this was not you, change your password now.");
         assertThat(AccountNoticeMailer.body(new AccountNotice(AccountNotice.Kind.ACCOUNT_DELETED, List.of("x@y.z"), "Me", AT, "UTC", "Safari", null)))
                 .contains("account and all its data were deleted", "contact your coach or administrator");
     }

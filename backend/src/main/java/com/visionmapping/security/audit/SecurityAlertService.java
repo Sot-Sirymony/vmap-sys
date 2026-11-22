@@ -102,6 +102,34 @@ public class SecurityAlertService {
                             + event.getIpAddress() + " in the last " + windowMinutes + " minutes.");
                 }
             }
+            // V21 TF-NFR-06: failed second steps, with the failed sign-in thresholds; a recovery code on an admin at once.
+            case TWO_FACTOR_FAILED -> {
+                Set<SecurityEventType> failed = Set.of(SecurityEventType.TWO_FACTOR_FAILED);
+                if (event.getSubjectHash() != null && repository.countByEventTypeInAndSubjectHashAndOccurredAtAfter(
+                        failed, event.getSubjectHash(), since) >= failedLoginsPerAccount) {
+                    alert("2fa-account:" + event.getSubjectHash(), "Many failed two-factor codes for one account (email hash "
+                            + event.getSubjectHash().substring(0, 12) + "...) in the last " + windowMinutes + " minutes.");
+                }
+                if (event.getIpAddress() != null && repository.countByEventTypeInAndIpAddressAndOccurredAtAfter(
+                        failed, event.getIpAddress(), since) >= failedLoginsPerIp) {
+                    alert("2fa-ip:" + event.getIpAddress(), "Many failed two-factor codes from network "
+                            + event.getIpAddress() + " in the last " + windowMinutes + " minutes.");
+                }
+            }
+            case TWO_FACTOR_RESET_BY_ADMIN -> alert("2fa-reset:" + event.getId(), "User " + event.getActorId()
+                    + " reset the two-step sign-in of user " + event.getTargetId() + ".");
+            case TWO_FACTOR_DISABLED -> {
+                if (event.getDetail() != null && (event.getDetail().startsWith("admin") || event.getDetail().startsWith("coach"))) {
+                    alert("2fa-off:" + event.getId(), "Two-step sign-in was turned off by "
+                            + event.getDetail().substring(0, event.getDetail().indexOf(',')) + " user " + event.getActorId() + ".");
+                }
+            }
+            case RECOVERY_CODE_USED -> {
+                if (event.getDetail() != null && event.getDetail().startsWith("admin")) {
+                    alert("recovery:" + event.getId(), "A recovery code was used to sign in to admin user "
+                            + event.getActorId() + ".");
+                }
+            }
             case ACCESS_DENIED, NOT_OWNER -> {
                 if (event.getActorId() != null) {
                     long refusals = repository.countByEventTypeAndActorIdAndOccurredAtAfter(SecurityEventType.ACCESS_DENIED, event.getActorId(), since)

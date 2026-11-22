@@ -86,6 +86,9 @@ class AccessControlSweepTests {
             "GET /api/auth/oauth/google/callback",
             "POST /api/auth/oauth/google/exchange",
             "POST /api/auth/oauth/google/link",
+            // V21: the second step of signing in happens before a session exists.
+            "POST /api/auth/two-factor/verify",
+            "POST /api/auth/two-factor/resend",
             "GET /api/ui-text",
             "GET /api/shared-plans/{token}",
             "GET /api/public/reports/{token}",
@@ -126,6 +129,9 @@ class AccessControlSweepTests {
 
     @Autowired
     private AppUserRepository appUserRepository;
+
+    @Autowired
+    private com.visionmapping.repository.TrustedDeviceRepository trustedDeviceRepository;
 
     @Autowired
     private AiConversationRepository aiConversationRepository;
@@ -191,6 +197,11 @@ class AccessControlSweepTests {
         create("issue-reports", Map.of("reportType", "IMPROVEMENT", "title", "Something broke", "description", "Details"));
         create("milestones", Map.of("dreamId", dreamId, "title", "First draft", "achievedOn", LocalDate.now().toString()));
         create("plan-shares", Map.of("dreamId", dreamId, "expiresInDays", 7));
+        // V21 TF-FR-23: a remembered browser, which only its owner may remove.
+        ownerIds.put("account/trusted-devices", trustedDeviceRepository.save(com.visionmapping.entity.TrustedDevice.builder()
+                .user(owner).tokenHash(UUID.randomUUID().toString().replace("-", "") + "00000000000000000000000000000000")
+                .label("Chrome on Windows").createdAt(java.time.Instant.now()).lastUsedAt(java.time.Instant.now())
+                .expiresAt(java.time.Instant.now().plus(java.time.Duration.ofDays(30))).build()).getId());
         // V19 RM-NFR-01: a saved Management Report.
         create("reports/saved", Map.of("dreamId", dreamId));
         // V19 phase 4: the report is finalised so it can have a share link to probe.
@@ -399,7 +410,9 @@ class AccessControlSweepTests {
     private static final Map<String, String> ALLOWED_PRIVILEGED_FIELDS = Map.of(
             "PartnerRequest.role", "the partner's job title, free text, not an app role",
             "StepUpVerifyRequest.code", "the six-digit code the person typed, checked against the stored hash (V20)",
-            "GoogleExchangeRequest.code", "the one-time Google sign-in code, checked against the stored hash (V14)");
+            "GoogleExchangeRequest.code", "the one-time Google sign-in code, checked against the stored hash (V14)",
+            "TwoFactorVerifyRequest.code", "the second-step code the person typed, checked against the authenticator or stored hash (V21)",
+            "TotpConfirmRequest.code", "the first code from the person's own authenticator app, checked against the pending secret (V21)");
 
     @Test
     void noRequestBodyLetsTheCallerSetPrivilegedFields() {

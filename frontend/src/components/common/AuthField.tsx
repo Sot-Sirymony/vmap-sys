@@ -19,6 +19,9 @@ type AuthFieldProps = {
   revealable?: boolean;
   /** Rendered at the right end of the label row (e.g. "Forgot password?"). */
   labelEnd?: ReactNode;
+  /** V21: "numeric" opens the number pad on phones for sign-in codes. */
+  inputMode?: 'text' | 'numeric';
+  maxLength?: number;
 };
 
 /**
@@ -41,6 +44,8 @@ export function AuthField({
   icon,
   revealable,
   labelEnd,
+  inputMode,
+  maxLength,
 }: AuthFieldProps) {
   const [revealed, setRevealed] = useState(false);
   const inputType = revealable ? (revealed ? 'text' : 'password') : type;
@@ -78,6 +83,8 @@ export function AuthField({
           type={inputType}
           name={name}
           autoComplete={autoComplete}
+          inputMode={inputMode}
+          maxLength={maxLength}
           placeholder={placeholder}
           required={required}
           minLength={minLength}

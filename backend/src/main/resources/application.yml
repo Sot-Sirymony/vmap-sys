@@ -127,6 +127,12 @@ app:
       # V14 GA-SEC-09: each Google sign-in step (start, callback, exchange, link) per network.
       google-sign-in-per-ip: ${RATE_LIMIT_GOOGLE_SIGN_IN_PER_IP:60}
       google-sign-in-window-minutes: ${RATE_LIMIT_GOOGLE_SIGN_IN_WINDOW:15}
+      # V21 TF-NFR-04: second-step code checks per network.
+      two-factor-verify-per-ip: ${RATE_LIMIT_TWO_FACTOR_VERIFY_PER_IP:30}
+      two-factor-verify-window-minutes: ${RATE_LIMIT_TWO_FACTOR_VERIFY_WINDOW:15}
+      # V21 Phase 5: sign-in code emails per account (threat model: mailbox flooding).
+      two-factor-email-per-user: ${RATE_LIMIT_TWO_FACTOR_EMAIL_PER_USER:5}
+      two-factor-email-window-minutes: ${RATE_LIMIT_TWO_FACTOR_EMAIL_WINDOW:60}
     login:
       max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
       max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}
@@ -150,6 +156,15 @@ app:
       client-secret: ${GOOGLE_CLIENT_SECRET:}
       redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/oauth/google/callback}
       frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  # V21 (BRD 21.0.0): two-factor sign-in. TF-NFR-11: off only for a deliberate
+  # reason; logged at start-up. The secret keys the HMAC of recovery and email
+  # codes; it defaults to the JWT secret, which production already requires.
+  two-factor:
+    enabled: ${TWO_FACTOR_ENABLED:true}
+    secret: ${TWO_FACTOR_SECRET:${app.security.jwt-secret}}
+    challenge-minutes: ${TWO_FACTOR_CHALLENGE_MINUTES:5}
+    trusted-device-days: ${TWO_FACTOR_TRUSTED_DEVICE_DAYS:30}
+    grace-days: ${TWO_FACTOR_GRACE_DAYS:14}
   password-reset:
     # Long enough to go and find the mail, short enough that a link left sitting
     # in a mailbox stops being a key to the account.
@@ -353,3 +368,4 @@ app:
       shared-plan-per-ip: 1000000
       excel-import-per-user: 1000000
       google-sign-in-per-ip: 1000000
+      two-factor-verify-per-ip: 1000000

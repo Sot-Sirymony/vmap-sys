@@ -1,6 +1,10 @@
 package com.visionmapping.service.oauth;
 
 import com.visionmapping.dto.response.AuthResponse;
+import com.visionmapping.dto.response.SignInAnswer;
+import com.visionmapping.dto.response.TwoFactorChallengeResponse;
+import com.visionmapping.entity.enums.SignInOrigin;
+import com.visionmapping.service.twofactor.SignInChallengeService;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.ExternalIdentity;
 import com.visionmapping.entity.OAuthHandoff;
@@ -69,6 +73,7 @@ public class GoogleAccountService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final PasswordEncoder passwordEncoder;
     private final SecurityEventService securityEvents;
+    private final SignInChallengeService signInChallenges;
     private final Clock clock;
 
     /**
@@ -98,11 +103,12 @@ public class GoogleAccountService {
 
     /** GA-FR-20: turns a sign-in code into the normal sign-in answer, once. */
     @Transactional(noRollbackFor = BusinessRuleException.class)
-    public AuthResponse exchange(@Nullable String code) {
+    public SignInAnswer exchange(@Nullable String code, @Nullable String deviceToken) {
         Optional<OAuthHandoff> open = findOpen(code, OAuthHandoffKind.SIGN_IN);
         // Read before markUsed, which clears the persistence context.
         Long userId = open.map(handoff -> handoff.getUser().getId()).orElse(null);
         boolean remember = open.map(OAuthHandoff::isRememberMe).orElse(false);
+        String returnPath = open.map(OAuthHandoff::getReturnPath).orElse("/");
         if (open.isEmpty() || handoffRepository.markUsed(open.get().getId(), clock.instant()) != 1) {
             // GA-FR-34: counted per network towards the security alert.
             securityEvents.record(SecurityEventType.GOOGLE_SIGN_IN_FAILED, SecurityOutcome.DENIED, null, null, "exchange");
@@ -116,6 +122,12 @@ public class GoogleAccountService {
         }
         identityRepository.findByUser_IdAndProvider(user.getId(), IdentityProvider.GOOGLE)
                 .ifPresent(identity -> identity.setLastUsedAt(clock.instant()));
+        // V21 (TF-FR-18, D-21-3): with 2FA on, Google is only the first factor.
+        Optional<TwoFactorChallengeResponse> challenge = signInChallenges.start(user, remember, returnPath,
+                SignInOrigin.GOOGLE, deviceToken);
+        if (challenge.isPresent()) {
+            return challenge.get();
+        }
         securityEvents.recordFor(user.getId(), SecurityEventType.GOOGLE_SIGN_IN_SUCCEEDED, SecurityOutcome.SUCCESS,
                 remember ? "remember me" : "this tab only");
         return AuthService.response(authSessionService.open(user, remember));
@@ -128,7 +140,8 @@ public class GoogleAccountService {
      * stays usable until it expires, so the person can try again.
      */
     @Transactional(noRollbackFor = {BusinessRuleException.class, TooManyRequestsException.class})
-    public AuthResponse link(@Nullable String linkToken, String password, @Nullable String clientIp) {
+    public SignInAnswer link(@Nullable String linkToken, String password, @Nullable String clientIp,
+                             @Nullable String deviceToken) {
         OAuthHandoff handoff = findOpen(linkToken, OAuthHandoffKind.LINK)
                 .orElseThrow(() -> new BusinessRuleException(LINK_EXPIRED));
         AppUser user = handoff.getUser();
@@ -149,6 +162,7 @@ public class GoogleAccountService {
         }
         String subject = handoff.getProviderSubject();
         boolean remember = handoff.isRememberMe();
+        String returnPath = handoff.getReturnPath();
         Long userId = user.getId();
         boolean alreadyLinked = identityRepository.findByProviderAndSubject(IdentityProvider.GOOGLE, subject).isPresent()
                 || identityRepository.findByUser_IdAndProvider(userId, IdentityProvider.GOOGLE).isPresent();
@@ -167,8 +181,15 @@ public class GoogleAccountService {
                 .linkedAt(now)
                 .lastUsedAt(now)
                 .build());
-        loginAttemptLimiter.recordSuccess(email);
         securityEvents.recordFor(userId, SecurityEventType.GOOGLE_LINKED, SecurityOutcome.SUCCESS, "password confirmed");
+        // V21 (TF-FR-18, TF-FR-16): the link is saved; with 2FA on, the second step still comes before a session,
+        // and the failure count is reset only after it.
+        Optional<TwoFactorChallengeResponse> challenge = signInChallenges.start(user, remember, returnPath,
+                SignInOrigin.GOOGLE, deviceToken);
+        if (challenge.isPresent()) {
+            return challenge.get();
+        }
+        loginAttemptLimiter.recordSuccess(email);
         return AuthService.response(authSessionService.open(user, remember));
     }
 

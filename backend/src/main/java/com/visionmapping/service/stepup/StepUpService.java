@@ -23,6 +23,7 @@ import com.visionmapping.service.mail.StepUpMailer;
 import com.visionmapping.service.mail.StepUpMailer.Delivery;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.RequestRateLimiter;
+import com.visionmapping.service.twofactor.AuthenticatorCodeCheck;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -88,11 +89,14 @@ public class StepUpService {
     private final Clock clock;
     private final boolean enabled;
     private final String secret;
+    private final AuthenticatorCodeCheck authenticatorCodes;
 
     public StepUpService(StepUpChallengeRepository repository, AuthSessionRepository sessions, StepUpMailer mailer,
                          SecurityEventService securityEvents, RequestRateLimiter rateLimiter, EntityLookup lookup, Clock clock,
                          @Value("${app.step-up.enabled:true}") boolean enabled,
-                         @Value("${app.step-up.secret:${app.security.jwt-secret}}") String secret) {
+                         @Value("${app.step-up.secret:${app.security.jwt-secret}}") String secret,
+                         AuthenticatorCodeCheck authenticatorCodes) {
+        this.authenticatorCodes = authenticatorCodes;
         this.repository = repository;
         this.sessions = sessions;
         this.mailer = mailer;
@@ -191,7 +195,9 @@ public class StepUpService {
                 .filter(found -> found.getExpiresAt().isAfter(now) && found.getAttempts() < MAX_TRIES)
                 .orElseThrow(StepUpService::ended);
         String code = StepUpCodes.normalise(typed);
-        if (code == null || !StepUpCodes.sameHash(StepUpCodes.hash(code, secret), challenge.getCodeHash())) {
+        boolean emailed = code != null && StepUpCodes.sameHash(StepUpCodes.hash(code, secret), challenge.getCodeHash());
+        // V21 (TF-FR-40): an authenticator user may type the app's current code instead.
+        if (!emailed && !authenticatorCodes.accepts(user.getId(), code)) {
             throw wrongTry(user, session, challenge, now);
         }
         challenge.setVerifiedAt(now);

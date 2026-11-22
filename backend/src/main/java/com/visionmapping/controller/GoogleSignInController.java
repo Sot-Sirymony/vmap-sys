@@ -2,7 +2,7 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.GoogleExchangeRequest;
 import com.visionmapping.dto.request.GoogleLinkRequest;
-import com.visionmapping.dto.response.AuthResponse;
+import com.visionmapping.dto.response.SignInAnswer;
 import com.visionmapping.dto.response.GoogleSignInStatusResponse;
 import com.visionmapping.service.oauth.GoogleAccountService;
 import com.visionmapping.service.oauth.GoogleSignInService;
@@ -76,16 +76,17 @@ public class GoogleSignInController {
 
     /** GA-FR-20: the one-time sign-in code for the normal sign-in answer; 400 when used or expired. */
     @PostMapping("/exchange")
-    public ResponseEntity<AuthResponse> exchange(@Valid @RequestBody GoogleExchangeRequest request, HttpServletRequest http) {
+    public ResponseEntity<SignInAnswer> exchange(@Valid @RequestBody GoogleExchangeRequest request, HttpServletRequest http) {
         rateLimiter.check(RequestRateLimiter.Action.GOOGLE_SIGN_IN, ClientIp.of(http));
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(googleAccountService.exchange(request.code()));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(googleAccountService.exchange(request.code(), request.deviceToken()));
     }
 
     /** GA-FR-23: links Google to an existing account after its password; 400, or 429 when locked. */
     @PostMapping("/link")
-    public ResponseEntity<AuthResponse> link(@Valid @RequestBody GoogleLinkRequest request, HttpServletRequest http) {
+    public ResponseEntity<SignInAnswer> link(@Valid @RequestBody GoogleLinkRequest request, HttpServletRequest http) {
         rateLimiter.check(RequestRateLimiter.Action.GOOGLE_SIGN_IN, ClientIp.of(http));
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(googleAccountService.link(request.linkToken(), request.password(), ClientIp.of(http)));
+                .body(googleAccountService.link(request.linkToken(), request.password(), ClientIp.of(http), request.deviceToken()));
     }
 }

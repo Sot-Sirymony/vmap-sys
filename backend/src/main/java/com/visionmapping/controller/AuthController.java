@@ -8,6 +8,7 @@ import com.visionmapping.dto.request.RefreshTokenRequest;
 import com.visionmapping.dto.request.RegisterRequest;
 import com.visionmapping.dto.request.ResetPasswordRequest;
 import com.visionmapping.dto.response.AuthResponse;
+import com.visionmapping.dto.response.SignInAnswer;
 import com.visionmapping.service.AuthService;
 import com.visionmapping.service.PasswordResetService;
 import com.visionmapping.util.ClientIp;
@@ -45,7 +46,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+    public SignInAnswer login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
         return authService.login(request, ClientIp.of(http));
     }
 

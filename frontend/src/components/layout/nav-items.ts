@@ -32,6 +32,7 @@ import {
   UsersRound,
   type LucideIcon,
   FolderClock,
+  ShieldCheck,
 } from 'lucide-react';
 import { tr } from '../../i18n/translate';
 
@@ -133,6 +134,8 @@ export const navGroups: NavGroup[] = [
       { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, roles: ['ADMIN'] },
       // V10 (SEC-09-05): the read-only security log.
       { to: '/settings/security-log', label: tr('Security log'), icon: ShieldAlert, roles: ['ADMIN'] },
+      // V21 (TF-FR-36): who uses two-step sign-in, and resets.
+      { to: '/settings/two-factor', label: tr('Two-step sign-in'), icon: ShieldCheck, roles: ['ADMIN'] },
     ],
   },
 ];

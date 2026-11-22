@@ -104,6 +104,11 @@ public class AppUser extends BaseAuditableEntity {
     @Column(name = "password_set", nullable = false)
     private boolean passwordSet = true;
 
+    // V21 (TF-FR-32, D-21-2): the set-up-by date for admins and coaches; null
+    // when two-factor sign-in is not required.
+    @Column(name = "two_factor_due_at")
+    private Instant twoFactorDueAt;
+
     // V9 (AI-NFR-03): when this person consented to AI reading their data; null means no consent.
     @Column(name = "ai_consent_at")
     private Instant aiConsentAt;

@@ -2211,6 +2211,7 @@ export type CommentaryDraft = {
 
 /** V20 (BRD 20.0.0): the actions that need a "Verify it's you" code. */
 export type StepUpAction = 'CHANGE_PASSWORD' | 'EXPORT_DATA' | 'CHANGE_REMINDER_EMAIL' | 'CONFIRM_REMINDER_EMAIL' | 'DELETE_ACCOUNT'
+  | 'TWO_FACTOR_SETTINGS' | 'ADMIN_TWO_FACTOR_RESET'
   | 'ADMIN_ROLE_CHANGE' | 'ADMIN_AI_KEY' | 'ADMIN_COHORT_COACH';
 
 /**

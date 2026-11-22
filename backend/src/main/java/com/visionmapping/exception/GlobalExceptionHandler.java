@@ -171,6 +171,13 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), exception.getCode(), exception.getTriesLeft(), exception.getAction()));
     }
 
+    /** V21: a two-factor answer the page acts on (wrong code, step ended). */
+    @ExceptionHandler(TwoFactorException.class)
+    public ResponseEntity<ErrorResponse> handleTwoFactor(TwoFactorException exception, HttpServletRequest request) {
+        return ResponseEntity.status(exception.getStatus()).body(ErrorResponse.of(exception.getStatus(), exception.getMessage(),
+                request.getRequestURI(), exception.getCode(), exception.getTriesLeft(), null));
+    }
+
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyRequests(
             TooManyRequestsException exception,

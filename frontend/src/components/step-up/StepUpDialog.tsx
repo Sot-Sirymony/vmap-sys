@@ -122,6 +122,9 @@ export function StepUpDialog({ token, action, target, onVerified, onCancel }: Re
             <Typography variant="body2" id="step-up-description">
               {tr('We sent a 6-digit code to {address}. It works for {minutes} minutes.', { address: challenge.sentTo, minutes })}
             </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {tr('If you use an authenticator app, you can type its code instead.')}
+            </Typography>
             {challenge.delivery === 'LOG' && (
               <Typography variant="caption" color="text.secondary">
                 {tr('Development server: the code is in the server log.')}

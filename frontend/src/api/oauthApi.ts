@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import type { AuthResponse } from '../types/auth';
+import type { SignInAnswer } from '../types/auth';
 
 /**
  * V14 (BRD 14.0.0, Appendix B): Sign in with Google. Every call except
@@ -21,10 +21,10 @@ export function getGoogleAuthorizeUrl(remember: boolean, from: string) {
 }
 
 /** GA-FR-20: turns the one-time code from the callback into a session. */
-export function exchangeGoogleCode(code: string) {
-  return apiClient<AuthResponse>('/auth/oauth/google/exchange', {
+export function exchangeGoogleCode(code: string, deviceToken?: string) {
+  return apiClient<SignInAnswer>('/auth/oauth/google/exchange', {
     method: 'POST',
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code, deviceToken }),
   });
 }
 
@@ -33,8 +33,8 @@ export function exchangeGoogleCode(code: string) {
  * comes back from the OAuth callback when the email already has an account;
  * the password proves the person linking owns that account.
  */
-export function linkGoogleAccount(request: { linkToken: string; password: string }) {
-  return apiClient<AuthResponse>('/auth/oauth/google/link', {
+export function linkGoogleAccount(request: { linkToken: string; password: string; deviceToken?: string }) {
+  return apiClient<SignInAnswer>('/auth/oauth/google/link', {
     method: 'POST',
     body: JSON.stringify(request),
   });

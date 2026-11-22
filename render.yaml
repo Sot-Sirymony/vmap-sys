@@ -42,6 +42,14 @@ services:
       # with this one the next time an admin saves it.
       - key: SETTINGS_ENCRYPTION_KEY
         generateValue: true
+      # V21 Phase 5 (ASVS F-08): separate keys for the "Verify it's you" and
+      # two-step code hashes instead of falling back to JWT_SECRET, so one leaked
+      # secret does not reveal the others. Changing TWO_FACTOR_SECRET later makes
+      # every saved recovery code stop working.
+      - key: STEP_UP_SECRET
+        generateValue: true
+      - key: TWO_FACTOR_SECRET
+        generateValue: true
       # V10 (SEC-09-04): where security alerts are emailed. Set it in the
       # dashboard; until then alerts go only to the log ("SECURITY ALERT").
       - key: SECURITY_ALERT_EMAIL

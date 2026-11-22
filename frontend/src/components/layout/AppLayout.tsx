@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 import Box from '@mui/material/Box';
 import { DreamCoachLauncher } from '../ai/DreamCoachLauncher';
+import { TwoFactorRequirementGate } from '../security/TwoFactorRequirementGate';
 import { BottomNav } from './BottomNav';
 import { GlobalShortcuts } from './GlobalShortcuts';
 import { Header } from './Header';
@@ -25,6 +26,8 @@ export function AppLayout() {
           </Box>
         </Box>
         <BottomNav />
+        {/* V21 (D-21-2): admins and coaches without two-step sign-in. */}
+        <TwoFactorRequirementGate />
         {/* V9 (AI-FR-01): the Dream Coach on every screen. */}
         <DreamCoachLauncher />
       </CommandPaletteProvider>

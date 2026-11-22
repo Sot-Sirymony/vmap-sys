@@ -252,6 +252,26 @@ its access tokens at once.
 apply the user's saved theme on first paint, instead of rendering the default and
 swapping it once a follow-up request returns.
 
+### Two-step sign-in (V21)
+
+| Method and path | Access | Answer |
+| --- | --- | --- |
+| `POST /auth/login`, `POST /auth/oauth/google/exchange`, `POST /auth/oauth/google/link` | Public | The session as before, or `{ "status": "TWO_FACTOR_REQUIRED", "challengeToken", "method", "sentTo"?, "emailUnavailable", "expiresAt" }`. The body may carry `deviceToken` |
+| `POST /auth/two-factor/verify` `{ "challengeToken", "code"?, "recoveryCode"?, "rememberDevice" }` | Public | The session (plus `deviceToken` when remembered); 400 `TWO_FACTOR_WRONG_CODE` with `triesLeft`; 410 `TWO_FACTOR_ENDED` |
+| `POST /auth/two-factor/resend` `{ "challengeToken" }` | Public | A new email code; 429 within a minute |
+| `GET /account/two-factor` | Signed in | Status, method, recovery codes left, set-up-by date, `emailMethodAvailable`, `canTurnOff`, trusted devices |
+| `POST /account/two-factor/totp` → `POST /account/two-factor/totp/confirm` `{ "code" }` | Signed in, `X-Step-Up` for the first | The key and `otpauth://` address; then the ten recovery codes, once |
+| `POST /account/two-factor/email` | Signed in, `X-Step-Up`; participants | The ten recovery codes |
+| `POST /account/two-factor/recovery-codes`, `POST /account/two-factor/disable` | Signed in, `X-Step-Up` | New codes; 204 |
+| `POST /account/two-factor/skip` | Admins and coaches before their date | 204 (logged) |
+| `DELETE /account/trusted-devices/{id}`, `DELETE /account/trusted-devices` | Signed in | 204; another person's device 404 |
+| `GET /admin/two-factor` | Admin | Admins, coaches and anyone with it on |
+| `POST /admin/users/{id}/two-factor/reset` `{ "reason" }` | Admin, `X-Step-Up` (`ADMIN_TWO_FACTOR_RESET`) | 204; never the admin's own account |
+
+An admin or coach past their set-up-by date gets 403 `TWO_FACTOR_SETUP_REQUIRED` on every call except the two-step
+sign-in, "Verify it's you", `/auth/*` and the few calls that draw the page. "Verify it's you" also accepts a current
+authenticator code instead of the emailed one.
+
 ### Sign in with Google (V14)
 
 All public except `sign-in-methods`. Off until `GOOGLE_CLIENT_ID` and

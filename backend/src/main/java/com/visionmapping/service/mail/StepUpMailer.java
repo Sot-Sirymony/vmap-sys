@@ -88,6 +88,35 @@ public class StepUpMailer {
     }
 
     /**
+     * V21 (TF-FR-14): the second step of signing in for an email-method account.
+     * Same rules as the step-up email: code in the subject, no link.
+     *
+     * @throws MailException when the mail server refuses or times out
+     */
+    public void sendSignInCode(String to, String code, long minutes) {
+        Delivery delivery = delivery();
+        if (delivery == Delivery.LOG) {
+            log.warn("No SMTP server configured — no email was sent. Sign-in code for {}: {} (valid {} minutes)",
+                    LogMasks.email(to), code, minutes);
+            return;
+        }
+        if (delivery == Delivery.NONE) {
+            return;
+        }
+        send(to, "Your Vision Map sign-in code: " + code, """
+                Hello,
+
+                Your code to finish signing in is:
+
+                %s
+
+                It works for %d minutes and only once.
+
+                If you did not just sign in, someone knows your password. Do not share this code; change your password now.
+                """.formatted(code, minutes));
+    }
+
+    /**
      * SV-FR-19: many wrong codes look like someone else holding the session.
      * Never throws: the person's other sessions have already ended.
      */

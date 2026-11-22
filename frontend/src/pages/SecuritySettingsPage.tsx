@@ -1,5 +1,7 @@
 import { FormEvent, useState } from 'react';
 import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import { useLocation } from 'react-router';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
@@ -8,6 +10,7 @@ import { changePassword } from '../api/authApi';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
+import { TwoFactorCard } from '../components/security/TwoFactorCard';
 import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { useAuth } from '../context/AuthContext';
 import { useSignInMethods } from '../hooks/useSignInMethods';
@@ -18,6 +21,7 @@ import { tr } from '../i18n/translate';
 const MIN_PASSWORD_LENGTH = 8;
 
 export function SecuritySettingsPage() {
+  const twoFactorRequired = Boolean((useLocation().state as { twoFactorRequired?: boolean } | null)?.twoFactorRequired);
   const { token, user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -134,6 +138,15 @@ export function SecuritySettingsPage() {
           </Stack>
         </CardContent>
       </Card>
+      {/* V21 (TF-FR-01): two-step sign-in, below the password. */}
+      <Box sx={{ mt: 2 }}>
+        {twoFactorRequired && (
+          <Alert severity="warning" sx={{ mb: 2, maxWidth: 520 }}>
+            {tr('Coach and admin accounts need two-step sign-in. Set it up below to use the rest of the app.')}
+          </Alert>
+        )}
+        <TwoFactorCard token={token} />
+      </Box>
       {stepUp.dialog}
     </PageSection>
   );

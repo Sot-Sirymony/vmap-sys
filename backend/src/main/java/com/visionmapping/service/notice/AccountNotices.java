@@ -48,7 +48,8 @@ public class AccountNotices {
         return describe(request == null ? null : request.getHeader("User-Agent"));
     }
 
-    static String describe(@Nullable String userAgent) {
+    /** Also names trusted devices (V21 TF-FR-23). */
+    public static String describe(@Nullable String userAgent) {
         if (userAgent == null || userAgent.isBlank()) {
             return "an unknown browser";
         }

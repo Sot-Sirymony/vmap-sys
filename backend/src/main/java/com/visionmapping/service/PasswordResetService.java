@@ -1,5 +1,7 @@
 package com.visionmapping.service;
 
+import com.visionmapping.service.twofactor.TrustedDeviceService;
+
 import com.visionmapping.security.audit.SecurityOutcome;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityEventService;
@@ -60,6 +62,7 @@ public class PasswordResetService {
     private static final int TOKEN_BYTES = 32;
 
     private final AppUserRepository appUserRepository;
+    private final TrustedDeviceService trustedDevices;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetMailer mailer;
@@ -158,6 +161,8 @@ public class PasswordResetService {
         // V14 (D-14-3): an account created with Google now has a password of its own.
         user.setPasswordSet(true);
         appUserRepository.save(user);
+        // V21 (TF-FR-24, TF-FR-31): 2FA stays on; remembered browsers must pass the second step again.
+        trustedDevices.removeAll(user.getId(), "password reset");
 
         // Spent before returning, so the same link cannot be replayed — including
         // by anyone who later reads it out of the mailbox.

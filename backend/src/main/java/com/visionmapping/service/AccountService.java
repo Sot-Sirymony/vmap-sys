@@ -84,6 +84,11 @@ public class AccountService {
             "coach_comments",
             "plan_shares",
             "password_reset_tokens",
+            // V21 (TF-FR-42): two-factor settings, recovery codes, challenges and devices.
+            "sign_in_challenges",
+            "trusted_devices",
+            "two_factor_recovery_codes",
+            "two_factor_settings",
             // V14 (GA-FR-32): Google links and any open hand-off codes.
             "oauth_handoffs",
             "external_identities",
@@ -144,6 +149,7 @@ public class AccountService {
     private final SelfAssessmentSnapshotRepository selfAssessmentSnapshotRepository;
     private final StepUpService stepUpService;
     private final SignInMethodsService signInMethodsService;
+    private final com.visionmapping.service.twofactor.TwoFactorService twoFactorService;
     private final AccountNotices accountNotices;
 
     /**
@@ -222,6 +228,7 @@ public class AccountService {
                                 snapshot.getTakenOn(), snapshot.getItemsJson()))
                         .toList())
                 .linkedAccounts(signInMethodsService.linkedAccounts(userId))
+                .twoFactor(twoFactorService.exportFor(userId))
                 .build();
     }
 

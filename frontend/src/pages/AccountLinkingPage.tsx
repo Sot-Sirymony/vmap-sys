@@ -7,6 +7,8 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
+import { continueSignIn } from '../utils/continueSignIn';
+import { readDeviceToken } from '../utils/deviceToken';
 
 /**
  * The account-linking screen: reached from the Google callback when the
@@ -53,9 +55,9 @@ export function AccountLinkingPage() {
     setError('');
     setLoading(true);
     try {
-      const response = await linkGoogleAccount({ linkToken, password });
-      setSession(response, state?.remember ?? true);
-      navigate(state?.from ?? '/', { replace: true });
+      const response = await linkGoogleAccount({ linkToken, password, deviceToken: readDeviceToken() });
+      // V21 (TF-FR-18): the link is saved; with two-factor sign-in on, the second step comes next.
+      continueSignIn(response, { remember: state?.remember ?? true, from: state?.from ?? '/', navigate, setSession });
     } catch (error) {
       setError(error instanceof Error ? tr(error.message) : tr('Could not link the accounts.'));
     } finally {

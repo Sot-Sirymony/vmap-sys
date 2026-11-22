@@ -55,7 +55,8 @@ class StepUpServiceTest {
     private final AuthSession session = AuthSession.builder().id(SESSION_ID).user(user).expiresAt(NOW.plus(Duration.ofDays(1))).build();
 
     private StepUpService service(boolean enabled) {
-        return new StepUpService(repository, sessions, mailer, events, mock(RequestRateLimiter.class), lookup, clock, enabled, "secret");
+        return new StepUpService(repository, sessions, mailer, events, mock(RequestRateLimiter.class), lookup, clock, enabled, "secret",
+                mock(com.visionmapping.service.twofactor.AuthenticatorCodeCheck.class));
     }
 
     @BeforeEach

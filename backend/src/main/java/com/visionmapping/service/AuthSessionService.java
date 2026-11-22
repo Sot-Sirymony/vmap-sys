@@ -173,8 +173,13 @@ public class AuthSessionService {
     /** After a password reset: every session ends. */
     @Transactional
     public int endAllSessions(Long userId) {
+        return endAllSessions(userId, REASON_PASSWORD_RESET);
+    }
+
+    /** V21 (TF-FR-29): ends every session, with the reason kept on each row. */
+    public int endAllSessions(Long userId, String reason) {
         repository.closeVerifiedWindows(userId);
-        return repository.revokeAllForUser(userId, null, REASON_PASSWORD_RESET, clock.instant());
+        return repository.revokeAllForUser(userId, null, reason, clock.instant());
     }
 
     /**

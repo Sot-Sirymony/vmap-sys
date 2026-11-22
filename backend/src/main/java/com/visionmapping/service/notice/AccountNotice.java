@@ -13,7 +13,7 @@ import java.util.List;
 public record AccountNotice(Kind kind, List<String> recipients, String fullName, Instant at, String timeZone, String browser,
                             String detail) {
 
-    public enum Kind { PASSWORD_CHANGED, DATA_EXPORTED, REMINDER_EMAIL_CHANGED, ACCOUNT_DELETED }
+    public enum Kind { PASSWORD_CHANGED, DATA_EXPORTED, REMINDER_EMAIL_CHANGED, ACCOUNT_DELETED, RECOVERY_CODE_USED, TWO_FACTOR_CHANGED }
 
     public AccountNotice {
         recipients = Copies.list(recipients);
