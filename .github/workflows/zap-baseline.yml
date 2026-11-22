@@ -71,8 +71,13 @@ jobs:
           serious = []
           for site in report.get("site", []):
               for alert in site.get("alerts", []):
-                  if int(alert.get("riskcode", 0)) >= 2:
-                      serious.append(f'{alert.get("pluginid")} {alert.get("riskdesc")}: {alert.get("name")} ({alert.get("count")} URLs)')
+                  line = f'{alert.get("pluginid")} {alert.get("riskdesc")}: {alert.get("name")} ({alert.get("count")} URLs)'
+                  risk = int(alert.get("riskcode", 0))
+                  # Annotations show on the run page and can be read without signing in.
+                  level = "error" if risk >= 2 else "notice"
+                  print(f"::{level} title=ZAP ${{ matrix.name }}::{line}")
+                  if risk >= 2:
+                      serious.append(line)
           if serious:
               print("Medium or High findings not accepted in .zap/rules.tsv:")
               print("\n".join(serious))
