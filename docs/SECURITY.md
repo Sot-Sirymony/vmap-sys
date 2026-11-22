@@ -166,9 +166,14 @@ and on demand (GitHub → Actions → **ZAP baseline** → **Run workflow**). It
 
 ### Scanner exceptions
 
-A finding that is accepted rather than fixed is listed in `.zap/rules.tsv` as `<plugin id> IGNORE <reason>`. Each one
-needs the security lead's (until named, the product owner's) agreement, a reason a reviewer can check, and a line in the
+A finding that is accepted rather than fixed is listed in `.zap/accepted.tsv` as `<plugin id> <finding name> <reason>`
+(one finding; preferred, so a new finding of the same rule still fails), or in `.zap/rules.tsv` as
+`<plugin id> IGNORE <reason>` (a whole rule). Accepted findings still show on each run as warnings. Each one needs the security lead's (until named, the product owner's) agreement, a reason a reviewer can check, and a line in the
 ASVS check. Review the list at each release; remove an entry as soon as its cause is fixed.
+
+Accepted on 22 Nov 2026 by the product owner (first scan): rule 10055 **CSP: style-src unsafe-inline** (MUI/Emotion and
+inline style attributes; scripts stay strict) and **CSP: Wildcard Directive** (`img-src https:`, because dream pictures
+are links people paste; proxying them would break SEC-01-09).
 
 ## Threat model, ASVS check and abuse cases
 

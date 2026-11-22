@@ -61,6 +61,11 @@ created.
   it (the instructions being repeated) is withheld as a refusal, and streaming stops before it is shown.
 - SEC-02-08: a hardening checklist per environment in `SECURITY.md`.
 
+**First ZAP baseline scan (22 Nov 2026):** the API has no Medium or High findings. The frontend's two Medium CSP
+findings (style-src `'unsafe-inline'` for MUI, and `img-src https:` for pasted dream pictures) were accepted by the
+product owner and are listed by name in `.zap/accepted.tsv`, so any new CSP finding still fails the scan. Findings now
+show as annotations on the run page.
+
 ### Phase 1 — data and core (2026-11-22)
 - **Data.** Migration `V87__two_factor_sign_in.sql`: `two_factor_settings`, `two_factor_recovery_codes`,
   `sign_in_challenges`, `trusted_devices`, and `app_users.two_factor_due_at`. Deleting an account removes them.

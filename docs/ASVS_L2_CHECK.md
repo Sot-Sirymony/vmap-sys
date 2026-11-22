@@ -207,8 +207,14 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 
 
 **ZAP baseline (SAC-06, SAC-17):** `.github/workflows/zap-baseline.yml` scans the production frontend and API weekly
-(passive); a Medium or High finding fails it unless accepted in `.zap/rules.tsv`. Added 22 Nov 2026; the first run's
-result is to be recorded here.
+(passive); a Medium or High finding fails it unless accepted in `.zap/rules.tsv`. Added 22 Nov 2026.
+
+First run, 22 Nov 2026 (`88c90e5`): **API** no Medium or High findings. **Frontend** two Medium findings, both
+accepted by the product owner the same day and listed in `.zap/accepted.tsv`: 10055 *CSP: style-src unsafe-inline*
+(MUI/Emotion inject styles and the UI uses inline style attributes; `script-src 'self'` stays strict) and 10055 *CSP:
+Wildcard Directive* (`img-src https:` for dream pictures people paste; a server-side image proxy would break SEC-01-09).
+Low and informational findings, kept for review: missing `Cross-Origin-*-Policy` headers (90004), a cache-control note
+(10015), timestamp and Base64 patterns in the bundled JavaScript (10096, 10094), and one URL without HSTS (10035).
 ## Sign-off
 
 | Role | Name | Decision on F-02 to F-04 | Date |

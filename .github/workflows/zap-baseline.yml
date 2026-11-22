@@ -5,7 +5,8 @@
 # payloads and signs in to nothing, so it is safe against production.
 #
 # The job fails when a Medium or High finding remains that is not accepted in
-# .zap/rules.tsv (each acceptance has a reason; see docs/SECURITY.md). Reports
+# .zap/accepted.tsv (one finding, by name) or .zap/rules.tsv (a whole rule), each
+# with a reason (see docs/SECURITY.md). Reports
 # are kept as workflow artifacts. No GitHub issues are created.
 name: ZAP baseline
 
@@ -68,19 +69,26 @@ jobs:
           import json, sys
           with open("report_json.json") as handle:
               report = json.load(handle)
+          accepted = set()
+          with open(".zap/accepted.tsv") as handle:
+              for row in handle:
+                  parts = row.rstrip("\n").split("\t")
+                  if len(parts) >= 3 and not row.startswith("#"):
+                      accepted.add((parts[0], parts[1]))
           serious = []
           for site in report.get("site", []):
               for alert in site.get("alerts", []):
                   line = f'{alert.get("pluginid")} {alert.get("riskdesc")}: {alert.get("name")} ({alert.get("count")} URLs)'
                   risk = int(alert.get("riskcode", 0))
                   # Annotations show on the run page and can be read without signing in.
-                  level = "error" if risk >= 2 else "notice"
-                  print(f"::{level} title=ZAP ${{ matrix.name }}::{line}")
-                  if risk >= 2:
+                  is_accepted = (str(alert.get("pluginid")), alert.get("name")) in accepted
+                  level = "warning" if risk >= 2 and is_accepted else "error" if risk >= 2 else "notice"
+                  print(f"::{level} title=ZAP ${{ matrix.name }}::{line}{' (accepted, .zap/accepted.tsv)' if is_accepted else ''}")
+                  if risk >= 2 and not is_accepted:
                       serious.append(line)
           if serious:
-              print("Medium or High findings not accepted in .zap/rules.tsv:")
+              print("Medium or High findings not accepted in .zap/accepted.tsv or .zap/rules.tsv:")
               print("\n".join(serious))
               sys.exit(1)
-          print("No Medium or High findings.")
+          print("No Medium or High findings that are not accepted.")
           PY

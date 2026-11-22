@@ -1,0 +1,8 @@
+# Findings accepted by name for .github/workflows/zap-baseline.yml (V10 SAC-17).
+# Unlike .zap/rules.tsv (whole rules), an entry here accepts one finding of a rule, so a new
+# finding of the same rule still fails the scan.
+#
+# Format: <plugin id><TAB><finding name, exactly as ZAP reports it><TAB><reason; who accepted; date>
+
+10055	CSP: style-src unsafe-inline	MUI/Emotion inject <style> tags at runtime and the UI uses inline style attributes; scripts stay strict (script-src 'self'), so injected script cannot run. Accepted by the product owner, 22 Nov 2026 (ASVS_L2_CHECK.md).
+10055	CSP: Wildcard Directive	img-src allows https: because a dream picture is a link the user pastes; images cannot run code, and proxying them would make the server fetch user URLs (SEC-01-09). Accepted by the product owner, 22 Nov 2026 (ASVS_L2_CHECK.md).
