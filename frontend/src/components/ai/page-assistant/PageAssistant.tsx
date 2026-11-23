@@ -121,7 +121,7 @@ export function PageAssistantProvider({ page, itemId = null, current = null, for
             // Over any open form dialog. On wide screens there is no backdrop, so the form stays in view beside it.
             hideBackdrop={wide}
             sx={{ zIndex: (muiTheme) => muiTheme.zIndex.modal + 2 }}
-            slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 }, p: 2, boxShadow: 8 }, 'aria-label': tr('Page assistant') } }}
+            slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 }, p: 2, boxShadow: 'var(--style-shadow-overlay)' }, 'aria-label': tr('Page assistant') } }}
           >
             {open && (
               <AssistantPanel token={token} page={page} pageItemId={itemId} topic={topic} formRef={formRef}

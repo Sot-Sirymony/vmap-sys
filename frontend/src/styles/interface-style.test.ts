@@ -1,187 +1,137 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildTheme, interfaceStyles, styleShape, type InterfaceStyleId } from '../theme';
+import { createAppTheme, interfaceStyleFromStored, interfaceStyles } from '../theme';
+import { INTERFACE_STYLES, styleCssVariables, styleTokens } from '../design/tokens';
 
 /**
- * FR-48 — the interface style, and the two invariants it depends on.
+ * FR-48 as reworked by BRD 26 — the interface style in the MUI theme.
  *
- * The first is a contract between files: `styleShape` drives MUI components
- * and the stylesheet tokens drive hand-written CSS. Modern is the baseline, so
- * its values live in the base `:root` block (dark shadows in
- * `[data-theme="dark"]`); Classic is the opt-in override block. A card whose
- * corner disagreed with the panel beside it would be the visible symptom of
- * the two channels drifting. Same arrangement as the `--palette-*` variables,
- * and the same reason for testing it.
- *
- * The second is the claim that makes this a cheap feature at all: a style
- * changes shape, never colour. That is what lets either style compose with
- * twelve accents, six tones, and high contrast without a single new pair to
- * contrast-check — so it is asserted rather than merely documented.
+ * The token values themselves (and their sync with global.css) are checked in
+ * design/style-tokens.test.ts. This file checks the theme side: MUI surfaces
+ * read the --style-* variables rather than copies of the numbers, and a style
+ * changes shape, never colour.
  */
-const css = readFileSync(resolve(process.cwd(), 'src/styles/global.css'), 'utf8');
 
-/** The declarations inside one selector's block. */
-function blockVars(selector: string): Map<string, string> {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const block = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`).exec(css);
-  expect(block, `${selector} block missing from global.css`).not.toBeNull();
+type StyleOverrides = Record<string, Record<string, unknown>>;
 
-  const found = new Map<string, string>();
-  for (const match of block![1].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
-    found.set(match[1], match[2].trim());
-  }
-  return found;
+function overrides(theme: ReturnType<typeof createAppTheme>, component: string): StyleOverrides {
+  const entry = (theme.components as Record<string, { styleOverrides?: StyleOverrides }>)[component];
+  expect(entry?.styleOverrides, `${component} overrides missing`).toBeDefined();
+  return entry!.styleOverrides!;
 }
 
-/** Whitespace differs harmlessly between a CSS file and a JS string literal. */
-function normalise(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-const RADIUS_SCALE = ['--radius-sm', '--radius-md', '--radius-lg', '--radius-xl', '--radius-pill'];
-
-describe('interface style (FR-48)', () => {
-  it('exposes exactly the three styles the backend enum stores', () => {
-    expect(interfaceStyles.map((style) => style.stored)).toEqual(['CLASSIC', 'MODERN', 'LIQUID_GLASS']);
+describe('interface style (FR-48, BRD 26)', () => {
+  it('exposes exactly the three styles the backend enum stores, Modern first', () => {
+    expect(interfaceStyles.map((style) => style.stored)).toEqual(['MODERN', 'CLASSIC', 'LIQUID_GLASS']);
+    expect(interfaceStyles.map((style) => style.id)).toEqual([...INTERFACE_STYLES]);
   });
 
-  /**
-   * AC: Classic is defined as the treatment the app originally shipped with,
-   * so it has to be byte-identical to Fluent's own tokens — square corners,
-   * flat surfaces, no wash.
-   */
-  it('leaves Classic on Fluent’s 4px radius and flat surfaces', () => {
-    const shape = styleShape('classic', 'light');
-    expect(shape.radius).toBe(4);
-    expect(shape.pillRadius).toBe(4);
-    expect(shape.cardRadius).toBe(4);
-    // `none`, not undefined: it is what suppresses MUI's dark-mode elevation
-    // overlay gradient.
-    expect(shape.cardWash).toBe('none');
-    expect(shape.headingLetterSpacing).toBe('normal');
+  it('maps the stored values to the renamed ids (Q-26-4) and unknown values to Modern', () => {
+    expect(interfaceStyleFromStored('LIQUID_GLASS')).toBe('glass');
+    expect(interfaceStyleFromStored('CLASSIC')).toBe('classic');
+    expect(interfaceStyleFromStored('MODERN')).toBe('modern');
+    expect(interfaceStyleFromStored('SOMETHING_ELSE')).toBe('modern');
   });
 
-  it('gives Modern rounder corners and a pill for chips and nav', () => {
-    const shape = styleShape('modern', 'light');
-    expect(shape.radius).toBeGreaterThan(styleShape('classic', 'light').radius);
-    expect(shape.pillRadius).toBe(999);
-    expect(shape.cardWash).toContain('linear-gradient');
+  it('sets theme.shape.borderRadius to the style’s control radius', () => {
+    for (const style of INTERFACE_STYLES) {
+      expect(createAppTheme({ mode: 'light', style }).shape.borderRadius).toBe(styleTokens[style].light.radiusControl);
+    }
   });
 
-  it('matches the --radius each side of the stylesheet declares', () => {
-    // Modern is the baseline, so its radius is the base :root token…
-    expect(blockVars(':root').get('--radius'))
-      .toBe(`${styleShape('modern', 'light').radius}px`);
-    // …and each opt-in style restores its own in its override block.
-    expect(blockVars(':root[data-style="classic"]').get('--radius'))
-      .toBe(`${styleShape('classic', 'light').radius}px`);
-    expect(blockVars(':root[data-style="liquidGlass"]').get('--radius'))
-      .toBe(`${styleShape('liquidGlass', 'light').radius}px`);
+  it('defaults to Modern when no style is given', () => {
+    expect(createAppTheme({ mode: 'light' }).shape.borderRadius).toBe(styleTokens.modern.light.radiusControl);
   });
 
-  /**
-   * The card shadow is the one shape token both channels paint: MUI's Card uses
-   * `styleShape().cardShadow`, and hand-written panels use `--shadow-4`. They
-   * are the same tier and must be the same value, per mode.
-   */
-  it('keeps the card shadow identical in the theme and the stylesheet', () => {
-    expect(normalise(blockVars(':root').get('--shadow-4') ?? ''))
-      .toBe(normalise(styleShape('modern', 'light').cardShadow));
-    expect(normalise(blockVars('[data-theme="dark"]').get('--shadow-4') ?? ''))
-      .toBe(normalise(styleShape('modern', 'dark').cardShadow));
-    // Classic's Fluent shadows are mode-independent, so one block covers both.
-    expect(normalise(blockVars(':root[data-style="classic"]').get('--shadow-4') ?? ''))
-      .toBe(normalise(styleShape('classic', 'light').cardShadow));
-    // Liquid Glass shadows differ per mode, so it has a dark twin block.
-    expect(normalise(blockVars(':root[data-style="liquidGlass"]').get('--shadow-4') ?? ''))
-      .toBe(normalise(styleShape('liquidGlass', 'light').cardShadow));
-    expect(normalise(blockVars(':root[data-theme="dark"][data-style="liquidGlass"]').get('--shadow-4') ?? ''))
-      .toBe(normalise(styleShape('liquidGlass', 'dark').cardShadow));
+  it('paints cards from the solid card tokens in every style (D-26-3)', () => {
+    for (const style of INTERFACE_STYLES) {
+      const root = overrides(createAppTheme({ mode: 'light', style }), 'MuiCard').root;
+      expect(root).toMatchObject({
+        backgroundColor: 'var(--style-card-bg)',
+        border: 'var(--style-card-border)',
+        borderRadius: 'var(--style-radius-card)',
+        boxShadow: 'var(--style-shadow-rest)',
+        backgroundImage: 'none',
+      });
+      expect(root).not.toHaveProperty('backdropFilter');
+    }
   });
 
-  it('declares all four elevation tiers in every shadow-bearing block', () => {
-    for (const selector of [':root', '[data-theme="dark"]', ':root[data-style="classic"]', ':root[data-style="liquidGlass"]', ':root[data-theme="dark"][data-style="liquidGlass"]']) {
-      const declared = blockVars(selector);
-      for (const tier of ['--shadow-2', '--shadow-4', '--shadow-8', '--shadow-16']) {
-        expect(declared.has(tier), `${tier} missing from ${selector}`).toBe(true);
-      }
+  it('paints dialogs and popovers from the floating tokens, so glass and its fallbacks reach them', () => {
+    const theme = createAppTheme({ mode: 'dark', style: 'glass' });
+    for (const [component, radius] of [['MuiDialog', 'var(--style-radius-dialog)'], ['MuiPopover', 'var(--style-radius-menu)']] as const) {
+      const paper = overrides(theme, component).paper;
+      expect(paper).toMatchObject({
+        borderRadius: radius,
+        backgroundColor: 'var(--style-floating-bg)',
+        backdropFilter: 'var(--style-blur)',
+        border: 'var(--style-floating-border)',
+        boxShadow: 'var(--style-highlight), var(--style-shadow-overlay)',
+      });
+    }
+  });
+
+  it('uses a 30% scrim under glass dialogs and 40% otherwise (§4)', () => {
+    const scrim = (style: 'modern' | 'glass') =>
+      (overrides(createAppTheme({ mode: 'light', style }), 'MuiDialog').root as Record<string, { backgroundColor: string }>)['& .MuiBackdrop-root:not(.MuiBackdrop-invisible)'].backgroundColor;
+    expect(scrim('glass')).toContain('0.30');
+    expect(scrim('modern')).toContain('0.40');
+  });
+
+  it('takes button, input and chip radii from the tokens', () => {
+    const theme = createAppTheme({ mode: 'light', style: 'classic' });
+    expect(overrides(theme, 'MuiButton').root).toMatchObject({ borderRadius: 'var(--style-radius-control)' });
+    expect(overrides(theme, 'MuiOutlinedInput').root).toMatchObject({ borderRadius: 'var(--style-radius-control)' });
+    expect(overrides(theme, 'MuiChip').root).toMatchObject({ borderRadius: 'var(--style-radius-chip)' });
+  });
+
+  it('follows each style’s motion tokens (§3.5)', () => {
+    for (const style of INTERFACE_STYLES) {
+      const { duration, easing } = createAppTheme({ mode: 'light', style }).transitions;
+      expect(duration.shortest).toBe(styleTokens[style].light.motionFast);
+      expect(duration.standard).toBe(styleTokens[style].light.motionBase);
+      expect(duration.complex).toBe(styleTokens[style].light.motionSlow);
+      expect(easing.easeInOut).toBe(styleTokens[style].light.ease);
     }
   });
 
   /**
-   * The radius scale is what lets the style axis reach hand-written surfaces
-   * (kanban columns, toasts, the command palette, the map tree). The base
-   * declares every tier, and Classic must re-declare every tier — a partial
-   * override would leave some corners modern in Classic mode.
+   * BR-14, extended: a style may not introduce a hue. Shadows (black or white
+   * alpha, no hue) and the dark Modern hover border (a neutral grey) are the
+   * only literal colours a style block may carry.
    */
-  it('declares the full radius scale in the base and re-declares it per opt-in style', () => {
-    const base = blockVars(':root');
-    const classic = blockVars(':root[data-style="classic"]');
-    const glass = blockVars(':root[data-style="liquidGlass"]');
-    for (const tier of RADIUS_SCALE) {
-      expect(base.has(tier), `${tier} missing from base :root`).toBe(true);
-      expect(classic.has(tier), `${tier} missing from the Classic override`).toBe(true);
-      expect(glass.has(tier), `${tier} missing from the Liquid Glass override`).toBe(true);
-    }
-  });
-
-  /**
-   * BR-14, extended: a style may not introduce a hue. The shadows are the one
-   * legitimate exception — a shadow is by definition a black or near-black with
-   * an alpha, and it carries no meaning a user could misread as a status.
-   */
-  it('introduces no colour of its own', () => {
-    for (const style of interfaceStyles.map((entry) => entry.id) as InterfaceStyleId[]) {
+  it('introduces no hue of its own', () => {
+    const hueless = /rgba\((\d+), \1, \1, [\d.]+\)/g;
+    for (const style of INTERFACE_STYLES) {
       for (const mode of ['light', 'dark'] as const) {
-        const shape = styleShape(style, mode);
-        const colourBearing = [shape.cardWash, shape.headingLetterSpacing].join(' ');
-        expect(colourBearing, `${style}/${mode} names a literal colour`).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-        // The wash is allowed to reference the accent, because that is the
-        // user's own colour rather than a new one this file chose.
-        if (shape.cardWash !== 'none') {
-          expect(shape.cardWash).toContain('var(--primary)');
+        for (const [name, value] of Object.entries(styleCssVariables(style, mode))) {
+          const stripped = value.replace(hueless, '').replace(/transparent/g, '');
+          if (name.startsWith('--style-shadow-') || name === '--style-hover-border' || name === '--style-floating-text-tertiary') {
+            // Shadows are near-black alphas, and the other two are neutral
+            // greys from the neutral ramp: none of them reads as a status.
+            continue;
+          }
+          expect(stripped, `${style}/${mode} ${name}`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
         }
       }
     }
   });
 
-  /** The stylesheet half of the same rule. */
-  it('declares no colour in the Classic CSS block beyond shadow alphas', () => {
-    for (const [name, value] of blockVars(':root[data-style="classic"]')) {
-      if (name.startsWith('--shadow-')) {
-        continue;
-      }
-      expect(value, `${name} in the Classic block names a colour`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
-    }
-  });
-
-  /**
-   * The composition claim, checked where it would actually break: the style
-   * reaches the theme's shape and typography and leaves its palette alone.
-   */
+  /** The composition claim: the style reaches shape and leaves the palette alone. */
   it('changes no palette value when the style changes', () => {
-    const classic = buildTheme('light', 'teal', 'comfortable', false, 'warm', 'system', 'classic');
-    const modern = buildTheme('light', 'teal', 'comfortable', false, 'warm', 'system', 'modern');
+    const base = { mode: 'light', accent: 'teal', density: 'comfortable', highContrast: false, tone: 'warm', font: 'system' } as const;
+    const classic = createAppTheme({ ...base, style: 'classic' });
+    const glass = createAppTheme({ ...base, style: 'glass' });
 
-    expect(modern.palette.primary.main).toBe(classic.palette.primary.main);
-    expect(modern.palette.background.default).toBe(classic.palette.background.default);
-    expect(modern.palette.background.paper).toBe(classic.palette.background.paper);
-    expect(modern.palette.text.primary).toBe(classic.palette.text.primary);
-    expect(modern.palette.divider).toBe(classic.palette.divider);
-    // …while the shape does change, so the test would still fail if the style
-    // were being dropped on the floor entirely.
-    expect(modern.shape.borderRadius).not.toBe(classic.shape.borderRadius);
+    expect(glass.palette.primary.main).toBe(classic.palette.primary.main);
+    expect(glass.palette.background.default).toBe(classic.palette.background.default);
+    expect(glass.palette.background.paper).toBe(classic.palette.background.paper);
+    expect(glass.palette.text.primary).toBe(classic.palette.text.primary);
+    expect(glass.palette.divider).toBe(classic.palette.divider);
+    expect(glass.shape.borderRadius).not.toBe(classic.shape.borderRadius);
   });
 
-  it('composes with high contrast rather than being overridden by it', () => {
-    // Unlike the background tone, a corner radius cannot hurt legibility, so
-    // high contrast has no reason to take the user's chosen shape away.
-    const theme = buildTheme('light', 'blue', 'comfortable', true, 'neutral', 'system', 'modern');
-    expect(theme.shape.borderRadius).toBe(styleShape('modern', 'light').radius);
-  });
-
-  it('defaults to Modern when no style is given', () => {
-    expect(buildTheme('light').shape.borderRadius).toBe(styleShape('modern', 'light').radius);
+  it('keeps the chosen shape under high contrast (only translucency falls back, in CSS)', () => {
+    const theme = createAppTheme({ mode: 'light', highContrast: true, style: 'glass' });
+    expect(theme.shape.borderRadius).toBe(styleTokens.glass.light.radiusControl);
   });
 });

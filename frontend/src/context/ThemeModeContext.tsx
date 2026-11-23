@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { accentOptions, backgroundTones, buildTheme, fontFamilies, fontStack, interfaceStyles, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type InterfaceStyleId, type StoredThemePreset } from '../theme';
+import { accentOptions, backgroundTones, createAppTheme, fontFamilies, fontStack, interfaceStyles, matchPreset, type AccentId, type BackgroundToneId, type Density, type FontFamilyId, type InterfaceStyleId, type StoredThemePreset } from '../theme';
 import { loadFont } from '../fonts';
 import { getAppearancePreferences, updateAppearancePreferences } from '../api/preferencesApi';
 import { toSettings, toWire } from './appearance-mapping';
@@ -33,39 +33,19 @@ const STORAGE_KEY = 'vms-theme-settings';
 // Pre-FR-18 key that held only 'light' | 'dark'; migrated on first load.
 const LEGACY_MODE_KEY = 'vms-theme-mode';
 /**
- * One-shot re-baseline to the Modern interface style. Before Modern became the
- * baseline, Classic was the default — so virtually every stored profile says
- * CLASSIC without the user ever having chosen it. The first time this build
- * sees a profile (local cache or account), a stored Classic is treated as
- * "never chose" and re-based to Modern, then this flag stops it happening
- * again — an explicit Classic pick afterwards is honoured forever. The flag is
- * also set by any explicit style pick, so a deliberate choice is never undone.
+ * Before BRD 26 the app switched a stored Classic to Modern once per browser,
+ * remembered under this key. V93 made Modern the default on the account and
+ * Q-26-1 keeps existing Classic accounts on Classic, so the switch is gone; the
+ * leftover key is removed on load.
  */
-const STYLE_REBASELINE_KEY = 'vms-style-rebaseline';
+const LEGACY_STYLE_REBASELINE_KEY = 'vms-style-rebaseline';
 
-function styleRebaselineDone(): boolean {
+function forgetLegacyRebaseline(): void {
   try {
-    return localStorage.getItem(STYLE_REBASELINE_KEY) === '1';
+    localStorage.removeItem(LEGACY_STYLE_REBASELINE_KEY);
   } catch {
-    // Unreadable storage: never force anything.
-    return true;
+    // Unreadable storage: nothing to clean up.
   }
-}
-
-function markStyleRebaselined(): void {
-  try {
-    localStorage.setItem(STYLE_REBASELINE_KEY, '1');
-  } catch {
-    // Best effort — worst case the re-baseline repeats, which is idempotent.
-  }
-}
-
-/** The re-baseline itself, pure so it can be tested directly. */
-export function rebaselineInterfaceStyle(settings: ThemeSettings, alreadyDone: boolean): ThemeSettings {
-  if (alreadyDone || settings.interfaceStyle !== 'classic') {
-    return settings;
-  }
-  return { ...settings, interfaceStyle: 'modern' };
 }
 
 const DEFAULT_SETTINGS: ThemeSettings = {
@@ -194,26 +174,33 @@ const ThemeSettingsContext = createContext<ThemeSettingsContextValue>({
   setBackgroundContrast: () => undefined,
 });
 
+/**
+ * The style from the local cache. Caches written before BRD 26 (Q-26-4) say
+ * `liquidGlass`; it is the same style under its new id.
+ */
+function cachedStyle(value: unknown): InterfaceStyleId {
+  if (value === 'liquidGlass') {
+    return 'glass';
+  }
+  return typeof value === 'string' && KNOWN_STYLES.has(value as InterfaceStyleId) ? (value as InterfaceStyleId) : 'modern';
+}
+
 function initialSettings(): ThemeSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<ThemeSettings>;
-      return rebaselineInterfaceStyle({
+      return {
         mode: parsed.mode === 'light' || parsed.mode === 'dark' || parsed.mode === 'system' ? parsed.mode : DEFAULT_SETTINGS.mode,
         accent: parsed.accent && parsed.accent in accentOptions ? parsed.accent : DEFAULT_SETTINGS.accent,
         density: parsed.density === 'compact' ? 'compact' : 'comfortable',
         fontSize: parsed.fontSize === 'small' || parsed.fontSize === 'large' ? parsed.fontSize : 'medium',
         backgroundTone: parsed.backgroundTone && KNOWN_TONES.has(parsed.backgroundTone) ? parsed.backgroundTone : 'neutral',
         fontFamily: parsed.fontFamily && KNOWN_FONTS.has(parsed.fontFamily) ? parsed.fontFamily : 'system',
-        interfaceStyle: parsed.interfaceStyle && KNOWN_STYLES.has(parsed.interfaceStyle) ? parsed.interfaceStyle : 'modern',
+        interfaceStyle: cachedStyle(parsed.interfaceStyle),
         highContrast: parsed.highContrast === true,
         reduceMotion: parsed.reduceMotion === true,
-        // The flag is deliberately NOT set here: a signed-in user's account
-        // value arrives later via adopt(), which is where the re-baseline is
-        // recorded as done. Setting it this early would let a stale local
-        // cache block the account migration.
-      }, styleRebaselineDone());
+      };
     }
     const legacyMode = localStorage.getItem(LEGACY_MODE_KEY);
     if (legacyMode === 'light' || legacyMode === 'dark') {
@@ -248,6 +235,7 @@ function systemPrefersDark(): boolean {
 export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const { token, appearance } = useAuth();
   const [settings, setSettings] = useState<ThemeSettings>(initialSettings);
+  useEffect(forgetLegacyRebaseline, []);
   const [osPrefersDark, setOsPrefersDark] = useState(systemPrefersDark);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [backgroundImage, setBackgroundImageState] = useState<string | null>(initialBackgroundImage);
@@ -287,15 +275,9 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
    */
   const adopt = useCallback((wire: AppearancePreferences) => {
     const stored = toSettings(wire, DEFAULT_SETTINGS);
-    // Record what the account actually holds, THEN apply the one-shot Modern
-    // re-baseline. When it changes anything, settings and lastSynced disagree,
-    // so the debounced save below writes MODERN back to the account — the
-    // migration persists rather than repeating on every device forever.
     lastSynced.current = JSON.stringify(toWire(stored));
     userTouched.current = false;
-    const next = rebaselineInterfaceStyle(stored, styleRebaselineDone());
-    markStyleRebaselined();
-    setSettings(next);
+    setSettings(stored);
   }, []);
 
   // FR-18.2: System mode follows OS changes live, without a reload.
@@ -370,16 +352,11 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     } else {
       root.dataset.tone = settings.backgroundTone;
     }
-    // FR-48: same convention — absent means Modern, the baseline the tokens in
-    // global.css now carry; Classic is the stamped override. Unlike the tone,
-    // this one is NOT suppressed by high contrast: that setting is about
-    // legibility, and a corner radius cannot make anything harder to read, so
-    // there is no reason to take the user's chosen shape away when it is on.
-    if (settings.interfaceStyle === 'modern') {
-      delete root.dataset.style;
-    } else {
-      root.dataset.style = settings.interfaceStyle;
-    }
+    // BRD 26 (IS-FR-01): data-style always names the style — modern, classic
+    // or glass — and switches every --style-* token. It is not suppressed by
+    // high contrast: the stylesheet turns glass solid under high contrast
+    // (D-26-6), and the shape and density stay the user's choice.
+    root.dataset.style = settings.interfaceStyle;
     // The accent's CSS variables (FR-18.3). Inline custom properties win over
     // both the :root defaults and the [data-theme="dark"] block, so the
     // chosen ramp applies in either mode.
@@ -476,17 +453,20 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   }, [settings, token]);
 
   const theme = useMemo(
-    () => buildTheme(resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily, settings.interfaceStyle),
+    () => createAppTheme({
+      mode: resolvedMode,
+      style: settings.interfaceStyle,
+      accent: settings.accent,
+      font: settings.fontFamily,
+      density: settings.density,
+      highContrast: settings.highContrast,
+      tone: settings.backgroundTone,
+    }),
     [resolvedMode, settings.accent, settings.density, settings.highContrast, settings.backgroundTone, settings.fontFamily, settings.interfaceStyle],
   );
 
   const update = useCallback((changes: Partial<ThemeSettings>) => {
     userTouched.current = true;
-    // An explicit style pick is a deliberate decision — record it so the
-    // one-shot Modern re-baseline can never override it later.
-    if (changes.interfaceStyle) {
-      markStyleRebaselined();
-    }
     setSettings((current) => ({ ...current, ...changes }));
   }, []);
 

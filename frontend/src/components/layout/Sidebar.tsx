@@ -18,7 +18,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
-import { useThemeSettings } from '@/context/ThemeModeContext';
+import { useInterfaceStyle } from '@/hooks/useInterfaceStyle';
 import { useI18n } from '@/i18n/I18nContext';
 import { activeNavTo, navGroupsFor, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
@@ -70,7 +70,8 @@ function SidebarSearch() {
           borderRadius: 'var(--radius)',
           border: '1px solid',
           borderColor: 'divider',
-          bgcolor: 'background.paper',
+          // Solid inside the floating sidebar (D-26-4).
+          bgcolor: 'var(--style-card-bg)',
           color: 'text.secondary',
           transition: (theme) => theme.transitions.create(['border-color', 'background-color']),
           '&:hover': { borderColor: 'primary.main' },
@@ -161,19 +162,19 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
           alignItems: 'center',
           gap: 1,
           p: 1,
-          borderRadius: modern ? 'var(--radius)' : 1.5,
+          borderRadius: 'var(--style-radius-card)',
           justifyContent: collapsed ? 'center' : 'flex-start',
           // Modern lifts the card off the rail so it reads as a distinct
           // control rather than as the last row of the nav list.
           ...(modern && !collapsed
             ? {
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                boxShadow: 'var(--shadow-2)',
+                // A solid card inside the floating sidebar (D-26-4).
+                bgcolor: 'var(--style-card-bg)',
+                border: 'var(--style-card-border)',
+                boxShadow: 'var(--style-shadow-rest)',
               }
             : null),
-          '&:hover': { bgcolor: modern && !collapsed ? 'background.paper' : 'action.hover', borderColor: modern ? 'primary.main' : undefined },
+          '&:hover': { bgcolor: modern && !collapsed ? 'var(--style-card-bg)' : 'action.hover', borderColor: modern ? 'primary.main' : undefined },
         }}
       >
         <Avatar
@@ -265,7 +266,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
               // signal is the same colour either way — only its shape changes.
               ...(modern
                 ? {
-                    borderRadius: 999,
+                    borderRadius: 'var(--style-radius-nav)',
                     '&.Mui-selected': {
                       bgcolor: 'var(--sidebar-accent)',
                       color: 'var(--sidebar-accent-foreground)',
@@ -274,8 +275,8 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
                     },
                   }
                 : {
-                    borderRadius: 1.5,
-                    borderLeft: '3px solid transparent',
+                    borderRadius: 'var(--style-radius-nav)',
+                    borderLeft: 'var(--style-nav-bar) solid transparent',
                     '&:hover': { borderLeftColor: 'primary.light' },
                     '&.Mui-selected': { borderLeftColor: 'primary.main' },
                   }),
@@ -302,10 +303,11 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
 }
 
 function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavigate: () => void }) {
-  const { settings } = useThemeSettings();
-  // Liquid Glass builds on the Modern chrome (search pill, workspace card) —
-  // Classic is the only style that swaps the navigation anatomy.
-  const modern = settings.interfaceStyle !== 'classic';
+  // IS-FR-05: the navigation shape comes from the style's --style-nav-shape
+  // token (pill for Modern and Liquid Glass, rect with an accent bar for
+  // Classic), never from the style's name.
+  const { navShape } = useInterfaceStyle();
+  const modern = navShape === 'pill';
 
   return (
     <Box component="nav" aria-label={tr('Sidebar')} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -338,6 +340,16 @@ function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavi
   );
 }
 
+/**
+ * BRD 26: the sidebar is a floating layer — glass in Liquid Glass, solid
+ * otherwise. Below 600px global.css turns the drawer solid (§5.6).
+ */
+const sidebarPaper = {
+  bgcolor: 'var(--style-floating-bg)',
+  backdropFilter: 'var(--style-blur)',
+  WebkitBackdropFilter: 'var(--style-blur)',
+} as const;
+
 export function Sidebar() {
   const { open, mobileOpen, closeMobile } = useSidebarState();
 
@@ -348,9 +360,10 @@ export function Sidebar() {
         variant="temporary"
         open={mobileOpen}
         onClose={closeMobile}
+        slotProps={{ paper: { className: 'app-sidebar' } }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          '& .MuiDrawer-paper': { ...sidebarPaper, width: DRAWER_WIDTH, boxSizing: 'border-box' },
         }}
       >
         <SidebarContents collapsed={false} onNavigate={closeMobile} />
@@ -359,6 +372,7 @@ export function Sidebar() {
       {/* Desktop: permanent rail, collapsible to icon-only width */}
       <Drawer
         variant="permanent"
+        slotProps={{ paper: { className: 'app-sidebar' } }}
         sx={{
           display: { xs: 'none', md: 'block' },
           width: open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
@@ -370,6 +384,7 @@ export function Sidebar() {
             duration: theme.transitions.duration.enteringScreen,
           }),
           '& .MuiDrawer-paper': {
+            ...sidebarPaper,
             width: open ? DRAWER_WIDTH : DRAWER_WIDTH_COLLAPSED,
             overflowX: 'hidden',
             boxSizing: 'border-box',

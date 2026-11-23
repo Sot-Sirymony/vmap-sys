@@ -1,24 +1,16 @@
+import { surface } from '../../design/surface';
+
 /**
- * BRD 25 §6 — the level-1 card: surface, hairline border, soft shadow (none in
- * dark mode, where --shadow-2 is heavier but the border carries the edge),
- * 12px radius, 20px padding (16px on phones). One definition, so every V25
- * card has the same edges and padding.
+ * BRD 25 §6 — the level-1 card, now from the shared BRD 26 surface helper, so
+ * every V25 card follows the interface style (radius, shadow, padding).
+ * Cards stay solid in every style, Liquid Glass included (D-26-3).
  */
-export const cardSurface = {
-  bgcolor: 'var(--surface)',
-  color: 'var(--text-primary)',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius-lg)',
-  boxShadow: 'var(--shadow-2)',
-  p: { xs: '16px', sm: '20px' },
-  minWidth: 0,
-  position: 'relative',
-} as const;
+export const cardSurface = surface('card');
 
 /** Hover lift for clickable cards (level 2): shadow and border only, no movement. */
 export const cardHover = {
   transition: 'box-shadow var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease)',
-  '&:hover': { boxShadow: 'var(--shadow-4)', borderColor: 'var(--border-strong)' },
+  '&:hover': { boxShadow: 'var(--style-shadow-hover)', borderColor: 'var(--style-hover-border)' },
 } as const;
 
 /** Visually hidden but read by screen readers. */

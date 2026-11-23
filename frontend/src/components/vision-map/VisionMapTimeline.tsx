@@ -945,7 +945,7 @@ export function TimelineView({
       )}
 
       <Collapse in={legendOpen || printing} unmountOnExit timeout={reduceMotion ? 0 : 'auto'}>
-        <Box className="vm-timeline__legend" sx={{ display: 'grid', gap: 1, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+        <Box className="vm-timeline__legend" sx={{ display: 'grid', gap: 1, gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)', p: 1.5 }}>
           {progressToneLegend().map((tone) => (
             <LegendItem key={tone.tone} swatch={<span className="vm-legend__swatch" style={{ background: `var(--progress-${tone.tone})` }} />}>
               {t('Filled part: {label} ({range})', { label: t(tone.label), range: tone.range })}
@@ -1009,12 +1009,12 @@ export function TimelineView({
           aria-label={label}
           onScroll={onScroll}
           className="vm-timeline__scroll"
-          sx={{ overflow: 'auto', maxHeight: '70vh', border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', position: 'relative' }}
+          sx={{ overflow: 'auto', maxHeight: '70vh', border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)', bgcolor: 'var(--style-card-bg)', position: 'relative' }}
         >
           <Box sx={{ width: labelWidth + trackWidth, minWidth: '100%', position: 'relative' }}>
             {/* Header: sticky to the top, with a sticky corner on the left. */}
-            <Box sx={{ display: 'flex', position: 'sticky', top: 0, zIndex: 3, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
-              <Box sx={{ width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 4, bgcolor: 'background.paper', borderRight: 1, borderColor: 'divider', height: headerHeight, display: 'grid', gridTemplateRows: showBusy ? '48px 22px' : '48px' }}>
+            <Box sx={{ display: 'flex', position: 'sticky', top: 0, zIndex: 3, bgcolor: 'var(--style-card-bg)', borderBottom: 1, borderColor: 'divider' }}>
+              <Box sx={{ width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 4, bgcolor: 'var(--style-card-bg)', borderRight: 1, borderColor: 'divider', height: headerHeight, display: 'grid', gridTemplateRows: showBusy ? '48px 22px' : '48px' }}>
                 <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'end', px: 1.5, pb: 0.5 }}>
                   {dreamCount > 1 ? t('Dreams, goals, steps and tasks') : t('Goals, steps and tasks')}
                 </Typography>
@@ -1028,7 +1028,7 @@ export function TimelineView({
                 {dateCells}
                 {busyCells}
                 {today >= rangeStart && today <= rangeEnd && (
-                  <Box sx={{ position: 'absolute', top: 24, left: todayLeft + 3, zIndex: 1, fontSize: 11, fontWeight: 700, color: 'error.main', lineHeight: '24px', whiteSpace: 'nowrap', bgcolor: 'background.paper', px: 0.5, borderLeft: 2, borderColor: 'error.main', pointerEvents: 'none' }}>
+                  <Box sx={{ position: 'absolute', top: 24, left: todayLeft + 3, zIndex: 1, fontSize: 11, fontWeight: 700, color: 'error.main', lineHeight: '24px', whiteSpace: 'nowrap', bgcolor: 'var(--style-card-bg)', px: 0.5, borderLeft: 2, borderColor: 'error.main', pointerEvents: 'none' }}>
                     {t('Today')}
                   </Box>
                 )}
@@ -1110,7 +1110,7 @@ export function TimelineView({
                   <Box
                     className="vm-timeline__sticky-label"
                     sx={{
-                      width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.paper',
+                      width: labelWidth, flex: 'none', position: 'sticky', left: 0, zIndex: 2, bgcolor: 'var(--style-card-bg)',
                       borderRight: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 0.5, pl: 0.5 + row.depth * 1.5, pr: 1, minWidth: 0,
                     }}
                   >
@@ -1263,7 +1263,7 @@ export function TimelineView({
       </Typography>
 
       {timeline.undated.length > 0 && (
-        <Box component="section" aria-label={t('Undated')} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+        <Box component="section" aria-label={t('Undated')} sx={{ border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)', p: 1.5 }}>
           <Typography variant="subtitle2">{t('Undated')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {t('These have no date yet, so they are not on the timeline.')}{' '}

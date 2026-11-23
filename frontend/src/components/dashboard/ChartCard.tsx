@@ -55,7 +55,7 @@ export function ChartCard({ title, caption, action, state = 'ready', emptyMessag
               component="button"
               type="button"
               onClick={onRetry}
-              sx={{ mt: 1.25, height: 32, px: 1.5, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', bgcolor: 'var(--surface)', color: 'inherit', font: 'inherit', fontWeight: 500, cursor: 'pointer' }}
+              sx={{ mt: 1.25, height: 32, px: 1.5, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', bgcolor: 'var(--style-card-bg)', color: 'inherit', font: 'inherit', fontWeight: 500, cursor: 'pointer' }}
             >
               {tr('Try again')}
             </Box>
@@ -91,7 +91,7 @@ export function ChartCard({ title, caption, action, state = 'ready', emptyMessag
                 border: '1px solid', borderColor: asTable ? 'var(--border)' : 'transparent', bgcolor: asTable ? 'var(--surface-sunken)' : 'transparent',
                 color: 'var(--text-secondary)', font: 'inherit', fontSize: 'var(--font-caption)', cursor: 'pointer',
                 '&:hover': { bgcolor: 'var(--surface-sunken)' },
-                '&:active': { transform: 'scale(0.98)' },
+                '&:active': { transform: 'scale(var(--style-press-scale))' },
                 transition: 'background var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease)',
               }}
             >

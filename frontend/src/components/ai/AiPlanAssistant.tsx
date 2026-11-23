@@ -371,7 +371,7 @@ function GoalRows({ result, busy, onChange, onAdd }: {
     <Stack spacing={1.5}>
       <Question question={result.question} />
       {result.rows.map((row, index) => (
-        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Checkbox checked={row.picked} onChange={(event) => update(index, { picked: event.target.checked })}
               slotProps={{ input: { 'aria-label': tr('Add {title}', { title: row.title }) } }} />
@@ -411,7 +411,7 @@ function StepRows({ result, busy, onChange, onAdd }: {
     <Stack spacing={1.5}>
       <Question question={result.question} />
       {result.rows.map((row, index) => (
-        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Checkbox checked={row.picked} onChange={(event) => update(index, { picked: event.target.checked })}
               slotProps={{ input: { 'aria-label': tr('Add {title}', { title: row.title }) } }} />
@@ -455,7 +455,7 @@ function TaskRows({ result, busy, onChange, onAdd }: {
     <Stack spacing={1.5}>
       <Question question={result.question} />
       {result.rows.map((row, index) => (
-        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <Box key={index} sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Checkbox checked={row.picked} onChange={(event) => update(index, { picked: event.target.checked })}
               slotProps={{ input: { 'aria-label': tr('Add {title}', { title: row.title }) } }} />

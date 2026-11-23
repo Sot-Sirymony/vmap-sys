@@ -68,15 +68,15 @@
   --border: #E5E7EB;
   --input: #E5E7EB;
   --ring: #0F6CBD;
-  /* FR-48 — Modern is the baseline shape. --radius carries the panel tier;
-     the explicit scale below is absolute (not calc-derived) so the Classic
-     override can flatten every tier to one value uniformly. */
-  --radius: 12px;
-  --radius-sm: 6px;    /* kbd, toast actions, inline edits, thead corners */
-  --radius-md: 8px;    /* inputs, palette rows, map rows, icon chips */
-  --radius-lg: 12px;   /* panels, kanban columns, list/table cards, toasts */
-  --radius-xl: 16px;   /* MUI Card, dialogs, auth panel (= styleShape cardRadius) */
-  --radius-pill: 999px; /* chips, nav pills, progress bars */
+  /* BRD 26 — the legacy radius names are aliases of the style tokens
+     (--style-radius-*), so hand-written CSS follows the interface style.
+     --radius-sm stays a small tier (kbd, thead corners, menu rows). */
+  --radius: var(--style-radius-card);
+  --radius-sm: min(var(--style-radius-control), 6px);
+  --radius-md: var(--style-radius-control);   /* inputs, palette rows, map rows */
+  --radius-lg: var(--style-radius-card);      /* panels, list/table cards, toasts */
+  --radius-xl: var(--style-radius-dialog);    /* dialogs, auth panel */
+  --radius-pill: var(--style-radius-chip);    /* chips, progress bars */
   --sidebar: #F1F3F5;
   --sidebar-foreground: #1B1F24;
   --sidebar-primary: #0F6CBD;
@@ -179,18 +179,12 @@
   /* FR-18.1: the toast layer sits on the theme's z-index scale (snackbar
      tier), not an invented number. */
   --z-toast: 1400;
-  /* Elevation scale. Consumed both here (list-card hover = shadow-8, board
-     cards = shadow-2) and in theme.ts, where the MUI overrides apply the
-     matching tiers: Card = shadow-4, Popover/Menu = shadow-8, Dialog =
-     shadow-16. The theme uses literal values equal to these tokens.
-     The baseline set is Modern's: wide, low-alpha, negative-spread — a card
-     that floats rather than one that is outlined. The paired 1px contact
-     shadow is what stops it reading as a blur with nothing casting it.
-     Values mirror styleShape('modern', 'light') in theme.ts. */
-  --shadow-2: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px -4px rgba(16, 24, 40, 0.07);
-  --shadow-4: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -8px rgba(16, 24, 40, 0.10);
-  --shadow-8: 0 4px 8px -2px rgba(16, 24, 40, 0.05), 0 16px 40px -6px rgba(16, 24, 40, 0.14);
-  --shadow-16: 0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20);
+  /* BRD 26 — the elevation names are aliases of the style tokens:
+     shadow-2 = rest (cards), shadow-4 = hover, shadow-8/16 = overlay. */
+  --shadow-2: var(--style-shadow-rest);
+  --shadow-4: var(--style-shadow-hover);
+  --shadow-8: var(--style-shadow-overlay);
+  --shadow-16: var(--style-shadow-overlay);
   /* FR-20.1 type ramp — mirrors theme.ts `typography` (the two must change
      together). Six sizes are the whole scale; no other font-size values may
      appear in this file (M-7). */
@@ -202,10 +196,11 @@
   --font-title-page: 1.5rem;    /* page title (h1, one per page) */
   /* FR-20.4 motion tokens — mirrors theme.ts `transitions`. fast: hover
      feedback; base: open/close; slow: layout shifts. */
-  --motion-fast: 150ms;
-  --motion-base: 200ms;
-  --motion-slow: 250ms;
-  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  /* BRD 26 §3.5: per-style motion, from the --style-motion-* tokens. */
+  --motion-fast: var(--style-motion-fast);
+  --motion-base: var(--style-motion-base);
+  --motion-slow: var(--style-motion-slow);
+  --motion-ease: var(--style-ease);
   --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
   /* BRD 25 (D-25-6) — the V25 tokens, GENERATED FROM src/design/tokens.ts.
      design/tokens.test.ts parses this block and the dark block below and fails
@@ -316,14 +311,6 @@
   --progress-done-text: #a4d7a6;
   --hint: #6ccdc2;
   --moonshot-fg: #cdbce6;
-  /* Dark surfaces swallow the soft light-mode shadows entirely — those alphas
-     are invisible on #1b1a19 — so dark mode gets its own, heavier set rather
-     than a shadow that is technically present and does nothing. Values mirror
-     styleShape('modern', 'dark') in theme.ts. */
-  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.30), 0 4px 12px -4px rgba(0, 0, 0, 0.40);
-  --shadow-4: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
-  --shadow-8: 0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55);
-  --shadow-16: 0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65);
   /* BRD 25 V25 tokens, dark values — generated from design/tokens.ts. */
   --surface-raised: #1E2228;
   --surface-sunken: #12151A;
@@ -811,81 +798,350 @@
   font-size: 17.5px;
 }
 
-/* FR-48 — the Classic interface style (opt-in; Modern is the baseline above).
+/* BRD 26 (D-26-1) — the interface style token layer, GENERATED FROM
+ * src/design/tokens.ts (`styleCssVariables`). design/style-tokens.test.ts
+ * parses these blocks and fails on any drift.
  *
- * Shape only. There is not one colour in this block, and that is the invariant
- * worth protecting: because a style never touches a hue, Classic composes with
- * all twelve accents, all six background tones, and high contrast without a
- * single new pair to contrast-check. The moment a colour appears here, that
- * stops being true.
+ * ThemeModeProvider sets data-style="modern | classic | glass" on <html>,
+ * next to data-theme and data-contrast. Modern also applies before the
+ * attribute is set. Each block declares every --style-* token, so the cascade
+ * never mixes two styles. Specificity: the light blocks are (0,2,0), the dark
+ * blocks (0,3,0), so dark always wins over light for the same style.
  *
- * The values mirror `styleShape('classic', …)` in theme.ts, which carries the
- * same numbers for MUI components — the same two-channel arrangement the type
- * ramp and motion tokens already use, and the two must change together.
- *
- * Classic is Fluent's flat look: one 4px radius across every tier, and the
- * tight Fluent depth shadows. Those shadows read the same on light and dark
- * surfaces, so — unlike the Modern baseline — no dark twin block is needed;
- * this block's higher specificity beats the dark block's shadow overrides. */
+ * A style decides shape, elevation, translucency, density of the layout and
+ * motion. It never decides a hue: colour stays with mode, accent, tone and
+ * high contrast, so every style composes with all of them. */
+:root:not([data-style]),
+:root[data-style="modern"] {
+  --style-radius-control: 8px;
+  --style-radius-card: 12px;
+  --style-radius-chip: 999px;
+  --style-radius-dialog: 16px;
+  --style-radius-menu: 8px;
+  --style-radius-nav: 999px;
+  --style-nav-bar: 0px;
+  --style-shadow-rest: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --style-shadow-hover: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --style-shadow-overlay: 0 12px 32px rgba(16, 24, 40, 0.14);
+  --style-hover-border: var(--border-strong);
+  --style-card-bg: var(--surface);
+  --style-card-border: 1px solid var(--border);
+  --style-floating-bg: var(--surface-raised);
+  --style-floating-bg-canvas: var(--surface-raised);
+  --style-blur: none;
+  --style-floating-border: 1px solid var(--border);
+  --style-highlight: 0 0 0 0 transparent;
+  --style-inset-bg: var(--surface-sunken);
+  --style-floating-text-tertiary: #646C78;
+  --style-card-pad: 20px;
+  --style-card-pad-phone: 16px;
+  --style-gap-lg: 24px;
+  --style-gap-md: 16px;
+  --style-gap-sm: 12px;
+  --style-zone-gap: 32px;
+  --style-motion-fast: 150ms;
+  --style-motion-base: 200ms;
+  --style-motion-slow: 250ms;
+  --style-ease: cubic-bezier(0.2, 0, 0, 1);
+  --style-press-scale: 0.98;
+  --style-chart-grid-dash: 2 4;
+  --style-chart-bar-radius: 4px;
+  --style-chart-tooltip-bg: var(--surface-raised);
+  --style-chart-tooltip-blur: none;
+  --style-chart-tooltip-radius: 8px;
+}
+
+:root[data-theme="dark"]:not([data-style]),
+:root[data-theme="dark"][data-style="modern"] {
+  --style-radius-control: 8px;
+  --style-radius-card: 12px;
+  --style-radius-chip: 999px;
+  --style-radius-dialog: 16px;
+  --style-radius-menu: 8px;
+  --style-radius-nav: 999px;
+  --style-nav-bar: 0px;
+  --style-shadow-rest: 0 0 0 0 transparent;
+  --style-shadow-hover: 0 0 0 0 transparent;
+  --style-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.50);
+  --style-hover-border: #363C46;
+  --style-card-bg: var(--surface);
+  --style-card-border: 1px solid var(--border);
+  --style-floating-bg: var(--surface-raised);
+  --style-floating-bg-canvas: var(--surface-raised);
+  --style-blur: none;
+  --style-floating-border: 1px solid var(--border);
+  --style-highlight: 0 0 0 0 transparent;
+  --style-inset-bg: var(--surface-sunken);
+  --style-floating-text-tertiary: #8E97A3;
+  --style-card-pad: 20px;
+  --style-card-pad-phone: 16px;
+  --style-gap-lg: 24px;
+  --style-gap-md: 16px;
+  --style-gap-sm: 12px;
+  --style-zone-gap: 32px;
+  --style-motion-fast: 150ms;
+  --style-motion-base: 200ms;
+  --style-motion-slow: 250ms;
+  --style-ease: cubic-bezier(0.2, 0, 0, 1);
+  --style-press-scale: 0.98;
+  --style-chart-grid-dash: 2 4;
+  --style-chart-bar-radius: 4px;
+  --style-chart-tooltip-bg: var(--surface-raised);
+  --style-chart-tooltip-blur: none;
+  --style-chart-tooltip-radius: 8px;
+}
+
 :root[data-style="classic"] {
-  --radius: 4px;
-  --radius-sm: 4px;
-  --radius-md: 4px;
-  --radius-lg: 4px;
-  --radius-xl: 4px;
-  --radius-pill: 4px;
-  --shadow-2: 0 0.6px 1.8px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06);
-  --shadow-4: 0 1.6px 3.6px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06);
-  --shadow-8: 0 3.2px 7.2px rgba(0,0,0,0.13), 0 0.6px 1.8px rgba(0,0,0,0.08);
-  --shadow-16: 0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.08);
+  --style-radius-control: 4px;
+  --style-radius-card: 4px;
+  --style-radius-chip: 4px;
+  --style-radius-dialog: 4px;
+  --style-radius-menu: 4px;
+  --style-radius-nav: 4px;
+  --style-nav-bar: 3px;
+  --style-shadow-rest: 0 0.6px 1.8px rgba(0, 0, 0, 0.10), 0 0.3px 0.9px rgba(0, 0, 0, 0.06);
+  --style-shadow-hover: 0 1.6px 3.6px rgba(0, 0, 0, 0.13), 0 0.3px 0.9px rgba(0, 0, 0, 0.10);
+  --style-shadow-overlay: 0 6.4px 14.4px rgba(0, 0, 0, 0.13), 0 1.2px 3.6px rgba(0, 0, 0, 0.08);
+  --style-hover-border: var(--border-strong);
+  --style-card-bg: var(--surface);
+  --style-card-border: 1px solid var(--border);
+  --style-floating-bg: var(--surface-raised);
+  --style-floating-bg-canvas: var(--surface-raised);
+  --style-blur: none;
+  --style-floating-border: 1px solid var(--border);
+  --style-highlight: 0 0 0 0 transparent;
+  --style-inset-bg: var(--surface-sunken);
+  --style-floating-text-tertiary: #646C78;
+  --style-card-pad: 12px;
+  --style-card-pad-phone: 12px;
+  --style-gap-lg: 12px;
+  --style-gap-md: 12px;
+  --style-gap-sm: 8px;
+  --style-zone-gap: 20px;
+  --style-motion-fast: 100ms;
+  --style-motion-base: 150ms;
+  --style-motion-slow: 200ms;
+  --style-ease: cubic-bezier(0.33, 0, 0.67, 1);
+  --style-press-scale: 1;
+  --style-chart-grid-dash: none;
+  --style-chart-bar-radius: 0px;
+  --style-chart-tooltip-bg: var(--surface-raised);
+  --style-chart-tooltip-blur: none;
+  --style-chart-tooltip-radius: 4px;
 }
 
-/* FR-48 third style — Liquid Glass. Same two-channel arrangement as Classic:
-   these tokens mirror styleShape('liquidGlass', …) in theme.ts, and the two
-   must change together. Corners go one step rounder than Modern, and every
-   shadow carries a specular top edge (an inset white-alpha highlight — hueless,
-   like a shadow) over a deep soft drop, so panels read as floating glass.
-   The --glass-* tokens carry the translucency channel for hand-written
-   surfaces; MUI surfaces get the same values through buildTheme. */
-:root[data-style="liquidGlass"] {
-  --radius: 14px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 22px;
-  --radius-pill: 999px;
-  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 6px 18px -6px rgba(16, 24, 40, 0.12);
-  --shadow-4: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 10px 30px -6px rgba(16, 24, 40, 0.16);
-  --shadow-8: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 16px 44px -8px rgba(16, 24, 40, 0.20);
-  --shadow-16: inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 28px 64px -12px rgba(16, 24, 40, 0.26);
-  --glass-surface: color-mix(in srgb, var(--card) 60%, transparent);
-  --glass-blur: blur(18px) saturate(1.7);
-  --glass-border: rgba(255, 255, 255, 0.55);
+:root[data-theme="dark"][data-style="classic"] {
+  --style-radius-control: 4px;
+  --style-radius-card: 4px;
+  --style-radius-chip: 4px;
+  --style-radius-dialog: 4px;
+  --style-radius-menu: 4px;
+  --style-radius-nav: 4px;
+  --style-nav-bar: 3px;
+  --style-shadow-rest: 0 0.6px 1.8px rgba(0, 0, 0, 0.40);
+  --style-shadow-hover: 0 1.6px 3.6px rgba(0, 0, 0, 0.45);
+  --style-shadow-overlay: 0 6.4px 14.4px rgba(0, 0, 0, 0.50);
+  --style-hover-border: var(--border-strong);
+  --style-card-bg: var(--surface);
+  --style-card-border: 1px solid var(--border);
+  --style-floating-bg: var(--surface-raised);
+  --style-floating-bg-canvas: var(--surface-raised);
+  --style-blur: none;
+  --style-floating-border: 1px solid var(--border);
+  --style-highlight: 0 0 0 0 transparent;
+  --style-inset-bg: var(--surface-sunken);
+  --style-floating-text-tertiary: #8E97A3;
+  --style-card-pad: 12px;
+  --style-card-pad-phone: 12px;
+  --style-gap-lg: 12px;
+  --style-gap-md: 12px;
+  --style-gap-sm: 8px;
+  --style-zone-gap: 20px;
+  --style-motion-fast: 100ms;
+  --style-motion-base: 150ms;
+  --style-motion-slow: 200ms;
+  --style-ease: cubic-bezier(0.33, 0, 0.67, 1);
+  --style-press-scale: 1;
+  --style-chart-grid-dash: none;
+  --style-chart-bar-radius: 0px;
+  --style-chart-tooltip-bg: var(--surface-raised);
+  --style-chart-tooltip-blur: none;
+  --style-chart-tooltip-radius: 4px;
 }
 
-:root[data-theme="dark"][data-style="liquidGlass"] {
-  --shadow-2: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 18px -6px rgba(0, 0, 0, 0.45);
-  --shadow-4: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px -6px rgba(0, 0, 0, 0.55);
-  --shadow-8: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 44px -8px rgba(0, 0, 0, 0.60);
-  --shadow-16: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 32px 72px -12px rgba(0, 0, 0, 0.70);
-  --glass-surface: color-mix(in srgb, var(--card) 66%, transparent);
-  --glass-border: rgba(255, 255, 255, 0.12);
+:root[data-style="glass"] {
+  --style-radius-control: 12px;
+  --style-radius-card: 18px;
+  --style-radius-chip: 999px;
+  --style-radius-dialog: 24px;
+  --style-radius-menu: 14px;
+  --style-radius-nav: 999px;
+  --style-nav-bar: 0px;
+  --style-shadow-rest: 0 6px 18px -6px rgba(16, 24, 40, 0.12);
+  --style-shadow-hover: 0 10px 30px -6px rgba(16, 24, 40, 0.16);
+  --style-shadow-overlay: 0 28px 64px -12px rgba(16, 24, 40, 0.26);
+  --style-hover-border: var(--border-strong);
+  --style-card-bg: var(--surface);
+  --style-card-border: 1px solid var(--border);
+  --style-floating-bg: color-mix(in srgb, var(--surface) 88%, transparent);
+  --style-floating-bg-canvas: color-mix(in srgb, var(--surface) 74%, transparent);
+  --style-blur: blur(20px) saturate(1.4);
+  --style-floating-border: 1px solid rgba(255, 255, 255, 0.55);
+  --style-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  --style-inset-bg: var(--surface-sunken);
+  --style-floating-text-tertiary: var(--muted-foreground);
+  --style-card-pad: 20px;
+  --style-card-pad-phone: 16px;
+  --style-gap-lg: 24px;
+  --style-gap-md: 16px;
+  --style-gap-sm: 12px;
+  --style-zone-gap: 32px;
+  --style-motion-fast: 200ms;
+  --style-motion-base: 250ms;
+  --style-motion-slow: 350ms;
+  --style-ease: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --style-press-scale: 0.97;
+  --style-chart-grid-dash: 2 4;
+  --style-chart-bar-radius: 6px;
+  --style-chart-tooltip-bg: color-mix(in srgb, var(--surface) 88%, transparent);
+  --style-chart-tooltip-blur: blur(20px) saturate(1.4);
+  --style-chart-tooltip-radius: 14px;
 }
 
-/* The frosted treatment for hand-written surfaces and the sidebar. Guarded by
-   :not([data-contrast="high"]): translucency is the one shape treatment that
-   can cost legibility, so high contrast keeps every surface solid — the same
-   rule the tones and the background image follow. buildTheme applies the same
-   guard to MUI's Card, Dialog, and Popover. */
-:root[data-style="liquidGlass"]:not([data-contrast="high"]) .metric-card,
-:root[data-style="liquidGlass"]:not([data-contrast="high"]) .empty-state,
-:root[data-style="liquidGlass"]:not([data-contrast="high"]) .auth-card,
-:root[data-style="liquidGlass"]:not([data-contrast="high"]) .kanban-column,
-:root[data-style="liquidGlass"]:not([data-contrast="high"]) .MuiDrawer-paper {
-  background: var(--glass-surface);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-color: var(--glass-border);
+:root[data-theme="dark"][data-style="glass"] {
+  --style-radius-control: 12px;
+  --style-radius-card: 18px;
+  --style-radius-chip: 999px;
+  --style-radius-dialog: 24px;
+  --style-radius-menu: 14px;
+  --style-radius-nav: 999px;
+  --style-nav-bar: 0px;
+  --style-shadow-rest: 0 6px 18px -6px rgba(0, 0, 0, 0.45);
+  --style-shadow-hover: 0 10px 30px -6px rgba(0, 0, 0, 0.55);
+  --style-shadow-overlay: 0 32px 72px -12px rgba(0, 0, 0, 0.70);
+  --style-hover-border: var(--border-strong);
+  --style-card-bg: var(--surface);
+  --style-card-border: 1px solid var(--border);
+  --style-floating-bg: color-mix(in srgb, var(--surface-raised) 85%, transparent);
+  --style-floating-bg-canvas: color-mix(in srgb, var(--surface-raised) 74%, transparent);
+  --style-blur: blur(20px) saturate(1.2);
+  --style-floating-border: 1px solid rgba(255, 255, 255, 0.10);
+  --style-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --style-inset-bg: var(--surface-sunken);
+  --style-floating-text-tertiary: var(--muted-foreground);
+  --style-card-pad: 20px;
+  --style-card-pad-phone: 16px;
+  --style-gap-lg: 24px;
+  --style-gap-md: 16px;
+  --style-gap-sm: 12px;
+  --style-zone-gap: 32px;
+  --style-motion-fast: 200ms;
+  --style-motion-base: 250ms;
+  --style-motion-slow: 350ms;
+  --style-ease: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --style-press-scale: 0.97;
+  --style-chart-grid-dash: 2 4;
+  --style-chart-bar-radius: 6px;
+  --style-chart-tooltip-bg: color-mix(in srgb, var(--surface-raised) 85%, transparent);
+  --style-chart-tooltip-blur: blur(20px) saturate(1.2);
+  --style-chart-tooltip-radius: 14px;
+}
+
+/* BRD 26 — Liquid Glass with a background image: the backdrop is no longer
+ * the plain canvas, so the hero card uses the 0.88 / 0.85 floor too (§5.3). */
+:root[data-style="glass"][data-bg-image] {
+  --style-floating-bg-canvas: var(--style-floating-bg);
+}
+
+/* D-26-6 — glass falls back to solid under the app's High contrast setting,
+ * prefers-contrast: more, prefers-reduced-transparency: reduce, and in
+ * browsers without backdrop-filter. These blocks come after the style blocks
+ * and match at (0,3,0) or more, so they win in both modes. Shape, shadow and
+ * motion stay Liquid Glass; only the translucency goes. */
+:root[data-style="glass"][data-contrast="high"],
+:root[data-theme="dark"][data-style="glass"][data-contrast="high"] {
+  --style-floating-bg: var(--surface-raised);
+  --style-floating-bg-canvas: var(--surface-raised);
+  --style-blur: none;
+  --style-floating-border: 1px solid var(--border);
+  --style-highlight: 0 0 0 0 transparent;
+  --style-chart-tooltip-bg: var(--surface-raised);
+  --style-chart-tooltip-blur: none;
+}
+
+@media (prefers-contrast: more) {
+  :root[data-style="glass"],
+  :root[data-theme="dark"][data-style="glass"] {
+    --style-floating-bg: var(--surface-raised);
+    --style-floating-bg-canvas: var(--surface-raised);
+    --style-blur: none;
+    --style-floating-border: 1px solid var(--border);
+    --style-highlight: 0 0 0 0 transparent;
+    --style-chart-tooltip-bg: var(--surface-raised);
+    --style-chart-tooltip-blur: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-style="glass"],
+  :root[data-theme="dark"][data-style="glass"] {
+    --style-floating-bg: var(--surface-raised);
+    --style-floating-bg-canvas: var(--surface-raised);
+    --style-blur: none;
+    --style-floating-border: 1px solid var(--border);
+    --style-highlight: 0 0 0 0 transparent;
+    --style-chart-tooltip-bg: var(--surface-raised);
+    --style-chart-tooltip-blur: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-style="glass"],
+  :root[data-theme="dark"][data-style="glass"] {
+    --style-floating-bg: var(--surface-raised);
+    --style-floating-bg-canvas: var(--surface-raised);
+    --style-blur: none;
+    --style-floating-border: 1px solid var(--border);
+    --style-highlight: 0 0 0 0 transparent;
+    --style-chart-tooltip-bg: var(--surface-raised);
+    --style-chart-tooltip-blur: none;
+  }
+}
+
+/* BRD 26 §3.5 — no press scale under reduced motion (the blanket rules
+ * further down already zero durations). (0,3,0)+ and later, so it wins. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme][data-style] {
+    --style-press-scale: 1;
+  }
+}
+
+:root[data-theme][data-motion="reduced"][data-style] {
+  --style-press-scale: 1;
+}
+
+/* D-26-5 — tertiary text on a floating layer is promoted to secondary in
+ * Liquid Glass (the token is the plain tertiary colour in the other styles).
+ * MUI overlays, the header and the sidebar are floating layers; components
+ * built with surface('floating') set the same variable inline. */
+.app-header,
+.app-sidebar,
+.MuiPopover-paper,
+.MuiMenu-paper,
+.MuiDialog-paper,
+.MuiTooltip-tooltip {
+  --text-tertiary: var(--style-floating-text-tertiary);
+}
+
+/* BRD 26 §5.6 — below 600px the sidebar drawer and the hero card use the
+ * solid fallback; the header keeps glass. */
+@media (max-width: 599.95px) {
+  :root[data-style="glass"] .MuiDrawer-paper,
+  :root[data-style="glass"] .glass-hero {
+    background: var(--surface-raised) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }
 
 .text-muted-foreground {
@@ -2046,7 +2302,7 @@ button:focus-visible,
 }
 
 .auth-submit:active {
-  transform: scale(0.98);
+  transform: scale(var(--style-press-scale));
 }
 
 .auth-submit:disabled {
@@ -3418,8 +3674,8 @@ button:focus-visible,
 
 /* Mobile bottom navigation. Hidden from the md breakpoint up, where the
    sidebar rail takes over; on phones the four core destinations sit one
-   thumb-tap away instead of behind the hamburger. Same glass treatment as
-   the header, with the same high-contrast opt-out. */
+   thumb-tap away instead of behind the hamburger. A floating layer, like
+   the header (BRD 26 §5). */
 .bottom-nav {
   display: none;
 }
@@ -3434,10 +3690,11 @@ button:focus-visible,
     display: flex;
     gap: 2px;
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-    background: color-mix(in srgb, var(--card) 88%, transparent);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border);
+    /* BRD 26: a floating layer — glass in Liquid Glass, solid otherwise. */
+    background: var(--style-floating-bg);
+    -webkit-backdrop-filter: var(--style-blur);
+    backdrop-filter: var(--style-blur);
+    border-top: var(--style-floating-border);
   }
 
   .bottom-nav-item {

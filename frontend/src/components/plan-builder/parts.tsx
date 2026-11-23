@@ -71,7 +71,7 @@ export function ItemCard({ title, fromAi, existing, edited, locked, onToggleLock
 }) {
   const name = title || tr('this item');
   return (
-    <Box sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2,
+    <Box sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)',
       bgcolor: existing ? 'action.hover' : 'background.paper' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         {existing && <Chip size="small" variant="outlined" label={tr('Already in your plan')} />}
@@ -175,7 +175,7 @@ export function RefineBar({ replaceable, busy, onRefine }: {
     return null;
   }
   return (
-    <Box sx={{ display: 'grid', gap: 1, p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+    <Box sx={{ display: 'grid', gap: 1, p: 1.5, borderRadius: 'var(--style-radius-control)', bgcolor: 'action.hover' }}>
       <Typography variant="body2" sx={{ fontWeight: 600 }}>
         {tr('Change the {count} suggestion(s) you have not edited or locked', { count: replaceable })}
       </Typography>

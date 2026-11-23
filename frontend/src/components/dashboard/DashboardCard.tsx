@@ -51,7 +51,7 @@ export function DashboardCard({ label, value, icon: Icon, tone = 'neutral', vari
               transition: (theme) => theme.transitions.create(['border-color', 'box-shadow'], { duration: 120 }),
               '&:hover': {
                 borderColor: 'primary.main',
-                boxShadow: '0 1.6px 3.6px rgba(0,0,0,0.13), 0 0.3px 0.9px rgba(0,0,0,0.10)',
+                boxShadow: 'var(--style-shadow-hover)',
               },
             }
           : {}),

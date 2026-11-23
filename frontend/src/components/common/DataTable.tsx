@@ -399,7 +399,7 @@ export function DataTable<T extends { id: number }>({
       {selection && totalSelected > 0 && (
         <Toolbar
           className="bulk-actions-bar"
-          sx={{ gap: 1.5, flexWrap: 'wrap', bgcolor: 'action.selected', borderRadius: 1, mb: 1.5, minHeight: 56 }}
+          sx={{ gap: 1.5, flexWrap: 'wrap', bgcolor: 'action.selected', borderRadius: 'var(--style-radius-control)', mb: 1.5, minHeight: 56 }}
         >
           <Typography className="bulk-count" variant="subtitle2" component="span">
             {totalSelected} selected

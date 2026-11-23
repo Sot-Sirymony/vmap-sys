@@ -9,6 +9,7 @@ import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.InterfaceStyle;
+import com.visionmapping.entity.enums.InterfaceStyleSource;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
 import com.visionmapping.entity.enums.UiDensity;
@@ -74,6 +75,12 @@ public class AppearancePreferenceService {
             user.setBackgroundTone(request.backgroundTone());
         }
         if (request.interfaceStyle() != null) {
+            // D-26-7: a changed style is the user's choice. The client sends the
+            // whole appearance on every save, so an unchanged style (a save that
+            // only moved the mode, say) must not count as picking it.
+            if (request.interfaceStyle() != user.getInterfaceStyle()) {
+                user.setInterfaceStyleSource(InterfaceStyleSource.CHOSEN);
+            }
             user.setInterfaceStyle(request.interfaceStyle());
         }
         if (request.highContrast() != null) {
@@ -103,7 +110,8 @@ public class AppearancePreferenceService {
                 user.getFontSize() == null ? FontSize.MEDIUM : user.getFontSize(),
                 user.getFontFamily() == null ? FontFamily.SYSTEM : user.getFontFamily(),
                 user.getBackgroundTone() == null ? BackgroundTone.NEUTRAL : user.getBackgroundTone(),
-                user.getInterfaceStyle() == null ? InterfaceStyle.CLASSIC : user.getInterfaceStyle(),
+                user.getInterfaceStyle() == null ? InterfaceStyle.MODERN : user.getInterfaceStyle(),
+                user.getInterfaceStyleSource() == null ? InterfaceStyleSource.DEFAULT : user.getInterfaceStyleSource(),
                 user.isHighContrast(),
                 user.isReduceMotion()
         );

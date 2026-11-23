@@ -31,6 +31,7 @@ import { ProgressRing } from '../components/dashboard/ProgressRing';
 import { RankedProgressList, type RankedProgressItem } from '../components/dashboard/RankedProgressList';
 import { StackedStatusBar, WORK_STATUS_ORDER } from '../components/dashboard/StackedStatusBar';
 import { cardSurface, tabular } from '../components/dashboard/surface';
+import { surface } from '../design/surface';
 import { ZoneHeader } from '../components/dashboard/ZoneHeader';
 import { ReportReminderNotice } from '../components/report/ReportReminderNotice';
 import { useAuth } from '../context/AuthContext';
@@ -299,9 +300,17 @@ type ZonesProps = {
   accountCards: ReactNode;
 };
 
+/** The hero keeps the card's radius and padding, and takes the floating material. */
+const heroSurface = {
+  ...surface('floating', { over: 'canvas' }),
+  borderRadius: 'var(--style-radius-card)',
+  boxShadow: 'var(--style-highlight), var(--style-shadow-rest)',
+};
+
 const grid = {
   display: 'grid',
-  gap: { xs: '12px', md: '16px', lg: '24px' },
+  // BRD 26 §3.4: grid gaps follow the style (Classic is tighter).
+  gap: { xs: 'var(--style-gap-sm)', md: 'var(--style-gap-md)', lg: 'var(--style-gap-lg)' },
   gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(8, minmax(0, 1fr))', lg: 'repeat(12, minmax(0, 1fr))' },
   alignItems: 'start',
 } as const;
@@ -357,7 +366,7 @@ function DashboardZones({ summary, cardState, visionAreas, periodLabel, dueLink,
   const DeltaIcon = delta !== null && delta < 0 ? ArrowDown : ArrowUp;
 
   return (
-    <Box sx={{ display: 'grid', gap: { xs: 2, md: 4 } }}>
+    <Box sx={{ display: 'grid', gap: { xs: 2, md: 'var(--style-zone-gap)' } }}>
       {before}
 
       {/* ---------------- Today ---------------- */}
@@ -378,7 +387,10 @@ function DashboardZones({ summary, cardState, visionAreas, periodLabel, dueLink,
             </ChartCard>
           </Box>
 
-          <Box component="section" aria-label={tr('Overall progress')} sx={{ ...span(3, 4), ...cardSurface, order: { xs: 1, md: 0 } }}>
+          {/* BRD 26 §4: the Today hero is the one glass card on the page (floating
+              over the plain canvas, so the 0.74 floor applies). Solid in the other
+              styles, and below 600px (the .glass-hero rule in global.css). */}
+          <Box component="section" className="glass-hero" aria-label={tr('Overall progress')} sx={{ ...span(3, 4), ...cardSurface, ...heroSurface, order: { xs: 1, md: 0 } }}>
             <Box component="h3" sx={{ m: 0, mb: 2, fontSize: '1rem', lineHeight: 1.5, fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>{tr('Overall progress')}</Box>
             <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, alignItems: 'center', textAlign: { xs: 'left', sm: 'center' }, gap: { xs: 2, sm: 1.5 } }}>
               {loadingCards && <Skeleton variant="circular" width={120} height={120} aria-hidden="true" />}
@@ -551,7 +563,7 @@ function DashboardZones({ summary, cardState, visionAreas, periodLabel, dueLink,
             />
           </Box>
         </Box>
-        <Box sx={{ display: 'grid', gap: { xs: '12px', md: '16px', lg: '24px' }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gap: { xs: 'var(--style-gap-sm)', md: 'var(--style-gap-md)', lg: 'var(--style-gap-lg)' }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }, alignItems: 'start' }}>
           {accountCards}
         </Box>
       </Box>

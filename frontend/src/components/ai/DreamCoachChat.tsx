@@ -217,7 +217,7 @@ function MessageBubble({ message, onRate }: { message: AiMessage; onRate: (ratin
         sx={{
           px: 1.5,
           py: 1,
-          borderRadius: 2,
+          borderRadius: 'var(--style-radius-control)',
           bgcolor: mine ? 'primary.main' : 'action.hover',
           color: mine ? 'primary.contrastText' : 'text.primary',
           whiteSpace: 'pre-wrap',

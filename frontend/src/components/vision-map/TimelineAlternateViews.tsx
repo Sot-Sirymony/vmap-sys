@@ -32,7 +32,7 @@ export function TimelineTable({ rows, kindLabel, statusLabel, formatDay, onOpen,
   const { t } = useI18n();
   const workedOut = (why: unknown) => (why ? ` (${t('worked out')})` : '');
   return (
-    <TableContainer sx={{ border: 1, borderColor: 'divider', borderRadius: 1, maxHeight: '70vh' }}>
+    <TableContainer sx={{ border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)', maxHeight: '70vh' }}>
       <Table size="small" stickyHeader>
         <caption style={{ captionSide: 'top', textAlign: 'left', padding: '8px 12px' }}>{caption}</caption>
         <TableHead>
@@ -132,7 +132,7 @@ export function TimelineAgenda({
       )}
       {shown.length === 0 && <Typography variant="body2" color="text.secondary">{t('Nothing planned from this month on.')}</Typography>}
       {shown.map(([key, entries]) => (
-        <Box component="section" key={key} aria-label={monthTitle(key)} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+        <Box component="section" key={key} aria-label={monthTitle(key)} sx={{ border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)', overflow: 'hidden' }}>
           <Typography component="h3" variant="subtitle2" sx={{ px: 1.5, py: 1, bgcolor: 'action.hover' }}>
             {monthTitle(key)}{key === current ? ` · ${t('This month')}` : ''}
           </Typography>

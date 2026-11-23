@@ -17,7 +17,7 @@ import { navItems } from './nav-items';
 import { useSidebarState } from './sidebar-context';
 import { ReportIssueModal } from '../common/ReportIssueModal';
 import { useAuth } from '../../context/AuthContext';
-import { useThemeSettings } from '../../context/ThemeModeContext';
+import { useInterfaceStyle } from '../../hooks/useInterfaceStyle';
 import { useI18n } from '../../i18n/I18nContext';
 import { listPartners } from '../../api/partnerApi';
 import type { Partner } from '../../types/vision';
@@ -160,10 +160,10 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toggle } = useSidebarState();
-  const { settings } = useThemeSettings();
-  // Liquid Glass builds on the Modern chrome (greeting header, not
-  // breadcrumbs) — Classic is the only style that swaps the anatomy.
-  const modern = settings.interfaceStyle !== 'classic';
+  // IS-FR-05: the header anatomy comes from the style's --style-header token
+  // (greeting for Modern and Liquid Glass, breadcrumbs for Classic).
+  const { header } = useInterfaceStyle();
+  const modern = header === 'greeting';
   // FR-38.1: the "Report an issue" affordance lives in the header, so it's
   // reachable from every authenticated page without leaving the current one.
   const [reportOpen, setReportOpen] = useState(false);
@@ -178,12 +178,13 @@ export function Header() {
       sx={{
         borderBottom: 1,
         borderColor: 'divider',
-        // Glass header: stays put while the page scrolls under it, translucent
-        // enough to hint at what's passing beneath. High contrast makes it
-        // opaque again via the .app-header override in global.css.
-        bgcolor: 'color-mix(in srgb, var(--background) 82%, transparent)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        // BRD 26: the sticky header is a floating layer. Solid in Modern and
+        // Classic; glass at the 0.88 / 0.85 floor in Liquid Glass, since
+        // content scrolls under it (D-26-5). The stylesheet turns it solid
+        // under the D-26-6 fallbacks.
+        bgcolor: 'var(--style-floating-bg)',
+        backdropFilter: 'var(--style-blur)',
+        WebkitBackdropFilter: 'var(--style-blur)',
       }}
     >
       <Toolbar sx={{ gap: 1.5, minHeight: `${modern ? 64 : 56}px !important` }}>

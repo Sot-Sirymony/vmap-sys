@@ -19,7 +19,7 @@ export function ChartTooltipContent({ active, payload, label }: { active?: boole
     return null;
   }
   return (
-    <Box sx={{ bgcolor: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-8)', px: 1.5, py: 1.25, minWidth: 120, fontVariantNumeric: 'tabular-nums' }}>
+    <Box sx={{ bgcolor: 'var(--style-chart-tooltip-bg)', backdropFilter: 'var(--style-chart-tooltip-blur)', WebkitBackdropFilter: 'var(--style-chart-tooltip-blur)', border: 'var(--style-floating-border)', borderRadius: 'var(--style-chart-tooltip-radius)', boxShadow: 'var(--style-highlight), var(--style-shadow-overlay)', '--text-tertiary': 'var(--style-floating-text-tertiary)', px: 1.5, py: 1.25, minWidth: 120, fontVariantNumeric: 'tabular-nums' }}>
       {label !== undefined && label !== '' && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>{label}</Typography>
       )}

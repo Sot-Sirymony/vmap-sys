@@ -14,7 +14,7 @@ export function ProgressBar({ value, colored = false }: { value: number; colored
       value={percent}
       aria-label={`Progress ${percent}%`}
       className={colored ? `progress-bar--${progressTone(percent)}` : undefined}
-      sx={{ width: '100%', borderRadius: 999, '& .MuiLinearProgress-bar': { transition: 'transform var(--motion-slow) var(--motion-ease)' } }}
+      sx={{ width: '100%', borderRadius: 'var(--radius-pill)', '& .MuiLinearProgress-bar': { transition: 'transform var(--motion-slow) var(--motion-ease)' } }}
     />
   );
 }

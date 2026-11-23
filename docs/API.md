@@ -217,7 +217,8 @@ Auth response:
     "fontSize": "MEDIUM",
     "fontFamily": "SYSTEM",
     "backgroundTone": "NEUTRAL",
-    "interfaceStyle": "CLASSIC",
+    "interfaceStyle": "MODERN",
+    "interfaceStyleSource": "DEFAULT",
     "highContrast": false,
     "reduceMotion": false
   },
@@ -800,8 +801,14 @@ Allowed values:
 | `fontSize` | `SMALL`, `MEDIUM`, `LARGE` |
 | `fontFamily` | `SYSTEM`, `PUBLIC_SANS`, `INTER`, `DM_SANS`, `NUNITO_SANS` |
 | `backgroundTone` | `NEUTRAL`, `WARM`, `COOL`, `SOFT`, `TINTED`, `FLAT` |
-| `interfaceStyle` | `CLASSIC`, `MODERN` |
+| `interfaceStyle` | `MODERN` (default for new accounts since V93), `CLASSIC`, `LIQUID_GLASS` |
 | `highContrast`, `reduceMotion` | `true`, `false` |
+
+**`interfaceStyleSource`** (V26, response only; requests never send it): `DEFAULT`
+until the user changes the style, then `CHOSEN`. A request that carries the style
+the account already holds does not count as a choice, because the app sends the
+whole appearance on every save. Accounts that held `CLASSIC` before V93 keep it
+with source `DEFAULT` (Q-26-1).
 
 A value outside these sets is rejected with **400** rather than stored, so the
 database can only ever hold something the UI can render (BR-33). `CUSTOM` is

@@ -5,6 +5,7 @@ import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.InterfaceStyle;
+import com.visionmapping.entity.enums.InterfaceStyleSource;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
 import com.visionmapping.entity.enums.UiDensity;
@@ -28,6 +29,8 @@ public record AppearancePreferencesResponse(
         FontFamily fontFamily,
         BackgroundTone backgroundTone,
         InterfaceStyle interfaceStyle,
+        /* BRD 26 D-26-7: DEFAULT until the user picks a style in Appearance. */
+        InterfaceStyleSource interfaceStyleSource,
         boolean highContrast,
         boolean reduceMotion
 ) {

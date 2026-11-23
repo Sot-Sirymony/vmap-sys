@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   accentOptions,
   backgroundTones,
-  buildTheme,
+  createAppTheme,
   grey,
   palette,
   semanticTints,
@@ -164,8 +164,8 @@ describe('high contrast (FR-39.3)', () => {
   });
 
   it('steps the accent along its own ramp, keeping the user’s choice recognisable', () => {
-    const normal = buildTheme('light', 'teal', 'comfortable', false);
-    const high = buildTheme('light', 'teal', 'comfortable', true);
+    const normal = createAppTheme({ mode: 'light', accent: 'teal', density: 'comfortable', highContrast: false });
+    const high = createAppTheme({ mode: 'light', accent: 'teal', density: 'comfortable', highContrast: true });
 
     expect(high.palette.primary.main).toBe(accentOptions.teal.light.pressed);
     expect(high.palette.primary.main).not.toBe(normal.palette.primary.main);
@@ -226,7 +226,7 @@ describe('semantic palette and grey ramp (FR-43)', () => {
    * as a choice rather than imposed as the default.
    */
   it('does not make the supplied red the default accent', () => {
-    const defaultTheme = buildTheme('light');
+    const defaultTheme = createAppTheme({ mode: 'light' });
     expect(defaultTheme.palette.primary.main).toBe(accentOptions.blue.light.main);
     expect(defaultTheme.palette.primary.main).not.toBe(palette.primary.main);
   });
@@ -238,7 +238,7 @@ describe('semantic palette and grey ramp (FR-43)', () => {
    * referenced by nothing.
    */
   it.each(['success', 'warning', 'info'] as const)('wires %s into the MUI palette', (family) => {
-    const theme = buildTheme('light');
+    const theme = createAppTheme({ mode: 'light' });
     expect(theme.palette[family].main).toBe(palette[family].main);
     expect(theme.palette[family].light).toBe(palette[family].light);
     expect(theme.palette[family].dark).toBe(palette[family].dark);
@@ -251,14 +251,14 @@ describe('semantic palette and grey ramp (FR-43)', () => {
    */
   it.each(['success', 'warning', 'info', 'error'] as const)('keeps a filled %s surface readable', (family) => {
     for (const mode of MODES) {
-      const theme = buildTheme(mode);
+      const theme = createAppTheme({ mode: mode });
       const slot = theme.palette[family];
       expect(contrast(slot.main, slot.contrastText)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
   it('exposes the grey ramp through MUI’s standard slot', () => {
-    const theme = buildTheme('light');
+    const theme = createAppTheme({ mode: 'light' });
     for (const step of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const) {
       expect(theme.palette.grey[step]).toBe(grey[step]);
     }
@@ -270,7 +270,7 @@ describe('semantic palette and grey ramp (FR-43)', () => {
    * rather than accidentally near it.
    */
   it('uses the low end of the ramp for disabled states', () => {
-    const light = buildTheme('light');
+    const light = createAppTheme({ mode: 'light' });
     expect(light.palette.text.disabled).toBe(grey[500]);
     expect(contrast(grey[500], '#ffffff')).toBeLessThan(4.5);
     expect(light.palette.action.disabledBackground).toBe(grey[400]);
@@ -324,8 +324,8 @@ describe('background tones (FR-40)', () => {
     for (const mode of MODES) {
       expect(toneSurfaces(mode, 'neutral')).toBeNull();
 
-      const base = buildTheme(mode, 'blue', 'comfortable', false);
-      const neutral = buildTheme(mode, 'blue', 'comfortable', false, 'neutral');
+      const base = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: false });
+      const neutral = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: false, tone: 'neutral' });
       expect(neutral.palette.background.default).toBe(base.palette.background.default);
       expect(neutral.palette.background.paper).toBe(base.palette.background.paper);
     }
@@ -370,8 +370,8 @@ describe('background tones (FR-40)', () => {
    */
   it.each(TONE_IDS.filter((id) => id !== 'neutral'))('%s actually changes the canvas', (toneId) => {
     for (const mode of MODES) {
-      const neutral = buildTheme(mode, 'blue', 'comfortable', false, 'neutral');
-      const toned = buildTheme(mode, 'blue', 'comfortable', false, toneId);
+      const neutral = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: false, tone: 'neutral' });
+      const toned = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: false, tone: toneId });
 
       const changedCanvas = toned.palette.background.default !== neutral.palette.background.default;
       const changedCard = toned.palette.background.paper !== neutral.palette.background.paper;
@@ -396,7 +396,7 @@ describe('background tones (FR-40)', () => {
         if (toneId === 'flat') {
           continue;
         }
-        const theme = buildTheme(mode, 'blue', 'comfortable', false, toneId);
+        const theme = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: false, tone: toneId });
         expect(theme.palette.background.default).not.toBe(theme.palette.background.paper);
       }
     }
@@ -409,7 +409,7 @@ describe('background tones (FR-40)', () => {
    * never stood out from the page, and Flat had no step to remove.
    */
   it('gives the light canvas a real step below the card', () => {
-    const theme = buildTheme('light');
+    const theme = createAppTheme({ mode: 'light' });
     // BRD 25: the V25 canvas (design/tokens.ts neutrals.light.canvas).
     expect(theme.palette.background.default).toBe('#F6F7F9');
     expect(theme.palette.background.default).not.toBe(theme.palette.background.paper);
@@ -445,9 +445,9 @@ describe('background tones (FR-40)', () => {
    */
   it('is overridden by high contrast, in both modes', () => {
     for (const mode of MODES) {
-      const hcNeutral = buildTheme(mode, 'blue', 'comfortable', true, 'neutral');
+      const hcNeutral = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: true, tone: 'neutral' });
       for (const toneId of TONE_IDS) {
-        const withTone = buildTheme(mode, 'blue', 'comfortable', true, toneId);
+        const withTone = createAppTheme({ mode: mode, accent: 'blue', density: 'comfortable', highContrast: true, tone: toneId });
         expect(withTone.palette.background.default).toBe(hcNeutral.palette.background.default);
         expect(withTone.palette.background.paper).toBe(hcNeutral.palette.background.paper);
       }
@@ -455,8 +455,8 @@ describe('background tones (FR-40)', () => {
   });
 
   it('applies the tone again as soon as high contrast is switched off', () => {
-    const on = buildTheme('light', 'blue', 'comfortable', true, 'warm');
-    const off = buildTheme('light', 'blue', 'comfortable', false, 'warm');
+    const on = createAppTheme({ mode: 'light', accent: 'blue', density: 'comfortable', highContrast: true, tone: 'warm' });
+    const off = createAppTheme({ mode: 'light', accent: 'blue', density: 'comfortable', highContrast: false, tone: 'warm' });
     expect(off.palette.background.default).not.toBe(on.palette.background.default);
     expect(off.palette.background.default).toBe(toneSurfaces('light', 'warm')!.background);
   });

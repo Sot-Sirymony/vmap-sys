@@ -81,7 +81,7 @@ export function ModuleContentAiCard({ token, module, language, onFill }: Props) 
   });
 
   return (
-    <Box sx={{ p: 1.5, borderRadius: 2, border: 1, borderColor: 'divider' }}>
+    <Box sx={{ p: 1.5, borderRadius: 'var(--style-radius-control)', border: 1, borderColor: 'divider' }}>
       <Stack spacing={1}>
         <Typography variant="subtitle2">{tr('AI help for this text')}</Typography>
         {language === 'en' && (

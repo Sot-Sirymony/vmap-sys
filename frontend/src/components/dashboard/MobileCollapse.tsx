@@ -31,9 +31,9 @@ export function MobileCollapse({ label, children }: MobileCollapseProps) {
         onClick={() => setOpen((value) => !value)}
         sx={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', minHeight: 48, px: 2,
-          border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', bgcolor: 'var(--surface)', color: 'var(--text-primary)',
+          border: 'var(--style-card-border)', borderRadius: 'var(--style-radius-card)', bgcolor: 'var(--style-card-bg)', color: 'var(--text-primary)',
           font: 'inherit', fontWeight: 600, textAlign: 'left', cursor: 'pointer',
-          '&:active': { transform: 'scale(0.98)' },
+          '&:active': { transform: 'scale(var(--style-press-scale))' },
           transition: 'transform var(--motion-fast) var(--motion-ease)',
           '& svg': { transition: 'transform var(--motion-base) var(--motion-ease)', transform: open ? 'rotate(90deg)' : 'none' },
         }}

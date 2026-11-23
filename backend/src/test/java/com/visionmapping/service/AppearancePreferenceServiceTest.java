@@ -14,6 +14,7 @@ import com.visionmapping.entity.enums.BackgroundTone;
 import com.visionmapping.entity.enums.FontFamily;
 import com.visionmapping.entity.enums.FontSize;
 import com.visionmapping.entity.enums.InterfaceStyle;
+import com.visionmapping.entity.enums.InterfaceStyleSource;
 import com.visionmapping.entity.enums.ThemeMode;
 import com.visionmapping.entity.enums.ThemePreset;
 import com.visionmapping.entity.enums.UiDensity;
@@ -114,9 +115,9 @@ class AppearancePreferenceServiceTest {
         assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.NEUTRAL);
         // FR-42: the platform's own UI face, so the default downloads nothing.
         assertThat(response.fontFamily()).isEqualTo(FontFamily.SYSTEM);
-        // FR-48: CLASSIC is the Fluent treatment that shipped before the style
-        // control existed, so defaulting to it changes nothing for anyone.
-        assertThat(response.interfaceStyle()).isEqualTo(InterfaceStyle.CLASSIC);
+        // BRD 26 D-26-7: MODERN is the only default, and nothing was chosen yet.
+        assertThat(response.interfaceStyle()).isEqualTo(InterfaceStyle.MODERN);
+        assertThat(response.interfaceStyleSource()).isEqualTo(InterfaceStyleSource.DEFAULT);
         assertThat(response.highContrast()).isFalse();
         assertThat(response.reduceMotion()).isFalse();
     }
@@ -136,6 +137,7 @@ class AppearancePreferenceServiceTest {
         stored.setBackgroundTone(null);
         stored.setFontFamily(null);
         stored.setInterfaceStyle(null);
+        stored.setInterfaceStyleSource(null);
         when(userScope.currentUser()).thenReturn(stored);
 
         AppearancePreferencesResponse response = service.getMyPreferences();
@@ -147,7 +149,8 @@ class AppearancePreferenceServiceTest {
         assertThat(response.fontSize()).isEqualTo(FontSize.MEDIUM);
         assertThat(response.backgroundTone()).isEqualTo(BackgroundTone.NEUTRAL);
         assertThat(response.fontFamily()).isEqualTo(FontFamily.SYSTEM);
-        assertThat(response.interfaceStyle()).isEqualTo(InterfaceStyle.CLASSIC);
+        assertThat(response.interfaceStyle()).isEqualTo(InterfaceStyle.MODERN);
+        assertThat(response.interfaceStyleSource()).isEqualTo(InterfaceStyleSource.DEFAULT);
     }
 
     @Test
@@ -376,5 +379,39 @@ class AppearancePreferenceServiceTest {
                 Changes.none().mode(ThemeMode.DARK).build());
         assertThat(dark.themeMode()).isEqualTo(ThemeMode.DARK);
         assertThat(dark.highContrast()).isTrue();
+    }
+
+    /** BRD 26 D-26-7: picking a style marks it as the user's choice, on the account. */
+    @Test
+    void pickingAStyleRecordsItAsChosen() {
+        AppUser stored = user();
+        stored.setInterfaceStyle(InterfaceStyle.MODERN);
+        when(userScope.currentUser()).thenReturn(stored);
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
+
+        AppearancePreferencesResponse response =
+                service.updateMyPreferences(Changes.none().style(InterfaceStyle.CLASSIC).build());
+
+        assertThat(response.interfaceStyle()).isEqualTo(InterfaceStyle.CLASSIC);
+        assertThat(response.interfaceStyleSource()).isEqualTo(InterfaceStyleSource.CHOSEN);
+        assertThat(stored.getInterfaceStyleSource()).isEqualTo(InterfaceStyleSource.CHOSEN);
+    }
+
+    /**
+     * The client sends the whole appearance on every save, so a save that only
+     * changes the mode still carries the unchanged style. That is not a pick.
+     */
+    @Test
+    void resendingTheSameStyleDoesNotMarkItChosen() {
+        AppUser stored = user();
+        stored.setInterfaceStyle(InterfaceStyle.CLASSIC);
+        when(userScope.currentUser()).thenReturn(stored);
+        when(appUserRepository.save(any(AppUser.class))).thenAnswer(call -> call.getArgument(0));
+
+        AppearancePreferencesResponse response = service.updateMyPreferences(
+                Changes.none().mode(ThemeMode.DARK).style(InterfaceStyle.CLASSIC).build());
+
+        assertThat(response.interfaceStyle()).isEqualTo(InterfaceStyle.CLASSIC);
+        assertThat(response.interfaceStyleSource()).isEqualTo(InterfaceStyleSource.DEFAULT);
     }
 }

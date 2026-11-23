@@ -55,23 +55,38 @@ describe('AppearanceSettingsPage (FR-39.5)', () => {
   });
 
   /**
-   * FR-48: the style control is on this page, not only in the header menu,
-   * because the preview beside it is what the choice is actually about.
+   * BRD 26 §7 (IS-FR-10): three style cards with live thumbnails, radio
+   * semantics and arrow keys.
    */
-  it('offers both interface styles and applies the one picked', async () => {
+  it('offers the three interface styles as a radio group and applies the one picked', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('button', { name: /^Modern/ })).toBeInTheDocument();
-    const classic = screen.getByRole('button', { name: /^Classic/ });
-
-    // Modern is the baseline, so nothing is stamped until Classic is chosen.
-    expect(document.documentElement.hasAttribute('data-style')).toBe(false);
+    const group = screen.getByRole('radiogroup', { name: 'Interface style' });
+    expect(group).toBeInTheDocument();
+    const modern = screen.getByRole('radio', { name: /^Modern/ });
+    const classic = screen.getByRole('radio', { name: /^Classic/ });
+    expect(screen.getByRole('radio', { name: /^Liquid Glass/ })).toBeInTheDocument();
+    expect(modern).toHaveAttribute('aria-checked', 'true');
+    expect(document.documentElement.dataset.style).toBe('modern');
+    expect(screen.getByText('Calm and spacious. The recommended look.')).toBeInTheDocument();
+    expect(screen.getByText('Pair with Compact density for the densest view.')).toBeInTheDocument();
 
     await user.click(classic);
-
-    expect(classic).toHaveAttribute('aria-pressed', 'true');
+    expect(classic).toHaveAttribute('aria-checked', 'true');
     expect(document.documentElement.dataset.style).toBe('classic');
+
+    // Arrow keys move the selection (roving focus).
+    classic.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: /^Liquid Glass/ })).toHaveAttribute('aria-checked', 'true');
+    expect(document.documentElement.dataset.style).toBe('glass');
+  });
+
+  it('says why Liquid Glass is solid under High contrast (ISC-03)', async () => {
+    localStorage.setItem('vms-theme-settings', JSON.stringify({ interfaceStyle: 'glass', highContrast: true }));
+    renderPage();
+    expect(await screen.findByTestId('glass-fallback-note')).toHaveTextContent('High contrast is on, so panels stay solid.');
   });
 
   it('shows the live preview with real badge components', () => {

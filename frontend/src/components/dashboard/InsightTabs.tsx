@@ -310,7 +310,7 @@ export function InsightTabs(props: InsightTabsProps) {
                 boxShadow: selected ? '0 0 0 1px var(--border)' : 'none',
                 transition: 'background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), transform var(--motion-fast) var(--motion-ease)',
                 '&:hover': { color: 'var(--text-primary)' },
-                '&:active': { transform: 'scale(0.98)' },
+                '&:active': { transform: 'scale(var(--style-press-scale))' },
               }}
             >
               {tab.label}

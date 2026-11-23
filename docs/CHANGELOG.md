@@ -17,6 +17,54 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 26.0.0 — Interface styles: Modern, Classic, Liquid Glass (phases 1–6 built; phase 7 to do)
+
+BRD [`VMS_BRD_V26.0.0.md`](VMS_BRD_V26.0.0.md). One style token layer replaces the four ways styles were applied
+(D-26-1). Open questions Q-26-2 to Q-26-4 are built as proposed (KPI cards stay solid; Classic does not change
+Density, with a hint; internal id `liquidGlass` renamed `glass`, wire value `LIQUID_GLASS` unchanged).
+
+**Phase 1 (preview):** [`design/v26-interface-styles-preview.html`](design/v26-interface-styles-preview.html): the
+Dashboard, a tasks table with a menu, and a dialog in all three styles, light and dark, over the plain canvas or a dark
+or bright image, with a toggle that simulates the glass fallbacks. Its token CSS is generated from `tokens.ts`.
+
+**Phase 2 (tokens):** `design/tokens.ts` adds `styleTokens[style][mode]` (shape, elevation, surfaces, layout density,
+motion, chart tokens) and `styleCssVariables()`. global.css carries six generated `--style-*` blocks, switched by
+`data-style="modern | classic | glass"`, which is now always set. `--radius-*`, `--shadow-*` and `--motion-*` are
+aliases of the style tokens. Glass is 0.88 (light) / 0.85 (dark) opaque, 0.74 only over the plain canvas, and falls
+back to solid under High contrast, `prefers-contrast: more`, `prefers-reduced-transparency: reduce` and without
+`backdrop-filter` (D-26-5, D-26-6). `style-tokens.test.ts` checks CSS sync, the contrast floors over black and white,
+and every fallback.
+
+**Phase 3 (theme and components):** `createAppTheme({ mode, style, accent, font, density, highContrast, tone })`
+replaces `buildTheme` and `styleShape`; MUI overrides read the `--style-*` variables, so the CSS fallbacks reach MUI.
+New `design/surface.ts` (`surface('card' | 'floating' | 'dense' | 'inset')`) and `hooks/useInterfaceStyle.ts`
+(style, tokens, `glassActive`, fallback reason). The V25 cards, 24 numeric radii, the literal shadows and the seven
+own-surface files now use tokens. Header and Sidebar decide anatomy from the `header` / `navShape` tokens, not the
+style name. `no-hardcoded-style.test.ts` fails on literal radii, shadows, blur, surface and border colours in
+components and pages (ISC-04).
+
+**Phase 4 (glass placement):** glass only on the sidebar, sticky header, bottom nav, menus, popovers, dialogs (30%
+scrim; solid inputs inside), the chart tooltip and the Dashboard's Overall progress hero card. Kanban columns, metric
+cards, empty states and the auth card are no longer glass. Charts read the grid dash and bar radius tokens; per-style
+motion and press scale, zeroed under reduced motion.
+
+**Phase 6 (picker):** Appearance → Interface style is a three-card radio group with live thumbnails drawn from each
+style's real tokens, arrow-key movement, the Classic density hint, and a note when Liquid Glass falls back to solid.
+Khmer drafts in [`km-review-v26.csv`](km-review-v26.csv).
+
+**Phase 5 (default unified, Q-26-1 answered "keep CLASSIC"):** migration `V93__interface_style_default.sql`
+makes MODERN the column default and adds `interface_style_source` (`DEFAULT` / `CHOSEN`). No stored style changes:
+accounts on CLASSIC keep it as `DEFAULT`; MODERN and LIQUID_GLASS accounts are marked `CHOSEN`. `AppUser` and the
+response's null fallback default to MODERN. `PUT /api/preferences/appearance` marks the style `CHOSEN` only when it
+changes (the app sends the whole appearance on every save), and the response adds `interfaceStyleSource`. The app's
+per-browser Classic-to-Modern switch and its `vms-style-rebaseline` flag are removed, so a chosen Classic holds on
+every browser. With no migrated accounts there is no one-time notice. (Local database after V93: 69 CLASSIC/DEFAULT,
+3 MODERN/CHOSEN, 2 LIQUID_GLASS/CHOSEN.)
+
+**Not yet built:** phase 7 (Playwright snapshots, axe matrix, blur-layer count, `UAT_V26.md`, user guide).
+
+---
+
 ## 25.0.0 — Dashboard appearance redesign (all 6 phases built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V25.0.0.md`](VMS_BRD_V25.0.0.md), from the product owner's design brief of 23 Nov 2026. Visual direction

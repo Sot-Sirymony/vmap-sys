@@ -162,7 +162,7 @@ export function PartnerDetailPage() {
                   sx={{
                     px: 1.5,
                     py: 0.5,
-                    borderRadius: 1,
+                    borderRadius: 'var(--style-radius-control)',
                     fontSize: 'var(--font-body-sm)',
                     fontWeight: candidate === stage ? 700 : 400,
                     bgcolor: candidate === stage ? 'var(--accent)' : 'transparent',

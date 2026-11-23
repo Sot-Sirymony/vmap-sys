@@ -1329,6 +1329,14 @@ export const km: Record<string, string> = {
   'Rounded cards, soft shadows, pill navigation (default)': 'កាតមូល ស្រមោលទន់ ការរុករករាងគ្រាប់ថ្នាំ (លំនាំដើម)',
   'Liquid Glass': 'កញ្ចក់រាវ',
   'Frosted translucent panels that float over your background': 'ផ្ទាំងថ្លាស្រអាប់ដែលអណ្តែតលើផ្ទៃខាងក្រោយរបស់អ្នក',
+  // BRD 26 — interface style picker (drafts, km-review-v26.csv)
+  'Calm and spacious. The recommended look.': 'ស្ងប់ និងទូលាយ។ រូបរាងដែលណែនាំ។',
+  'Compact and crisp, for scanning lots of rows.': 'តូចចង្អៀត និងច្បាស់ សម្រាប់ពិនិត្យជួរជាច្រើន។',
+  'Frosted panels that float over your background.': 'ផ្ទាំងស្រអាប់ដែលអណ្តែតលើផ្ទៃខាងក្រោយរបស់អ្នក។',
+  'Pair with Compact density for the densest view.': 'ប្រើជាមួយដង់ស៊ីតេតូចចង្អៀត ដើម្បីទទួលបានទិដ្ឋភាពណែនបំផុត។',
+  'Your device asks for less transparency, so panels stay solid.': 'ឧបករណ៍របស់អ្នកស្នើឱ្យមានភាពថ្លាតិច ដូច្នេះផ្ទាំងនៅតែរឹង។',
+  'High contrast is on, so panels stay solid.': 'កម្រិតពន្លឺខ្ពស់ត្រូវបានបើក ដូច្នេះផ្ទាំងនៅតែរឹង។',
+  'This browser cannot blur the background, so panels stay solid.': 'កម្មវិធីរុករកនេះមិនអាចធ្វើឱ្យផ្ទៃខាងក្រោយព្រិលបានទេ ដូច្នេះផ្ទាំងនៅតែរឹង។',
 
   // Other pages: counts and names
   'A preset sets the mode and accent together. Currently: {preset}.': 'គំរូមួយកំណត់របៀប និងពណ៌សង្កត់ព្រមគ្នា។ បច្ចុប្បន្ន៖ {preset}។',

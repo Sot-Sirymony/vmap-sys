@@ -15,15 +15,14 @@ package com.visionmapping.entity.enums;
 public enum InterfaceStyle {
     /**
      * The Fluent 2 treatment the app shipped with — 4px corners, thin neutral
-     * strokes, tight shadows, a breadcrumb header. The default, and therefore a
-     * no-op for every existing user.
+     * strokes, tight shadows, a breadcrumb header. The default until BRD 26
+     * (V93); accounts that held it then keep it (Q-26-1).
      */
     CLASSIC,
 
     /**
-     * The contemporary SaaS treatment: larger radii, soft diffused shadows,
-     * gradient-washed cards, pill navigation, a sidebar search affordance and a
-     * greeting header in place of breadcrumbs.
+     * The calm flagship and the only default since BRD 26 (D-26-7): 12px cards,
+     * soft shadows, pill navigation and a greeting header.
      */
     MODERN,
 

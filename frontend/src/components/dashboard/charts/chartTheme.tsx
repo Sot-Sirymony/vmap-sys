@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useThemeSettings } from '../../../context/ThemeModeContext';
-import { brand, chartCategorical, chartOther, heatScale, neutrals, type Mode } from '../../../design/tokens';
+import { brand, chartCategorical, chartOther, heatScale, neutrals, styleTokens, type InterfaceStyle, type Mode } from '../../../design/tokens';
 import { useReducedMotion } from '../../../hooks/useReducedMotion';
 import { statusColor, type StatusToken } from '../../../theme';
 import { familyOf } from '../../common/StatusChip';
@@ -33,13 +33,17 @@ function fallbacks(mode: Mode) {
 
 export type ChartTheme = ReturnType<typeof buildChartTheme>;
 
-function buildChartTheme(mode: Mode, reduced: boolean, statusFill: (status: string) => string) {
+function buildChartTheme(mode: Mode, style: InterfaceStyle, reduced: boolean, statusFill: (status: string) => string) {
   const f = fallbacks(mode);
+  // IS-FR-08: gridline weight and bar radius come from the style tokens.
+  const styled = styleTokens[style][mode];
+  const dash = styled.chartGridDash === 'none' ? undefined : styled.chartGridDash;
+  const barRadius = styled.chartBarRadius;
   const textTertiary = cssVar('--text-tertiary', f.textTertiary);
   const surface = cssVar('--surface', f.surface);
   return {
-    /** Horizontal dashed gridlines only, no vertical (BRD 25 §7.1). */
-    grid: { stroke: cssVar('--divider', f.divider), strokeDasharray: '2 4', vertical: false },
+    /** Horizontal gridlines only, no vertical (BRD 25 §7.1): dashed, or solid in Classic. */
+    grid: { stroke: cssVar('--divider', f.divider), strokeDasharray: dash, vertical: false },
     /** No axis or tick lines; quiet tabular tick labels. */
     axis: {
       axisLine: false,
@@ -47,8 +51,8 @@ function buildChartTheme(mode: Mode, reduced: boolean, statusFill: (status: stri
       tickMargin: 8,
       tick: { fill: textTertiary, fontSize: 12, style: { fontVariantNumeric: 'tabular-nums' } },
     },
-    /** Rounded ends, 12–16px thick. */
-    bar: { radius: [4, 4, 4, 4] as [number, number, number, number], maxBarSize: 16 },
+    /** 12–16px thick; 4px ends in Modern, square in Classic, 6px in Liquid Glass. */
+    bar: { radius: [barRadius, barRadius, barRadius, barRadius] as [number, number, number, number], maxBarSize: 16 },
     line: {
       strokeWidth: 2,
       type: 'monotone' as const,
@@ -81,13 +85,13 @@ function buildChartTheme(mode: Mode, reduced: boolean, statusFill: (status: stri
 export function useChartTheme(): ChartTheme {
   const { settings, resolvedMode } = useThemeSettings();
   const reduced = useReducedMotion();
-  const { accent, backgroundTone, highContrast } = settings;
+  const { accent, backgroundTone, highContrast, interfaceStyle } = settings;
   return useMemo(() => {
     const statusFill = (status: string) =>
       highContrast ? statusColor(status.toUpperCase() as StatusToken, resolvedMode, true) : `var(--st-${familyOf(status)})`;
-    return buildChartTheme(resolvedMode, reduced, statusFill);
+    return buildChartTheme(resolvedMode, interfaceStyle, reduced, statusFill);
     // accent and backgroundTone change the CSS variables buildChartTheme reads.
-  }, [resolvedMode, reduced, accent, backgroundTone, highContrast]);
+  }, [resolvedMode, reduced, accent, backgroundTone, highContrast, interfaceStyle]);
 }
 
 /**

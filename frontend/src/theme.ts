@@ -1,6 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 import { tr } from './i18n/translate';
-import { brand as v25Brand, neutrals, statusTones, type StatusFamily } from './design/tokens';
+import { brand as v25Brand, neutrals, statusTones, styleTokens, type InterfaceStyle, type StatusFamily } from './design/tokens';
 
 /**
  * BRD 25 (D-25-6): colour values come from `design/tokens.ts`, the one token
@@ -820,47 +820,52 @@ export function toneFromStored(stored: string): BackgroundToneId {
 }
 
 /**
- * FR-48 — the interface style.
+ * FR-48, reworked by BRD 26 — the interface style.
  *
- * The dimension the other appearance settings deliberately leave alone: *shape*.
- * Mode, accent, and tone all decide colour; density decides spacing; this
- * decides corner radius, shadow diffusion, the surface wash, and which
- * navigation chrome renders. Because it touches no hue, it multiplies nothing —
- * Modern works with all twelve accents and all six tones without a single new
- * pair to hand-validate, which is the whole reason it is its own axis rather
- * than a longer preset list.
+ * The dimension the other appearance settings leave alone: shape, elevation,
+ * translucency, layout density and motion. It decides no hue, so every style
+ * composes with all accents, tones and high contrast.
  *
- * `modern` is the baseline every surface is designed against; `classic` is the
- * Fluent 2 treatment the app shipped with, kept as a flatter, denser opt-in.
+ * The values live in `design/tokens.ts` (`styleTokens`) and global.css carries
+ * them as `--style-*` variables, switched by `data-style` on `<html>`. The MUI
+ * overrides below read those variables rather than copies of the numbers, so
+ * MUI and hand-written CSS cannot disagree, and the glass fallbacks in the
+ * stylesheet (D-26-6) reach MUI surfaces with no extra code.
+ *
+ *   modern   the calm flagship and the only default (D-26-7)
+ *   classic  dense Fluent 2 for power users
+ *   glass    Liquid Glass: glass only on floating layers (D-26-3)
  */
-export type InterfaceStyleId = 'classic' | 'modern' | 'liquidGlass';
+export type InterfaceStyleId = InterfaceStyle;
 
 export type InterfaceStyleDefinition = {
   id: InterfaceStyleId;
-  /** Backend enum name. */
+  /** Backend enum name (unchanged by the Q-26-4 rename). */
   stored: 'CLASSIC' | 'MODERN' | 'LIQUID_GLASS';
   label: string;
+  /** The one-line "who it suits" (BRD 26 §7). */
   description: string;
 };
 
+/** In picker order: the default first. */
 export const interfaceStyles: InterfaceStyleDefinition[] = [
-  {
-    id: 'classic',
-    stored: 'CLASSIC',
-    label: tr('Classic'),
-    description: tr('Flatter and denser — square corners, crisp borders, breadcrumbs'),
-  },
   {
     id: 'modern',
     stored: 'MODERN',
     label: tr('Modern'),
-    description: tr('Rounded cards, soft shadows, pill navigation (default)'),
+    description: tr('Calm and spacious. The recommended look.'),
   },
   {
-    id: 'liquidGlass',
+    id: 'classic',
+    stored: 'CLASSIC',
+    label: tr('Classic'),
+    description: tr('Compact and crisp, for scanning lots of rows.'),
+  },
+  {
+    id: 'glass',
     stored: 'LIQUID_GLASS',
     label: tr('Liquid Glass'),
-    description: tr('Frosted translucent panels that float over your background'),
+    description: tr('Frosted panels that float over your background.'),
   },
 ];
 
@@ -868,115 +873,9 @@ export function interfaceStyleFromStored(stored: string): InterfaceStyleId {
   return interfaceStyles.find((style) => style.stored === stored)?.id ?? 'modern';
 }
 
-/**
- * The shape tokens one style contributes. Mirrored in global.css — Modern's
- * values live in the base `:root` (and `[data-theme="dark"]`) token blocks,
- * Classic's in the `:root[data-style="classic"]` override — and the two files
- * must change together, exactly as the type ramp and motion tokens already do.
- * Keep these literal strings (never `var(--shadow-*)`): the Appearance page's
- * StylePreview renders BOTH styles side-by-side from this function.
- */
-export type StyleShape = {
-  /** `theme.shape.borderRadius`, and `--radius` in the stylesheet. */
-  radius: number;
-  /** Chips and nav items. Classic keeps Fluent's flat 4px; Modern goes pill. */
-  pillRadius: number;
-  cardRadius: number;
-  cardShadow: string;
-  popoverShadow: string;
-  dialogShadow: string;
-  /**
-   * The wash painted over a card, as a `background-image`. Modern uses a faint
-   * accent gradient that fades out by mid-card; `none` is what kills MUI's dark
-   * elevation overlay, so Classic must keep saying it explicitly.
-   *
-   * Expressed against `var(--primary)` rather than a fixed hue so it follows
-   * whichever accent is active — and kept at single-digit alpha so it cannot
-   * move the contrast of text sitting on the card.
-   */
-  cardWash: string;
-  /** Tighter tracking on headings, which reads as intentional at large sizes. */
-  headingLetterSpacing: string;
-  /**
-   * Liquid Glass only — the translucency channel. A card surface as a
-   * color-mix of `var(--card)` toward transparent, the backdrop-filter that
-   * frosts what shows through it, and the specular border that replaces the
-   * neutral stroke. All three are absent on opaque styles, and buildTheme
-   * skips them entirely under high contrast: translucency is the one shape
-   * treatment that can cost legibility, so the accessibility toggle wins
-   * (the same rule the tones and the background image follow).
-   */
-  cardBackground?: string;
-  cardBackdropFilter?: string;
-  cardBorderColor?: string;
-};
-
-export function styleShape(style: InterfaceStyleId, mode: 'light' | 'dark'): StyleShape {
-  const dark = mode === 'dark';
-
-  if (style === 'modern') {
-    return {
-      radius: 12,
-      pillRadius: 999,
-      cardRadius: 16,
-      // Soft and diffused: a near-invisible contact shadow plus a wide, low-alpha
-      // ambient one. The large blur with a negative spread is what makes a card
-      // read as floating rather than as outlined.
-      cardShadow: dark
-        ? '0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45)'
-        : '0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -8px rgba(16, 24, 40, 0.10)',
-      popoverShadow: dark
-        ? '0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55)'
-        : '0 4px 8px -2px rgba(16, 24, 40, 0.05), 0 16px 40px -6px rgba(16, 24, 40, 0.14)',
-      dialogShadow: dark
-        ? '0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65)'
-        : '0 8px 16px -6px rgba(16, 24, 40, 0.06), 0 28px 60px -12px rgba(16, 24, 40, 0.20)',
-      cardWash: `linear-gradient(160deg, color-mix(in srgb, var(--primary) ${dark ? 7 : 5}%, transparent) 0%, transparent 42%)`,
-      headingLetterSpacing: '-0.018em',
-    };
-  }
-
-  if (style === 'liquidGlass') {
-    // The core Liquid Glass vocabulary, in web terms: frosted translucent
-    // panels (backdrop blur + saturation), capsule-leaning corners one step
-    // rounder than Modern, a specular top edge drawn as an inset highlight
-    // in every shadow, and deep soft drop shadows so the panels read as
-    // floating layers. The highlight is achromatic white-alpha — like a
-    // shadow, it carries no hue of its own (BR-14).
-    return {
-      radius: 14,
-      pillRadius: 999,
-      cardRadius: 22,
-      cardShadow: dark
-        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px -6px rgba(0, 0, 0, 0.55)'
-        : 'inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 10px 30px -6px rgba(16, 24, 40, 0.16)',
-      popoverShadow: dark
-        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 44px -8px rgba(0, 0, 0, 0.60)'
-        : 'inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 16px 44px -8px rgba(16, 24, 40, 0.20)',
-      dialogShadow: dark
-        ? 'inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 32px 72px -12px rgba(0, 0, 0, 0.70)'
-        : 'inset 0 1px 0 rgba(255, 255, 255, 0.60), 0 28px 64px -12px rgba(16, 24, 40, 0.26)',
-      cardWash: `linear-gradient(160deg, color-mix(in srgb, var(--primary) ${dark ? 8 : 6}%, transparent) 0%, transparent 45%)`,
-      headingLetterSpacing: '-0.018em',
-      cardBackground: dark
-        ? 'color-mix(in srgb, var(--card) 66%, transparent)'
-        : 'color-mix(in srgb, var(--card) 60%, transparent)',
-      cardBackdropFilter: 'blur(18px) saturate(1.7)',
-      cardBorderColor: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.55)',
-    };
-  }
-
-  return {
-    radius: 4, // Fluent's corner radius
-    pillRadius: 4,
-    cardRadius: 4,
-    // The Fluent elevation tiers, matching --shadow-4/8/16 in global.css.
-    cardShadow: '0 1.6px 3.6px rgba(0,0,0,0.10), 0 0.3px 0.9px rgba(0,0,0,0.06)',
-    popoverShadow: '0 3.2px 7.2px rgba(0,0,0,0.13), 0 0.6px 1.8px rgba(0,0,0,0.08)',
-    dialogShadow: '0 6.4px 14.4px rgba(0,0,0,0.13), 0 1.2px 3.6px rgba(0,0,0,0.08)',
-    cardWash: 'none',
-    headingLetterSpacing: 'normal',
-  };
+/** Tighter tracking on the two display sizes; Classic keeps Fluent's normal tracking. */
+function headingLetterSpacing(style: InterfaceStyleId): string {
+  return style === 'classic' ? 'normal' : '-0.018em';
 }
 
 /**
@@ -1259,20 +1158,33 @@ export function priorityColor(token: PriorityToken, mode: 'light' | 'dark' = 'li
  * every fill keeps 3:1 on its surface); the meaning family never changes with
  * the mode. The priority palette is still shared by both modes.
  */
-export function buildTheme(
-  mode: 'light' | 'dark',
-  accent: AccentId = 'blue',
-  density: Density = 'comfortable',
+export type AppThemeOptions = {
+  mode: 'light' | 'dark';
+  style?: InterfaceStyleId;
+  accent?: AccentId;
+  font?: FontFamilyId;
+  density?: Density;
+  highContrast?: boolean;
+  tone?: BackgroundToneId;
+};
+
+/**
+ * IS-FR-06 — builds the MUI theme. Named options replace the old positional
+ * `buildTheme(mode, accent, density, highContrast, tone, font, style)`.
+ */
+export function createAppTheme({
+  mode,
+  style = 'modern',
+  accent = 'blue',
+  font = 'system',
+  density = 'comfortable',
   highContrast = false,
-  tone: BackgroundToneId = 'neutral',
-  font: FontFamilyId = 'system',
-  style: InterfaceStyleId = 'modern',
-) {
+  tone = 'neutral',
+}: AppThemeOptions) {
   const dark = mode === 'dark';
-  // FR-48: shape only. Nothing below reads a colour from `shape` — the styles
-  // change radii, shadows, and tracking, and leave every hue to the accent,
-  // tone, and contrast settings resolved above.
-  const shape = styleShape(style, mode);
+  // BRD 26: the style's numbers, for the one place MUI needs a number
+  // (theme.shape.borderRadius). Everything else reads the --style-* variables.
+  const shape = styleTokens[style][mode];
   // FR-40.5: high contrast outranks the tone. Applying the tone only when it is
   // off is what keeps that true here as well as in the stylesheet — and because
   // the tone is never written to the stored settings by this, turning high
@@ -1363,8 +1275,9 @@ export function buildTheme(
       divider: border, // --border / --input
     },
     shape: {
-      // FR-48: --radius in global.css carries the same number per style.
-      borderRadius: shape.radius,
+      // BRD 26: the control radius (--style-radius-control). Components never
+      // multiply it: D-26-2 bans numeric `borderRadius: n` in sx.
+      borderRadius: shape.radiusControl,
     },
     // FR-18.4: Compact narrows the spacing base every sx/gap multiplier builds
     // on; the table/card paddings in global.css follow via [data-density].
@@ -1382,18 +1295,19 @@ export function buildTheme(
     // asked for that (BR-19).
     transitions: {
       // BRD 25 §8: fast 150 / base 200 / slow 250 (design/tokens.ts `motion`).
+      // BRD 26 §3.5: each style has its own fast / base / slow and easing.
       duration: {
-        shortest: 150,
-        shorter: 150,
-        short: 200,
-        standard: 200,
-        complex: 250,
-        enteringScreen: 200,
-        leavingScreen: 150,
+        shortest: shape.motionFast,
+        shorter: shape.motionFast,
+        short: shape.motionBase,
+        standard: shape.motionBase,
+        complex: shape.motionSlow,
+        enteringScreen: shape.motionBase,
+        leavingScreen: shape.motionFast,
       },
       easing: {
-        easeInOut: 'cubic-bezier(0.2, 0, 0, 1)',
-        easeOut: 'cubic-bezier(0.2, 0, 0, 1)',
+        easeInOut: shape.ease,
+        easeOut: shape.ease,
         easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
         sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
       },
@@ -1422,8 +1336,8 @@ export function buildTheme(
       // FR-48: only the two display sizes take the tighter tracking. Tightening
       // body text costs legibility for nothing — the effect reads as deliberate
       // at 1.25rem and up, and as a rendering fault below it.
-      h1: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3, letterSpacing: shape.headingLetterSpacing },
-      h2: { fontSize: '1.25rem', fontWeight: 600, lineHeight: 1.35, letterSpacing: shape.headingLetterSpacing },
+      h1: { fontSize: '1.5rem', fontWeight: 600, lineHeight: 1.3, letterSpacing: headingLetterSpacing(style) },
+      h2: { fontSize: '1.25rem', fontWeight: 600, lineHeight: 1.35, letterSpacing: headingLetterSpacing(style) },
       h3: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
       h4: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
       h5: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
@@ -1441,10 +1355,22 @@ export function buildTheme(
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
-          // The radius is stated explicitly (not inherited) so a button and the
-          // input beside it agree even if MUI's own derivation changes. Buttons
-          // stay on the base radius in both styles — pills are for chips/nav.
-          root: { textTransform: 'none', fontWeight: 600, borderRadius: shape.radius },
+          // BRD 26: buttons and inputs share --style-radius-control, so a
+          // button and the field beside it always agree.
+          root: { textTransform: 'none', fontWeight: 600, borderRadius: 'var(--style-radius-control)' },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 'var(--style-radius-control)',
+            // Fluent's outer focus ring. Classic keeps the 1px offset; Modern
+            // and Glass use 2px (BRD 26 §4). Never blurred.
+            '&.Mui-focused': {
+              outline: `2px solid ${brand.main}`,
+              outlineOffset: style === 'classic' ? '1px' : '2px',
+            },
+          },
         },
       },
       // Skeletons appear wherever Loading.tsx mirrors a page's real layout.
@@ -1456,14 +1382,16 @@ export function buildTheme(
           root: { borderRadius: 'var(--radius-sm)' },
         },
       },
+      // Tooltips are a floating layer: glass in Liquid Glass (D-26-3).
       MuiTooltip: {
         styleOverrides: {
-          tooltip: { borderRadius: 'var(--radius-sm)', fontSize: '0.75rem' },
+          tooltip: {
+            borderRadius: 'var(--style-radius-menu)',
+            fontSize: '0.75rem',
+          },
         },
       },
-      // Flyout rows read as soft inset rows rather than full-bleed strips: a
-      // small radius plus a hair of inline margin. Classic collapses the token
-      // to 4px, so both styles keep their own character.
+      // Flyout rows read as soft inset rows rather than full-bleed strips.
       MuiMenuItem: {
         styleOverrides: {
           root: { borderRadius: 'var(--radius-sm)', marginInline: 4 },
@@ -1474,112 +1402,72 @@ export function buildTheme(
           root: { borderRadius: 'var(--radius-sm)' },
         },
       },
-      // MUI's Chip has its own hardcoded pill radius (~16px) that doesn't
-      // follow theme.shape.borderRadius — override it directly so badges get
-      // Fluent's flatter 4px corners instead of a Material-style pill.
-      // FR-48: Modern wants the pill back, so the value comes from the style
-      // rather than being written in. Either way it is stated explicitly, since
-      // MUI's own default is neither of them.
+      // MUI's Chip has its own pill radius that ignores theme.shape, so the
+      // style's chip radius is stated explicitly. Chips are always solid.
       MuiChip: {
         styleOverrides: {
-          root: { fontWeight: 700, borderRadius: shape.pillRadius },
+          root: { fontWeight: 700, borderRadius: 'var(--style-radius-chip)' },
           label: { fontWeight: 700 },
         },
       },
-      // MUI's default Card elevation is a generic Material drop-shadow. Fluent
-      // cards instead pair a thin neutral-stroke border with its own shadow
-      // scale (--shadow-4 from global.css) — elevation is disabled here so
-      // that shadow doesn't stack on top of this one.
-      // FR-48: Modern keeps the same anatomy — border plus shadow — and only
-      // changes the values: a larger radius, a wide diffused shadow, and a faint
-      // accent wash in place of the flat fill. `backgroundImage` is always set,
-      // because leaving it unset is what lets MUI's dark-mode elevation overlay
-      // gradient back in.
+      // Paper is content by default: solid, never glass. Overlays below opt in.
+      MuiPaper: {
+        styleOverrides: {
+          root: { backgroundImage: 'none' },
+          rounded: { borderRadius: 'var(--style-radius-card)' },
+        },
+      },
+      // Cards are content, so they stay solid in every style (D-26-3): the
+      // surface, hairline border, rest shadow and radius come from the tokens.
+      // `backgroundImage: none` keeps MUI's dark elevation overlay out.
       MuiCard: {
         defaultProps: { elevation: 0 },
         styleOverrides: {
           root: {
-            border: `1px solid ${!highContrast && shape.cardBorderColor ? shape.cardBorderColor : border}`,
-            borderRadius: shape.cardRadius,
-            boxShadow: shape.cardShadow,
-            backgroundImage: shape.cardWash,
-            // Liquid Glass: the frosted surface. Skipped under high contrast —
-            // translucency is the one shape treatment that can cost
-            // legibility, so the accessibility toggle keeps surfaces solid.
-            ...(!highContrast && shape.cardBackground
-              ? {
-                  backgroundColor: shape.cardBackground,
-                  backdropFilter: shape.cardBackdropFilter,
-                  WebkitBackdropFilter: shape.cardBackdropFilter,
-                }
-              : {}),
+            backgroundColor: 'var(--style-card-bg)',
+            border: 'var(--style-card-border)',
+            borderRadius: 'var(--style-radius-card)',
+            boxShadow: 'var(--style-shadow-rest)',
+            backgroundImage: 'none',
           },
         },
       },
-      // Dialog defaults to MUI's heaviest Material elevation (24) — replaced
-      // with Fluent's own top elevation tier (--shadow-16), since a modal is
-      // the most "raised" surface in the app and should read as clearly above
-      // everything else, not just have a bigger version of the Card shadow.
+      // Dialogs are a floating layer: glass in Liquid Glass over a 30% scrim,
+      // raised solid over a 40% scrim otherwise (BRD 26 §4). The fallbacks in
+      // global.css turn the glass variables solid when D-26-6 applies.
       MuiDialog: {
         styleOverrides: {
-          // A light blur on the backdrop separates the modal from the page it
-          // covers without darkening it further. Scoped to Dialog's own
-          // backdrop — a blanket MuiBackdrop override would also hit Popover's
-          // invisible backdrop and blur the page every time a menu opens.
           root: {
-            '& .MuiBackdrop-root': {
-              backdropFilter: 'blur(3px)',
-              WebkitBackdropFilter: 'blur(3px)',
+            '& .MuiBackdrop-root:not(.MuiBackdrop-invisible)': {
+              backgroundColor: style === 'glass' ? 'rgba(0, 0, 0, 0.30)' : 'rgba(0, 0, 0, 0.40)',
             },
           },
           paper: {
-            borderRadius: shape.cardRadius,
-            boxShadow: shape.dialogShadow,
+            borderRadius: 'var(--style-radius-dialog)',
+            backgroundColor: 'var(--style-floating-bg)',
+            backdropFilter: 'var(--style-blur)',
+            WebkitBackdropFilter: 'var(--style-blur)',
+            border: 'var(--style-floating-border)',
+            boxShadow: 'var(--style-highlight), var(--style-shadow-overlay)',
             backgroundImage: 'none',
-            ...(!highContrast && shape.cardBackground
-              ? {
-                  backgroundColor: shape.cardBackground,
-                  backdropFilter: shape.cardBackdropFilter,
-                  WebkitBackdropFilter: shape.cardBackdropFilter,
-                }
+            // Inputs inside a glass dialog sit on a solid inset surface (D-26-4).
+            ...(style === 'glass'
+              ? { '& .MuiOutlinedInput-root, & .MuiFilledInput-root': { backgroundColor: 'var(--style-card-bg)' } }
               : {}),
           },
         },
       },
-      // Flyouts (Select/autocomplete dropdowns, the row-actions Menu) render
-      // through MUI's Popover, which defaults to a generic Material elevation-8
-      // drop-shadow. Replace it with Fluent's flyout tier (--shadow-8 from
-      // global.css) so menus sit on the same elevation scale as Card (shadow-4)
-      // and Dialog (shadow-16) — a menu reads as raised above the page but
-      // below a modal. backgroundImage:none drops MUI dark-mode's overlay
-      // gradient, matching the flat Fluent surfaces used by Card/Dialog.
+      // Menus, selects and popovers: a floating layer.
       MuiPopover: {
         styleOverrides: {
           paper: {
-            boxShadow: shape.popoverShadow,
+            borderRadius: 'var(--style-radius-menu)',
+            backgroundColor: 'var(--style-floating-bg)',
+            backdropFilter: 'var(--style-blur)',
+            WebkitBackdropFilter: 'var(--style-blur)',
+            border: 'var(--style-floating-border)',
+            boxShadow: 'var(--style-highlight), var(--style-shadow-overlay)',
             backgroundImage: 'none',
-            ...(!highContrast && shape.cardBackground
-              ? {
-                  backgroundColor: shape.cardBackground,
-                  backdropFilter: shape.cardBackdropFilter,
-                  WebkitBackdropFilter: shape.cardBackdropFilter,
-                }
-              : {}),
-          },
-        },
-      },
-      // Fluent's focus indicator is a visible outer ring around the whole
-      // control, not just a thicker border — MUI's default focus behavior
-      // already colors the border via palette.primary, so this adds the ring
-      // on top rather than replacing it. Covers both TextField and Select,
-      // since outlined Select renders through OutlinedInput internally.
-      MuiOutlinedInput: {
-        styleOverrides: {
-          root: {
-            '&.Mui-focused': {
-              outline: `2px solid ${brand.main}`,
-              outlineOffset: '1px',
-            },
           },
         },
       },
@@ -1587,6 +1475,6 @@ export function buildTheme(
   });
 }
 
-const theme = buildTheme('light');
+const theme = createAppTheme({ mode: 'light' });
 
 export default theme;

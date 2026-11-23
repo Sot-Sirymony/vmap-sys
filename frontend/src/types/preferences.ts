@@ -99,6 +99,11 @@ export type AppearancePreferences = {
   fontFamily: StoredFontFamily;
   backgroundTone: StoredBackgroundTone;
   interfaceStyle: StoredInterfaceStyle;
+  /**
+   * BRD 26 D-26-7: response only. DEFAULT until the user changes the style in
+   * Appearance; the server works it out, so requests never send it.
+   */
+  interfaceStyleSource?: 'DEFAULT' | 'CHOSEN';
   highContrast: boolean;
   reduceMotion: boolean;
 };

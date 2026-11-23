@@ -88,7 +88,7 @@ export function PitchCoachCard({ token, initialPitch = '' }: { token: string; in
               </Box>
               {feedback.tip && <Alert severity="info">{feedback.tip}</Alert>}
               {feedback.improvedPitch && (
-                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                <Box sx={{ p: 1.5, borderRadius: 'var(--style-radius-control)', bgcolor: 'action.hover' }}>
                   <Typography variant="subtitle2">{tr('Suggested wording')}</Typography>
                   <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{feedback.improvedPitch}</Typography>
                   <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>

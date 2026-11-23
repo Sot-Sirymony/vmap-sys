@@ -151,7 +151,7 @@ export function ModuleHelpCard({ token, module, rows, onUseDraft }: Readonly<Pro
           {help?.mode === 'START' && (
             <Stack spacing={1}>
               {help.questions.length > 0 && (
-                <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+                <Box sx={{ p: 1.5, borderRadius: 'var(--style-radius-control)', bgcolor: 'action.hover' }}>
                   <Typography variant="caption" color="text.secondary">
                     {tr('Question {number} of {total}', { number: questionIndex + 1, total: help.questions.length })}
                   </Typography>
@@ -188,7 +188,7 @@ export function ModuleHelpCard({ token, module, rows, onUseDraft }: Readonly<Pro
                 <Typography variant="caption" color="text.secondary">{tr('Built on your answers to the questions.')}</Typography>
               )}
               {help.rows.map((row, index) => (
-                <Box key={index} sx={{ p: 1.5, borderRadius: 2, border: 1, borderColor: 'divider' }}>
+                <Box key={index} sx={{ p: 1.5, borderRadius: 'var(--style-radius-control)', border: 1, borderColor: 'divider' }}>
                   {module.fields.filter((field) => row[field.key]).map((field) => (
                     <Typography key={field.key} variant="body2"><strong>{field.label}:</strong> {row[field.key]}</Typography>
                   ))}

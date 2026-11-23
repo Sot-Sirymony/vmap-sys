@@ -226,3 +226,311 @@ export function cssVariables(mode: Mode): Record<string, string> {
   });
   return vars;
 }
+
+/* ------------------------------------------------------------------------- */
+/* BRD 26 — interface style tokens (D-26-1)                                   */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The three interface styles, by their CSS id (`data-style` on `<html>`). The
+ * stored wire values stay `MODERN`, `CLASSIC` and `LIQUID_GLASS` (Q-26-4).
+ *
+ *   modern   the calm flagship and the only default (D-26-7)
+ *   classic  dense Fluent 2 for power users: 4px corners, tight shadows
+ *   glass    expressive; glass only on floating layers (D-26-3)
+ */
+export type InterfaceStyle = 'modern' | 'classic' | 'glass';
+
+export const INTERFACE_STYLES: readonly InterfaceStyle[] = ['modern', 'classic', 'glass'];
+
+export type StyleTokens = {
+  /** Buttons, inputs, selects (px). */
+  radiusControl: number;
+  radiusCard: number;
+  radiusChip: number;
+  radiusDialog: number;
+  /** Menus, popovers, tooltips. */
+  radiusMenu: number;
+  /** Navigation selection shape. `rect` adds a 3px accent bar (Classic). */
+  navShape: 'pill' | 'rect';
+  /** Header anatomy (D-26-9). */
+  header: 'greeting' | 'breadcrumbs';
+  shadowRest: string;
+  shadowHover: string;
+  shadowOverlay: string;
+  /** Border colour a clickable card takes on hover. */
+  hoverBorder: string;
+  cardBg: string;
+  cardBorder: string;
+  /** Sidebar, header, menus, dialogs, the hero card. Translucent only in Glass. */
+  floatingBg: string;
+  /** Glass over the plain app canvas only, where the backdrop is known (D-26-5). */
+  floatingBgCanvas: string;
+  blur: string;
+  floatingBorder: string;
+  /** Top-edge highlight, as an inset shadow. A no-op shadow outside Glass, so it can be combined. */
+  highlight: string;
+  /** Children of floating layers (D-26-4). */
+  insetBg: string;
+  /** Tertiary text on a floating layer. Glass promotes it to secondary (D-26-5). */
+  floatingTextTertiary: string;
+  cardPad: string;
+  cardPadPhone: string;
+  /** Grid gaps: wide (≥ 1200px), medium, narrow (< 600px). */
+  gap: readonly [string, string, string];
+  zoneGap: string;
+  motionFast: number;
+  motionBase: number;
+  motionSlow: number;
+  ease: string;
+  /** `1` means no press scale (Classic changes colour only). */
+  pressScale: number;
+  /** Chart gridline dash pattern; `none` is a solid line. */
+  chartGridDash: string;
+  chartBarRadius: number;
+  chartTooltipBg: string;
+  chartTooltipBlur: string;
+  chartTooltipRadius: number;
+  /**
+   * The surface opacity behind `floatingBg` / `floatingBgCanvas`, for the
+   * contrast test. `1` means solid.
+   */
+  floatingAlpha: number;
+  floatingCanvasAlpha: number;
+};
+
+/** A shadow that draws nothing but can still sit in a comma-separated list. */
+export const NO_SHADOW = '0 0 0 0 transparent';
+
+const modernLight: StyleTokens = {
+  radiusControl: 8,
+  radiusCard: 12,
+  radiusChip: 999,
+  radiusDialog: 16,
+  radiusMenu: 8,
+  navShape: 'pill',
+  header: 'greeting',
+  shadowRest: '0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06)',
+  shadowHover: '0 4px 12px rgba(16, 24, 40, 0.08)',
+  shadowOverlay: '0 12px 32px rgba(16, 24, 40, 0.14)',
+  hoverBorder: 'var(--border-strong)',
+  cardBg: 'var(--surface)',
+  cardBorder: '1px solid var(--border)',
+  floatingBg: 'var(--surface-raised)',
+  floatingBgCanvas: 'var(--surface-raised)',
+  blur: 'none',
+  floatingBorder: '1px solid var(--border)',
+  highlight: NO_SHADOW,
+  insetBg: 'var(--surface-sunken)',
+  floatingTextTertiary: neutrals.light.textTertiary,
+  cardPad: '20px',
+  cardPadPhone: '16px',
+  gap: ['24px', '16px', '12px'],
+  zoneGap: '32px',
+  motionFast: 150,
+  motionBase: 200,
+  motionSlow: 250,
+  ease: 'cubic-bezier(0.2, 0, 0, 1)',
+  pressScale: 0.98,
+  chartGridDash: '2 4',
+  chartBarRadius: 4,
+  chartTooltipBg: 'var(--surface-raised)',
+  chartTooltipBlur: 'none',
+  chartTooltipRadius: 8,
+  floatingAlpha: 1,
+  floatingCanvasAlpha: 1,
+};
+
+const classicLight: StyleTokens = {
+  ...modernLight,
+  radiusControl: 4,
+  radiusCard: 4,
+  radiusChip: 4,
+  radiusDialog: 4,
+  radiusMenu: 4,
+  navShape: 'rect',
+  header: 'breadcrumbs',
+  shadowRest: '0 0.6px 1.8px rgba(0, 0, 0, 0.10), 0 0.3px 0.9px rgba(0, 0, 0, 0.06)',
+  shadowHover: '0 1.6px 3.6px rgba(0, 0, 0, 0.13), 0 0.3px 0.9px rgba(0, 0, 0, 0.10)',
+  shadowOverlay: '0 6.4px 14.4px rgba(0, 0, 0, 0.13), 0 1.2px 3.6px rgba(0, 0, 0, 0.08)',
+  cardPad: '12px',
+  cardPadPhone: '12px',
+  gap: ['12px', '12px', '8px'],
+  zoneGap: '20px',
+  motionFast: 100,
+  motionBase: 150,
+  motionSlow: 200,
+  ease: 'cubic-bezier(0.33, 0, 0.67, 1)',
+  pressScale: 1,
+  chartGridDash: 'none',
+  chartBarRadius: 0,
+  chartTooltipRadius: 4,
+};
+
+const glassLight: StyleTokens = {
+  ...modernLight,
+  radiusControl: 12,
+  radiusCard: 18,
+  radiusChip: 999,
+  radiusDialog: 24,
+  radiusMenu: 14,
+  shadowRest: '0 6px 18px -6px rgba(16, 24, 40, 0.12)',
+  shadowHover: '0 10px 30px -6px rgba(16, 24, 40, 0.16)',
+  shadowOverlay: '0 28px 64px -12px rgba(16, 24, 40, 0.26)',
+  floatingBg: 'color-mix(in srgb, var(--surface) 88%, transparent)',
+  floatingBgCanvas: 'color-mix(in srgb, var(--surface) 74%, transparent)',
+  blur: 'blur(20px) saturate(1.4)',
+  floatingBorder: '1px solid rgba(255, 255, 255, 0.55)',
+  highlight: 'inset 0 1px 0 rgba(255, 255, 255, 0.35)',
+  floatingTextTertiary: 'var(--muted-foreground)',
+  motionFast: 200,
+  motionBase: 250,
+  motionSlow: 350,
+  ease: 'cubic-bezier(0.2, 0.9, 0.1, 1)',
+  pressScale: 0.97,
+  chartBarRadius: 6,
+  chartTooltipBg: 'color-mix(in srgb, var(--surface) 88%, transparent)',
+  chartTooltipBlur: 'blur(20px) saturate(1.4)',
+  chartTooltipRadius: 14,
+  floatingAlpha: 0.88,
+  floatingCanvasAlpha: 0.74,
+};
+
+/**
+ * `styleTokens[style][mode]` (BRD 26 §3). global.css carries the same values as
+ * `--style-*` variables; `style-tokens.test.ts` keeps the two equal.
+ */
+export const styleTokens: Record<InterfaceStyle, Record<Mode, StyleTokens>> = {
+  modern: {
+    light: modernLight,
+    dark: {
+      ...modernLight,
+      // The border carries the edge in dark mode.
+      shadowRest: NO_SHADOW,
+      shadowHover: NO_SHADOW,
+      shadowOverlay: '0 12px 32px rgba(0, 0, 0, 0.50)',
+      hoverBorder: '#363C46',
+      floatingTextTertiary: neutrals.dark.textTertiary,
+    },
+  },
+  classic: {
+    light: classicLight,
+    dark: {
+      ...classicLight,
+      shadowRest: '0 0.6px 1.8px rgba(0, 0, 0, 0.40)',
+      shadowHover: '0 1.6px 3.6px rgba(0, 0, 0, 0.45)',
+      shadowOverlay: '0 6.4px 14.4px rgba(0, 0, 0, 0.50)',
+      floatingTextTertiary: neutrals.dark.textTertiary,
+    },
+  },
+  glass: {
+    light: glassLight,
+    dark: {
+      ...glassLight,
+      shadowRest: '0 6px 18px -6px rgba(0, 0, 0, 0.45)',
+      shadowHover: '0 10px 30px -6px rgba(0, 0, 0, 0.55)',
+      shadowOverlay: '0 32px 72px -12px rgba(0, 0, 0, 0.70)',
+      floatingBg: 'color-mix(in srgb, var(--surface-raised) 85%, transparent)',
+      floatingBgCanvas: 'color-mix(in srgb, var(--surface-raised) 74%, transparent)',
+      blur: 'blur(20px) saturate(1.2)',
+      floatingBorder: '1px solid rgba(255, 255, 255, 0.10)',
+      highlight: 'inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+      chartTooltipBg: 'color-mix(in srgb, var(--surface-raised) 85%, transparent)',
+      chartTooltipBlur: 'blur(20px) saturate(1.2)',
+      floatingAlpha: 0.85,
+    },
+  },
+};
+
+/** The solid values glass falls back to (D-26-6), for the floating tokens only. */
+export const glassFallback: Record<string, string> = {
+  '--style-floating-bg': 'var(--surface-raised)',
+  '--style-floating-bg-canvas': 'var(--surface-raised)',
+  '--style-blur': 'none',
+  '--style-floating-border': '1px solid var(--border)',
+  '--style-highlight': NO_SHADOW,
+  '--style-chart-tooltip-bg': 'var(--surface-raised)',
+  '--style-chart-tooltip-blur': 'none',
+};
+
+const px = (value: number) => `${value}px`;
+const ms = (value: number) => `${value}ms`;
+
+/**
+ * The `--style-*` variables one style × mode block in global.css must carry,
+ * as name → value.
+ */
+export function styleCssVariables(style: InterfaceStyle, mode: Mode): Record<string, string> {
+  const t = styleTokens[style][mode];
+  return {
+    '--style-radius-control': px(t.radiusControl),
+    '--style-radius-card': px(t.radiusCard),
+    '--style-radius-chip': px(t.radiusChip),
+    '--style-radius-dialog': px(t.radiusDialog),
+    '--style-radius-menu': px(t.radiusMenu),
+    '--style-radius-nav': t.navShape === 'pill' ? '999px' : '4px',
+    '--style-nav-bar': t.navShape === 'rect' ? '3px' : '0px',
+    '--style-shadow-rest': t.shadowRest,
+    '--style-shadow-hover': t.shadowHover,
+    '--style-shadow-overlay': t.shadowOverlay,
+    '--style-hover-border': t.hoverBorder,
+    '--style-card-bg': t.cardBg,
+    '--style-card-border': t.cardBorder,
+    '--style-floating-bg': t.floatingBg,
+    '--style-floating-bg-canvas': t.floatingBgCanvas,
+    '--style-blur': t.blur,
+    '--style-floating-border': t.floatingBorder,
+    '--style-highlight': t.highlight,
+    '--style-inset-bg': t.insetBg,
+    '--style-floating-text-tertiary': t.floatingTextTertiary,
+    '--style-card-pad': t.cardPad,
+    '--style-card-pad-phone': t.cardPadPhone,
+    '--style-gap-lg': t.gap[0],
+    '--style-gap-md': t.gap[1],
+    '--style-gap-sm': t.gap[2],
+    '--style-zone-gap': t.zoneGap,
+    '--style-motion-fast': ms(t.motionFast),
+    '--style-motion-base': ms(t.motionBase),
+    '--style-motion-slow': ms(t.motionSlow),
+    '--style-ease': t.ease,
+    '--style-press-scale': String(t.pressScale),
+    '--style-chart-grid-dash': t.chartGridDash,
+    '--style-chart-bar-radius': px(t.chartBarRadius),
+    '--style-chart-tooltip-bg': t.chartTooltipBg,
+    '--style-chart-tooltip-blur': t.chartTooltipBlur,
+    '--style-chart-tooltip-radius': px(t.chartTooltipRadius),
+  };
+}
+
+/** The CSS selector of each style × mode block, in cascade order. */
+export function styleBlockSelector(style: InterfaceStyle, mode: Mode): string {
+  if (style === 'modern') {
+    // Modern is also what renders before the attribute is set.
+    return mode === 'light'
+      ? ':root:not([data-style]),\n:root[data-style="modern"]'
+      : ':root[data-theme="dark"]:not([data-style]),\n:root[data-theme="dark"][data-style="modern"]';
+  }
+  return mode === 'light' ? `:root[data-style="${style}"]` : `:root[data-theme="dark"][data-style="${style}"]`;
+}
+
+/**
+ * Legacy radius and shadow names, kept as aliases so existing CSS follows the
+ * style (BRD 26 §3.1). `--radius-sm` stays a small tier (kbd, thead corners,
+ * menu rows) capped at 6px.
+ */
+export const legacyStyleAliases: Record<string, string> = {
+  '--radius': 'var(--style-radius-card)',
+  '--radius-sm': 'min(var(--style-radius-control), 6px)',
+  '--radius-md': 'var(--style-radius-control)',
+  '--radius-lg': 'var(--style-radius-card)',
+  '--radius-xl': 'var(--style-radius-dialog)',
+  '--radius-pill': 'var(--style-radius-chip)',
+  '--shadow-2': 'var(--style-shadow-rest)',
+  '--shadow-4': 'var(--style-shadow-hover)',
+  '--shadow-8': 'var(--style-shadow-overlay)',
+  '--shadow-16': 'var(--style-shadow-overlay)',
+  '--motion-fast': 'var(--style-motion-fast)',
+  '--motion-base': 'var(--style-motion-base)',
+  '--motion-slow': 'var(--style-motion-slow)',
+  '--motion-ease': 'var(--style-ease)',
+};

@@ -182,7 +182,7 @@ function DraftChecker({ dreamId, token, language, aiReady, saveDraft, onChange, 
   };
 
   return (
-    <Box sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+    <Box sx={{ display: 'grid', gap: 1, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)' }}>
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
         <Button variant="secondary" disabled={busy !== null} onClick={() => void run()}>{tr('Check my draft')}</Button>
         <Typography variant="caption" color="text.secondary">

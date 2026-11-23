@@ -196,7 +196,7 @@ export function AssessmentPage() {
                       {t('What does this mean?')}
                     </Link>
                     {explained[chain.key] && (
-                      <Box sx={{ p: 1, mb: 1, borderRadius: 1, bgcolor: 'action.hover' }}>
+                      <Box sx={{ p: 1, mb: 1, borderRadius: 'var(--style-radius-control)', bgcolor: 'action.hover' }}>
                         <Typography variant="body2">{t(STATEMENT_GUIDE[chain.key].meaning)}</Typography>
                         <Typography variant="body2" color="text.secondary">{t(STATEMENT_GUIDE[chain.key].low)}</Typography>
                         <Typography variant="body2" color="text.secondary">{t(STATEMENT_GUIDE[chain.key].high)}</Typography>
