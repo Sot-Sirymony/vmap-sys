@@ -64,6 +64,7 @@ const SharedReportPage = lazy(() => import('./pages/SharedReportPage').then((m) 
 const TwoFactorAdminPage = lazy(() => import('./pages/TwoFactorAdminPage').then((m) => ({ default: m.TwoFactorAdminPage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const RolesPage = lazy(() => import('./pages/RolesPage').then((m) => ({ default: m.RolesPage })));
+const SecurityAccessPage = lazy(() => import('./pages/SecurityAccessPage').then((m) => ({ default: m.SecurityAccessPage })));
 const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage').then((m) => ({ default: m.AcceptInvitationPage })));
 const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
@@ -131,6 +132,8 @@ export function App() {
             {/* V23: users and roles */}
             <Route path="/settings/users" element={<UsersPage />} />
             <Route path="/settings/roles" element={<RolesPage />} />
+            {/* V24.0.0.0: Security access prototype (front end only) */}
+            <Route path="/settings/security-access" element={<SecurityAccessPage />} />
             <Route path="/settings/two-factor" element={<TwoFactorAdminPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/dream-coach" element={<DreamCoachPage />} />

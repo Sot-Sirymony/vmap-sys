@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   ListChecks,
+  LockKeyhole,
   MoonStar,
   Network,
   Palette,
@@ -137,6 +138,8 @@ export const navGroups: NavGroup[] = [
       // V23 (UM-FR-17, UM-FR-08): accounts and roles.
       { to: '/settings/users', label: tr('Users'), icon: UserRoundCog, permission: 'VIEW_USERS' },
       { to: '/settings/roles', label: tr('Roles'), icon: ShieldUser, permission: 'MANAGE_ROLES' },
+      // V24.0.0.0: Security access prototype; Admin only, like Manage roles.
+      { to: '/settings/security-access', label: tr('Security access'), icon: LockKeyhole, permission: 'MANAGE_ROLES' },
       { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, permission: 'MANAGE_COHORTS' },
       { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, permission: 'MANAGE_AI_SETTINGS' },
       // V10 (SEC-09-05): the read-only security log.
