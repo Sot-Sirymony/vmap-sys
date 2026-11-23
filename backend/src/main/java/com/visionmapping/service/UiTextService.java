@@ -2,7 +2,8 @@ package com.visionmapping.service;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.dto.request.UiTextOverrideRequest;
 import com.visionmapping.dto.response.UiTextOverrideResponse;
 import com.visionmapping.entity.UiTextOverride;
@@ -38,6 +39,7 @@ public class UiTextService {
 
     private final EntityLookup lookup;
     private final UiTextOverrideRepository repository;
+    private final PermissionService permissions;
 
     @Transactional(readOnly = true)
     public Map<String, String> overridesFor(String language) {
@@ -97,6 +99,6 @@ public class UiTextService {
     }
 
     private void requireAdmin() {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can edit interface text.");
+        permissions.require(lookup.currentUser(), Permission.MANAGE_INTERFACE_TEXT, "Only an administrator can edit interface text.");
     }
 }

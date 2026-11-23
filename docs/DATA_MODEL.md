@@ -382,6 +382,36 @@ All are deleted with the account. The export shows status, method, codes left an
 secret, code or token. A daily clean-up removes unfinished setups after 15 minutes, challenges a day after they end, and
 devices a week after they expire or are removed.
 
+## V23 Roles and permissions (phase 1)
+
+- **roles**: `role_key` (primary key, for example `USER`, `COACH`, `ADMIN`), `name` (unique), `description`,
+  `built_in`, timestamps. Participant, Coach and Admin are built in.
+- **role_permissions**: `role_key` → `roles`, `permission` (a `Permission` key such as `MANAGE_COHORTS`); primary key
+  on both.
+- **app_users.role** now holds a role key, with a foreign key to `roles`. (The BRD's data table named a `role_id`
+  column; keeping the key in `role` gives the same model without rewriting every account, and existing SQL keeps
+  working.)
+- The Admin role is given every permission in code as well, and `MANAGE_ROLES` is stripped from any other role, so
+  neither can be lost or escalated through the table (D-23-2, D-23-9).
+
+## V23 Invitations (phase 5)
+
+`user_invitations`: `id`, `user_id` (→ `app_users`), `token_hash` (SHA-256 of the emailed token, unique), `expires_at`
+(7 days), `used_at` (set on acceptance or when a newer invitation replaces it), `created_by_id` (→ `app_users`, set to
+null if that admin's account is deleted), `created_at`. Erased with the account. An account an admin created has
+`password_set = false` and `created_by_id` set until the person chooses a password.
+
+## V23 Custom roles (phase 4)
+
+No new tables: custom roles are rows in `roles` (`built_in = false`) with their permissions in `role_permissions`.
+`app_users.role` may now hold a custom role's key; the Java field is a string, and `UserRole` names only the three
+built-in roles.
+
+## V23 Account tracking (phase 2)
+
+`app_users` gains `created_by_id`, `role_changed_by_id` and `blocked_by_id` (each → `app_users`, set to null if that
+admin's account is deleted), `role_changed_at`, `blocked_at`, and `last_sign_in_at` (set whenever a session opens).
+
 ## Business Rules
 
 - A Dream must belong to a Vision Area.

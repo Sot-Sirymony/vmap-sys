@@ -31,13 +31,14 @@ import { useAuth } from '../context/AuthContext';
 import { tr } from '../i18n/translate';
 import type { Cohort, CohortMember } from '../types/vision';
 import { PageSection } from './PageSection';
+import { can } from '../utils/permissions';
 
 const EMPTY: CohortInput = { name: '', coachEmail: '', startDate: null };
 
 /** V9 (v0.1 FR-01, FR-20): admins create cohorts, choose coaches, and manage members. */
 export function CohortsPage() {
   const { token, user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = can(user, 'MANAGE_COHORTS');
   const [cohorts, setCohorts] = useState<Cohort[] | null>(null);
   const [error, setError] = useState('');
 

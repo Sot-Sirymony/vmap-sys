@@ -2,7 +2,8 @@ package com.visionmapping.service.ai;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,6 +58,7 @@ public class AiAdminService {
     private final AiApprovedResourceRepository resourceRepository;
     private final LearningModuleContentRepository contentRepository;
     private final ObjectMapper objectMapper;
+    private final PermissionService permissions;
 
     @Transactional(readOnly = true)
     public List<AiApprovedResourceResponse> resources() {
@@ -184,7 +186,7 @@ public class AiAdminService {
     }
 
     private AppUser requireAdmin() {
-        return Roles.requireAdmin(lookup.currentUser(), "Only an administrator can change AI settings.");
+        return permissions.require(lookup.currentUser(), Permission.MANAGE_AI_SETTINGS, "Only an administrator can change AI settings.");
     }
 
     @Nullable

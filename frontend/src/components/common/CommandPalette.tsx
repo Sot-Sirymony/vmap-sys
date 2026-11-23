@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { navItems } from '../layout/nav-items';
 import type { Dream } from '../../types/vision';
 import { tr } from '../../i18n/translate';
+import { can } from '../../utils/permissions';
 
 type Command = {
   key: string;
@@ -57,7 +58,7 @@ export function CommandPalette({ open, onClose, onShowShortcuts }: CommandPalett
       navigate(to);
     };
     return [
-      ...navItems.filter((item) => !item.roles || (user?.role !== undefined && item.roles.includes(user.role))).map((item) => ({ key: `go-${item.to}`, group: 'Go to' as const, label: tr(item.label), run: go(item.to) })),
+      ...navItems.filter((item) => !item.permission || can(user, item.permission)).map((item) => ({ key: `go-${item.to}`, group: 'Go to' as const, label: tr(item.label), run: go(item.to) })),
       { key: 'new-area', group: 'Create', label: tr('New vision area'), run: go('/vision-areas?create=area') },
       { key: 'new-dream', group: 'Create', label: tr('New dream'), run: go('/dreams?create=dream') },
       { key: 'new-goal', group: 'Create', label: tr('New goal'), run: go('/goals?create=goal') },

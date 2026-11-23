@@ -71,7 +71,8 @@ class IssueReportServiceTest {
         EntityLookup lookup = new EntityLookup(userScope, visionAreaRepository, dreamRepository, goalRepository,
                 visionStepRepository, taskItemRepository, partnerRepository, communicationMessageRepository,
                 reviewRepository, obstacleRepository, progressLogRepository);
-        service = new IssueReportService(lookup, new VisionMappingMapper(), issueReportRepository);
+        service = new IssueReportService(lookup, new VisionMappingMapper(), issueReportRepository,
+                com.visionmapping.security.PermissionService.withBuiltInRoles());
 
         user = AppUser.builder().id(1L).fullName("Test User").email("test@example.com")
                 .passwordHash("hash").role(UserRole.USER).status(UserStatus.ACTIVE).build();

@@ -20,6 +20,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
 import { HelpWithThis, PageAssistantProvider, PageHelpButton } from '../components/ai/page-assistant/PageAssistant';
 import { JourneyCard, ModuleNextCard } from '../components/modules/ModulesListHelpers';
+import { can } from '../utils/permissions';
 
 const STAGE_LABELS: Record<ModuleStage, string> = {
   BREAK_CHAINS: 'Break barriers',
@@ -72,7 +73,7 @@ export function ModulesPage() {
       actions={(
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <PageHelpButton />
-          {user?.role === 'ADMIN' && <Button variant="secondary" onClick={() => navigate('/settings/module-content')}>{t('Edit content')}</Button>}
+          {can(user, 'MANAGE_MODULE_CONTENT') && <Button variant="secondary" onClick={() => navigate('/settings/module-content')}>{t('Edit content')}</Button>}
         </Box>
       )}
     >

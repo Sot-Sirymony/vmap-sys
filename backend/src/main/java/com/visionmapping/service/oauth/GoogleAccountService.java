@@ -75,6 +75,7 @@ public class GoogleAccountService {
     private final SecurityEventService securityEvents;
     private final SignInChallengeService signInChallenges;
     private final Clock clock;
+    private final com.visionmapping.service.admin.InvitationService invitations;
 
     /**
      * GA-FR-14 to GA-FR-17, GA-FR-19: decides the outcome and returns the URL
@@ -95,6 +96,13 @@ public class GoogleAccountService {
         Optional<AppUser> existing = appUserRepository.findByEmail(email);
         if (existing.isPresent()) {
             AppUser user = activeOrRefuse(existing.get());
+            // V23 (UM-FR-26): an invited person who has not chosen a password yet. Google proved they own the
+            // address, as the invitation email would have, so it is linked without a password.
+            if (identityRepository.findByUser_IdAndProvider(user.getId(), IdentityProvider.GOOGLE).isEmpty()
+                    && invitations.acceptWithGoogle(user)) {
+                linkIdentity(user, google, "invitation");
+                return fragment("signed-in", newCode(OAuthHandoffKind.SIGN_IN, user, google.subject(), verified), verified);
+            }
             return fragment("link", newCode(OAuthHandoffKind.LINK, user, google.subject(), verified), verified);
         }
         AppUser created = createAccount(google, email);
@@ -229,6 +237,19 @@ public class GoogleAccountService {
                 .build());
         securityEvents.recordFor(user.getId(), SecurityEventType.REGISTERED, SecurityOutcome.SUCCESS, "google");
         return user;
+    }
+
+    private void linkIdentity(AppUser user, GoogleIdentity google, String how) {
+        Instant now = clock.instant();
+        identityRepository.save(ExternalIdentity.builder()
+                .user(user)
+                .provider(IdentityProvider.GOOGLE)
+                .subject(google.subject())
+                .emailAtLink(google.email())
+                .lastEmail(google.email())
+                .linkedAt(now)
+                .build());
+        securityEvents.recordFor(user.getId(), SecurityEventType.GOOGLE_LINKED, SecurityOutcome.SUCCESS, how);
     }
 
     static String fullName(GoogleIdentity google, String email) {

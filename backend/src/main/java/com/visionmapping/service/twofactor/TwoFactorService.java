@@ -62,6 +62,7 @@ public class TwoFactorService {
     private final AccountNotices accountNotices;
     private final SecurityEventService securityEvents;
     private final Clock clock;
+    private final com.visionmapping.security.PermissionService permissions;
 
     /** TF-FR-01. */
     @Transactional(readOnly = true)
@@ -80,7 +81,7 @@ public class TwoFactorService {
                 settings.isPresent() ? recoveryRepository.countByUser_IdAndUsedAtIsNull(user.getId()) : 0,
                 user.getTwoFactorDueAt(),
                 emailMethodAllowed(user),
-                canTurnOff(user, now),
+                canTurnOff(user, now, permissions.isPrivileged(user)),
                 devices);
     }
 
@@ -140,7 +141,7 @@ public class TwoFactorService {
      */
     public RecoveryCodesResponse useEmail(@Nullable String stepUp) {
         AppUser user = userScope.currentUser();
-        if (user.getRole() != UserRole.USER) {
+        if (permissions.isPrivileged(user)) {
             throw new BusinessRuleException("Coach and admin accounts must use an authenticator app.");
         }
         if (mailer.delivery() == StepUpMailer.Delivery.NONE) {
@@ -186,7 +187,7 @@ public class TwoFactorService {
         if (enabledSettings(user.getId()).isEmpty()) {
             throw new BusinessRuleException("Two-factor sign-in is already off.");
         }
-        if (!canTurnOff(user, clock.instant())) {
+        if (!canTurnOff(user, clock.instant(), permissions.isPrivileged(user))) {
             throw new BusinessRuleException("Coach and admin accounts must keep two-factor sign-in on.");
         }
         stepUpService.require(StepUpAction.TWO_FACTOR_SETTINGS, stepUp);
@@ -240,7 +241,7 @@ public class TwoFactorService {
 
     private void changed(AppUser user, SecurityEventType type, String what) {
         // TF-NFR-06: the role leads the detail, so an admin or coach turning it off raises an alert.
-        String role = user.getRole() == UserRole.USER ? "" : user.getRole().name().toLowerCase() + ", ";
+        String role = permissions.isPrivileged(user) ? user.getRole().toLowerCase() + ", " : "";
         securityEvents.recordFor(user.getId(), type, SecurityOutcome.SUCCESS, role + what);
         accountNotices.changed(AccountNotice.Kind.TWO_FACTOR_CHANGED, user, null, what);
     }
@@ -250,12 +251,12 @@ public class TwoFactorService {
     }
 
     private boolean emailMethodAllowed(AppUser user) {
-        return user.getRole() == UserRole.USER && mailer.delivery() != StepUpMailer.Delivery.NONE;
+        return !permissions.isPrivileged(user) && mailer.delivery() != StepUpMailer.Delivery.NONE;
     }
 
     /** D-21-2: participants always; admins and coaches only before their set-up-by date. */
-    static boolean canTurnOff(AppUser user, Instant now) {
-        return user.getRole() == UserRole.USER || (user.getTwoFactorDueAt() != null && user.getTwoFactorDueAt().isAfter(now));
+    static boolean canTurnOff(AppUser user, Instant now, boolean privileged) {
+        return !privileged || (user.getTwoFactorDueAt() != null && user.getTwoFactorDueAt().isAfter(now));
     }
 
     private static TrustedDeviceResponse toResponse(TrustedDevice device) {

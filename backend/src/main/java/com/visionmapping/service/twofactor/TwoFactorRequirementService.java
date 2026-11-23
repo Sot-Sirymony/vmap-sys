@@ -40,6 +40,7 @@ public class TwoFactorRequirementService {
     private final UserScope userScope;
     private final SecurityEventService securityEvents;
     private final Clock clock;
+    private final com.visionmapping.security.PermissionService permissions;
 
     /** TF-FR-32, TF-FR-37: at start-up, dates for admins and coaches who have none; none for participants. */
     @EventListener(ApplicationReadyEvent.class)
@@ -47,8 +48,9 @@ public class TwoFactorRequirementService {
         if (!properties.enabled()) {
             return;
         }
-        int assigned = appUserRepository.assignTwoFactorDueDates(clock.instant().plus(properties.gracePeriod()));
-        appUserRepository.clearParticipantTwoFactorDueDates();
+        java.util.Set<String> privileged = permissions.privilegedRoleKeys();
+        int assigned = appUserRepository.assignTwoFactorDueDates(clock.instant().plus(properties.gracePeriod()), privileged);
+        appUserRepository.clearParticipantTwoFactorDueDates(privileged);
         if (assigned > 0) {
             log.info("Two-step sign-in: {} admin or coach accounts must set it up within {} days", assigned,
                     properties.gracePeriod().toDays());
@@ -57,14 +59,14 @@ public class TwoFactorRequirementService {
 
     /** TF-FR-32, TF-FR-35: a new coach or admin gets the grace period from today, unless already dated. */
     public void roleGiven(AppUser user) {
-        if (user.getRole() != UserRole.USER && user.getTwoFactorDueAt() == null && !hasTwoFactor(user.getId())) {
+        if (permissions.isPrivileged(user) && user.getTwoFactorDueAt() == null && !hasTwoFactor(user.getId())) {
             user.setTwoFactorDueAt(clock.instant().plus(properties.gracePeriod()));
         }
     }
 
     /** TF-FR-30. */
     public void afterReset(AppUser user) {
-        if (user.getRole() != UserRole.USER) {
+        if (permissions.isPrivileged(user)) {
             user.setTwoFactorDueAt(clock.instant().plus(AFTER_RESET));
         }
     }
@@ -73,7 +75,7 @@ public class TwoFactorRequirementService {
     @Transactional(readOnly = true)
     public boolean setupRequiredNow(AppUser user) {
         Instant due = user.getTwoFactorDueAt();
-        return properties.enabled() && user.getRole() != UserRole.USER && due != null
+        return properties.enabled() && permissions.isPrivileged(user) && due != null
                 && !due.isAfter(clock.instant()) && !hasTwoFactor(user.getId());
     }
 

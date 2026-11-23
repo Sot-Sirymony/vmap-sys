@@ -2,7 +2,8 @@ package com.visionmapping.service;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,6 +73,7 @@ public class CoachService {
     private final ModuleCompletionRepository moduleCompletionRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final PermissionService permissions;
 
     public List<CoachParticipantResponse> participants() {
         AppUser coach = requireCoach();
@@ -170,6 +172,6 @@ public class CoachService {
     }
 
     private AppUser requireCoach() {
-        return Roles.requireCoach(lookup.currentUser(), "Only a coach can open the coach workspace.");
+        return permissions.require(lookup.currentUser(), Permission.COACH_COHORTS, "Only a coach can open the coach workspace.");
     }
 }

@@ -23,6 +23,7 @@ import { ModuleContentAiCard } from '../components/ai/ModuleContentAiCard';
 import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
+import { can } from '../utils/permissions';
 
 const LANGUAGES = [{ value: 'en', label: 'English' }, { value: 'km', label: 'ខ្មែរ (Khmer)' }];
 
@@ -44,7 +45,7 @@ export function ModuleContentPage() {
   const selected = modules?.find((module) => module.number === selectedNumber) ?? null;
 
   const load = useCallback(async () => {
-    if (!token || user?.role !== 'ADMIN') {
+    if (!token || !can(user, 'MANAGE_MODULE_CONTENT')) {
       return;
     }
     setLoadError('');
@@ -105,7 +106,7 @@ export function ModuleContentPage() {
     }
   }
 
-  if (user?.role !== 'ADMIN') {
+  if (!can(user, 'MANAGE_MODULE_CONTENT')) {
     return (
       <PageSection title={tr('Module content')} subtitle={tr('Edit the text and order of the modules')}>
         <Alert severity="info">{tr('Only an administrator can edit module content.')}</Alert>

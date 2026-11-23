@@ -98,6 +98,9 @@ services:
         value: https://vision-mapping-frontend.onrender.com/reset-password
       - key: PASSWORD_RESET_TTL_MINUTES
         value: "30"
+      # V23: invitations for accounts a program admin creates (Add user).
+      - key: INVITATION_URL
+        value: https://vision-mapping-frontend.onrender.com/invitation
       # Email delivery is OFF until these are set. Without MAIL_HOST the backend
       # still issues valid tokens but writes the link to the log instead of
       # sending it — deliberately, so an unconfigured deploy fails visibly in the

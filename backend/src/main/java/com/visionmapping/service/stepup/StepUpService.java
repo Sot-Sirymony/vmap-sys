@@ -14,7 +14,8 @@ import com.visionmapping.exception.TooManyRequestsException;
 import com.visionmapping.repository.AuthSessionRepository;
 import com.visionmapping.repository.StepUpChallengeRepository;
 import com.visionmapping.security.AppUserPrincipal;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityOutcome;
@@ -90,13 +91,15 @@ public class StepUpService {
     private final boolean enabled;
     private final String secret;
     private final AuthenticatorCodeCheck authenticatorCodes;
+    private final PermissionService permissions;
 
     public StepUpService(StepUpChallengeRepository repository, AuthSessionRepository sessions, StepUpMailer mailer,
                          SecurityEventService securityEvents, RequestRateLimiter rateLimiter, EntityLookup lookup, Clock clock,
                          @Value("${app.step-up.enabled:true}") boolean enabled,
                          @Value("${app.step-up.secret:${app.security.jwt-secret}}") String secret,
-                         AuthenticatorCodeCheck authenticatorCodes) {
+                         AuthenticatorCodeCheck authenticatorCodes, PermissionService permissions) {
         this.authenticatorCodes = authenticatorCodes;
+        this.permissions = permissions;
         this.repository = repository;
         this.sessions = sessions;
         this.mailer = mailer;
@@ -118,7 +121,7 @@ public class StepUpService {
 
     /** SV-FR-34, SV-NFR-09: for the admin warning when codes cannot be sent. */
     public StepUpStatusResponse status() {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can see this.");
+        permissions.requireAny(lookup.currentUser(), "Only an administrator can see this.", Permission.MANAGE_COHORTS, Permission.MANAGE_AI_SETTINGS, Permission.VIEW_SECURITY_LOG);
         return new StepUpStatusResponse(enabled, mailer.delivery().name(), active());
     }
 

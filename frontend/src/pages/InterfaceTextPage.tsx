@@ -22,6 +22,7 @@ import { km } from '../i18n/km';
 import { currentLanguage, setOverrides, tr, type Language } from '../i18n/translate';
 import type { UiTextOverride } from '../types/vision';
 import { PageSection } from './PageSection';
+import { can } from '../utils/permissions';
 
 const LANGUAGES: { value: Language; label: string }[] = [{ value: 'km', label: 'ខ្មែរ (Khmer)' }, { value: 'en', label: 'English' }];
 const MAX_ROWS = 50;
@@ -41,7 +42,7 @@ export function InterfaceTextPage() {
   const [loadError, setLoadError] = useState('');
 
   const load = useCallback(async () => {
-    if (!token || user?.role !== 'ADMIN') {
+    if (!token || !can(user, 'MANAGE_INTERFACE_TEXT')) {
       return;
     }
     setLoadError('');
@@ -81,7 +82,7 @@ export function InterfaceTextPage() {
     }
   }
 
-  if (user?.role !== 'ADMIN') {
+  if (!can(user, 'MANAGE_INTERFACE_TEXT')) {
     return (
       <PageSection title={tr('Interface text')} subtitle={tr('Change the words the app uses')}>
         <Alert severity="info">{tr('Only an administrator can edit interface text.')}</Alert>

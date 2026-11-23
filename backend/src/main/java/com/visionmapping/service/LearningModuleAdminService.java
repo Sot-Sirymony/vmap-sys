@@ -2,7 +2,8 @@ package com.visionmapping.service;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +50,7 @@ public class LearningModuleAdminService {
     private final EntityManager entityManager;
     private final LearningModuleRepository moduleRepository;
     private final LearningModuleContentRepository contentRepository;
+    private final PermissionService permissions;
 
     @Transactional(readOnly = true)
     public List<ModuleContentResponse> listContent(String language) {
@@ -143,6 +145,6 @@ public class LearningModuleAdminService {
     }
 
     private void requireAdmin() {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can edit module content.");
+        permissions.require(lookup.currentUser(), Permission.MANAGE_MODULE_CONTENT, "Only an administrator can edit module content.");
     }
 }

@@ -80,6 +80,9 @@ class AccessControlSweepTests {
             "POST /api/auth/logout",
             "POST /api/auth/forgot-password",
             "POST /api/auth/reset-password",
+            // V23: an invited person has no token yet; the invitation link is their credential.
+            "POST /api/auth/invitation/check",
+            "POST /api/auth/invitation/accept",
             // V14: Google sign-in happens before the person has a token.
             "GET /api/auth/oauth/google/status",
             "GET /api/auth/oauth/google/authorize-url",
@@ -412,7 +415,12 @@ class AccessControlSweepTests {
             "StepUpVerifyRequest.code", "the six-digit code the person typed, checked against the stored hash (V20)",
             "GoogleExchangeRequest.code", "the one-time Google sign-in code, checked against the stored hash (V14)",
             "TwoFactorVerifyRequest.code", "the second-step code the person typed, checked against the authenticator or stored hash (V21)",
-            "TotpConfirmRequest.code", "the first code from the person's own authenticator app, checked against the pending secret (V21)");
+            "TotpConfirmRequest.code", "the first code from the person's own authenticator app, checked against the pending secret (V21)",
+            "AdminRoleChangeRequest.role", "another person's new role, under /api/admin only, needing Manage users, a fresh code and the no-escalation check (V23 D-23-9)",
+            "AdminUserCreateRequest.role", "the new account's role, under /api/admin only, needing Manage users and the no-escalation check; "
+                    + "a privileged role needs a fresh code (V23 UM-FR-22)",
+            "AdminUserCreateRequest.cohortId", "the new account's cohort, under /api/admin only, needing Manage users; archived cohorts refused (V23 UM-FR-22)",
+            "AdminUserUpdateRequest.cohortId", "another person's cohort, under /api/admin only, needing Manage users and the no-escalation check (V23 UM-FR-27)");
 
     @Test
     void noRequestBodyLetsTheCallerSetPrivilegedFields() {

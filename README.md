@@ -59,7 +59,12 @@ export MAIL_PASSWORD='smtp-password'
 export MAIL_FROM='no-reply@yourdomain'
 export PASSWORD_RESET_URL='http://127.0.0.1:5173/reset-password'
 export PASSWORD_RESET_TTL_MINUTES=30
+export INVITATION_URL='http://127.0.0.1:5173/invitation'   # V23 Add user invitations
+export INVITATION_TTL_DAYS=7
 ```
+
+V23 **Add user** sends an invitation by email. Without `MAIL_HOST`, a local run writes the invitation link to
+the log; anywhere else, Add user refuses and creates nothing, since nobody could open the account.
 
 V20 "Verify it's you" codes use the same mail settings. Without `MAIL_HOST`, a local run writes the code to the
 backend log; in production no code is sent and risky actions keep their password checks. Optional:
@@ -344,6 +349,7 @@ Everything that differs between local dev and Render is env-driven — nothing i
 | `AI_BUDGET_WARN_PERCENT`, `AI_BUDGET_SPIKE_MIN_USD`, `AI_BUDGET_SPIKE_FACTOR` | Optional (defaults 80, 1.00, 5) | V10 SEC-09-04: alert when AI spend reaches this percent of the monthly budget (and 100%), or when one hour costs at least the minimum and this many times the week's average hour |
 | `EXCEL_BACKUP_DIR`, `EXCEL_BACKUP_RETENTION_DAYS` | Optional (defaults `data/backup`, 30) | BRD C-7 / V10 SEC-04-06: where the snapshot taken before each Excel import is saved, and after how many days the daily clean-up deletes it |
 | `SETTINGS_ENCRYPTION_KEY_PREVIOUS`, `TWO_FACTOR_SECRET_PREVIOUS` | Only during a rotation | V10 SEC-04-04: the old value while a secret is rotated, so stored secrets and recovery codes keep working. See `docs/SECURITY.md`, *Rotating secrets* |
+| `ADMIN_BOOTSTRAP_EMAIL` | Optional, new installations only | V23 UM-FR-41: at start-up, makes this existing account the first admin, once, and only while no active admin exists (logged and alerted). Remove it after the first start |
 | `BCRYPT_COST` | Optional (default 12) | V10 SEC-04-02: BCrypt cost for password hashes. Production refuses to start below 12; older hashes are upgraded at the person's next sign-in |
 | `SESSION_IDLE_DAYS` | Optional (default 14) | ASVS F-05: a session that has not been used for this many days ends, even before its lifetime is up |
 | `SECURITY_ALERT_EMAIL` | Set in the Render dashboard (`sync: false`) | V10: where security alerts are emailed (needs `MAIL_HOST`). Alerts always go to the log as `SECURITY ALERT` lines. See [docs/SECURITY.md](docs/SECURITY.md) |

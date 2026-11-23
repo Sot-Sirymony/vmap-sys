@@ -104,6 +104,11 @@ public class AuthService {
         }
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
+        } catch (org.springframework.security.authentication.DisabledException blocked) {
+            // V23 (UM-FR-32): the password was right; not counted as a failed guess.
+            securityEvents.recordForEmail(email, appUserRepository.findByEmail(email).map(AppUser::getId).orElse(null),
+                    SecurityEventType.LOGIN_FAILED, SecurityOutcome.DENIED, "account blocked");
+            throw new com.visionmapping.exception.AccountBlockedException();
         } catch (AuthenticationException exception) {
             loginAttemptLimiter.recordFailure(email, clientIp);
             // V10 (SEC-09-01): the reason stays in the log, never in the answer.
@@ -211,7 +216,8 @@ public class AuthService {
                 user.getId(),
                 user.getFullName(),
                 user.getEmail(),
-                user.getRole().name(),
+                user.getRole(),
+                tokens.permissions(),
                 // FR-39.6: the theme travels with the session so the first paint
                 // after signing in is already the user's own appearance.
                 AppearancePreferenceService.toResponse(user),

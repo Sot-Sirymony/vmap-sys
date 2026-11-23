@@ -1165,6 +1165,91 @@ Admin only.
 | POST | `/api/plan-shares/{id}/revoke` | Stops the link at once |
 | GET | `/api/shared-plans/{token}` | **Public.** One dream's title, description, success definition, target date, progress, goals and steps, the owner's first name and the ask. No journals, tasks, step owners or contact details. A stopped, expired or unknown link, or an archived dream, answers 404 |
 
+## Users (V23, needs "View users")
+
+Account details only; no plan data (D-23-3). A caller without the permission gets 403.
+
+```text
+GET /api/admin/users?q=&role=&status=&cohortId=&twoFactor=&sort=&page=0&size=25
+GET /api/admin/users/{id}
+```
+
+- `q`: part of the name or email, case-insensitive, matched literally.
+- `role`: `USER`, `COACH`, `ADMIN`; `status`: `ACTIVE`, `DISABLED`; `twoFactor`: `ON`, `DUE`, `OFF`.
+- `sort`: `joined` (newest first, default), `name`, `lastSignIn` (most recent first, never-signed-in last).
+- `size`: 10, 25, 50 or 100 (anything else gives 25). An unknown role, status, two-step value or sort is 400.
+
+The list answers `{ items, page, size, totalElements, hasNext, totalAccounts, activeAccounts, blockedAccounts,
+countsByRole }`; each item has `id, fullName, email, role, roleName, status, cohortId, cohortName, twoFactor,
+twoFactorDueAt, joinedAt, lastSignInAt`. The detail answers `{ account, createdBy, roleChangedAt, roleChangedBy,
+blockedAt, blockedBy, recordCounts: { visionAreas, dreams, goals, steps, tasks }, recentEvents }` with the last 20
+security events by or about the account.
+
+### Changing a role, blocking and unblocking (needs "Manage users")
+
+```text
+PUT  /api/admin/users/{id}/role     { role, reason, cohortChanges?: [{ cohortId, newCoachId | null }] }
+POST /api/admin/users/{id}/block    { reason }
+POST /api/admin/users/{id}/unblock  { reason }
+```
+
+Each needs a reason of 10 to 300 characters and a fresh "Verify it's you" code in `X-Step-Up` (`ADMIN_ROLE_CHANGE` or
+`ADMIN_USER_BLOCK`), and answers the account detail as it is afterwards. Refusals: your own account 403; an account or
+role with permissions you do not hold 403 (only an Admin acts on Admins or gives the Admin role); the last active admin
+409; demoting a coach of active cohorts without a choice for each cohort 409 (the message names them); already blocked
+or not blocked 409; 30 changes per person per 10 minutes 429. Blocking ends every session of the account; signing in
+with the right password then answers 403 "This account is blocked. Contact your program admin.", and the account's
+share links stop opening until it is unblocked.
+
+### Add user, edit, invitation, password reset, delete (phase 5)
+
+```text
+POST   /api/admin/users                     { fullName, email, role?, cohortId? }     201, the new account's detail
+PATCH  /api/admin/users/{id}                { fullName, cohortId | null }             the account's detail
+POST   /api/admin/users/{id}/invitation     (no body)                                 204, a new link replaces the old
+POST   /api/admin/users/{id}/password-reset (no body)                                 204, the normal 30-minute reset email
+DELETE /api/admin/users/{id}                { confirmEmail, reason }                  204
+```
+
+Add user, edit, invitation and reset need *Manage users*; delete needs *Delete users*. The account gets no usable
+password and a 7-day single-use invitation by email. `role` defaults to Participant and must be one the caller may
+give; a privileged role needs a fresh `ADMIN_ROLE_CHANGE` code. Refusals: an email that already has an account 409
+"This email already has an account."; email not set up (outside a local run) 409, nothing created; an archived cohort
+400; resending after the person chose a password 409; resetting or resending for a blocked account 409. Delete works
+only on a blocked account (409 otherwise), needs `confirmEmail` equal to the account email (400 otherwise), a reason of
+10 to 300 characters and a fresh `ADMIN_USER_DELETE` code, and erases the account as self-deletion does. The detail
+also answers `invitationPending`, `invitationExpiresAt` and `coachedCohorts` (the cohorts left without a coach on
+delete).
+
+Public, for the person invited (20 attempts per 15 minutes per network):
+
+```text
+POST /api/auth/invitation/check    { token }                            { fullName, email, expiresAt }
+POST /api/auth/invitation/accept   { token, password, rememberMe? }     the normal sign-in answer
+```
+
+Both answer 410 for a used, replaced or expired link; accepting for a blocked account answers 403. Signing in with
+Google on the invited address also completes the invitation.
+
+## Roles and permissions (V23)
+
+```text
+GET    /api/admin/permissions                 the catalogue: key, group, label, description, adminOnly, always
+GET    /api/admin/roles                       key, name, description, builtIn, editable, renameable, holders, privileged, permissions
+POST   /api/admin/roles                       { name, description, permissions: [keys], reason }
+PUT    /api/admin/roles/{key}                 { name, description, permissions, reason, cohortChanges? }
+DELETE /api/admin/roles/{key}                 { moveTo?, reason }
+```
+
+Reading needs *Manage roles* or *View users*; changes need *Manage roles* (the Admin role only), a reason of 10 to 300
+characters and a fresh code (`ADMIN_ROLE_EDIT`). *Use own plan* is always added; *Manage users* brings *View users*,
+*Delete users* brings *Manage users*, *Reset two-step sign-in* brings *View users*; *Manage roles* cannot be given
+(400). Admin and Participant cannot be changed (409); Coach keeps its name (400) but its permissions can change.
+Removing *Coach cohorts* while holders coach active cohorts needs `cohortChanges` for each (409 otherwise). A role
+with holders is deleted only with `moveTo` (409 otherwise); built-in roles are never deleted (409). A custom role's
+key is made from its name (for example `PROGRAM_ASSISTANT`) and never changes; `PUT /api/admin/users/{id}/role`
+accepts it.
+
 ## Excel
 
 ### Export

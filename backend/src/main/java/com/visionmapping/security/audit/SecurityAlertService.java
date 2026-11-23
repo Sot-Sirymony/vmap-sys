@@ -49,6 +49,10 @@ public class SecurityAlertService {
             Set.of(SecurityEventType.LOGIN_FAILED, SecurityEventType.LOGIN_LOCKED);
     private static final Duration REPEAT_AFTER = Duration.ofHours(1);
     private static final int RECENT_KEPT = 50;
+    /** V23 UM-FR-43: more blocks than this by one person within an hour raise an alert. */
+    static final int MASS_BLOCKS = 5;
+    /** V23 UM-FR-43: giving a role any of these raises an alert. */
+    static final List<String> SENSITIVE_PERMISSIONS = List.of("DELETE_USERS", "MANAGE_AI_SETTINGS", "VIEW_SECURITY_LOG", "RESET_TWO_FACTOR");
 
     private final SecurityEventRepository repository;
     private final Clock clock;
@@ -145,12 +149,41 @@ public class SecurityAlertService {
                     "A replaced refresh token was used again for user " + event.getActorId()
                             + "; the session was ended. The token may have been stolen.");
             case ROLE_CHANGED -> {
-                if (event.getDetail() != null && event.getDetail().contains("ADMIN")) {
+                // V23: only a role change *to* Admin; "ADMIN -> USER" is a demotion.
+                if (event.getDetail() != null && event.getDetail().contains("-> ADMIN")) {
                     alert("admin:" + event.getTargetId(), "The admin role was granted to user " + event.getTargetId()
                             + " by user " + event.getActorId() + ".");
                 }
             }
             // V10 SEC-09-04: AiBudgetWatch records each warning once; the detail says what happened.
+            // V23 UM-FR-43: an admin blocked at once; more than 5 blocks by one person in an hour.
+            // V23 phase 5: deletions count with blocks, and deleting an Admin alerts too.
+            case USER_BLOCKED, USER_DELETED_BY_ADMIN -> {
+                String verb = event.getEventType() == SecurityEventType.USER_BLOCKED ? "blocked" : "deleted";
+                if (event.getDetail() != null && event.getDetail().startsWith("ADMIN")) {
+                    alert("admin-" + verb + ":" + event.getId(), "Admin user " + event.getTargetId() + " was " + verb
+                            + " by user " + event.getActorId() + ".");
+                }
+                Instant hourAgo = clock.instant().minus(Duration.ofHours(1));
+                if (event.getActorId() != null
+                        && repository.countByEventTypeAndActorIdAndOccurredAtAfter(SecurityEventType.USER_BLOCKED, event.getActorId(), hourAgo)
+                        + repository.countByEventTypeAndActorIdAndOccurredAtAfter(SecurityEventType.USER_DELETED_BY_ADMIN,
+                                event.getActorId(), hourAgo) > MASS_BLOCKS) {
+                    alert("mass-block:" + event.getActorId(), "User " + event.getActorId() + " blocked or deleted more than "
+                            + MASS_BLOCKS + " accounts within an hour.");
+                }
+            }
+            // V23 UM-FR-43: a role gained a sensitive permission (the detail lists "+PERMISSION" for each one added).
+            case ROLE_CREATED, ROLE_UPDATED -> {
+                String detail = event.getDetail() == null ? "" : event.getDetail();
+                List<String> gained = SENSITIVE_PERMISSIONS.stream().filter(name -> detail.contains("+" + name)).toList();
+                if (!gained.isEmpty()) {
+                    alert("role-perm:" + event.getId(), "User " + event.getActorId() + " gave a role " + String.join(", ", gained)
+                            + " (" + detail.split(";")[0] + ").");
+                }
+            }
+            case ADMIN_BOOTSTRAPPED -> alert("bootstrap:" + event.getId(), "User " + event.getTargetId()
+                    + " was made the first admin from ADMIN_BOOTSTRAP_EMAIL. Remove the setting now.");
             case AI_BUDGET_WARNING -> alert("ai-budget:" + event.getId(), "AI spending: " + event.getDetail());
             case AI_KEY_CHANGED, AI_KEY_REMOVED -> alert("ai-key:" + event.getId(), "The Claude API key was "
                     + (event.getEventType() == SecurityEventType.AI_KEY_CHANGED ? "changed" : "removed")

@@ -108,8 +108,14 @@ public class PasswordResetService {
             return;
         }
 
-        AppUser user = found.get();
+        issueFor(found.get());
+    }
 
+    /**
+     * V23 (UM-FR-28): emails a reset link to a known account. Also used when a
+     * program admin sends the reset; the admin never sees the link.
+     */
+    public void issueFor(AppUser user) {
         // Asking twice must not leave two working links alive. The older one is
         // retired so the most recent mail is the only one that opens the account.
         List<PasswordResetToken> outstanding = tokenRepository.findByUserAndUsedAtIsNull(user);

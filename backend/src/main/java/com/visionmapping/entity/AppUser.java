@@ -52,9 +52,13 @@ public class AppUser extends BaseAuditableEntity {
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Enumerated(EnumType.STRING)
+    /**
+     * V23 (D-23-2): the key of the person's role in {@code roles}: a built-in one
+     * ({@link UserRole}) or a custom one. What the role allows lives in
+     * {@code role_permissions} (PermissionService), never in this name.
+     */
     @Column(nullable = false, length = 40)
-    private UserRole role;
+    private String role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
@@ -108,6 +112,27 @@ public class AppUser extends BaseAuditableEntity {
     // when two-factor sign-in is not required.
     @Column(name = "two_factor_due_at")
     private Instant twoFactorDueAt;
+
+    // V23 (UM-FR-19): who created the account (null: self sign-up or Google), and
+    // the last role change and block. Plain ids; the security log keeps the detail.
+    @Column(name = "created_by_id")
+    private Long createdById;
+
+    @Column(name = "role_changed_at")
+    private Instant roleChangedAt;
+
+    @Column(name = "role_changed_by_id")
+    private Long roleChangedById;
+
+    @Column(name = "blocked_at")
+    private Instant blockedAt;
+
+    @Column(name = "blocked_by_id")
+    private Long blockedById;
+
+    /** V23 (UM-FR-17): when a session last opened for this account. */
+    @Column(name = "last_sign_in_at")
+    private Instant lastSignInAt;
 
     // V9 (AI-NFR-03): when this person consented to AI reading their data; null means no consent.
     @Column(name = "ai_consent_at")
@@ -216,4 +241,32 @@ public class AppUser extends BaseAuditableEntity {
     @Builder.Default
     @Column(name = "ai_use_work_style", nullable = false)
     private boolean aiUseWorkStyle = false;
+
+    /** V23: set a role by its key (built-in or custom). */
+    public void setRole(String roleKey) {
+        this.role = roleKey;
+    }
+
+    /** V23: set a built-in role. */
+    public void setRole(UserRole builtIn) {
+        this.role = builtIn.name();
+    }
+
+    /** V23: whether the person has this built-in role (custom roles never match). */
+    public boolean hasRole(UserRole builtIn) {
+        return builtIn.name().equals(role);
+    }
+
+    /** V23: lets code and tests name a built-in role while building an account. */
+    public static class AppUserBuilder {
+        public AppUserBuilder role(UserRole builtIn) {
+            this.role = builtIn.name();
+            return this;
+        }
+
+        public AppUserBuilder role(String roleKey) {
+            this.role = roleKey;
+            return this;
+        }
+    }
 }

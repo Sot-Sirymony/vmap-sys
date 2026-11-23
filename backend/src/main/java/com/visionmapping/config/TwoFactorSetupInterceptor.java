@@ -39,7 +39,8 @@ public class TwoFactorSetupInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal principal)
-                || "USER".equals(principal.getRole())) {
+                // V23 (UM-FR-06): only privileged roles have a two-step set-up-by date.
+                || principal.getPermissions().stream().allMatch(permission -> permission == com.visionmapping.security.Permission.USE_OWN_PLAN)) {
             return true;
         }
         String path = request.getRequestURI();

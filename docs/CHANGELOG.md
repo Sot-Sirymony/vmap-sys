@@ -17,6 +17,72 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 23.0.0 — User, role and permission management (phases 1–5 of 7 built)
+
+BRD [`VMS_BRD_V23.0.0.md`](VMS_BRD_V23.0.0.md). Product owner answers on 22 Nov 2026: custom roles with editable
+permissions (Q-01), no separate user-manager role (Q-02), block before delete (Q-03), no reason in the block notice
+(Q-04), Add user stops without mail (Q-05), bulk import later (Q-06), `ADMIN_BOOTSTRAP_EMAIL` for the first admin
+(Q-07), `CLAUDE.md` rule 14 sentence (Q-08).
+
+**Phase 1 (permissions under the hood, no visible change):** migration `V89__roles_and_permissions.sql` adds `roles`
+and `role_permissions`, with Participant, Coach and Admin given exactly today's access, and a foreign key from
+`app_users.role`. `Permission` (the catalogue) and `PermissionService` replace the role-name checks (`Roles`, removed)
+in every service; `/api/admin/**` and `/api/coach/**` now check permissions; the sign-in answer carries
+`permissions`, and the frontend shows menus and buttons by permission (falling back to the role for sessions saved
+before V23). One permission was added to the catalogue during build: *Handle support* (issue-report triage and the
+failed request log, which the BRD's list had missed). Safety alerts with no coach go to accounts with *Manage
+cohorts*; the admin step-up warning shows to anyone with *Manage cohorts*, *Manage AI settings* or *View security log*.
+`ADMIN_BOOTSTRAP_EMAIL` makes the first admin once (UM-FR-41). The two-step requirement still follows the built-in
+roles until custom roles arrive (phase 4).
+
+**Phase 2 (Users list and detail, backend):** migration `V90__user_management.sql` adds who created the account, the
+last role change and block, and `last_sign_in_at` (set whenever a session opens). `GET /api/admin/users` (needs *View
+users*) searches by name or email, filters by role, status, cohort and two-step state, sorts by joined, name or last
+sign-in, and returns counts for all accounts; `GET /api/admin/users/{id}` adds who created the account, the last role
+change and block, record counts and the last 20 security events. Answers hold no plan text (tested with a planted
+value) and their types are guarded against secret or plan fields. The case-insensitive search indexes in the BRD were
+left out: H2 cannot build them and the list does not need them at this size. The pages come in phase 6.
+
+**Phase 3 (role change, block, unblock, backend):** `PUT /api/admin/users/{id}/role`, `POST …/block` and `POST
+…/unblock` need *Manage users*, a reason and a fresh code (new step-up action `ADMIN_USER_BLOCK`). Safeguards: no
+action on one's own account; no escalation (the actor must hold every permission of the target's role and of the role
+given, so only Admins act on Admins or give the Admin role); the last active admin cannot be demoted or blocked;
+demoting a coach of active cohorts needs a new coach, or none, for each, saved together. Blocking ends every session,
+pauses the person's plan and report share links (reminders already skipped blocked accounts), and signing in with the
+right password now answers 403 "This account is blocked. Contact your program admin." (a wrong password still gets the
+usual answer). New events `USER_BLOCKED`, `USER_UNBLOCKED`; notices to the person for a role change, block and unblock
+(no reason, no admin browser); alerts for an Admin blocked and more than 5 blocks by one person in an hour; the "Admin
+role granted" alert no longer fires on a demotion from Admin; rate limit 30 changes per person per 10 minutes.
+
+**Phase 4 (custom roles, backend):** `GET /api/admin/permissions`, and `GET/POST/PUT/DELETE /api/admin/roles`.
+Admins create roles with chosen permissions and change Coach's permissions; Admin and Participant are locked
+(Q-09); there is no limit on the number of roles (Q-10). Needed permissions are added together, *Manage roles* is
+refused, names are unique regardless of case, and a role is deleted only after its holders move. Removing *Coach
+cohorts* asks for a new coach for each active cohort. A role becoming privileged starts the two-step requirement for
+its holders (and clears it when it stops being privileged); holders are emailed. Events `ROLE_CREATED`,
+`ROLE_UPDATED` (with the permissions added and removed), `ROLE_DELETED`; alerts for sensitive permissions. Under the
+hood, `AppUser.role` became a role key so accounts can hold custom roles; every "is not a participant" check (two-step
+sign-in, the admin two-step report, the start-up job) now asks whether the role is privileged. Naming someone a
+cohort coach no longer overwrites a custom role (it refuses if their role cannot coach). Found and fixed during build:
+the permission cache could keep a role's old permissions if read while the change was being saved; it is now
+cleared again after the change commits.
+
+**Phase 5 (Add user, edit, resend, reset, delete, backend):** migration `V91__user_invitations.sql`. `POST
+/api/admin/users` (*Manage users*) creates an account with no usable password and emails a 7-day single-use
+invitation (only its SHA-256 is stored; the email goes out after the change is saved); a privileged role needs a fresh
+`ADMIN_ROLE_CHANGE` code and starts the two-step requirement; an email that already has an account is refused; without
+mail outside a local run, nothing is created (Q-05). The person opens `/invitation`, chooses a password
+(`POST /api/auth/invitation/check` and `/accept`, public, 20 per 15 minutes per network, 410 for a used, replaced or
+expired link) and is signed in, or signs in with Google on the same address (UM-FR-26). `PATCH /api/admin/users/{id}`
+changes name and cohort (logged as `USER_UPDATED` with field names only); `POST …/invitation` replaces the link;
+`POST …/password-reset` sends the normal reset email without showing the link. `DELETE /api/admin/users/{id}` (*Delete
+users*) works only on a blocked account (Q-03), needs the email typed exactly, a reason and a fresh `ADMIN_USER_DELETE`
+code, emails the person first, then uses the self-deletion erase routine in the same transaction; the log keeps the id,
+the viewer and the reason, never the name or email. Events `USER_CREATED_BY_ADMIN`, `USER_UPDATED`,
+`USER_DELETED_BY_ADMIN`, `INVITATION_SENT`, `INVITATION_ACCEPTED`; an Admin deleted raises an alert, and deletions
+count with blocks towards the "more than 5 in an hour" alert. The account detail adds `invitationPending`,
+`invitationExpiresAt` and `coachedCohorts` for the dialogs. New settings `INVITATION_URL`, `INVITATION_TTL_DAYS`.
+
 ## 21.0.0 — Two-factor sign-in (live 22 Nov 2026; awaiting UAT, sign-off of F-02 to F-04 and Q-09, and the Khmer review)
 
 BRD [`VMS_BRD_V21.0.0.md`](VMS_BRD_V21.0.0.md). Product owner answers on 22 Nov 2026: coaches must use 2FA too

@@ -32,6 +32,23 @@ public class AuthController {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
     private final RequestRateLimiter rateLimiter;
+    private final com.visionmapping.service.admin.InvitationService invitationService;
+
+    /** V23: whose account an invitation link opens; 410 for a used, replaced or expired link. */
+    @PostMapping("/invitation/check")
+    public com.visionmapping.dto.response.InvitationInfoResponse checkInvitation(
+            @Valid @RequestBody com.visionmapping.dto.request.InvitationCheckRequest request, HttpServletRequest http) {
+        rateLimiter.check(RequestRateLimiter.Action.INVITATION, ClientIp.of(http));
+        return invitationService.check(request.token());
+    }
+
+    /** V23 (UM-FR-24): choose a password from the invitation, then signed in as from the sign-in page. */
+    @PostMapping("/invitation/accept")
+    public SignInAnswer acceptInvitation(@Valid @RequestBody com.visionmapping.dto.request.AcceptInvitationRequest request,
+                                         HttpServletRequest http) {
+        rateLimiter.check(RequestRateLimiter.Action.INVITATION, ClientIp.of(http));
+        return invitationService.accept(request.token(), request.password(), request.remember());
+    }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)

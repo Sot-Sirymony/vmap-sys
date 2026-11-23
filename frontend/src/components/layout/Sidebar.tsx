@@ -223,7 +223,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
   const location = useLocation();
   const { user } = useAuth();
   const pathname = navPathname(location.pathname);
-  const activeTo = activeNavTo(pathname, navGroupsFor(user?.role).flatMap((group) => group.items));
+  const activeTo = activeNavTo(pathname, navGroupsFor(user).flatMap((group) => group.items));
 
   // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
   // flat list of eleven entries. Collapsed mode drops the labels and keeps a
@@ -231,7 +231,7 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
   return (
     <Box>
     <List sx={{ px: 1 }}>
-      {navGroupsFor(user?.role).map((group, groupIndex) => (
+      {navGroupsFor(user).map((group, groupIndex) => (
         <li key={group.label} style={{ listStyle: 'none' }}>
           {collapsed
             ? groupIndex > 0 && <Divider sx={{ my: 1 }} />

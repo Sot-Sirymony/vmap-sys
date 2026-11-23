@@ -57,6 +57,21 @@ public enum SecurityEventType {
     AI_KEY_REMOVED,
     // V10 SEC-09-04: AI spending passed 80% or 100% of the monthly budget, or jumped in one hour.
     AI_BUDGET_WARNING,
+    // V23 UM-FR-41: the first admin made from ADMIN_BOOTSTRAP_EMAIL.
+    ADMIN_BOOTSTRAPPED,
+    // V23 UM-FR-42: an account blocked or unblocked by someone with "Manage users".
+    USER_BLOCKED,
+    USER_UNBLOCKED,
+    // V23 UM-FR-42: roles created, changed (permissions added and removed) and deleted.
+    ROLE_CREATED,
+    ROLE_UPDATED,
+    ROLE_DELETED,
+    // V23 phase 5 (UM-FR-42): accounts an admin creates, edits and deletes, and their invitations.
+    USER_CREATED_BY_ADMIN,
+    USER_UPDATED,
+    USER_DELETED_BY_ADMIN,
+    INVITATION_SENT,
+    INVITATION_ACCEPTED,
     APPROVED_RESOURCE_CHANGED,
     MODULE_CONTENT_CHANGED,
     INTERFACE_TEXT_CHANGED,

@@ -198,6 +198,8 @@ public class ReportShareService {
         Instant now = Instant.now(clock);
         ReportShareLink link = repository.findByTokenHash(hash(token))
                 .filter(found -> found.isOpenAt(now))
+                // V23 (UM-FR-34): a blocked owner's links do not open until they are unblocked.
+                .filter(found -> found.getUser().getStatus() == com.visionmapping.entity.enums.UserStatus.ACTIVE)
                 .filter(found -> found.getReport().isFinal() && !found.getReport().isArchived())
                 .filter(found -> savedReports.decode(found.getReport()).verified())
                 .orElse(null);

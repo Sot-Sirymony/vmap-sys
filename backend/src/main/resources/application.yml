@@ -81,6 +81,9 @@ app:
     # V10 (SEC-04-02): BCrypt cost for password hashes (at least 12 in production).
     # Hashes made at a lower cost are upgraded at the person's next sign-in.
     bcrypt-cost: ${BCRYPT_COST:12}
+    # V23 (UM-FR-41): makes this existing account the first admin, once, and only
+    # while no active admin exists. Remove it after the first start.
+    admin-bootstrap-email: ${ADMIN_BOOTSTRAP_EMAIL:}
     # V10 (SEC-07-04): the access token's lifetime. Short, because it cannot be
     # recalled once handed out except by ending its session; the client renews
     # it in the background with the refresh token.
@@ -152,6 +155,9 @@ app:
       # V21 Phase 5: sign-in code emails per account (threat model: mailbox flooding).
       two-factor-email-per-user: ${RATE_LIMIT_TWO_FACTOR_EMAIL_PER_USER:5}
       two-factor-email-window-minutes: ${RATE_LIMIT_TWO_FACTOR_EMAIL_WINDOW:60}
+      # V23 UM-FR-44: role changes, blocks and other user management, per person.
+      user-admin-per-user: ${RATE_LIMIT_USER_ADMIN_PER_USER:30}
+      user-admin-window-minutes: ${RATE_LIMIT_USER_ADMIN_WINDOW:10}
     login:
       max-failures-per-account: ${LOGIN_MAX_FAILURES_PER_ACCOUNT:5}
       max-failures-per-ip: ${LOGIN_MAX_FAILURES_PER_IP:50}
@@ -187,6 +193,11 @@ app:
     challenge-minutes: ${TWO_FACTOR_CHALLENGE_MINUTES:5}
     trusted-device-days: ${TWO_FACTOR_TRUSTED_DEVICE_DAYS:30}
     grace-days: ${TWO_FACTOR_GRACE_DAYS:14}
+  # V23 (UM-FR-24): invitations for accounts an admin creates. The link points
+  # at the frontend page that calls /api/auth/invitation/accept.
+  invitation:
+    ttl-days: ${INVITATION_TTL_DAYS:7}
+    url: ${INVITATION_URL:http://127.0.0.1:5173/invitation}
   password-reset:
     # Long enough to go and find the mail, short enough that a link left sitting
     # in a mailbox stops being a key to the account.

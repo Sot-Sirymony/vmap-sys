@@ -22,7 +22,13 @@ public enum StepUpAction {
     ADMIN_AI_KEY(Rule.FRESH, 10, false, "change the AI key", "ប្តូរកូនសោ AI"),
     /** V21 (TF-FR-28): resetting another person's two-step sign-in. */
     ADMIN_TWO_FACTOR_RESET(Rule.FRESH, 10, false, "reset a person's two-step sign-in", "កំណត់ការចូលពីរជំហានរបស់មនុស្សម្នាក់ឡើងវិញ"),
-    ADMIN_COHORT_COACH(Rule.FRESH, 10, false, "change a cohort's coach", "ប្តូរគ្រូបង្វឹករបស់ក្រុម");
+    ADMIN_COHORT_COACH(Rule.FRESH, 10, false, "change a cohort's coach", "ប្តូរគ្រូបង្វឹករបស់ក្រុម"),
+    /** V23 (UM-FR-31, UM-FR-33): blocking or unblocking another person's account. */
+    ADMIN_USER_BLOCK(Rule.FRESH, 10, false, "block or unblock a person's account", "បិទ ឬបើកគណនីរបស់មនុស្សម្នាក់"),
+    /** V23 (UM-FR-11, UM-FR-14): creating, changing or deleting a role. */
+    ADMIN_ROLE_EDIT(Rule.FRESH, 10, false, "change a role and its permissions", "ប្តូរតួនាទី និងសិទ្ធិរបស់វា"),
+    /** V23 (UM-FR-36): permanently deleting another person's account. */
+    ADMIN_USER_DELETE(Rule.FRESH, 5, false, "permanently delete a person's account", "លុបគណនីរបស់មនុស្សម្នាក់ជាអចិន្ត្រៃយ៍");
 
     /** Whether the verified window covers the action. */
     public enum Rule { WINDOW, FRESH }

@@ -4,7 +4,8 @@ import com.visionmapping.dto.response.SecurityEventResponse;
 import com.visionmapping.dto.response.SecurityLogResponse;
 import com.visionmapping.entity.SecurityEvent;
 import com.visionmapping.repository.SecurityEventRepository;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
 import java.time.Instant;
@@ -27,11 +28,12 @@ public class SecurityLogService {
     private final SecurityAlertService alerts;
     private final EntityLookup lookup;
     private final Clock clock;
+    private final PermissionService permissions;
 
     @Transactional(readOnly = true)
     public SecurityLogResponse search(SecurityEventType type, SecurityOutcome outcome, Long actorId,
                                       LocalDate from, LocalDate to, int page, int size) {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can read the security log.");
+        permissions.require(lookup.currentUser(), Permission.VIEW_SECURITY_LOG, "Only an administrator can read the security log.");
         int pageSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         Instant start = from == null ? Instant.EPOCH : from.atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant end = to == null ? clock.instant().plusSeconds(60) : to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();

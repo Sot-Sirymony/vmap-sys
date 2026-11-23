@@ -255,6 +255,18 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
     }
 
+    /** V23 (UM-FR-32): a blocked account with the right password. */
+    /** V23 (UM-FR-24): a used, replaced or expired invitation link. */
+    @ExceptionHandler(InvitationGoneException.class)
+    public ResponseEntity<ErrorResponse> handleInvitationGone(InvitationGoneException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.GONE, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(AccountBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountBlocked(AccountBlockedException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
+    }
+
     @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
     public ResponseEntity<ErrorResponse> handleAuthentication(
             RuntimeException exception,

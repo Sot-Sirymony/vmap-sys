@@ -27,9 +27,15 @@ public record AuthResponse(
         String fullName,
         String email,
         String role,
+        /** V23 (UM-FR-05): the role's permission keys, for menus and buttons. The server checks again. */
+        java.util.List<String> permissions,
         AppearancePreferencesResponse appearance,
         String refreshToken,
         long expiresIn,
         @Nullable String deviceToken
 ) implements SignInAnswer {
+
+    public AuthResponse {
+        permissions = com.visionmapping.util.Copies.list(permissions);
+    }
 }

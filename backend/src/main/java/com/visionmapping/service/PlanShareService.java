@@ -108,6 +108,8 @@ public class PlanShareService {
         Instant now = Instant.now(clock);
         PlanShare share = planShareRepository.findByTokenHash(hash(token))
                 .filter(found -> found.isOpenAt(now) && !found.getDream().isArchived())
+                // V23 (UM-FR-34): a blocked owner's links do not open until they are unblocked.
+                .filter(found -> found.getUser().getStatus() == com.visionmapping.entity.enums.UserStatus.ACTIVE)
                 .orElse(null);
         // V10 (SEC-01-07): every opening is logged, and so is every refused one.
         if (share == null) {

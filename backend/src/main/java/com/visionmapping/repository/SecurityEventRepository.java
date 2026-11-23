@@ -40,4 +40,8 @@ public interface SecurityEventRepository extends Repository<SecurityEvent, Long>
     @Modifying
     @Query("delete from SecurityEvent e where e.occurredAt < :before")
     int deleteOlderThan(@Param("before") Instant before);
+
+    /** V23 (UM-FR-19): events by or about one account, newest first. */
+    @Query("select e from SecurityEvent e where e.actorId = :userId or (e.targetType = 'user' and e.targetId = :userId) order by e.occurredAt desc, e.id desc")
+    java.util.List<com.visionmapping.entity.SecurityEvent> findAboutUser(@Param("userId") Long userId, org.springframework.data.domain.Pageable page);
 }

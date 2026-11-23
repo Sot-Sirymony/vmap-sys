@@ -23,6 +23,7 @@ import { localDateIso } from '../utils/localDate';
 import { saveBlob } from '../utils/saveBlob';
 import { useI18n, type Language } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
+import { can } from '../utils/permissions';
 
 const DELETE_WORD = 'DELETE';
 
@@ -105,7 +106,7 @@ export function AccountSettingsPage() {
               <ToggleButton value="en" lang="en">English</ToggleButton>
               <ToggleButton value="km" lang="km">ខ្មែរ</ToggleButton>
             </ToggleButtonGroup>
-            {user?.role === 'ADMIN' && (
+            {can(user, 'MANAGE_INTERFACE_TEXT') && (
               <Box sx={{ mt: 2 }}>
                 <Button variant="secondary" onClick={() => navigate('/settings/interface-text')}>{t('Edit interface text')}</Button>
               </Box>

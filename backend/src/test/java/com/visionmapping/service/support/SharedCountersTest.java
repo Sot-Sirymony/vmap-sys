@@ -175,6 +175,6 @@ class SharedCountersTest {
     }
 
     private RequestRateLimiter limiter(SharedCounters counters) {
-        return new RequestRateLimiter(clock, counters, 2, 60, 3, 15, 2, 1, 1, 60, 2, 10, 2, 1440, 2, 1, 2, 10, 2, 15, 3, 15, 2, 60);
+        return new RequestRateLimiter(clock, counters, 2, 60, 3, 15, 2, 1, 1, 60, 2, 10, 2, 1440, 2, 1, 2, 10, 2, 15, 3, 15, 2, 60, 2, 10);
     }
 }

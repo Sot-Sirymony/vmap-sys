@@ -38,6 +38,7 @@ import type { IssueReport, IssueReportStatus } from '../types/vision';
 import { issueReportStatusLabels, reportTypeLabels, severityLabels } from '../utils/enumLabels';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
+import { can } from '../utils/permissions';
 
 const statuses: IssueReportStatus[] = ['OPEN', 'IN_REVIEW', 'PLANNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'WONT_FIX'];
 
@@ -56,7 +57,7 @@ function formatDateTime(iso: string): string {
 export function IssueReportsPage() {
   const { token, user } = useAuth();
   const { showToast } = useToast();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = can(user, 'HANDLE_SUPPORT');
 
   const [scope, setScope] = useState<Scope>('mine');
   const [reports, setReports] = useState<IssueReport[]>([]);

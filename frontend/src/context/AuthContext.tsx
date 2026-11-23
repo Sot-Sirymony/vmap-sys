@@ -98,7 +98,7 @@ function clearStored() {
 }
 
 function userOf(response: AuthResponse): AuthUser {
-  return { id: response.userId, fullName: response.fullName, email: response.email, role: response.role };
+  return { id: response.userId, fullName: response.fullName, email: response.email, role: response.role, permissions: response.permissions };
 }
 
 const wait = (ms: number) => new Promise((resolve) => { window.setTimeout(resolve, ms); });

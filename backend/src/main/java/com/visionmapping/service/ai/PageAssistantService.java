@@ -36,7 +36,8 @@ import com.visionmapping.repository.ModuleCompletionRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.VisionStepRepository;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.service.LearningModuleService;
 import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.util.Copies;
@@ -173,6 +174,7 @@ public class PageAssistantService {
     private final AiUsageLogRepository usageLogRepository;
     private final org.springframework.transaction.support.TransactionTemplate transactions;
     private final Clock clock;
+    private final PermissionService permissions;
 
     /** What the area on screen holds: records for Claude, sources, rule issues and the fields cards may change. */
     record View(String page, String area, String records, List<String> sources, List<PageIssue> issues,
@@ -756,7 +758,7 @@ public class PageAssistantService {
     /** AH-FR-56: per V15 feature over the last days, and the AHBO-01, 03 and 04 baselines. Admins only. */
     @Transactional(readOnly = true)
     public PageMetrics metrics(int days) {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can see AI page assistant metrics.");
+        permissions.require(lookup.currentUser(), Permission.VIEW_AI_REPORTS, "Only an administrator can see AI page assistant metrics.");
         int period = Math.max(1, Math.min(days, METRIC_MAX_DAYS));
         Instant from = Instant.now(clock).minus(Duration.ofDays(period));
         List<PageFeatureMetrics> features = new ArrayList<>();

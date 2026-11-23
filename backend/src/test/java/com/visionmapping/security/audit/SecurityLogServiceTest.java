@@ -36,7 +36,8 @@ class SecurityLogServiceTest {
 
     @Test
     void anOpenEndedSearchEndsOneMinuteAfterTheInjectedNow() {
-        SecurityLogService service = new SecurityLogService(repository, alerts, lookup, Clock.fixed(NOW, ZoneOffset.UTC));
+        SecurityLogService service = new SecurityLogService(repository, alerts, lookup, Clock.fixed(NOW, ZoneOffset.UTC),
+                com.visionmapping.security.PermissionService.withBuiltInRoles());
         when(lookup.currentUser()).thenReturn(AppUser.builder().id(1L).role(UserRole.ADMIN).status(UserStatus.ACTIVE).build());
         when(repository.search(isNull(), isNull(), isNull(), any(), any(), any(Pageable.class))).thenReturn(Page.empty());
         when(alerts.recentAlerts()).thenReturn(List.of());

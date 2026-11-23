@@ -2,7 +2,8 @@ package com.visionmapping.service;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.dto.request.AiApiKeyRequest;
 import com.visionmapping.dto.request.AiSettingsRequest;
 import com.visionmapping.dto.response.AiSettingsResponse;
@@ -49,6 +50,7 @@ public class AiSettingsService {
     private final ClaudeKeyChecker keyChecker;
     private final AiUsageLogRepository usageLogRepository;
     private final Clock clock;
+    private final PermissionService permissions;
 
     @Value("${app.ai.api-key:}")
     @Nullable
@@ -206,6 +208,6 @@ public class AiSettingsService {
     }
 
     private void requireAdmin() {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can change AI settings.");
+        permissions.require(lookup.currentUser(), Permission.MANAGE_AI_SETTINGS, "Only an administrator can change AI settings.");
     }
 }

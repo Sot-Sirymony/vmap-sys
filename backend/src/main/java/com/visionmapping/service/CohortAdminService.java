@@ -4,7 +4,8 @@ import com.visionmapping.security.audit.SecurityOutcome;
 import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.dto.request.CohortMemberRequest;
 import com.visionmapping.dto.request.CohortRequest;
 import com.visionmapping.dto.response.CohortMemberResponse;
@@ -47,6 +48,7 @@ public class CohortAdminService {
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
     private final StepUpService stepUpService;
+    private final PermissionService permissions;
 
     @Transactional(readOnly = true)
     public List<CohortResponse> list() {
@@ -131,14 +133,18 @@ public class CohortAdminService {
         Long currentCoachId = cohort.getCoach() == null ? null : cohort.getCoach().getId();
         if (!Objects.equals(currentCoachId, coach == null ? null : coach.getId())) {
             // V20 SV-FR-06, SV-FR-08: a fresh code for the admin. Making someone a coach is a role change, which covers both.
-            boolean promotes = coach != null && coach.getRole() == UserRole.USER;
+            boolean promotes = coach != null && !permissions.has(coach, com.visionmapping.security.Permission.COACH_COHORTS);
             stepUpService.require(promotes ? StepUpAction.ADMIN_ROLE_CHANGE : StepUpAction.ADMIN_COHORT_COACH, stepUp);
         }
         if (coach == null) {
             cohort.setCoach(null);
             return;
         }
-        if (coach.getRole() == UserRole.USER) {
+        if (!permissions.has(coach, com.visionmapping.security.Permission.COACH_COHORTS)) {
+            if (!coach.hasRole(UserRole.USER)) {
+                // V23: a custom role that cannot coach is not silently replaced by Coach.
+                throw new BusinessRuleException(coach.getFullName() + "'s role cannot coach. Change their role on the Users page first.");
+            }
             coach.setRole(UserRole.COACH);
             // V21 (TF-FR-32, TF-FR-35): a new coach must set up two-step sign-in within the grace period.
             twoFactorRequirement.roleGiven(coach);
@@ -178,6 +184,6 @@ public class CohortAdminService {
     }
 
     private void requireAdmin() {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can manage cohorts.");
+        permissions.require(lookup.currentUser(), Permission.MANAGE_COHORTS, "Only an administrator can manage cohorts.");
     }
 }

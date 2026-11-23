@@ -2,7 +2,8 @@ package com.visionmapping.service;
 
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityAudit;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
@@ -47,6 +48,7 @@ public class IssueReportService {
     private final EntityLookup lookup;
     private final VisionMappingMapper mapper;
     private final IssueReportRepository issueReportRepository;
+    private final PermissionService permissions;
 
     /** FR-38.3: the caller's own reports, newest first. */
     @Cacheable(CacheConfig.ISSUE_REPORT_LIST_CACHE)
@@ -162,10 +164,10 @@ public class IssueReportService {
     }
 
     private void requireAdmin() {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can triage issue reports.");
+        permissions.require(lookup.currentUser(), Permission.HANDLE_SUPPORT, "Only an administrator can triage issue reports.");
     }
 
     private boolean isAdmin() {
-        return Roles.isAdmin(lookup.currentUser());
+        return permissions.has(lookup.currentUser(), Permission.HANDLE_SUPPORT);
     }
 }

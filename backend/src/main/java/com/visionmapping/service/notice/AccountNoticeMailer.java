@@ -68,6 +68,11 @@ public class AccountNoticeMailer {
             case ACCOUNT_DELETED -> "Your Vision Map account was deleted";
             case RECOVERY_CODE_USED -> "Your Vision Map recovery code was used";
             case TWO_FACTOR_CHANGED -> "Your Vision Map two-factor sign-in was changed";
+            case ROLE_CHANGED -> "Your Vision Map role was changed";
+            case ACCOUNT_BLOCKED -> "Your Vision Map account was blocked";
+            case ACCOUNT_UNBLOCKED -> "Your Vision Map account was unblocked";
+            case ROLE_UPDATED -> "Your Vision Map role now allows different things";
+            case ACCOUNT_DELETED_BY_ADMIN -> "Your Vision Map account was deleted by a program admin";
         };
     }
 
@@ -84,7 +89,27 @@ public class AccountNoticeMailer {
             // V21 TF-FR-09: detail says what changed, for example "turned on with an authenticator app".
             case TWO_FACTOR_CHANGED -> "Two-factor sign-in for your Vision Map account was "
                     + (notice.detail() == null ? "changed" : notice.detail());
+            case ROLE_CHANGED -> "A program admin changed your Vision Map role to " + notice.detail();
+            case ACCOUNT_BLOCKED -> "A program admin blocked your Vision Map account";
+            case ACCOUNT_UNBLOCKED -> "A program admin unblocked your Vision Map account. You can sign in again";
+            case ROLE_UPDATED -> "A program admin changed what your Vision Map role (" + notice.detail() + ") allows";
+            case ACCOUNT_DELETED_BY_ADMIN -> "A program admin permanently deleted your Vision Map account and its data";
         };
+        if (notice.kind().byAdmin()) {
+            String next = switch (notice.kind()) {
+                case ACCOUNT_BLOCKED -> "You cannot sign in until it is unblocked. If you think this is a mistake, "
+                        + "contact your program admin.";
+                case ACCOUNT_DELETED_BY_ADMIN -> "This cannot be undone. If you have questions, contact your program admin.";
+                default -> "If you did not expect this, contact your program admin.";
+            };
+            return """
+                    Hello %s,
+
+                    %s on %s.
+
+                    %s
+                    """.formatted(notice.fullName(), what, when, next);
+        }
         String advice = notice.kind() == AccountNotice.Kind.ACCOUNT_DELETED
                 ? "If this was not you, contact your coach or administrator straight away."
                 : "If this was not you, change your password now.";

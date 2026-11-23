@@ -9,7 +9,8 @@ import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.TwoFactorRecoveryCodeRepository;
 import com.visionmapping.repository.UserTwoFactorRepository;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.security.audit.SecurityEventService;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityOutcome;
@@ -56,23 +57,24 @@ public class TwoFactorAdminService {
     private final AccountNotices accountNotices;
     private final SecurityEventService securityEvents;
     private final Clock clock;
+    private final PermissionService permissions;
 
     /** TF-FR-36: admins and coaches first, then anyone else with two-step sign-in on. */
     @Transactional(readOnly = true)
     public List<TwoFactorReportRow> report() {
-        Roles.requireAdmin(userScope.currentUser(), "Only admins can see two-step sign-in for other people.");
+        permissions.require(userScope.currentUser(), Permission.RESET_TWO_FACTOR, "Only admins can see two-step sign-in for other people.");
         Instant now = clock.instant();
         Map<Long, UserTwoFactor> settings = new LinkedHashMap<>();
         settingsRepository.findAll().stream().filter(UserTwoFactor::isEnabled).forEach(found -> settings.put(found.getUserId(), found));
-        List<AppUser> people = new ArrayList<>(appUserRepository.findByRoleNotOrderByRoleAscFullNameAsc(UserRole.USER));
+        List<AppUser> people = new ArrayList<>(appUserRepository.findByRoleInOrderByRoleAscFullNameAsc(permissions.privilegedRoleKeys()));
         appUserRepository.findAllById(settings.keySet()).stream()
-                .filter(user -> user.getRole() == UserRole.USER)
+                .filter(user -> !permissions.isPrivileged(user))
                 .sorted(Comparator.comparing(AppUser::getFullName))
                 .forEach(people::add);
         return people.stream().map(user -> {
             Optional<UserTwoFactor> found = Optional.ofNullable(settings.get(user.getId()));
-            Instant due = user.getRole() == UserRole.USER ? null : user.getTwoFactorDueAt();
-            return new TwoFactorReportRow(user.getId(), user.getFullName(), user.getEmail(), user.getRole().name(),
+            Instant due = permissions.isPrivileged(user) ? user.getTwoFactorDueAt() : null;
+            return new TwoFactorReportRow(user.getId(), user.getFullName(), user.getEmail(), user.getRole(),
                     found.isPresent(), found.map(value -> value.getMethod().name()).orElse(null), due,
                     found.isEmpty() && due != null && !due.isAfter(now));
         }).toList();
@@ -86,7 +88,7 @@ public class TwoFactorAdminService {
      */
     public void reset(Long userId, @Nullable String reason, @Nullable String stepUp) {
         AppUser admin = userScope.currentUser();
-        Roles.requireAdmin(admin, "Only admins can reset two-step sign-in.");
+        permissions.require(admin, Permission.RESET_TWO_FACTOR, "Only admins can reset two-step sign-in.");
         if (admin.getId().equals(userId)) {
             throw new BusinessRuleException("You cannot reset your own two-step sign-in. Ask another admin.");
         }

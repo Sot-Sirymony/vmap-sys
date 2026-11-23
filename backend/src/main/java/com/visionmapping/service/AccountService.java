@@ -84,6 +84,8 @@ public class AccountService {
             "coach_comments",
             "plan_shares",
             "password_reset_tokens",
+            // V23 (UM-FR-24): invitations an admin sent this account.
+            "user_invitations",
             // V21 (TF-FR-42): two-factor settings, recovery codes, challenges and devices.
             "sign_in_challenges",
             "trusted_devices",
@@ -245,9 +247,18 @@ public class AccountService {
                 throw new BusinessRuleException("That password is not correct.");
             }
         }
-        Long userId = user.getId();
         // V20 SV-FR-30: a last notice to the deleted account's email, sent only after the deletion is committed.
         accountNotices.changed(AccountNotice.Kind.ACCOUNT_DELETED, user);
+        erase(user.getId());
+    }
+
+    /**
+     * Erases the account and everything it owns, in the caller's transaction, so
+     * any failure erases nothing. Shared by self-deletion and, in V23 (UM-FR-37),
+     * an admin's permanent delete. The caller sends any notice first.
+     */
+    public void erase(Long userId) {
+        entityManager.flush();
         entityManager.clear();
         for (String table : USER_TABLES_ANONYMISED) {
             jdbcTemplate.update("UPDATE " + table + " SET user_id = NULL WHERE user_id = ?", userId);

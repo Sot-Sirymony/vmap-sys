@@ -27,6 +27,7 @@ import { PageMetricsCard } from '../components/ai/PageMetricsCard';
 import { PageSwitchesField } from '../components/ai/page-assistant/PageSwitchesField';
 import { PlanMetricsCard } from '../components/ai/PlanMetricsCard';
 import { PageSection } from './PageSection';
+import { can } from '../utils/permissions';
 
 /**
  * V9 (AI-FR-24): admins set the Claude API key, model and monthly budget
@@ -35,7 +36,7 @@ import { PageSection } from './PageSection';
  */
 export function AiSettingsPage() {
   const { token, user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = can(user, 'MANAGE_AI_SETTINGS');
   const [settings, setSettings] = useState<AiSettings | null>(null);
   const [error, setError] = useState('');
 

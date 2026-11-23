@@ -23,11 +23,12 @@ import { SafetyAlertsCard } from '../components/common/SafetyAlertsCard';
 import { CohortSummaryCard } from '../components/ai/CoachSummaryCards';
 import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { PageSection } from './PageSection';
+import { can } from '../utils/permissions';
 
 /** V9 (v0.1 FR-16, FR-17): the participants of the cohorts this coach leads, quietest first. */
 export function CoachPage() {
   const { token, user } = useAuth();
-  const isCoach = user?.role === 'COACH' || user?.role === 'ADMIN';
+  const isCoach = can(user, 'COACH_COHORTS');
   const [participants, setParticipants] = useState<CoachParticipant[] | null>(null);
   const [error, setError] = useState('');
   const [cohortId, setCohortId] = useState('');

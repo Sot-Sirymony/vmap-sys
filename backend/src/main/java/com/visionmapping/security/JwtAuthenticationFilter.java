@@ -48,6 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
     private final ObjectMapper objectMapper;
+    private final PermissionService permissions;
 
     @Override
     protected void doFilterInternal(
@@ -66,7 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             JwtService.AccessToken token = jwtService.parse(authHeader.substring(7));
             Optional<AppUserPrincipal> principal = authSessionService.activeSession(token.sessionId())
                     .filter(session -> belongsTo(session, token.email()))
-                    .map(session -> new AppUserPrincipal(session.getUser(), session.getId()))
+                    .map(session -> new AppUserPrincipal(session.getUser(), session.getId(), permissions.permissionsOf(session.getUser())))
                     .filter(AppUserPrincipal::isEnabled);
             if (principal.isPresent()) {
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

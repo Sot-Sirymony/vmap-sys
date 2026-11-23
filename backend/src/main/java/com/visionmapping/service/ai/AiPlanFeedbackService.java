@@ -13,7 +13,8 @@ import com.visionmapping.entity.VisionStep;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
 import com.visionmapping.repository.AiUsageLogRepository;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.service.GoalService;
 import com.visionmapping.service.TaskItemService;
@@ -66,6 +67,7 @@ public class AiPlanFeedbackService {
     private final com.visionmapping.service.PartnerService partnerService;
     private final com.visionmapping.service.ObstacleService obstacleService;
     private final Clock clock;
+    private final PermissionService permissions;
 
     /** Records how many items an answer suggested and returns its id for the client. */
     @Transactional
@@ -221,7 +223,7 @@ public class AiPlanFeedbackService {
     /** PB-FR-36: per plan builder feature over the last days, for admins only. */
     @Transactional(readOnly = true)
     public PlanMetrics metrics(int days) {
-        Roles.requireAdmin(lookup.currentUser(), "Only an administrator can see AI plan builder metrics.");
+        permissions.require(lookup.currentUser(), Permission.VIEW_AI_REPORTS, "Only an administrator can see AI plan builder metrics.");
         int period = Math.max(1, Math.min(days, MAX_METRIC_DAYS));
         Instant from = Instant.now(clock).minus(Duration.ofDays(period));
         Object[] finished = finishedPlans.totalsSince(from).get(0);

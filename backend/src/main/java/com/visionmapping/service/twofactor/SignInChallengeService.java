@@ -138,7 +138,7 @@ public class SignInChallengeService {
         }
         boolean remember = challenge.isRememberMe();
         SignInOrigin origin = challenge.getOrigin();
-        boolean admin = user.getRole() == UserRole.ADMIN;
+        boolean admin = user.hasRole(UserRole.ADMIN);
         if (challengeRepository.complete(challenge.getId(), clock.instant()) != 1) {
             throw TwoFactorException.ended();
         }

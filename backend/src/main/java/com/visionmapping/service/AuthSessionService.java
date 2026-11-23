@@ -63,6 +63,8 @@ public class AuthSessionService {
 
     private final AuthSessionRepository repository;
     private final JwtService jwtService;
+    private final com.visionmapping.security.PermissionService permissions;
+    private final com.visionmapping.repository.AppUserRepository users;
     private final SecurityEventService securityEvents;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -74,6 +76,8 @@ public class AuthSessionService {
     public AuthSessionService(
             AuthSessionRepository repository,
             JwtService jwtService,
+            com.visionmapping.security.PermissionService permissions,
+            com.visionmapping.repository.AppUserRepository users,
             SecurityEventService securityEvents,
             Clock clock,
             @Value("${app.security.session.remember-me-days:30}") long rememberMeDays,
@@ -82,6 +86,8 @@ public class AuthSessionService {
             @Value("${app.security.session.idle-days:14}") long idleDays) {
         this.repository = repository;
         this.jwtService = jwtService;
+        this.permissions = permissions;
+        this.users = users;
         this.securityEvents = securityEvents;
         this.clock = clock;
         this.rememberedLifetime = Duration.ofDays(rememberMeDays);
@@ -91,7 +97,12 @@ public class AuthSessionService {
     }
 
     /** The two tokens a sign-in or refresh hands back. */
-    public record Tokens(String accessToken, String refreshToken, long expiresInSeconds, AppUser user) {
+    public record Tokens(String accessToken, String refreshToken, long expiresInSeconds, AppUser user,
+                         java.util.List<String> permissions) {
+
+        public Tokens {
+            permissions = com.visionmapping.util.Copies.list(permissions);
+        }
     }
 
     /** Opens a session for a user who has just proved who they are. */
@@ -106,6 +117,9 @@ public class AuthSessionService {
                 .expiresAt(now.plus(rememberMe ? rememberedLifetime : sessionLifetime))
                 .lastUsedAt(now)
                 .build());
+        // V23 (UM-FR-17): every way of signing in opens a session here.
+        users.recordSignIn(user.getId(), now);
+        user.setLastSignInAt(now);
         return tokens(session, refreshToken);
     }
 
@@ -224,7 +238,9 @@ public class AuthSessionService {
     private Tokens tokens(AuthSession session, String refreshToken) {
         AppUser user = session.getUser();
         String access = jwtService.generateToken(new AppUserPrincipal(user, session.getId()), session.getId());
-        return new Tokens(access, refreshToken, jwtService.expiresInSeconds(), user);
+        // V23 (UM-FR-05): the page shows menus and buttons by permission.
+        return new Tokens(access, refreshToken, jwtService.expiresInSeconds(), user,
+                permissions.permissionsOf(user).stream().sorted().map(Enum::name).toList());
     }
 
     private String newToken() {

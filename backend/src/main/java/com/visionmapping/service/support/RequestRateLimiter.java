@@ -44,7 +44,11 @@ public class RequestRateLimiter {
         TWO_FACTOR_VERIFY("Too many sign-in code attempts from this network. Try again in a few minutes."),
         TWO_FACTOR_RESEND("Wait a minute before asking for a new code."),
         // V21 Phase 5 (threat model, sign-in D): sign-in code emails per account, so a known password cannot flood a mailbox.
-        TWO_FACTOR_EMAIL("Too many sign-in codes were emailed. Use a recovery code or try again later.");
+        TWO_FACTOR_EMAIL("Too many sign-in codes were emailed. Use a recovery code or try again later."),
+        // V23 UM-FR-44: role changes, blocks and other user management, per person.
+        USER_ADMIN("Too many account changes in a short time. Wait a few minutes and try again."),
+        // V23 phase 5: checking and accepting invitation links, per network.
+        INVITATION("Too many invitation attempts from this network. Try again in a few minutes.");
 
         private final String message;
 
@@ -84,7 +88,9 @@ public class RequestRateLimiter {
             @Value("${app.security.rate-limit.two-factor-verify-per-ip:30}") int twoFactorVerifyLimit,
             @Value("${app.security.rate-limit.two-factor-verify-window-minutes:15}") long twoFactorVerifyWindow,
             @Value("${app.security.rate-limit.two-factor-email-per-user:5}") int twoFactorEmailLimit,
-            @Value("${app.security.rate-limit.two-factor-email-window-minutes:60}") long twoFactorEmailWindow) {
+            @Value("${app.security.rate-limit.two-factor-email-window-minutes:60}") long twoFactorEmailWindow,
+            @Value("${app.security.rate-limit.user-admin-per-user:30}") int userAdminLimit,
+            @Value("${app.security.rate-limit.user-admin-window-minutes:10}") long userAdminWindow) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.sharedCounters = Objects.requireNonNull(sharedCounters, "sharedCounters");
         this.limits = Map.ofEntries(
@@ -99,7 +105,9 @@ public class RequestRateLimiter {
                 Map.entry(Action.GOOGLE_SIGN_IN, new Limit(googleLimit, Duration.ofMinutes(googleWindow))),
                 Map.entry(Action.TWO_FACTOR_VERIFY, new Limit(twoFactorVerifyLimit, Duration.ofMinutes(twoFactorVerifyWindow))),
                 Map.entry(Action.TWO_FACTOR_RESEND, new Limit(1, Duration.ofMinutes(1))),
-                Map.entry(Action.TWO_FACTOR_EMAIL, new Limit(twoFactorEmailLimit, Duration.ofMinutes(twoFactorEmailWindow))));
+                Map.entry(Action.TWO_FACTOR_EMAIL, new Limit(twoFactorEmailLimit, Duration.ofMinutes(twoFactorEmailWindow))),
+                Map.entry(Action.USER_ADMIN, new Limit(userAdminLimit, Duration.ofMinutes(userAdminWindow))),
+                Map.entry(Action.INVITATION, new Limit(20, Duration.ofMinutes(15))));
     }
 
     /**

@@ -54,6 +54,8 @@ export type AuthResponse = {
   fullName: string;
   email: string;
   role: string;
+  /** V23 (UM-FR-05): the role's permission keys. Optional for responses that predate V23. */
+  permissions?: string[];
   /**
    * FR-39.6: the saved appearance travels with the session, so the first paint
    * after signing in is already the user's own theme rather than the default
@@ -78,6 +80,8 @@ export type AuthUser = {
   fullName: string;
   email: string;
   role: string;
+  /** V23: absent in sessions saved before V23 (see utils/permissions). */
+  permissions?: string[];
 };
 
 export type AuthState = {

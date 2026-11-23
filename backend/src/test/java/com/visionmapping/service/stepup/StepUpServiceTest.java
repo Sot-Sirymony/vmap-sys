@@ -56,7 +56,8 @@ class StepUpServiceTest {
 
     private StepUpService service(boolean enabled) {
         return new StepUpService(repository, sessions, mailer, events, mock(RequestRateLimiter.class), lookup, clock, enabled, "secret",
-                mock(com.visionmapping.service.twofactor.AuthenticatorCodeCheck.class));
+                mock(com.visionmapping.service.twofactor.AuthenticatorCodeCheck.class),
+                com.visionmapping.security.PermissionService.withBuiltInRoles());
     }
 
     @BeforeEach

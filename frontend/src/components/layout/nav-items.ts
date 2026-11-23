@@ -1,3 +1,5 @@
+import type { AuthUser } from '../../types/auth';
+import { can, type Permission } from '../../utils/permissions';
 import {
   BookOpen,
   Bot,
@@ -40,8 +42,8 @@ export type NavItem = {
   to: string;
   label: string;
   icon: LucideIcon;
-  /** V9: shown only to these roles; every role sees an item without it. */
-  roles?: string[];
+  /** V23 (UM-FR-05): shown only with this permission; everyone sees an item without it. */
+  permission?: Permission;
 };
 
 export type NavGroup = {
@@ -129,22 +131,22 @@ export const navGroups: NavGroup[] = [
       { to: '/settings/security', label: tr('Security'), icon: KeyRound },
       { to: '/settings/account', label: tr('Account'), icon: UserCog },
       // V9: the coach workspace and cohort management.
-      { to: '/coach', label: tr('Coaching'), icon: Users, roles: ['COACH', 'ADMIN'] },
-      { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, roles: ['ADMIN'] },
-      { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, roles: ['ADMIN'] },
+      { to: '/coach', label: tr('Coaching'), icon: Users, permission: 'COACH_COHORTS' },
+      { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, permission: 'MANAGE_COHORTS' },
+      { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, permission: 'MANAGE_AI_SETTINGS' },
       // V10 (SEC-09-05): the read-only security log.
-      { to: '/settings/security-log', label: tr('Security log'), icon: ShieldAlert, roles: ['ADMIN'] },
+      { to: '/settings/security-log', label: tr('Security log'), icon: ShieldAlert, permission: 'VIEW_SECURITY_LOG' },
       // V21 (TF-FR-36): who uses two-step sign-in, and resets.
-      { to: '/settings/two-factor', label: tr('Two-step sign-in'), icon: ShieldCheck, roles: ['ADMIN'] },
+      { to: '/settings/two-factor', label: tr('Two-step sign-in'), icon: ShieldCheck, permission: 'RESET_TWO_FACTOR' },
     ],
   },
 ];
 
-/** The nav groups this role may see. */
-export function navGroupsFor(role: string | undefined): NavGroup[] {
+/** The nav groups this person may see (V23: by permission, not role name). */
+export function navGroupsFor(user: AuthUser | null | undefined): NavGroup[] {
   return navGroups.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.roles || (role !== undefined && item.roles.includes(role))),
+    items: group.items.filter((item) => !item.permission || can(user, item.permission)),
   }));
 }
 

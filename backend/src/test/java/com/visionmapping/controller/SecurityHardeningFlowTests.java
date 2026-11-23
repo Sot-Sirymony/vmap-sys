@@ -69,9 +69,13 @@ class SecurityHardeningFlowTests {
         String email = register();
         setStatus(email, UserStatus.DISABLED);
 
+        // V23 (UM-FR-32): with the right password the person is told the account is blocked ...
         login(email, PASSWORD, ip)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("This account is blocked. Contact your program admin."));
+        // ... but a wrong password gets the usual answer, so the block reveals nothing to a guesser.
+        login(email, "Wrong-Password-Here-1", uniqueIp())
                 .andExpect(status().isUnauthorized())
-                // Same answer as a wrong password: the status is not revealed.
                 .andExpect(jsonPath("$.message").value("Invalid email or password."));
     }
 

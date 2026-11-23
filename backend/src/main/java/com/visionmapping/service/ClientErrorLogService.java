@@ -6,7 +6,8 @@ import com.visionmapping.dto.response.ClientErrorLogResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.ClientErrorLog;
 import com.visionmapping.repository.ClientErrorLogRepository;
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.service.support.EntityLookup;
 import java.time.Clock;
 import java.time.Duration;
@@ -39,6 +40,7 @@ public class ClientErrorLogService {
     private final ClientErrorLogRepository repository;
     private final EntityLookup lookup;
     private final Clock clock;
+    private final PermissionService permissions;
 
     /** Records one failure. Over the hourly limit it is dropped quietly: the log is a help, never a blocker. */
     @Transactional
@@ -77,7 +79,7 @@ public class ClientErrorLogService {
     @Transactional(readOnly = true)
     public ClientErrorLogPageResponse search(@Nullable String page, @Nullable Integer status, int pageNumber, int size) {
         AppUser user = lookup.currentUser();
-        Roles.requireAdmin(user, "Only an administrator can read the failed request log.");
+        permissions.require(user, Permission.HANDLE_SUPPORT, "Only an administrator can read the failed request log.");
         int pageSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
         Page<ClientErrorLog> found = repository.search(blankToNull(page), status, PageRequest.of(Math.max(0, pageNumber), pageSize));
         return new ClientErrorLogPageResponse(

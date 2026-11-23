@@ -10,6 +10,7 @@ import { getTwoFactorStatus, skipTwoFactorSetup } from '../../api/twoFactorApi';
 import { useAuth } from '../../context/AuthContext';
 import { tr } from '../../i18n/translate';
 import { Button } from '../common/Button';
+import { isPrivileged } from '../../utils/permissions';
 
 const SECURITY_PAGE = '/settings/security';
 const SKIPPED_KEY = 'vms.twoFactorSetupSkipped';
@@ -39,7 +40,7 @@ export function TwoFactorRequirementGate() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [dueAt, setDueAt] = useState<string | null>(null);
-  const isStaff = user?.role === 'COACH' || user?.role === 'ADMIN';
+  const isStaff = isPrivileged(user);
 
   useEffect(() => {
     const open = () => navigate(SECURITY_PAGE, { state: { twoFactorRequired: true } });

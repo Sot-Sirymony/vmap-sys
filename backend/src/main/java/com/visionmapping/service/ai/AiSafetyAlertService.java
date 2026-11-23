@@ -1,6 +1,7 @@
 package com.visionmapping.service.ai;
 
-import com.visionmapping.security.Roles;
+import com.visionmapping.security.Permission;
+import com.visionmapping.security.PermissionService;
 import com.visionmapping.dto.response.AiSafetyAlertResponse;
 import com.visionmapping.entity.AiSafetyAlert;
 import com.visionmapping.entity.AppUser;
@@ -35,6 +36,7 @@ public class AiSafetyAlertService {
     private final AiSafetyAlertRepository repository;
     private final AppUserRepository appUserRepository;
     private final Clock clock;
+    private final PermissionService permissions;
 
     /** Returns true when a coach was alerted, false when it went to the administrators. */
     public boolean raise(Long participantId) {
@@ -55,7 +57,7 @@ public class AiSafetyAlertService {
     public List<AiSafetyAlertResponse> mine() {
         AppUser user = requireCoach();
         List<AiSafetyAlert> alerts = new ArrayList<>(repository.findByCoach_IdOrderByCreatedAtDesc(user.getId()));
-        if (Roles.isAdmin(user)) {
+        if (permissions.has(user, Permission.MANAGE_COHORTS)) {
             alerts.addAll(repository.findByCoachIsNullOrderByCreatedAtDesc());
         }
         return alerts.stream()
@@ -68,7 +70,7 @@ public class AiSafetyAlertService {
         AppUser user = requireCoach();
         AiSafetyAlert alert = repository.findById(id)
                 .filter(found -> found.getCoach() == null
-                        ? Roles.isAdmin(user)
+                        ? permissions.has(user, Permission.MANAGE_COHORTS)
                         : found.getCoach().getId().equals(user.getId()))
                 .orElseThrow(() -> new ResourceNotFoundException("Alert not found: " + id));
         if (alert.getAcknowledgedAt() == null) {
@@ -86,6 +88,6 @@ public class AiSafetyAlertService {
     }
 
     private AppUser requireCoach() {
-        return Roles.requireCoach(lookup.currentUser(), "Only a coach can see safety alerts.");
+        return permissions.require(lookup.currentUser(), Permission.COACH_COHORTS, "Only a coach can see safety alerts.");
     }
 }

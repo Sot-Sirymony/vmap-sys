@@ -55,7 +55,7 @@ class GoogleSignInOutcomeFlowTests extends GoogleSignInTestSupport {
                 .containsEntry("from", "/dreams?tab=all");
         AppUser user = appUserRepository.findByEmail(email.toLowerCase()).orElseThrow();
         assertThat(user.getFullName()).isEqualTo("New Person");
-        assertThat(user.getRole()).isEqualTo(UserRole.USER);
+        assertThat(user.getRole()).isEqualTo("USER");
         assertThat(user.isPasswordSet()).as("GA-FR-25").isFalse();
         assertThat(user.getPasswordHash()).startsWith("$2");
         ExternalIdentity identity = identityRepository.findByProviderAndSubject(IdentityProvider.GOOGLE, sub).orElseThrow();
@@ -133,6 +133,30 @@ class GoogleSignInOutcomeFlowTests extends GoogleSignInTestSupport {
         Map<String, String> next = fragment(googleAnswers(true, "/", sub, email, "Someone"));
         assertThat(next).containsEntry("result", "signed-in");
         assertThat(read(exchange(next.get("code")).andExpect(status().isOk())).get("userId").asLong()).isEqualTo(userId);
+    }
+
+    @Autowired
+    private com.visionmapping.service.admin.InvitationService invitationService;
+
+    @Test
+    void umFr26_anInvitedPersonCompletesTheInvitationWithGoogleOnTheSameAddress() throws Exception {
+        String email = unique("invited-google") + "@example.com";
+        AppUser inviter = appUserRepository.save(AppUser.builder().fullName("Inviter").email(unique("inviter") + "@example.com")
+                .passwordHash("$2a$10$x").role(UserRole.ADMIN).status(com.visionmapping.entity.enums.UserStatus.ACTIVE).build());
+        AppUser invited = appUserRepository.save(AppUser.builder().fullName("Invited").email(email).passwordHash("$2a$10$x")
+                .passwordSet(false).role(UserRole.USER).status(com.visionmapping.entity.enums.UserStatus.ACTIVE).build());
+        invitationService.issue(invited, inviter);
+        String sub = sub();
+
+        Map<String, String> result = fragment(googleAnswers(true, "/", sub, email, "Invited"));
+
+        assertThat(result).containsEntry("result", "signed-in");
+        assertThat(identityRepository.findByProviderAndSubject(IdentityProvider.GOOGLE, sub).orElseThrow().getUser().getId())
+                .isEqualTo(invited.getId());
+        assertThat(events(invited.getId(), "INVITATION_ACCEPTED")).containsExactly("google");
+        assertThat(jdbcTemplate.queryForObject("select count(*) from user_invitations where user_id = ? and used_at is null",
+                Integer.class, invited.getId())).as("the emailed link no longer works").isZero();
+        assertThat(read(exchange(result.get("code")).andExpect(status().isOk())).get("userId").asLong()).isEqualTo(invited.getId());
     }
 
     @Test

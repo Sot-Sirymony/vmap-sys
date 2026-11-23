@@ -2,6 +2,8 @@ package com.visionmapping.config;
 
 import com.visionmapping.security.AppUserDetailsService;
 import com.visionmapping.security.PasswordHashUpgrader;
+import com.visionmapping.security.Permission;
+import org.springframework.security.authentication.DisabledException;
 import com.visionmapping.service.stepup.StepUpService;
 import com.visionmapping.security.JwtAuthenticationFilter;
 import com.visionmapping.security.RestAccessDeniedHandler;
@@ -57,6 +59,8 @@ public class SecurityConfig {
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()";
     static final long HSTS_MAX_AGE_SECONDS = 31_536_000L;
     static final int MIN_PRODUCTION_BCRYPT_COST = 12;
+    static final String[] ADMIN_AREA_AUTHORITIES = Arrays.stream(Permission.values())
+            .filter(Permission::administrative).map(Permission::authority).toArray(String[]::new);
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AppUserDetailsService appUserDetailsService;
@@ -139,6 +143,9 @@ public class SecurityConfig {
                                 // and single-use.
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
+                                // V23 (UM-FR-24): the invitation link is the only credential the person has yet.
+                                "/api/auth/invitation/check",
+                                "/api/auth/invitation/accept",
                                 // V14 (BRD 14.0.0, Appendix B): Google sign-in. The
                                 // person is not signed in yet; state, PKCE and the
                                 // one-time codes are the keys.
@@ -165,8 +172,10 @@ public class SecurityConfig {
                         // controller or request-body validation runs. Services check
                         // again through Roles. The role comes from the database on
                         // every request, so a role change applies at once.
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/coach/**").hasAnyRole("COACH", "ADMIN")
+                        // V23 (D-23-1): any administrative permission opens /api/admin/**;
+                        // each service then asks for the exact one it needs.
+                        .requestMatchers("/api/admin/**").hasAnyAuthority(ADMIN_AREA_AUTHORITIES)
+                        .requestMatchers("/api/coach/**").hasAuthority(Permission.COACH_COHORTS.authority())
                         .anyRequest().authenticated()
                 )
                 // Without these, Spring's default handling answers an anonymous
@@ -190,6 +199,14 @@ public class SecurityConfig {
         provider.setPasswordEncoder(passwordEncoder());
         // SEC-04-02: a hash made at a lower cost is replaced at the next sign-in.
         provider.setUserDetailsPasswordService(passwordHashUpgrader);
+        // V23 (UM-FR-32): a blocked account is refused only after its password matched,
+        // so a wrong password still gets the usual answer and the block reveals nothing.
+        provider.setPreAuthenticationChecks(user -> { });
+        provider.setPostAuthenticationChecks(user -> {
+            if (!user.isEnabled()) {
+                throw new DisabledException("blocked");
+            }
+        });
         return provider;
     }
 
