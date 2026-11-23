@@ -234,116 +234,13 @@ export const moonshotViolet = '#7c3aed';
 export const moonshotVioletDeep = '#6b21a8';
 export const moonshotTint = '#f3edfd';
 
-// Dashboard chart palettes. FR-25.3 (audit V-02): the partner pipeline chart
-// now draws each stage in exactly the color its status badge uses — the
-// one-source-of-truth rule beats per-chart hue tuning. CONTACTED and ACTIVE
-// share the "work is moving" blue by design; the legend's counts tell them
-// apart, and WAITING is the same colorblind-safe indigo as everywhere else.
-export const partnerPipelineColors = {
-  TO_CONTACT: statusColors.TO_CONTACT,
-  CONTACTED: statusColors.CONTACTED,
-  AGREED: statusColors.AGREED,
-  ACTIVE: statusColors.ACTIVE,
-  WAITING: statusColors.WAITING,
-  DECLINED: statusColors.DECLINED,
-  COMPLETED: statusColors.COMPLETED,
-} as const;
+// BRD 25: the dashboard's pie palette (FR-41), green heatmap ramp, blue chart
+// ramp and partner pipeline colours were removed with the charts that used
+// them. Dashboard charts now take their colours from design/tokens.ts
+// (`chartCategorical`, `heatScale`, the status families) through
+// components/dashboard/charts/chartTheme.tsx.
 
-/**
- * FR-41 — the categorical pie palette.
- *
- * Four distinct hues for charts whose categories carry **no** inherent meaning
- * (Vision Areas, obstacle types). It is deliberately NOT used for status or
- * priority charts: those encode meaning in colour, and BR-14 forbids a slice
- * that could read as "Completed" when it means "Health".
- *
- * Mode-specific, because the labels sit *on* the slices. Light mode uses white
- * labels, so the slices must be dark enough to carry them; dark mode uses near
- * black labels, so the slices must be light. A single palette cannot do both —
- * the same reason the accents ship two ramps.
- *
- * Every value was searched rather than picked, against four simultaneous
- * constraints: the label clears 4.5:1 on its slice, the slice clears 3:1 on its
- * own card, no two slices collapse into each other under simulated colour
- * vision deficiency, and none is within ΔE 12 of a status or priority hue.
- *
- * Two of those constraints are worth knowing about, because they explain why
- * this looks deeper than a typical marketing palette:
- *   - White-on-slice is expensive. A bright gold cannot carry white text at any
- *     size (#F2D56F measures 1.45:1), so the gold here is a dark ochre.
- *   - Gold and coral collapse into each other for a deuteranope. Lighter corals
- *     measured ΔE 4.8 against this gold, so the coral is a deep brick — the same
- *     problem the status palette solved by moving WAITING off the warm ramp.
- *
- * Slot 0 used to be a green, and that was the bug this palette shipped with: the
- * separation floor was measured as CIELAB ΔE against a crude deuteranopia
- * matrix, which is far more forgiving than what people actually see. Re-measured
- * in OKLab against Machado–Oliveira–Fernandes 2009, green↔gold came out at ΔE
- * 5.4 for a protanope and only 12.6 for full colour vision — two slices of the
- * same pie that nobody could reliably tell apart. In dark mode the mint was
- * worse still, colliding with both the gold and the sky. Green is the hue that
- * cannot coexist with a gold under CVD, so slot 0 is now a magenta, and every
- * pair in every one of the four variants clears protan/deutan ΔE 8 and the
- * normal-vision floor of 15. `theme.test.ts` enforces exactly that.
- *
- * Slot order is fixed and identical across the four variants, so a category
- * keeps its identity when the user switches mode or turns on high contrast.
- */
-export const categoricalPieColors = {
-  light: ['#ae3078', '#8a6d00', '#2e6b9e', '#6e1b16'],
-  dark: ['#d254ae', '#eed492', '#8cc3e8', '#e57a63'],
-  // FR-39.3: the accessibility mode reaches charts too. Pushed to the extremes
-  // of each hue so the slices separate maximally against pure white / black.
-  // These two carried collisions of their own that the old ΔE floor missed —
-  // gold↔brick at ΔE 13.1 in light, sky↔gold at 11.3 in dark — so they are
-  // re-stepped rather than merely re-seeded.
-  highContrastLight: ['#a02a94', '#644e08', '#123a5c', '#5c1410'],
-  highContrastDark: ['#eeb4f8', '#ccd62c', '#0098e8', '#fa5e00'],
-} as const;
-
-/**
- * How many categories the pie palette can name. A chart with more categories
- * than this must roll the tail into an "Other" slice rather than reach for a
- * fifth colour — see `CategoryBreakdownChart`.
- */
-export const CATEGORICAL_PIE_SLOTS = categoricalPieColors.light.length;
-
-/** The label colour that sits on a slice — white in light mode, near-black in dark. */
-export const pieLabelColor = { light: '#ffffff', dark: '#1b1a19' } as const;
-
-/**
- * The pie palette for the active mode, honouring high contrast. Index by
- * position.
- *
- * It deliberately does NOT cycle. Wrapping used to be the documented behaviour,
- * and it meant a sixth vision area was painted the same colour as the first —
- * and at exactly five categories the repeat landed on the slice adjacent to it,
- * so with `stroke="none"` the two merged into one wedge with no boundary. A
- * repeated fill is a false identity claim, so an out-of-range slot returns the
- * last colour and callers are expected never to ask: `CATEGORICAL_PIE_SLOTS`
- * is the cap, and charts fold anything beyond it into a single "Other" slice.
- */
-export function categoricalPieColor(index: number, mode: 'light' | 'dark' = 'light', highContrast = false): string {
-  const highContrastKey = mode === 'dark' ? 'highContrastDark' : 'highContrastLight';
-  const palette = categoricalPieColors[highContrast ? highContrastKey : mode];
-  return palette[Math.min(Math.abs(index), palette.length - 1)];
-}
-
-// FR-41 removed `obstacleTypeColors`, the blue depth ramp the obstacle chart
-// used to index by type. It was a static map, so it would have quietly bypassed
-// the mode/high-contrast resolvers every other chart fill now goes through —
-// the same trap the dead enum palettes fell into. Obstacle types are
-// non-semantic categories, so they use `categoricalPieColor` instead.
-
-// Review heatmap intensity ramp (FR-25.3): neutral stroke for "none", then
-// the Fluent green family up to the same Success green the status palette
-// uses for Completed — intensity reads as "increasingly done".
-export const heatmapLevelColors = ['#e1e1e1', '#dff0df', '#6bbf6c', '#107c10', '#0b5a0b'] as const;
-
-// "Depth, applied to data": Fluent's blue ramp for charts whose categories
-// carry no inherent meaning, dark → light, plus the brand blue for
-// single-series charts.
-export const chartBlueRamp = ['#005a9e', '#0078d4', '#2b88d8', '#71afe5', '#c7e0f4', '#deecf9'] as const;
+// The brand blue for single-series charts (the reports still use it).
 export const chartPrimary = BLUE_MOVING;
 
 // FR-29.5: per-Vision-Area identity dots. A fixed mini-palette of Fluent

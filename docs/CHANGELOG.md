@@ -93,8 +93,15 @@ Frontend: 166 files, 1409 tests pass; the build passes.
 - A Dashboard section in [`USER_GUIDE.md`](USER_GUIDE.md), including what each status colour and icon means.
 - The dashboard fields in [`API.md`](API.md), including `nextUpTasks`.
 
-Still open: approval to remove the V24 dashboard components the page no longer uses, and the area target ticks
-(Q-25-2), which need a server calculation.
+**Cleanup:**
+- Removed the V24 dashboard components the redesign no longer uses: `DashboardSummary`, `CategoryBreakdownChart`,
+  `VisionAreaProgressChart`, `PartnerPipelineChart`, and `categoryKeys.ts`.
+- Removed the theme palettes only those used (the pie palette, green heatmap ramp, blue chart ramp and partner
+  pipeline colours), with their tests. Charts now use the V25 tokens.
+- `DashboardCard` stays, because the report summary uses it.
+- Frontend: 165 files, 1382 tests pass; the build passes.
+
+Still open: the area target ticks (Q-25-2), which need a server calculation.
 
 ---
 

@@ -19,7 +19,6 @@ import Skeleton from '@mui/material/Skeleton';
  */
 
 type PortfolioCharts = typeof import('./PortfolioCharts');
-type CategoryBreakdown = typeof import('../CategoryBreakdownChart');
 
 function ChartPlaceholder() {
   return (
@@ -31,12 +30,6 @@ function ChartPlaceholder() {
 
 const ProgressTrendChartLazy = lazy(() =>
   import('./PortfolioCharts').then((m) => ({ default: m.ProgressTrendChart })));
-const VisionAreaProgressChartLazy = lazy(() =>
-  import('./PortfolioCharts').then((m) => ({ default: m.VisionAreaProgressChart })));
-const PartnerPipelineChartLazy = lazy(() =>
-  import('./PortfolioCharts').then((m) => ({ default: m.PartnerPipelineChart })));
-const CategoryBreakdownChartLazy = lazy(() =>
-  import('../CategoryBreakdownChart').then((m) => ({ default: m.CategoryBreakdownChart })));
 
 export function ProgressTrendChart(props: ComponentProps<PortfolioCharts['ProgressTrendChart']>) {
   return (
@@ -46,27 +39,5 @@ export function ProgressTrendChart(props: ComponentProps<PortfolioCharts['Progre
   );
 }
 
-export function VisionAreaProgressChart(props: ComponentProps<PortfolioCharts['VisionAreaProgressChart']>) {
-  return (
-    <Suspense fallback={<ChartPlaceholder />}>
-      <VisionAreaProgressChartLazy {...props} />
-    </Suspense>
-  );
-}
 
-export function PartnerPipelineChart(props: ComponentProps<PortfolioCharts['PartnerPipelineChart']>) {
-  return (
-    <Suspense fallback={<ChartPlaceholder />}>
-      <PartnerPipelineChartLazy {...props} />
-    </Suspense>
-  );
-}
 
-/** Its own card, so the placeholder stands in for the whole card's body. */
-export function CategoryBreakdownChart(props: ComponentProps<CategoryBreakdown['CategoryBreakdownChart']>) {
-  return (
-    <Suspense fallback={<Box sx={{ minHeight: 280 }}><ChartPlaceholder /></Box>}>
-      <CategoryBreakdownChartLazy {...props} />
-    </Suspense>
-  );
-}

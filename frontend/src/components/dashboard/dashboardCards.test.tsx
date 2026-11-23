@@ -5,9 +5,8 @@ import { getProgressMetrics } from '../../api/accountApi';
 import { archiveGratitudeEntry, createGratitudeEntry } from '../../api/gratitudeEntryApi';
 import { aDream, aGoal, aStep, aTask, aVisionArea } from '../../test/builders';
 import { renderPage } from '../../test/render';
-import type { DashboardAttention, DashboardSummary as SummaryData, GratitudeEntry } from '../../types/vision';
+import type { DashboardAttention, GratitudeEntry } from '../../types/vision';
 import { AttentionPanel } from './AttentionPanel';
-import { DashboardSummary } from './DashboardSummary';
 import { EnergyBudgetCard } from './EnergyBudgetCard';
 import { GettingStarted } from './GettingStarted';
 import { GratitudeCard } from './GratitudeCard';
@@ -16,35 +15,6 @@ import { ProgressMetricsCard } from './ProgressMetricsCard';
 vi.mock('../../api/accountApi');
 vi.mock('../../api/gratitudeEntryApi');
 
-const summary = {
-  totalVisionAreas: 3, activeDreams: 4, activeGoals: 6, activeTasks: 12, completedTasks: 9, overdueTasks: 2, blockedTasks: 1,
-  averageProgress: 41.6, tasksDueThisWeek: 5, tasksDueInPeriod: 5, completedTasksInPeriod: 7,
-} as SummaryData;
-
-const card = (label: string) => screen.getByText(label).closest('a, .MuiCard-root, [class*="MuiPaper"]') as HTMLElement;
-
-describe('DashboardSummary (CLAUDE.md page 1)', () => {
-  it('shows each summary figure, with task pressure linked to the matching filtered list', () => {
-    renderPage(<DashboardSummary summary={summary} periodLabel="this week" dueInPeriodLink="/tasks?due=week" />);
-    expect(within(card('Overdue Tasks')).getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Overdue Tasks').closest('a')).toHaveAttribute('href', '/tasks?overdue=true');
-    expect(screen.getByText('Blocked Tasks').closest('a')).toHaveAttribute('href', '/tasks?status=BLOCKED');
-    expect(screen.getByText('Due this week').closest('a')).toHaveAttribute('href', '/tasks?due=week');
-    expect(within(card('Vision Areas')).getByText('3')).toBeInTheDocument();
-    expect(within(card('Active Dreams')).getByText('4')).toBeInTheDocument();
-    expect(within(card('Active Goals')).getByText('6')).toBeInTheDocument();
-    expect(within(card('Open Tasks')).getByText('12')).toBeInTheDocument();
-    expect(within(card('Completed this week')).getByText('7')).toBeInTheDocument();
-    expect(within(card('Average Progress')).getByText('42%')).toBeInTheDocument();
-  });
-
-  it('keeps the chosen vision area in every link, and shows zeros before data arrives', () => {
-    renderPage(<DashboardSummary summary={null} periodLabel="this week" dueInPeriodLink="/tasks" visionAreaId="2" />);
-    expect(screen.getByText('Overdue Tasks').closest('a')).toHaveAttribute('href', '/tasks?overdue=true&visionAreaId=2');
-    expect(screen.getByText('Active Dreams').closest('a')).toHaveAttribute('href', '/dreams?status=ACTIVE&visionAreaId=2');
-    expect(within(card('Average Progress')).getByText('0%')).toBeInTheDocument();
-  });
-});
 
 describe('AttentionPanel', () => {
   const empty: DashboardAttention = {
