@@ -17,7 +17,7 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
-## 26.0.0 — Interface styles: Modern, Classic, Liquid Glass (phases 1–6 built; phase 7 to do)
+## 26.0.0 — Interface styles: Modern, Classic, Liquid Glass (all 7 phases built; awaiting deploy, UAT, snapshot approval and the Khmer review)
 
 BRD [`VMS_BRD_V26.0.0.md`](VMS_BRD_V26.0.0.md). One style token layer replaces the four ways styles were applied
 (D-26-1). Open questions Q-26-2 to Q-26-4 are built as proposed (KPI cards stay solid; Classic does not change
@@ -61,7 +61,22 @@ per-browser Classic-to-Modern switch and its `vms-style-rebaseline` flag are rem
 every browser. With no migrated accounts there is no one-time notice. (Local database after V93: 69 CLASSIC/DEFAULT,
 3 MODERN/CHOSEN, 2 LIQUID_GLASS/CHOSEN.)
 
-**Not yet built:** phase 7 (Playwright snapshots, axe matrix, blur-layer count, `UAT_V26.md`, user guide).
+**Follow-ups to the BRD (after the first push):** tooltips and toasts are floating layers (raised solid, glass in
+Liquid Glass); the header sits on the canvas at the top and takes the floating material once content scrolls under
+it (Classic stays solid); the sidebar is sunken in Modern (`--style-sidebar-bg`); heatmap cells use
+`--style-heat-radius` (3 / 1 / 4px); Classic's tighter layout reaches the page gutter, section gaps, metric and list
+cards and MUI `CardContent` padding.
+
+**Phase 7 (verification):** `frontend/e2e/interface-styles.e2e.ts` (37 checks): snapshots of Dashboard, Tasks,
+Vision Map and a dialog × 3 styles × light/dark × English/Khmer, plus Khmer at 360px (54 baselines); axe on all of
+them, on violet and teal accents, and on Liquid Glass over a dark and a bright background image; at most 4 blurred
+layers and none inside a scrolling container; glass solid under `prefers-contrast: more` and High contrast; Classic
+and Modern header anatomy; main-thread work per scrolled frame at 4× CPU throttle (about 1 ms). The axe matrix found
+two accessibility faults, now fixed for every style: unselected toggle buttons were 4.49:1 on the canvas (now the
+secondary text colour), and the sidebar search button's spoken name did not match its visible text (WCAG 2.5.3; it
+now reads "Search", translated, with `aria-keyshortcuts`). The shared e2e seed was fixed (obstacles must sit on a
+step since V17), and account cleanup no longer fails a run when deletion needs a step-up code. `UAT_V26.md` and the
+user guide's Interface style section (now covering Liquid Glass) are added.
 
 ---
 

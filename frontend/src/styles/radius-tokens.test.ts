@@ -31,7 +31,7 @@ describe('radius tokens (FR-48)', () => {
       // Token declarations like `--radius-md: 8px;` don't match the property
       // regex above, so anything matched here is a real style rule.
       const value = match[1].trim();
-      if (value.startsWith('var(--radius') || ALLOWED.has(value)) {
+      if (value.startsWith('var(--radius') || value.startsWith('var(--style-radius') || ALLOWED.has(value)) {
         return;
       }
       offenders.push(`line ${index + 1}: ${line.trim()}`);
@@ -51,7 +51,7 @@ describe('radius tokens (FR-48)', () => {
         return;
       }
       const value = match[1].trim();
-      if (value.includes('var(--shadow') || value.startsWith('inset') || value === 'none') {
+      if (value.includes('var(--shadow') || value.includes('var(--style-shadow') || value.includes('var(--style-highlight') || value.startsWith('inset') || value === 'none') {
         return;
       }
       offenders.push(`line ${index + 1}: ${line.trim()}`);

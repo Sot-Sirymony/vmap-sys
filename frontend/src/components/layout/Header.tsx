@@ -11,6 +11,7 @@ import AvatarGroup from '@mui/material/AvatarGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
+import useScrollTrigger from '@mui/material/useScrollTrigger';
 import { Bug, PanelLeft, Plus, Upload } from 'lucide-react';
 import { AppearanceMenu } from './AppearanceMenu';
 import { navItems } from './nav-items';
@@ -164,6 +165,10 @@ export function Header() {
   // (greeting for Modern and Liquid Glass, breadcrumbs for Classic).
   const { header } = useInterfaceStyle();
   const modern = header === 'greeting';
+  // BRD 26 §4: Modern and Liquid Glass sit on the canvas at the top of the page
+  // and take the floating material once content scrolls under the header.
+  // Classic's rest background is already the solid floating surface.
+  const scrolled = useScrollTrigger({ disableHysteresis: true, threshold: 4 });
   // FR-38.1: the "Report an issue" affordance lives in the header, so it's
   // reachable from every authenticated page without leaving the current one.
   const [reportOpen, setReportOpen] = useState(false);
@@ -175,16 +180,18 @@ export function Header() {
       color="transparent"
       elevation={0}
       className="app-header"
+      data-scrolled={scrolled ? 'true' : 'false'}
       sx={{
         borderBottom: 1,
-        borderColor: 'divider',
-        // BRD 26: the sticky header is a floating layer. Solid in Modern and
-        // Classic; glass at the 0.88 / 0.85 floor in Liquid Glass, since
-        // content scrolls under it (D-26-5). The stylesheet turns it solid
-        // under the D-26-6 fallbacks.
-        bgcolor: 'var(--style-floating-bg)',
-        backdropFilter: 'var(--style-blur)',
-        WebkitBackdropFilter: 'var(--style-blur)',
+        borderColor: scrolled ? 'divider' : 'transparent',
+        // BRD 26: the sticky header is a floating layer once content scrolls
+        // under it — solid in Modern, glass at the 0.88 / 0.85 floor in Liquid
+        // Glass (D-26-5). The stylesheet turns it solid under the D-26-6
+        // fallbacks. At the top it shows --style-header-rest-bg.
+        bgcolor: scrolled ? 'var(--style-floating-bg)' : 'var(--style-header-rest-bg)',
+        backdropFilter: scrolled ? 'var(--style-blur)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'var(--style-blur)' : 'none',
+        transition: 'background-color var(--motion-base) var(--motion-ease), border-color var(--motion-base) var(--motion-ease)',
       }}
     >
       <Toolbar sx={{ gap: 1.5, minHeight: `${modern ? 64 : 56}px !important` }}>

@@ -52,15 +52,30 @@ export async function createSeedAccount(): Promise<Seed> {
     stepId: step.id, title: 'Call the bank', owner: 'E2E Tester', priority: 'CRITICAL', dueDate: today, status: 'NOT_STARTED', progressPercent: 0,
   });
   const partner = await api<WithId>(token, '/partners', 'POST', { name: 'A Mentor', supportType: 'MENTOR', status: 'AGREED', relatedDreamId: dream.id });
-  await api(token, '/obstacles', 'POST', { relatedDreamId: dream.id, title: 'Need funding', obstacleType: 'MONEY', severity: 'HIGH', status: 'OPEN' });
+  await api(token, '/obstacles', 'POST', { relatedStepId: step.id, title: 'Need funding', obstacleType: 'MONEY', severity: 'HIGH', status: 'OPEN' });
   await api(token, '/reviews', 'POST', { reviewType: 'DAILY', reviewDate: `${today}T09:00:00`, summary: 'A fair day' });
   await api(token, '/communication-messages', 'POST', { partnerId: partner.id, audience: 'Mentor', purpose: 'Advice', status: 'DRAFT' });
   await api(token, '/gratitude-entries', 'POST', { category: 'OTHER', description: 'A helpful friend' });
   return { email, token, dreamId: dream.id, goalId: goal.id, stepId: step.id, partnerId: partner.id };
 }
 
-export async function deleteSeedAccount(seed: Seed) {
-  await api(seed.token, '/account/delete', 'POST', { password: PASSWORD });
+/**
+ * Best-effort cleanup. Since V20/V24, deleting an account asks for a "Verify
+ * it's you" code sent by e-mail, which a test cannot read; the throwaway
+ * @example.invalid account is then left in the local database with a warning,
+ * rather than failing a test whose checks passed.
+ */
+export async function deleteSeedAccount(seed: Seed | undefined) {
+  if (!seed) return;
+  try {
+    await api(seed.token, '/account/delete', 'POST', { password: PASSWORD });
+  } catch (error) {
+    if (String(error).includes('STEP_UP_REQUIRED')) {
+      console.warn(`e2e: left ${seed.email} in the database (account deletion needs a step-up code)`);
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function signIn(page: Page, email: string) {

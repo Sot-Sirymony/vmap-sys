@@ -20,6 +20,7 @@ No data, permission or plan behaviour changes. There is one schema change, to th
 
 | Version | Change | Author |
 | --- | --- | --- |
+| 26.0.2 | Built as specified after review: tooltips and toasts glass in Liquid Glass, header glass only once content scrolls under it, sunken Modern sidebar, per-style heatmap radius, Classic layout density on all pages. Phase 7 verification added (`e2e/interface-styles.e2e.ts`, `UAT_V26.md`). IS-NFR-04 is checked as main-thread work per frame, since headless Chrome cannot measure GPU blur cost; a real-phone check stays in UAT | Dev |
 | 26.0.1 | Q-26-1 answered: keep CLASSIC. D-26-8 is replaced: V93 moves no account, so `MIGRATED` and the one-time notice are not built; `interface_style_source` holds `DEFAULT` or `CHOSEN`, and CHOSEN is set only when the style changes | BA / Dev |
 | 26.0.0 | First draft from the product owner's design brief of 23 Nov 2026 (three interface styles). Findings come from the code at commit `b55ab0e`; glass opacity floors were calculated, not estimated | BA / Design |
 

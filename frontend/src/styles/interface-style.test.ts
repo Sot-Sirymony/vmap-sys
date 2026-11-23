@@ -77,6 +77,21 @@ describe('interface style (FR-48, BRD 26)', () => {
     expect(scrim('modern')).toContain('0.40');
   });
 
+  it('paints tooltips as a floating layer with readable foreground text (§4)', () => {
+    const tooltip = overrides(createAppTheme({ mode: 'light', style: 'glass' }), 'MuiTooltip').tooltip;
+    expect(tooltip).toMatchObject({
+      color: 'var(--text-primary)',
+      backgroundColor: 'var(--style-floating-bg)',
+      backdropFilter: 'var(--style-blur)',
+      borderRadius: 'var(--style-radius-menu)',
+    });
+  });
+
+  it('pads MUI card content with the style’s card padding (§3.4)', () => {
+    const root = overrides(createAppTheme({ mode: 'light', style: 'classic' }), 'MuiCardContent').root;
+    expect(root).toMatchObject({ padding: 'var(--style-card-pad)' });
+  });
+
   it('takes button, input and chip radii from the tokens', () => {
     const theme = createAppTheme({ mode: 'light', style: 'classic' });
     expect(overrides(theme, 'MuiButton').root).toMatchObject({ borderRadius: 'var(--style-radius-control)' });

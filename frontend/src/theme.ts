@@ -1382,12 +1382,25 @@ export function createAppTheme({
           root: { borderRadius: 'var(--radius-sm)' },
         },
       },
-      // Tooltips are a floating layer: glass in Liquid Glass (D-26-3).
+      // Tooltips are a floating layer (BRD 26 §4): raised solid in Modern and
+      // Classic, glass in Liquid Glass. Text is the normal foreground on the
+      // surface, so it keeps 4.5:1 in every style (D-26-5 floors).
       MuiTooltip: {
         styleOverrides: {
           tooltip: {
             borderRadius: 'var(--style-radius-menu)',
             fontSize: '0.75rem',
+            color: 'var(--text-primary)',
+            backgroundColor: 'var(--style-floating-bg)',
+            backdropFilter: 'var(--style-blur)',
+            WebkitBackdropFilter: 'var(--style-blur)',
+            border: 'var(--style-floating-border)',
+            boxShadow: 'var(--style-highlight), var(--style-shadow-overlay)',
+          },
+          // The arrow is a solid triangle: it cannot blur, so it takes the
+          // raised surface and the floating border colour.
+          arrow: {
+            color: 'var(--surface-raised)',
           },
         },
       },
@@ -1429,6 +1442,28 @@ export function createAppTheme({
             borderRadius: 'var(--style-radius-card)',
             boxShadow: 'var(--style-shadow-rest)',
             backgroundImage: 'none',
+          },
+        },
+      },
+      // MUI's default unselected toggle text (54% black) measures 4.49:1 on the
+      // canvas, just under WCAG 1.4.3. The secondary text token clears 4.5:1 on
+      // every surface (found by the BRD 26 axe matrix).
+      MuiToggleButton: {
+        styleOverrides: {
+          root: { color: 'var(--text-secondary)' },
+        },
+      },
+      // BRD 26 §3.4: card padding follows the style's layout density — 20px in
+      // Modern and Liquid Glass (16px on phones), 12px in Classic.
+      MuiCardContent: {
+        styleOverrides: {
+          root: {
+            padding: 'var(--style-card-pad)',
+            '&:last-child': { paddingBottom: 'var(--style-card-pad)' },
+            '@media (max-width: 599.95px)': {
+              padding: 'var(--style-card-pad-phone)',
+              '&:last-child': { paddingBottom: 'var(--style-card-pad-phone)' },
+            },
           },
         },
       },

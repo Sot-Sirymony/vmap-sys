@@ -832,6 +832,9 @@
   --style-floating-border: 1px solid var(--border);
   --style-highlight: 0 0 0 0 transparent;
   --style-inset-bg: var(--surface-sunken);
+  --style-sidebar-bg: var(--sidebar);
+  --style-header-rest-bg: transparent;
+  --style-heat-radius: 3px;
   --style-floating-text-tertiary: #646C78;
   --style-card-pad: 20px;
   --style-card-pad-phone: 16px;
@@ -872,6 +875,9 @@
   --style-floating-border: 1px solid var(--border);
   --style-highlight: 0 0 0 0 transparent;
   --style-inset-bg: var(--surface-sunken);
+  --style-sidebar-bg: var(--sidebar);
+  --style-header-rest-bg: transparent;
+  --style-heat-radius: 3px;
   --style-floating-text-tertiary: #8E97A3;
   --style-card-pad: 20px;
   --style-card-pad-phone: 16px;
@@ -911,6 +917,9 @@
   --style-floating-border: 1px solid var(--border);
   --style-highlight: 0 0 0 0 transparent;
   --style-inset-bg: var(--surface-sunken);
+  --style-sidebar-bg: var(--surface-raised);
+  --style-header-rest-bg: var(--surface-raised);
+  --style-heat-radius: 1px;
   --style-floating-text-tertiary: #646C78;
   --style-card-pad: 12px;
   --style-card-pad-phone: 12px;
@@ -950,6 +959,9 @@
   --style-floating-border: 1px solid var(--border);
   --style-highlight: 0 0 0 0 transparent;
   --style-inset-bg: var(--surface-sunken);
+  --style-sidebar-bg: var(--surface-raised);
+  --style-header-rest-bg: var(--surface-raised);
+  --style-heat-radius: 1px;
   --style-floating-text-tertiary: #8E97A3;
   --style-card-pad: 12px;
   --style-card-pad-phone: 12px;
@@ -989,6 +1001,9 @@
   --style-floating-border: 1px solid rgba(255, 255, 255, 0.55);
   --style-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   --style-inset-bg: var(--surface-sunken);
+  --style-sidebar-bg: color-mix(in srgb, var(--surface) 88%, transparent);
+  --style-header-rest-bg: transparent;
+  --style-heat-radius: 4px;
   --style-floating-text-tertiary: var(--muted-foreground);
   --style-card-pad: 20px;
   --style-card-pad-phone: 16px;
@@ -1028,6 +1043,9 @@
   --style-floating-border: 1px solid rgba(255, 255, 255, 0.10);
   --style-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --style-inset-bg: var(--surface-sunken);
+  --style-sidebar-bg: color-mix(in srgb, var(--surface-raised) 85%, transparent);
+  --style-header-rest-bg: transparent;
+  --style-heat-radius: 4px;
   --style-floating-text-tertiary: var(--muted-foreground);
   --style-card-pad: 20px;
   --style-card-pad-phone: 16px;
@@ -1065,6 +1083,7 @@
   --style-blur: none;
   --style-floating-border: 1px solid var(--border);
   --style-highlight: 0 0 0 0 transparent;
+  --style-sidebar-bg: var(--surface-raised);
   --style-chart-tooltip-bg: var(--surface-raised);
   --style-chart-tooltip-blur: none;
 }
@@ -1077,6 +1096,7 @@
     --style-blur: none;
     --style-floating-border: 1px solid var(--border);
     --style-highlight: 0 0 0 0 transparent;
+    --style-sidebar-bg: var(--surface-raised);
     --style-chart-tooltip-bg: var(--surface-raised);
     --style-chart-tooltip-blur: none;
   }
@@ -1090,6 +1110,7 @@
     --style-blur: none;
     --style-floating-border: 1px solid var(--border);
     --style-highlight: 0 0 0 0 transparent;
+    --style-sidebar-bg: var(--surface-raised);
     --style-chart-tooltip-bg: var(--surface-raised);
     --style-chart-tooltip-blur: none;
   }
@@ -1103,6 +1124,7 @@
     --style-blur: none;
     --style-floating-border: 1px solid var(--border);
     --style-highlight: 0 0 0 0 transparent;
+    --style-sidebar-bg: var(--surface-raised);
     --style-chart-tooltip-bg: var(--surface-raised);
     --style-chart-tooltip-blur: none;
   }
@@ -1253,7 +1275,9 @@ button:focus-visible,
 }
 
 .page-shell {
-  padding: 28px;
+  /* BRD 26 §3.4: the page gutter follows the style's layout density —
+     28px in Modern and Liquid Glass, 20px in Classic. */
+  padding: calc(var(--style-card-pad) + 8px);
   /* A one-time entrance, not a route transition system: pages settle in with a
      short fade-and-rise. Suppressed wholesale by both reduce-motion blocks. */
   animation: page-in var(--motion-base) var(--motion-ease);
@@ -1263,7 +1287,7 @@ button:focus-visible,
    mobile override further down still takes it back to 18px. */
 @media (min-width: 900px) {
   .page-shell {
-    padding: 32px;
+    padding: calc(var(--style-card-pad) + 12px);
   }
 }
 
@@ -1280,7 +1304,8 @@ button:focus-visible,
 
 .page-section {
   display: grid;
-  gap: 20px;
+  /* 20px in Modern and Liquid Glass, 12px in Classic (BRD 26 §3.4). */
+  gap: var(--style-card-pad);
 }
 
 .create-trigger {
@@ -1500,11 +1525,11 @@ button:focus-visible,
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: min(14px, var(--style-gap-md));
 }
 
 .metric-card {
-  padding: 16px;
+  padding: min(16px, var(--style-card-pad));
 }
 
 .metric-card p {
@@ -1602,13 +1627,20 @@ button:focus-visible,
   align-items: flex-end;
 }
 
+/* BRD 26 §5: a toast is a floating layer — raised solid in Modern and
+   Classic, glass in Liquid Glass (solid again under the D-26-6 fallbacks).
+   Text is the normal foreground, so it meets the glass contrast floors. */
 .toast {
-  background: #14202f;
-  color: #f8fafc;
+  --text-tertiary: var(--style-floating-text-tertiary);
+  background: var(--style-floating-bg);
+  -webkit-backdrop-filter: var(--style-blur);
+  backdrop-filter: var(--style-blur);
+  color: var(--text-primary);
   padding: 10px 16px;
-  border-radius: var(--radius-lg);
-  border-left: 3px solid #16a34a;
-  box-shadow: var(--shadow-16);
+  border-radius: var(--style-radius-menu);
+  border: var(--style-floating-border);
+  border-left: 3px solid var(--st-done);
+  box-shadow: var(--style-highlight), var(--style-shadow-overlay);
   font-size: var(--font-body);
   animation: toast-in 0.18s ease-out;
 }
@@ -1713,7 +1745,8 @@ button:focus-visible,
 .list-card {
   display: grid;
   gap: 10px;
-  padding: var(--card-pad);
+  /* Density sets --card-pad; Classic caps it at its 12px card padding. */
+  padding: min(var(--card-pad), var(--style-card-pad));
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--card);

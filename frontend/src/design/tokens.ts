@@ -272,6 +272,16 @@ export type StyleTokens = {
   highlight: string;
   /** Children of floating layers (D-26-4). */
   insetBg: string;
+  /** Sidebar panel: sunken in Modern, raised in Classic, glass in Liquid Glass (§4). */
+  sidebarBg: string;
+  /**
+   * Header background while the page is at the top. Modern and Liquid Glass sit
+   * on the canvas until content scrolls under them, then take the floating
+   * material; Classic is always solid (§4).
+   */
+  headerRestBg: string;
+  /** Review heatmap cell corners (§4). */
+  heatRadius: number;
   /** Tertiary text on a floating layer. Glass promotes it to secondary (D-26-5). */
   floatingTextTertiary: string;
   cardPad: string;
@@ -322,6 +332,9 @@ const modernLight: StyleTokens = {
   floatingBorder: '1px solid var(--border)',
   highlight: NO_SHADOW,
   insetBg: 'var(--surface-sunken)',
+  sidebarBg: 'var(--sidebar)',
+  headerRestBg: 'transparent',
+  heatRadius: 3,
   floatingTextTertiary: neutrals.light.textTertiary,
   cardPad: '20px',
   cardPadPhone: '16px',
@@ -350,6 +363,9 @@ const classicLight: StyleTokens = {
   radiusMenu: 4,
   navShape: 'rect',
   header: 'breadcrumbs',
+  sidebarBg: 'var(--surface-raised)',
+  headerRestBg: 'var(--surface-raised)',
+  heatRadius: 1,
   shadowRest: '0 0.6px 1.8px rgba(0, 0, 0, 0.10), 0 0.3px 0.9px rgba(0, 0, 0, 0.06)',
   shadowHover: '0 1.6px 3.6px rgba(0, 0, 0, 0.13), 0 0.3px 0.9px rgba(0, 0, 0, 0.10)',
   shadowOverlay: '0 6.4px 14.4px rgba(0, 0, 0, 0.13), 0 1.2px 3.6px rgba(0, 0, 0, 0.08)',
@@ -382,6 +398,8 @@ const glassLight: StyleTokens = {
   blur: 'blur(20px) saturate(1.4)',
   floatingBorder: '1px solid rgba(255, 255, 255, 0.55)',
   highlight: 'inset 0 1px 0 rgba(255, 255, 255, 0.35)',
+  sidebarBg: 'color-mix(in srgb, var(--surface) 88%, transparent)',
+  heatRadius: 4,
   floatingTextTertiary: 'var(--muted-foreground)',
   motionFast: 200,
   motionBase: 250,
@@ -435,6 +453,7 @@ export const styleTokens: Record<InterfaceStyle, Record<Mode, StyleTokens>> = {
       blur: 'blur(20px) saturate(1.2)',
       floatingBorder: '1px solid rgba(255, 255, 255, 0.10)',
       highlight: 'inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+      sidebarBg: 'color-mix(in srgb, var(--surface-raised) 85%, transparent)',
       chartTooltipBg: 'color-mix(in srgb, var(--surface-raised) 85%, transparent)',
       chartTooltipBlur: 'blur(20px) saturate(1.2)',
       floatingAlpha: 0.85,
@@ -449,6 +468,7 @@ export const glassFallback: Record<string, string> = {
   '--style-blur': 'none',
   '--style-floating-border': '1px solid var(--border)',
   '--style-highlight': NO_SHADOW,
+  '--style-sidebar-bg': 'var(--surface-raised)',
   '--style-chart-tooltip-bg': 'var(--surface-raised)',
   '--style-chart-tooltip-blur': 'none',
 };
@@ -482,6 +502,9 @@ export function styleCssVariables(style: InterfaceStyle, mode: Mode): Record<str
     '--style-floating-border': t.floatingBorder,
     '--style-highlight': t.highlight,
     '--style-inset-bg': t.insetBg,
+    '--style-sidebar-bg': t.sidebarBg,
+    '--style-header-rest-bg': t.headerRestBg,
+    '--style-heat-radius': px(t.heatRadius),
     '--style-floating-text-tertiary': t.floatingTextTertiary,
     '--style-card-pad': t.cardPad,
     '--style-card-pad-phone': t.cardPadPhone,

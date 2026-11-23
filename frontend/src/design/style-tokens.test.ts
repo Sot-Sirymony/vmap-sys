@@ -111,6 +111,14 @@ describe('style tokens (BRD 26)', () => {
     expect(styleTokens.glass.light).toMatchObject({ radiusControl: 12, radiusCard: 18, radiusChip: 999, radiusDialog: 24, radiusMenu: 14, navShape: 'pill', header: 'greeting' });
   });
 
+  it('gives each style its sidebar, header-at-rest and heatmap values (§4)', () => {
+    expect(styleTokens.modern.light).toMatchObject({ sidebarBg: 'var(--sidebar)', headerRestBg: 'transparent', heatRadius: 3 });
+    expect(styleTokens.classic.light).toMatchObject({ sidebarBg: 'var(--surface-raised)', headerRestBg: 'var(--surface-raised)', heatRadius: 1 });
+    expect(styleTokens.glass.light).toMatchObject({ headerRestBg: 'transparent', heatRadius: 4 });
+    expect(styleTokens.glass.light.sidebarBg).toContain('88%');
+    expect(styleTokens.glass.dark.sidebarBg).toContain('85%');
+  });
+
   it('keeps cards solid in every style (D-26-3)', () => {
     for (const style of INTERFACE_STYLES) {
       for (const mode of MODES) {

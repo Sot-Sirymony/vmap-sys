@@ -456,17 +456,24 @@ hard to read. This control is switched off while High contrast is on, because
 that mode deliberately uses pure white or black — turn High contrast off and your
 chosen tone comes straight back.
 
-**Interface style** — Classic or Modern. This changes the *shape* of the app,
-not its colours, so it works with any theme, accent, or background you picked:
+**Interface style** — Modern, Classic or Liquid Glass. This changes the *shape*
+of the app, not its colours, so it works with any theme, accent, or background
+you picked. Each choice shows a small live preview drawn in your current colours.
+Click a card, or use the arrow keys, to switch.
 
-| Style | What changes |
-|---|---|
-| Classic | The original look — square corners, crisp borders, tight shadows, and a breadcrumb trail in the header |
-| Modern | Rounded cards with soft, wide shadows; a faint tint of your accent across each card; pill-shaped navigation; a search box with its keyboard shortcut in the sidebar; and a header that greets you by name on the dashboard, shows your partners, and puts Export within reach |
+| Style | Who it suits | What changes |
+|---|---|---|
+| Modern (recommended) | Most people | Calm and spacious: rounded cards with a soft shadow, pill-shaped navigation, a search box in the sidebar, and a header that greets you by name |
+| Classic | People who scan lots of rows every day | Compact and crisp: square corners, thin borders, tighter spacing on cards and pages, and a breadcrumb trail in the header. For the densest view, also set **Density** to Compact |
+| Liquid Glass | People who like a personal look, especially with a background image | Frosted panels that float over your background: the sidebar, the header (once the page scrolls under it), menus, pop-ups, tooltips, messages and the Overall progress card on the Dashboard. Cards, tables, lists, charts and forms stay solid so your data is always easy to read |
 
-Classic is the default, so nothing changes unless you pick Modern. Unlike the
-Background control, this one stays available while High contrast is on — a
-rounded corner can't make anything harder to read.
+New accounts start on Modern. If your account was already on Classic, it stays on
+Classic until you change it, and your choice now follows you to every browser and
+device.
+
+Liquid Glass turns its panels solid when **High contrast** is on, when your
+device asks for less transparency or more contrast, or when your browser cannot
+blur. The Liquid Glass card then tells you why. Shape and spacing stay as you chose.
 
 **Font** — the default is your device's own font and appears instantly. Public
 Sans, Inter, DM Sans, and Nunito Sans download once, the first time you pick

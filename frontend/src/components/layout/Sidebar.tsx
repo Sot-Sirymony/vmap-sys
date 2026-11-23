@@ -59,7 +59,10 @@ function SidebarSearch() {
     <Box sx={{ px: 2, pb: 1.5 }}>
       <ButtonBase
         onClick={openPalette}
-        aria-label={tr('Search and commands ({keys})', { keys: `${shortcutModifier()}+K` })}
+        // WCAG 2.5.3: the accessible name is the visible word, so speech users
+        // can say what they see. The shortcut is announced through
+        // aria-keyshortcuts and the kbd is hidden from assistive tech.
+        aria-keyshortcuts="Control+K Meta+K"
         sx={{
           width: '100%',
           display: 'flex',
@@ -79,10 +82,11 @@ function SidebarSearch() {
       >
         <Search size={15} />
         <Typography variant="body2" sx={{ flex: 1, textAlign: 'left' }} noWrap>
-          Search
+          {tr('Search')}
         </Typography>
         <Box
           component="kbd"
+          aria-hidden="true"
           sx={{
             px: 0.625,
             py: 0.125,
@@ -345,7 +349,8 @@ function SidebarContents({ collapsed, onNavigate }: { collapsed: boolean; onNavi
  * otherwise. Below 600px global.css turns the drawer solid (§5.6).
  */
 const sidebarPaper = {
-  bgcolor: 'var(--style-floating-bg)',
+  // Sunken in Modern, raised in Classic, glass in Liquid Glass (--style-sidebar-bg).
+  bgcolor: 'var(--style-sidebar-bg)',
   backdropFilter: 'var(--style-blur)',
   WebkitBackdropFilter: 'var(--style-blur)',
 } as const;

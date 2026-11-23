@@ -113,7 +113,7 @@ function ReviewsPanel({ reviewCadence, weeksWithDiligence }: { reviewCadence: Re
                 sx={{
                   width: 14,
                   height: 14,
-                  borderRadius: '3px',
+                  borderRadius: 'var(--style-heat-radius)',
                   bgcolor: day.isFuture ? 'transparent' : `var(--heat-${heatLevel(day.count)})`,
                   border: day.isFuture ? '1px dashed var(--border)' : 'none',
                 }}
@@ -125,7 +125,7 @@ function ReviewsPanel({ reviewCadence, weeksWithDiligence }: { reviewCadence: Re
       <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', mt: 1.5, fontSize: '0.6875rem', color: 'var(--text-tertiary)' }}>
         <Box component="span" sx={{ mr: 0.5 }}>{tr('Less')}</Box>
         {[0, 1, 2, 3, 4].map((level) => (
-          <Box key={level} sx={{ width: 12, height: 12, borderRadius: '3px', bgcolor: `var(--heat-${level})` }} />
+          <Box key={level} sx={{ width: 12, height: 12, borderRadius: 'var(--style-heat-radius)', bgcolor: `var(--heat-${level})` }} />
         ))}
         <Box component="span" sx={{ ml: 0.5 }}>{tr('More')}</Box>
       </Box>
