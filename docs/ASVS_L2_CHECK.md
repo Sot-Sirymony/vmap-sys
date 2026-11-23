@@ -1,7 +1,7 @@
 # OWASP ASVS 5.0 Level 2 check
 
 BRD 10 (security standard: OWASP Top 10:2025 with ASVS 5.0 Level 2 as the checklist) and BRD 21 Phase 5 (TF-FR-44,
-TF-FR-45), 22 Nov 2026, at the code of V21 Phase 5. V8 rows updated for BRD 23 (user and role management), 23 Nov 2026.
+TF-FR-45), 22 Nov 2026, at the code of V21 Phase 5. V8 rows updated for BRD 23 (user and role management), 23 Nov 2026. V6 and V8 rows added for BRD 24 (sign-in method settings), 23 Nov 2026.
 
 **How to read this.** Rows are grouped by the ASVS 5.0 chapters (V1 to V17) and describe each Level 1 and Level 2
 control area in plain words, with the evidence in the code or tests. Status: **Met**, **Partly met** (the gap is a
@@ -14,7 +14,7 @@ misses as a new finding.
 
 | Status | Rows |
 | --- | --- |
-| Met | 71 |
+| Met | 73 |
 | Partly met | 3 (F-02, F-03, F-04 internal TLS) |
 | Partly met, fixed | 3 (F-08 in this phase; F-05 and F-04 counts after release) |
 | Not met | 2 (F-01, F-07) |
@@ -86,6 +86,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | Password reset | Met | 256-bit single-use token, 30 minutes, SHA-256 stored; ends all sessions; does not turn off 2FA |
 | Email ownership confirmed | Not met | Not confirmed at sign-up (F-01) |
 | Third-party sign-in | Met | V14 Google with PKCE, nonce and ID-token checks; no takeover by email alone |
+| Sign-in methods an Admin can restrict (V24) | Met | Password and Google sign-in can be switched off for non-Admins; enforced at every way in and again at the code exchange and second step; sessions opened with a method switched off end; two-step sign-in can be required for everyone; `SecurityAccessEnforcementFlowTests`, `TwoFactorScopeFlowTests` |
 | Notifications of security changes | Met | Notices after password change, export, reminder email, deletion, two-step changes and recovery code use |
 
 ## V7 Session Management
@@ -108,6 +109,7 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | Function-level access (roles) | Met | V23: every action names a permission; `/api/admin/**` needs an administrative permission and `/api/coach/**` *Coach cohorts*, checked again in services; the role's permissions are read from the database on each request (cache cleared after each change commits); `PermissionFlowTests` |
 | No privilege escalation through user or role management (V23) | Met | D-23-9 no-escalation check; only Admins edit roles; *Manage roles* never on another role; no action on one's own account; last active admin kept; `AdminUserActionsFlowTests`, `RoleFlowTests`, abuse cases UMC-11 to UMC-19 |
 | Coach access limited to their cohorts, read-only | Met | Business rule 14; coach views logged |
+| Security settings protected (V24) | Met | Only the Admin role changes sign-in methods; reason and fresh code; no change that strands an account or affects Admins; alert for every change; abuse cases SAC-09 to SAC-14 |
 | Admin actions protected | Met | Fresh step-up code; logged; alerts for sensitive ones. V23: role changes, blocks, deletes and role edits each need a fresh code and a reason; more than 5 blocks or deletions in an hour alert |
 
 ## V9 Self-contained Tokens

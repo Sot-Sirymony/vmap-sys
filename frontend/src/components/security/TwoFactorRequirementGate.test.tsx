@@ -50,13 +50,23 @@ describe('TwoFactorRequirementGate', () => {
     await waitFor(() => expect(currentLocation()).toBe('/settings/security'));
   });
 
-  it('asks nothing of participants, or of staff who already use it', async () => {
+  it('asks nothing of participants without a date, or of staff who already use it', async () => {
+    vi.mocked(twoFactorApi.getTwoFactorStatus).mockResolvedValue(status(null));
     renderPage(<TwoFactorRequirementGate />, { role: 'USER', route: '/' });
-    expect(twoFactorApi.getTwoFactorStatus).not.toHaveBeenCalled();
+    await waitFor(() => expect(twoFactorApi.getTwoFactorStatus).toHaveBeenCalled());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     vi.mocked(twoFactorApi.getTwoFactorStatus).mockResolvedValue(status(inDays(5), true));
     renderPage(<TwoFactorRequirementGate />, { role: 'ADMIN', route: '/' });
     await waitFor(() => expect(twoFactorApi.getTwoFactorStatus).toHaveBeenCalled());
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('V24 D-24-4: asks a participant with a date, in words for participants', async () => {
+    vi.mocked(twoFactorApi.getTwoFactorStatus).mockResolvedValue(status(inDays(9)));
+    renderPage(<TwoFactorRequirementGate />, { role: 'USER', route: '/' });
+    expect(await screen.findByText('Every account now needs two-step sign-in. You can use an authenticator app or codes sent by email.'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip for now (9 days left)' })).toBeInTheDocument();
   });
 
   it('counts whole days left, never below zero', () => {

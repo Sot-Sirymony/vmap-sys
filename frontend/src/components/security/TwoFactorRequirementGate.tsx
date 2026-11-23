@@ -33,7 +33,8 @@ function skippedThisSession() {
  * sign-in. Before their date: "Set up now" or "Skip for now (N days left)",
  * once per browser session. From their date, or whenever the server answers
  * TWO_FACTOR_SETUP_REQUIRED, the Security page opens; the server refuses the
- * rest anyway.
+ * rest anyway. V24 (D-24-4): for everyone with a set-up date, which
+ * participants have only while an Admin requires two-step sign-in for everyone.
  */
 export function TwoFactorRequirementGate() {
   const { token, user } = useAuth();
@@ -49,7 +50,7 @@ export function TwoFactorRequirementGate() {
   }, [navigate]);
 
   useEffect(() => {
-    if (!token || !isStaff) return undefined;
+    if (!token) return undefined;
     let active = true;
     getTwoFactorStatus(token)
       .then((status) => {
@@ -62,7 +63,7 @@ export function TwoFactorRequirementGate() {
       })
       .catch(() => undefined);
     return () => { active = false; };
-  }, [token, isStaff, navigate]);
+  }, [token, navigate]);
 
   if (!dueAt || pathname === SECURITY_PAGE) return null;
 
@@ -81,7 +82,9 @@ export function TwoFactorRequirementGate() {
       <DialogTitle id="two-factor-required-title">{tr('Set up two-step sign-in')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2">
-          {tr('Coach and admin accounts can see other people\'s plans, so they need two-step sign-in with an authenticator app.')}
+          {isStaff
+            ? tr('Coach and admin accounts can see other people\'s plans, so they need two-step sign-in with an authenticator app.')
+            : tr('Every account now needs two-step sign-in. You can use an authenticator app or codes sent by email.')}
         </Typography>
       </DialogContent>
       <DialogActions>

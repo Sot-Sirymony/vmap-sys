@@ -72,6 +72,7 @@ public class SignInChallengeService {
     private final LoginAttemptLimiter loginAttemptLimiter;
     private final RequestRateLimiter rateLimiter;
     private final StepUpMailer mailer;
+    private final com.visionmapping.service.admin.SecurityAccessService securityAccess;
     private final AccountNotices accountNotices;
     private final SecurityEventService securityEvents;
     private final Clock clock;
@@ -144,6 +145,8 @@ public class SignInChallengeService {
         }
         // complete() clears the persistence context, so the account is read again.
         AppUser account = appUserRepository.findById(userId).orElseThrow(TwoFactorException::ended);
+        // V24 (D-24-3): the method may have been turned off between the two steps.
+        securityAccess.requireAllowed(account, origin);
         loginAttemptLimiter.recordSuccess(email);
         securityEvents.recordFor(userId, SecurityEventType.TWO_FACTOR_VERIFIED, SecurityOutcome.SUCCESS,
                 usingRecovery ? "recovery code" : challenge.getMethod().name().toLowerCase());
@@ -158,7 +161,7 @@ public class SignInChallengeService {
                         ? SecurityEventType.GOOGLE_SIGN_IN_SUCCEEDED : SecurityEventType.LOGIN_SUCCEEDED,
                 SecurityOutcome.SUCCESS, (remember ? "remember me" : "this tab only") + ", two-factor");
         String deviceToken = rememberDevice ? trustedDevices.remember(account, userAgent) : null;
-        return AuthService.response(authSessionService.open(account, remember), deviceToken);
+        return AuthService.response(authSessionService.open(account, remember, origin), deviceToken);
     }
 
     /** TF-FR-12: a new email code for an email-method challenge, at most once a minute. */

@@ -312,6 +312,25 @@ change; Admin and Participant cannot. Before saving, the editor says what change
 changes apply on their next request, and they are emailed. A role that can do more than use one's own plan requires
 two-step sign-in. To delete a role, choose the role its people move to.
 
+## Security access (V24, for program admins)
+
+**Security access** (*Settings*) decides how everyone except admins may sign in. Admins can always sign in with a
+password, so they cannot lock themselves out. Roles with *View security log* can open the page but not change it.
+
+- **Password sign-in** and **Google sign-in** can each be switched off. Each shows how many people use it, how many can
+  sign in no other way, and how many are signed in now. Switching a method off signs those people out at their next
+  click. At least one method always stays on, and a change that would leave anyone with no way to sign in is refused:
+  ask them to link Google from their Account page first, or send them a password reset from **Users**.
+- **Two-step sign-in required for**: *Privileged roles* (coaches, admins and roles with admin permissions), or
+  *Everyone*. With *Everyone*, people without it get 14 days to set it up, then must set it up to continue.
+  Switching back never turns it off for anyone who set it up.
+- **Save changes** lists what will happen, asks for a reason (kept in the security log) and a "Verify it's you" code.
+- **Security methods reference** lists common sign-in and access methods and whether VMS has them. It is for
+  information only.
+
+When password sign-in is off, the Sign In page offers Google, with "Admin? Sign in with a password" for admins; Sign
+Up and invitation links offer Google only. When Google sign-in is off, its button disappears.
+
 ## Verify it's you (V20)
 
 Some changes are risky enough that the app checks it is really you, even though you are signed in: changing your

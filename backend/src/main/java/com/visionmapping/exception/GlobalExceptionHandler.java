@@ -262,6 +262,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.GONE, exception.getMessage(), request);
     }
 
+    /** V24 (SA-FR-10 to SA-FR-12): the method is turned off; the message names the one to use. */
+    @ExceptionHandler(SignInMethodOffException.class)
+    public ResponseEntity<ErrorResponse> handleSignInMethodOff(SignInMethodOffException exception, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(AccountBlockedException.class)
     public ResponseEntity<ErrorResponse> handleAccountBlocked(AccountBlockedException exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);

@@ -132,7 +132,7 @@ export function App() {
             {/* V23: users and roles */}
             <Route path="/settings/users" element={<UsersPage />} />
             <Route path="/settings/roles" element={<RolesPage />} />
-            {/* V24.0.0.0: Security access prototype (front end only) */}
+            {/* V24: sign-in methods (Security access) */}
             <Route path="/settings/security-access" element={<SecurityAccessPage />} />
             <Route path="/settings/two-factor" element={<TwoFactorAdminPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />

@@ -2,17 +2,22 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../api/authApi';
+import * as securityAccessApi from '../api/securityAccessApi';
+import { resetOfferedSignInMethods } from '../hooks/useOfferedSignInMethods';
 import { ApiError } from '../api/apiClient';
 import { currentLocation, renderPage } from '../test/render';
 import { AcceptInvitationPage } from './AcceptInvitationPage';
 
 vi.mock('../api/authApi');
+vi.mock('../api/securityAccessApi');
 
 const PASSWORD = 'Quiet-River-Stone-77';
 
 describe('AcceptInvitationPage (V23 UM-FR-24)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetOfferedSignInMethods();
+    vi.mocked(securityAccessApi.getOfferedSignInMethods).mockResolvedValue({ password: true, google: true });
     vi.mocked(authApi.checkInvitation).mockResolvedValue({ fullName: 'Sokha', email: 'sokha@example.com', expiresAt: '2026-11-30T00:00:00Z' });
   });
 
@@ -59,5 +64,15 @@ describe('AcceptInvitationPage (V23 UM-FR-24)', () => {
 
     expect(screen.getByText('This invitation link is incomplete. Open the link from your email again.')).toBeInTheDocument();
     expect(authApi.checkInvitation).not.toHaveBeenCalled();
+  });
+
+  it('V24 SA-FR-11: with password sign-in off, the invitation is accepted with Google', async () => {
+    vi.mocked(securityAccessApi.getOfferedSignInMethods).mockResolvedValue({ password: false, google: true });
+    renderPage(<AcceptInvitationPage />, { route: '/invitation?token=abc', auth: { token: null, user: null } });
+    expect(await screen.findByText('Password sign-in is turned off. Accept your invitation with Google, using sokha@example.com.'))
+      .toBeInTheDocument();
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Google/ }));
+    await waitFor(() => expect(currentLocation()).toBe('/oauth/google'));
   });
 });

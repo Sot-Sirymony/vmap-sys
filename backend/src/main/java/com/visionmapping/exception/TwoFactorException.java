@@ -21,6 +21,12 @@ public class TwoFactorException extends RuntimeException {
     public static final String SETUP_REQUIRED = "TWO_FACTOR_SETUP_REQUIRED";
 
     /** TF-FR-34: an admin or coach past their set-up-by date may only set up two-step sign-in. */
+    /** V24 (D-24-4): for a participant while two-step sign-in is required for everyone. */
+    public static TwoFactorException setupRequiredForEveryone() {
+        return new TwoFactorException(HttpStatus.FORBIDDEN, SETUP_REQUIRED,
+                "Set up two-step sign-in to continue. Every account needs it.", null);
+    }
+
     public static TwoFactorException setupRequired() {
         return new TwoFactorException(HttpStatus.FORBIDDEN, SETUP_REQUIRED,
                 "Set up two-step sign-in to continue. Coach and admin accounts need it.", null);

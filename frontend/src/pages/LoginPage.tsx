@@ -8,6 +8,7 @@ import { login } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { GoogleSignInSection } from '../components/common/GoogleSignInButton';
+import { useOfferedSignInMethods } from '../hooks/useOfferedSignInMethods';
 import { useAuth } from '../context/AuthContext';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
@@ -46,6 +47,10 @@ export function LoginPage() {
   // a stale success notice.
   const [showNotice, setShowNotice] = useState(Boolean(notice));
   const [loading, setLoading] = useState(false);
+  // V24 (SA-FR-13): with password sign-in off for everyone else, Admins still reach the form through a link.
+  const methods = useOfferedSignInMethods();
+  const [adminPassword, setAdminPassword] = useState(false);
+  const passwordShown = methods.password || adminPassword;
   const { setSession } = useAuth();
   const navigate = useNavigate();
   const from = state?.from?.pathname ?? '/';
@@ -87,8 +92,20 @@ export function LoginPage() {
       {/* V14 (GA-FR-22): "remember me" and the page to return to travel with the Google sign-in. */}
       <GoogleSignInSection
         onClick={() => navigate('/oauth/google', { state: { from, remember } })}
-        divider={tr('or sign in with email')}
+        divider={passwordShown ? tr('or sign in with email') : undefined}
       />
+      {!passwordShown && (
+        <>
+          <MuiAlert severity="info">{tr('Password sign-in is turned off. Sign in with Google.')}</MuiAlert>
+          <p className="auth-link" style={{ textAlign: 'center' }}>
+            {tr('Admin?')}{' '}
+            <button type="button" className="auth-link-button" onClick={() => setAdminPassword(true)}>
+              {tr('Sign in with a password')}
+            </button>
+          </p>
+        </>
+      )}
+      {passwordShown && (
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="login-email"
@@ -128,6 +145,7 @@ export function LoginPage() {
           {loading ? tr('Signing in...') : tr('Sign in')}
         </button>
       </form>
+      )}
       <p className="auth-link" style={{ textAlign: 'center' }}>
         No account yet? <Link to="/register">{tr('Create one')}</Link>
       </p>

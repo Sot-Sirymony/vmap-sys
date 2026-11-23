@@ -63,6 +63,7 @@ public class TwoFactorService {
     private final SecurityEventService securityEvents;
     private final Clock clock;
     private final com.visionmapping.security.PermissionService permissions;
+    private final TwoFactorRequirementService requirement;
 
     /** TF-FR-01. */
     @Transactional(readOnly = true)
@@ -81,7 +82,7 @@ public class TwoFactorService {
                 settings.isPresent() ? recoveryRepository.countByUser_IdAndUsedAtIsNull(user.getId()) : 0,
                 user.getTwoFactorDueAt(),
                 emailMethodAllowed(user),
-                canTurnOff(user, now, permissions.isPrivileged(user)),
+                canTurnOff(user, now, requirement.requiredFor(user)),
                 devices);
     }
 
@@ -187,8 +188,11 @@ public class TwoFactorService {
         if (enabledSettings(user.getId()).isEmpty()) {
             throw new BusinessRuleException("Two-factor sign-in is already off.");
         }
-        if (!canTurnOff(user, clock.instant(), permissions.isPrivileged(user))) {
-            throw new BusinessRuleException("Coach and admin accounts must keep two-factor sign-in on.");
+        if (!canTurnOff(user, clock.instant(), requirement.requiredFor(user))) {
+            throw new BusinessRuleException(permissions.isPrivileged(user)
+                    ? "Coach and admin accounts must keep two-factor sign-in on."
+                    // V24 (D-24-4): required for every account.
+                    : "Two-step sign-in is required for every account, so it must stay on.");
         }
         stepUpService.require(StepUpAction.TWO_FACTOR_SETTINGS, stepUp);
         settingsRepository.deleteById(user.getId());
@@ -254,7 +258,7 @@ public class TwoFactorService {
         return !permissions.isPrivileged(user) && mailer.delivery() != StepUpMailer.Delivery.NONE;
     }
 
-    /** D-21-2: participants always; admins and coaches only before their set-up-by date. */
+    /** D-21-2: participants always; admins and coaches only before their set-up-by date. V24: "required" covers everyone when chosen. */
     static boolean canTurnOff(AppUser user, Instant now, boolean privileged) {
         return !privileged || (user.getTwoFactorDueAt() != null && user.getTwoFactorDueAt().isAfter(now));
     }

@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { ButtonHTMLAttributes } from 'react';
-import { getGoogleSignInStatus } from '../../api/oauthApi';
+import { resetOfferedSignInMethods, useOfferedSignInMethods } from '../../hooks/useOfferedSignInMethods';
 import { tr } from '../../i18n/translate';
 
 /** The four-colour Google "G", inlined so it needs no asset request. */
@@ -38,49 +37,32 @@ export function GoogleSignInButton({ children, ...props }: GoogleSignInButtonPro
   );
 }
 
-// One status request per page load; the answer only changes when the server's settings do.
-let statusRequest: Promise<boolean> | null = null;
-
-function googleSignInEnabled(): Promise<boolean> {
-  statusRequest ??= getGoogleSignInStatus()
-    .then((status) => status.enabled === true)
-    .catch(() => false);
-  return statusRequest;
-}
-
-/** For tests: forget the cached status. */
+/** For tests: forget the cached sign-in methods. */
 export function resetGoogleSignInStatus() {
-  statusRequest = null;
+  resetOfferedSignInMethods();
 }
 
 /**
  * V14 (GA-FR-03, D-14-4): the Google button and the divider under it, shown
- * only when the server has Google sign-in set up. Nothing shows while the
- * answer is on its way, or when the server cannot be reached, so a button
- * that could only fail is never offered.
+ * only when the server offers Google sign-in: set up on the server and, since
+ * V24 (SA-FR-03), not turned off by an Admin. Nothing shows while the answer is
+ * on its way, or when the server cannot be reached, so a button that could only
+ * fail is never offered. Without a divider (V24: no password form below), only
+ * the button shows.
  */
-export function GoogleSignInSection({ onClick, divider }: { onClick: () => void; divider: string }) {
-  const [enabled, setEnabled] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    void googleSignInEnabled().then((value) => {
-      if (active) setEnabled(value);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (!enabled) {
+export function GoogleSignInSection({ onClick, divider }: { onClick: () => void; divider?: string }) {
+  const { google } = useOfferedSignInMethods();
+  if (!google) {
     return null;
   }
   return (
     <>
       <GoogleSignInButton onClick={onClick} />
-      <div className="auth-divider" aria-hidden="true">
-        <span>{divider}</span>
-      </div>
+      {divider && (
+        <div className="auth-divider" aria-hidden="true">
+          <span>{divider}</span>
+        </div>
+      )}
     </>
   );
 }

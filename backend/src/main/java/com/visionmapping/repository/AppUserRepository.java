@@ -18,6 +18,17 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long>,
     int assignTwoFactorDueDates(@org.springframework.data.repository.query.Param("due") java.time.Instant due,
                                 @org.springframework.data.repository.query.Param("privilegedRoles") java.util.Collection<String> privilegedRoles);
 
+    /** V24 (SA-FR-14, D-24-4): with two-step sign-in required for everyone, every active account without it gets a date. */
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update AppUser u set u.twoFactorDueAt = :due where u.status = :active"
+            + " and u.twoFactorDueAt is null and not exists (select t from UserTwoFactor t where t.userId = u.id and t.enabledAt is not null)")
+    int assignEveryoneTwoFactorDueDates(@org.springframework.data.repository.query.Param("due") java.time.Instant due,
+                                        @org.springframework.data.repository.query.Param("active") com.visionmapping.entity.enums.UserStatus active);
+
+    /** V24 (SA-FR-14): participants with a set-up-by date, for the two-step sign-in report. */
+    java.util.List<AppUser> findByTwoFactorDueAtIsNotNullAndRoleNotInOrderByFullNameAsc(java.util.Collection<String> roles);
+
     /** V21 (TF-FR-37): a participant has no set-up-by date. */
     @org.springframework.transaction.annotation.Transactional
     @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)

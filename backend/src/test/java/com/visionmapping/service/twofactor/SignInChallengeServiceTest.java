@@ -30,6 +30,7 @@ class SignInChallengeServiceTest {
                 settings, challenges, mock(TwoFactorRecoveryCodeRepository.class), mock(AppUserRepository.class),
                 mock(TotpSecretVault.class), mock(TrustedDeviceService.class), mock(AuthSessionService.class),
                 mock(LoginAttemptLimiter.class), mock(RequestRateLimiter.class), mock(StepUpMailer.class),
+                mock(com.visionmapping.service.admin.SecurityAccessService.class),
                 mock(AccountNotices.class), mock(SecurityEventService.class), Clock.systemUTC());
 
         assertThat(service.start(AppUser.builder().id(1L).email("a@example.com").build(), true, "/", SignInOrigin.PASSWORD, null))

@@ -1252,6 +1252,28 @@ with holders is deleted only with `moveTo` (409 otherwise); built-in roles are n
 key is made from its name (for example `PROGRAM_ASSISTANT`) and never changes; `PUT /api/admin/users/{id}/role`
 accepts it.
 
+## Security access (V24)
+
+```text
+GET /api/auth/sign-in-methods            public: { password, google } — what the sign-in pages offer
+GET /api/admin/security-access           { passwordSignIn, googleSignIn, twoFactorScope, googleAvailable, canChange,
+                                           updatedAt, updatedBy, password: { accounts, onlyWay, openSessions }, google: {…} }
+PUT /api/admin/security-access           { passwordSignIn, googleSignIn, twoFactorScope?, reason }
+```
+
+Reading needs *Manage roles* or *View security log* (`canChange` is true only with *Manage roles*); changing needs
+*Manage roles* (the Admin role only), a reason of 10 to 300 characters and a fresh code (`ADMIN_SECURITY_ACCESS`).
+Counts leave out Admins. `google` in the public answer is true only when Google is on here and set up on the server.
+Refusals, all before the code is checked: nothing changed (400), both methods off (400), password off without Google
+set up (409), anyone left with no way to sign in (409, with the count), *Everyone* with two-step sign-in turned off
+on the server (409). Switching a method off ends non-Admin sessions opened with it. `twoFactorScope` is `PRIVILEGED`
+or `EVERYONE`; *Everyone* gives each account without two-step sign-in a set-up date 14 days ahead, and `PRIVILEGED`
+clears the dates of non-privileged accounts.
+
+With a method off, sign-in answers 403 with "Password sign-in is turned off. Sign in with Google.", "Sign-up with a
+password is turned off. Sign up with Google." or "Google sign-in is turned off. Sign in with your password.", and a
+refused Google sign-in returns to the app with `reason=google-off`. Admins are never refused.
+
 ## Excel
 
 ### Export

@@ -144,6 +144,25 @@ permissions they lack, acting on an Admin, making a role with every permission; 
 themselves; the bootstrap setting on a system with admins; reading plans through admin endpoints; a stolen session
 blocking many accounts.
 
+## 7. Sign-in method settings (V24)
+
+**Data flow.** Admin → `PUT /api/admin/security-access` (*Manage roles*, reason, fresh code) → `security_settings`
+(one row) → read from the database at every sign-in (no cache) → password sign-in, sign-up, invitation acceptance,
+Google sign-in, sign-up and linking, and the two-step second step refuse a method that is off for non-Admins →
+sessions opened with a method switched off are ended (`auth_sessions.sign_in_method`). Public
+`GET /api/auth/sign-in-methods` tells the sign-in pages what to offer.
+
+| Threat | Control |
+| --- | --- |
+| E: a non-Admin weakening everyone's sign-in | Changes need *Manage roles*, which only the Admin role holds (D-23-9, D-24-2); *View security log* reads only; `SecurityAccessFlowTests` |
+| D: locking everyone, or every admin, out | Admins are never affected by the switches (D-24-5); at least one method stays on; password cannot be turned off without Google set up; a change that leaves any active non-Admin account with no way in is refused with the count (D-24-6) |
+| S: a stolen admin session turning methods off | Fresh "Verify it's you" code, reason, 30 changes per person per 10 minutes, an alert for every change |
+| I: the setting revealing which emails exist | With password sign-in off, only the right password gets the "turned off" answer; wrong passwords keep the generic answer and still count towards the lock |
+| E: a session opened before the switch outliving it | Sessions remember their method and are ended at once (next request); the setting is checked again at the Google code exchange and the two-step code |
+| R: denying a change | `SECURITY_ACCESS_CHANGED` with before and after values, sessions ended, set-up dates given or cleared, and the reason |
+
+**Abuse cases.** SAC-09 to SAC-14 in [UAT_V24.md](UAT_V24.md).
+
 ## Residual risks
 
 | Risk | Why accepted or open | Owner |

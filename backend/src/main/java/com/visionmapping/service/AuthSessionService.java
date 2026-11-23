@@ -105,15 +105,16 @@ public class AuthSessionService {
         }
     }
 
-    /** Opens a session for a user who has just proved who they are. */
+    /** Opens a session for a user who has just proved who they are, with the method they used (V24, D-24-3). */
     @Transactional
-    public Tokens open(AppUser user, boolean rememberMe) {
+    public Tokens open(AppUser user, boolean rememberMe, com.visionmapping.entity.enums.SignInOrigin method) {
         Instant now = clock.instant();
         String refreshToken = newToken();
         AuthSession session = repository.save(AuthSession.builder()
                 .user(user)
                 .refreshTokenHash(hash(refreshToken))
                 .rememberMe(rememberMe)
+                .signInMethod(method)
                 .expiresAt(now.plus(rememberMe ? rememberedLifetime : sessionLifetime))
                 .lastUsedAt(now)
                 .build());

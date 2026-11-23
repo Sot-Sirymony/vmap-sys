@@ -21,6 +21,8 @@ public enum GoogleSignInFailure {
      * Google has already proved the person owns the address.
      */
     BLOCKED("blocked"),
+    /** V24 (SA-FR-12): an Admin turned Google sign-in off for everyone but Admins. */
+    METHOD_OFF("google-off"),
     /** GA-SEC-09: too many Google sign-in steps from this network. */
     TOO_MANY("too-many");
 

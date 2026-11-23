@@ -62,6 +62,7 @@ public class InvitationService {
     private final PasswordPolicy passwordPolicy;
     private final AuthSessionService authSessionService;
     private final SignInChallengeService signInChallenges;
+    private final SecurityAccessService securityAccess;
     private final SecurityEventService securityEvents;
     private final Clock clock;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -134,6 +135,8 @@ public class InvitationService {
             securityEvents.recordFor(user.getId(), SecurityEventType.INVITATION_ACCEPTED, SecurityOutcome.DENIED, "account blocked");
             throw new AccountBlockedException();
         }
+        // V24 (SA-FR-11): with password sign-in off, the invitation is accepted with Google instead.
+        securityAccess.requireAllowed(user, SignInOrigin.PASSWORD);
         passwordPolicy.check(password, user.getEmail());
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setPasswordSet(true);
@@ -146,7 +149,7 @@ public class InvitationService {
         if (challenge.isPresent()) {
             return challenge.get();
         }
-        return AuthService.response(authSessionService.open(user, remember));
+        return AuthService.response(authSessionService.open(user, remember, SignInOrigin.PASSWORD));
     }
 
     /**

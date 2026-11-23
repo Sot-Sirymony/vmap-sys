@@ -64,8 +64,12 @@ public class AuthService {
     private final AccountNotices accountNotices;
     private final SignInChallengeService signInChallenges;
     private final TrustedDeviceService trustedDevices;
+    private final com.visionmapping.service.admin.SecurityAccessService securityAccess;
+    private final com.visionmapping.service.twofactor.TwoFactorRequirementService twoFactorRequirement;
 
     public AuthResponse register(RegisterRequest request) {
+        // V24 (SA-FR-11): with password sign-in off, new accounts come through Google only.
+        securityAccess.requireSignUpAllowed(SignInOrigin.PASSWORD);
         String email = request.email().trim().toLowerCase();
         passwordPolicy.check(request.password(), email);
         if (appUserRepository.existsByEmail(email)) {
@@ -83,9 +87,11 @@ public class AuthService {
                 .cohort(cohort)
                 .build();
         AppUser saved = appUserRepository.save(user);
+        // V24 (SA-FR-14): with two-step sign-in required for everyone, a new account gets its set-up date.
+        twoFactorRequirement.roleGiven(saved);
         securityEvents.recordFor(saved.getId(), SecurityEventType.REGISTERED, SecurityOutcome.SUCCESS,
                 cohort == null ? null : "joined a cohort");
-        return response(authSessionService.open(saved, request.remember()));
+        return response(authSessionService.open(saved, request.remember(), SignInOrigin.PASSWORD));
     }
 
     /**
@@ -118,6 +124,12 @@ public class AuthService {
         }
         AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessRuleException("Invalid email or password."));
+        // V24 (SA-FR-10): only after the right password, so a guesser learns nothing; not counted as a failed guess.
+        if (!securityAccess.allows(user, SignInOrigin.PASSWORD)) {
+            securityEvents.recordFor(user.getId(), SecurityEventType.LOGIN_FAILED, SecurityOutcome.DENIED, "password sign-in off");
+            throw new com.visionmapping.exception.SignInMethodOffException(
+                    com.visionmapping.exception.SignInMethodOffException.PASSWORD_OFF);
+        }
         // V21 (TF-FR-10, TF-FR-16): with 2FA on, the password alone opens no session, and the failure count is
         // reset only after the second step, so a known password cannot be used to guess codes without limit.
         Optional<TwoFactorChallengeResponse> challenge = signInChallenges.start(user, request.remember(), "/",
@@ -128,7 +140,7 @@ public class AuthService {
         loginAttemptLimiter.recordSuccess(email);
         securityEvents.recordFor(user.getId(), SecurityEventType.LOGIN_SUCCEEDED, SecurityOutcome.SUCCESS,
                 request.remember() ? "remember me" : "this tab only");
-        return response(authSessionService.open(user, request.remember()));
+        return response(authSessionService.open(user, request.remember(), SignInOrigin.PASSWORD));
     }
 
     /**

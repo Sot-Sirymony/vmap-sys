@@ -83,6 +83,8 @@ class AccessControlSweepTests {
             // V23: an invited person has no token yet; the invitation link is their credential.
             "POST /api/auth/invitation/check",
             "POST /api/auth/invitation/accept",
+            // V24: the sign-in pages read the allowed methods before anyone signs in.
+            "GET /api/auth/sign-in-methods",
             // V14: Google sign-in happens before the person has a token.
             "GET /api/auth/oauth/google/status",
             "GET /api/auth/oauth/google/authorize-url",

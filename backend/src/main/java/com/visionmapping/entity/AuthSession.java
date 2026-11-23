@@ -2,6 +2,8 @@ package com.visionmapping.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -61,6 +63,11 @@ public class AuthSession extends BaseAuditableEntity {
     /** V20 (D-20-3): until when "Verify it's you" covers the settings group of actions in this session. */
     @Column(name = "verified_until")
     private Instant verifiedUntil;
+
+    /** V24 (D-24-3): how this session was opened; null for sessions from before V24. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sign_in_method", length = 20)
+    private com.visionmapping.entity.enums.SignInOrigin signInMethod;
 
     public boolean isActive(Instant now) {
         return revokedAt == null && expiresAt.isAfter(now);

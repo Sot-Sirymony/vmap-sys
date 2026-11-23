@@ -17,6 +17,40 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 24.0.0 — Security access: sign-in methods (all 5 phases built; awaiting deploy, UAT and the Khmer review)
+
+BRD [`VMS_BRD_V24.0.0.md`](VMS_BRD_V24.0.0.md), from the 24.0.0.0 prototype
+([`VMS_BRD_V24.0.0.0 – Security Access Control.md`](VMS_BRD_V24.0.0.0%20–%20Security%20Access%20Control.md), commit
+`a545f3d`). Product owner answers on 23 Nov 2026: only real methods get switches (Q-01), Admin only (Q-02), signed out
+at the next request (Q-03), "two-step for everyone" with 14 days to set up (Q-04).
+
+**Phase 1 (storage, no visible change):** migration `V92__security_access.sql` adds the one-row `security_settings`
+table (password and Google sign-in on, two-step for privileged roles) and `auth_sessions.sign_in_method`; every way of
+opening a session records its method. `GET /api/auth/sign-in-methods` (public) and `GET /api/admin/security-access`
+(settings and per-method counts, Admins left out).
+
+**Phase 2 (enforcement):** with a method off, non-Admins are refused at password sign-in (only after the right
+password), sign-up, invitation acceptance, Google sign-in, sign-up and linking, and again at the Google code exchange
+and the two-step code. `PUT /api/admin/security-access` (Admin only, reason, fresh code `ADMIN_SECURITY_ACCESS`)
+refuses both off, password off without Google, and any change that strands an account; switching off ends the
+sessions opened with that method; `SECURITY_ACCESS_CHANGED` is logged and alerted.
+
+**Phase 3 (two-step for everyone):** `TwoFactorRequirementService.requiredFor` (privileged role, or scope
+`EVERYONE`) replaces the privileged-only test for set-up dates, the between-requests set-up check, turning two-step
+sign-in off and the admin report. *Everyone* gives accounts without it 14 days; new accounts get their date at
+creation; switching back clears participants' dates and never turns two-step sign-in off.
+
+**Phase 4 (frontend):** the Security access page works against the server: two switches with counts, the two-step
+choice, a save summary with reason and code, read-only for *View security log*, and the 57-item catalogue as a
+collapsed reference with *In VMS* marks. Sign In, Sign Up and the invitation page offer only the methods that are on,
+with "Admin? Sign in with a password"; the Google button follows the setting; the two-step set-up prompt asks
+participants who have a date. Menu items can name several permissions.
+
+**Phase 5 (documents):** [`UAT_V24.md`](UAT_V24.md) (SAC-01 to SAC-14), [`km-review-v24.csv`](km-review-v24.csv) (72
+drafts), `USER_GUIDE.md`, `THREAT_MODEL.md` section 7, `ASVS_L2_CHECK.md` (two rows; Met is now 73), `API.md`.
+
+Tests: backend 1094, frontend 1302, all passing.
+
 ## 23.0.0 — User, role and permission management (all 7 phases built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V23.0.0.md`](VMS_BRD_V23.0.0.md). Product owner answers on 22 Nov 2026: custom roles with editable

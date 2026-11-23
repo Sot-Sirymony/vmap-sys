@@ -2216,7 +2216,9 @@ export type StepUpAction = 'CHANGE_PASSWORD' | 'EXPORT_DATA' | 'CHANGE_REMINDER_
   | 'TWO_FACTOR_SETTINGS' | 'ADMIN_TWO_FACTOR_RESET'
   | 'ADMIN_ROLE_CHANGE' | 'ADMIN_AI_KEY' | 'ADMIN_COHORT_COACH'
   // V23: blocking or unblocking, editing a role, permanently deleting an account.
-  | 'ADMIN_USER_BLOCK' | 'ADMIN_ROLE_EDIT' | 'ADMIN_USER_DELETE';
+  | 'ADMIN_USER_BLOCK' | 'ADMIN_ROLE_EDIT' | 'ADMIN_USER_DELETE'
+  // V24: turning sign-in methods on or off.
+  | 'ADMIN_SECURITY_ACCESS';
 
 /**
  * V20: a code was sent. delivery is EMAIL, LOG (development: the code is in the

@@ -21,7 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * V21 (BRD 21.0.0, D-21-2, TF-FR-32 to TF-FR-37): two-step sign-in is required
- * for admins and coaches. Each gets a set-up-by date (the release, or the day
+ * for admins and coaches, and V24 (D-24-4, SA-FR-14) for everyone when an Admin
+ * chooses so on the Security access page. Each gets a set-up-by date (the release, or the day
  * the role is given, plus the grace period). Before it they may skip; from it
  * they may only set it up (TF-FR-34, enforced by {@code TwoFactorSetupInterceptor}).
  */
@@ -41,11 +42,21 @@ public class TwoFactorRequirementService {
     private final SecurityEventService securityEvents;
     private final Clock clock;
     private final com.visionmapping.security.PermissionService permissions;
+    private final com.visionmapping.repository.SecuritySettingsRepository securitySettings;
 
     /** TF-FR-32, TF-FR-37: at start-up, dates for admins and coaches who have none; none for participants. */
     @EventListener(ApplicationReadyEvent.class)
     public void assignMissingDueDates() {
         if (!properties.enabled()) {
+            return;
+        }
+        if (everyone()) {
+            int assigned = appUserRepository.assignEveryoneTwoFactorDueDates(clock.instant().plus(properties.gracePeriod()),
+                    com.visionmapping.entity.enums.UserStatus.ACTIVE);
+            if (assigned > 0) {
+                log.info("Two-step sign-in: {} accounts must set it up within {} days (required for everyone)", assigned,
+                        properties.gracePeriod().toDays());
+            }
             return;
         }
         java.util.Set<String> privileged = permissions.privilegedRoleKeys();
@@ -57,16 +68,61 @@ public class TwoFactorRequirementService {
         }
     }
 
-    /** TF-FR-32, TF-FR-35: a new coach or admin gets the grace period from today, unless already dated. */
+    /**
+     * V24 (SA-FR-14): whether this account must use two-step sign-in: a privileged role (V21 D-21-2), or anyone
+     * while an Admin requires it for everyone (D-24-4).
+     */
+    @Transactional(readOnly = true)
+    public boolean requiredFor(AppUser user) {
+        return permissions.isPrivileged(user) || everyone();
+    }
+
+    /** V24 (D-24-4): whether "Everyone" is chosen on the Security access page. */
+    @Transactional(readOnly = true)
+    public boolean everyone() {
+        return securitySettings.findById(com.visionmapping.entity.SecuritySettings.SINGLE_ROW_ID)
+                .map(row -> row.getTwoFactorScope() == com.visionmapping.entity.enums.TwoFactorScope.EVERYONE)
+                .orElse(false);
+    }
+
+    /** V24 (SA-FR-14): whether two-step sign-in works on this server at all. */
+    public boolean available() {
+        return properties.enabled();
+    }
+
+    /**
+     * V24 (SA-FR-14, D-24-4): applies a new scope. EVERYONE gives every active account without two-step sign-in a
+     * set-up date (unless it has one); PRIVILEGED clears the dates of non-privileged accounts, and never turns
+     * two-step sign-in off for anyone. Returns how many accounts changed.
+     */
+    public int scopeChanged(com.visionmapping.entity.enums.TwoFactorScope scope) {
+        if (scope == com.visionmapping.entity.enums.TwoFactorScope.EVERYONE) {
+            return appUserRepository.assignEveryoneTwoFactorDueDates(clock.instant().plus(properties.gracePeriod()),
+                    com.visionmapping.entity.enums.UserStatus.ACTIVE);
+        }
+        return appUserRepository.clearParticipantTwoFactorDueDates(permissions.privilegedRoleKeys());
+    }
+
+    /** V24: after a role change to a role that does not need it, the date goes, unless everyone needs it (D-24-4). */
+    public void roleTaken(AppUser user) {
+        if (!requiredFor(user)) {
+            user.setTwoFactorDueAt(null);
+        }
+    }
+
+    /**
+     * TF-FR-32, TF-FR-35: a new coach or admin gets the grace period from today, unless already dated. V24: so does
+     * any new account while two-step sign-in is required for everyone.
+     */
     public void roleGiven(AppUser user) {
-        if (permissions.isPrivileged(user) && user.getTwoFactorDueAt() == null && !hasTwoFactor(user.getId())) {
+        if (requiredFor(user) && user.getTwoFactorDueAt() == null && !hasTwoFactor(user.getId())) {
             user.setTwoFactorDueAt(clock.instant().plus(properties.gracePeriod()));
         }
     }
 
     /** TF-FR-30. */
     public void afterReset(AppUser user) {
-        if (permissions.isPrivileged(user)) {
+        if (requiredFor(user)) {
             user.setTwoFactorDueAt(clock.instant().plus(AFTER_RESET));
         }
     }
@@ -75,7 +131,7 @@ public class TwoFactorRequirementService {
     @Transactional(readOnly = true)
     public boolean setupRequiredNow(AppUser user) {
         Instant due = user.getTwoFactorDueAt();
-        return properties.enabled() && permissions.isPrivileged(user) && due != null
+        return properties.enabled() && requiredFor(user) && due != null
                 && !due.isAfter(clock.instant()) && !hasTwoFactor(user.getId());
     }
 

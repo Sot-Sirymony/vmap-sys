@@ -38,9 +38,14 @@ public class TwoFactorSetupInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal principal)
-                // V23 (UM-FR-06): only privileged roles have a two-step set-up-by date.
-                || principal.getPermissions().stream().allMatch(permission -> permission == com.visionmapping.security.Permission.USE_OWN_PLAN)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal principal)) {
+            return true;
+        }
+        // V23 (UM-FR-06): only privileged roles have a two-step set-up-by date, unless an Admin requires two-step
+        // sign-in for everyone (V24 D-24-4); the setting is one row read by key.
+        boolean participant = principal.getPermissions().stream()
+                .allMatch(permission -> permission == com.visionmapping.security.Permission.USE_OWN_PLAN);
+        if (participant && !requirement.everyone()) {
             return true;
         }
         String path = request.getRequestURI();
@@ -49,7 +54,7 @@ public class TwoFactorSetupInterceptor implements HandlerInterceptor {
         }
         boolean blocked = appUserRepository.findById(principal.getId()).map(requirement::setupRequiredNow).orElse(false);
         if (blocked) {
-            throw TwoFactorException.setupRequired();
+            throw participant ? TwoFactorException.setupRequiredForEveryone() : TwoFactorException.setupRequired();
         }
         return true;
     }

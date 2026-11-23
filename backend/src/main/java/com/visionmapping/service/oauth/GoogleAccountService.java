@@ -76,6 +76,8 @@ public class GoogleAccountService {
     private final SignInChallengeService signInChallenges;
     private final Clock clock;
     private final com.visionmapping.service.admin.InvitationService invitations;
+    private final com.visionmapping.service.admin.SecurityAccessService securityAccess;
+    private final com.visionmapping.service.twofactor.TwoFactorRequirementService twoFactorRequirement;
 
     /**
      * GA-FR-14 to GA-FR-17, GA-FR-19: decides the outcome and returns the URL
@@ -86,7 +88,7 @@ public class GoogleAccountService {
         Optional<ExternalIdentity> linked = identityRepository.findByProviderAndSubject(IdentityProvider.GOOGLE, google.subject());
         if (linked.isPresent()) {
             ExternalIdentity identity = linked.get();
-            AppUser user = activeOrRefuse(identity.getUser());
+            AppUser user = googleAllowed(activeOrRefuse(identity.getUser()));
             if (!identity.getLastEmail().equalsIgnoreCase(google.email())) {
                 identity.setLastEmail(google.email());
             }
@@ -95,7 +97,7 @@ public class GoogleAccountService {
         String email = google.email().toLowerCase(Locale.ROOT);
         Optional<AppUser> existing = appUserRepository.findByEmail(email);
         if (existing.isPresent()) {
-            AppUser user = activeOrRefuse(existing.get());
+            AppUser user = googleAllowed(activeOrRefuse(existing.get()));
             // V23 (UM-FR-26): an invited person who has not chosen a password yet. Google proved they own the
             // address, as the invitation email would have, so it is linked without a password.
             if (identityRepository.findByUser_IdAndProvider(user.getId(), IdentityProvider.GOOGLE).isEmpty()
@@ -104,6 +106,10 @@ public class GoogleAccountService {
                 return fragment("signed-in", newCode(OAuthHandoffKind.SIGN_IN, user, google.subject(), verified), verified);
             }
             return fragment("link", newCode(OAuthHandoffKind.LINK, user, google.subject(), verified), verified);
+        }
+        // V24 (SA-FR-12): a new account is never an Admin.
+        if (!securityAccess.settings().googleSignIn()) {
+            throw new GoogleSignInException(GoogleSignInFailure.METHOD_OFF, "Google sign-up is turned off");
         }
         AppUser created = createAccount(google, email);
         return fragment("signed-in", newCode(OAuthHandoffKind.SIGN_IN, created, google.subject(), verified), verified);
@@ -128,6 +134,8 @@ public class GoogleAccountService {
             securityEvents.recordFor(user.getId(), SecurityEventType.GOOGLE_SIGN_IN_FAILED, SecurityOutcome.DENIED, "unavailable");
             throw new BusinessRuleException(SIGN_IN_EXPIRED);
         }
+        // V24 (SA-FR-12): turned off since the Google step.
+        securityAccess.requireAllowed(user, SignInOrigin.GOOGLE);
         identityRepository.findByUser_IdAndProvider(user.getId(), IdentityProvider.GOOGLE)
                 .ifPresent(identity -> identity.setLastUsedAt(clock.instant()));
         // V21 (TF-FR-18, D-21-3): with 2FA on, Google is only the first factor.
@@ -138,7 +146,7 @@ public class GoogleAccountService {
         }
         securityEvents.recordFor(user.getId(), SecurityEventType.GOOGLE_SIGN_IN_SUCCEEDED, SecurityOutcome.SUCCESS,
                 remember ? "remember me" : "this tab only");
-        return AuthService.response(authSessionService.open(user, remember));
+        return AuthService.response(authSessionService.open(user, remember, SignInOrigin.GOOGLE));
     }
 
     /**
@@ -163,6 +171,8 @@ public class GoogleAccountService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new BusinessRuleException(LINK_EXPIRED);
         }
+        // V24 (SA-FR-12): linking Google is refused while Google sign-in is off for this account.
+        securityAccess.requireAllowed(user, SignInOrigin.GOOGLE);
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             loginAttemptLimiter.recordFailure(email, clientIp);
             securityEvents.recordForEmail(email, user.getId(), SecurityEventType.LOGIN_FAILED, SecurityOutcome.DENIED, "google link");
@@ -198,7 +208,16 @@ public class GoogleAccountService {
             return challenge.get();
         }
         loginAttemptLimiter.recordSuccess(email);
-        return AuthService.response(authSessionService.open(user, remember));
+        return AuthService.response(authSessionService.open(user, remember, SignInOrigin.GOOGLE));
+    }
+
+    /** V24 (SA-FR-12): Google sign-in turned off for this account (never for Admins, D-24-5). */
+    private AppUser googleAllowed(AppUser user) {
+        if (!securityAccess.allows(user, SignInOrigin.GOOGLE)) {
+            securityEvents.recordFor(user.getId(), SecurityEventType.GOOGLE_SIGN_IN_FAILED, SecurityOutcome.DENIED, "google sign-in off");
+            throw new GoogleSignInException(GoogleSignInFailure.METHOD_OFF, "Google sign-in is turned off");
+        }
+        return user;
     }
 
     /** GA-FR-17: a disabled account is never signed in or linked through Google. */
@@ -238,6 +257,8 @@ public class GoogleAccountService {
                 .lastEmail(google.email())
                 .linkedAt(now)
                 .build());
+        // V24 (SA-FR-14): with two-step sign-in required for everyone, a new account gets its set-up date.
+        twoFactorRequirement.roleGiven(user);
         securityEvents.recordFor(user.getId(), SecurityEventType.REGISTERED, SecurityOutcome.SUCCESS, "google");
         return user;
     }

@@ -71,9 +71,16 @@ public class TwoFactorAdminService {
                 .filter(user -> !permissions.isPrivileged(user))
                 .sorted(Comparator.comparing(AppUser::getFullName))
                 .forEach(people::add);
+        // V24 (SA-FR-14): with two-step sign-in required for everyone, participants still setting it up are listed too.
+        if (requirement.everyone()) {
+            java.util.Set<Long> listed = new java.util.HashSet<>(people.stream().map(AppUser::getId).toList());
+            appUserRepository.findByTwoFactorDueAtIsNotNullAndRoleNotInOrderByFullNameAsc(permissions.privilegedRoleKeys()).stream()
+                    .filter(user -> listed.add(user.getId()))
+                    .forEach(people::add);
+        }
         return people.stream().map(user -> {
             Optional<UserTwoFactor> found = Optional.ofNullable(settings.get(user.getId()));
-            Instant due = permissions.isPrivileged(user) ? user.getTwoFactorDueAt() : null;
+            Instant due = requirement.requiredFor(user) ? user.getTwoFactorDueAt() : null;
             return new TwoFactorReportRow(user.getId(), user.getFullName(), user.getEmail(), user.getRole(),
                     found.isPresent(), found.map(value -> value.getMethod().name()).orElse(null), due,
                     found.isEmpty() && due != null && !due.isAfter(now));

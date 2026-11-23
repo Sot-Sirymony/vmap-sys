@@ -182,6 +182,9 @@ public class SecurityAlertService {
                             + " (" + detail.split(";")[0] + ").");
                 }
             }
+            // V24 SA-FR-08: every change to the sign-in methods.
+            case SECURITY_ACCESS_CHANGED -> alert("security-access:" + event.getId(), "User " + event.getActorId()
+                    + " changed the sign-in methods: " + event.getDetail());
             case ADMIN_BOOTSTRAPPED -> alert("bootstrap:" + event.getId(), "User " + event.getTargetId()
                     + " was made the first admin from ADMIN_BOOTSTRAP_EMAIL. Remove the setting now.");
             case AI_BUDGET_WARNING -> alert("ai-budget:" + event.getId(), "AI spending: " + event.getDetail());

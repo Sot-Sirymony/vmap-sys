@@ -25,6 +25,14 @@ public interface AuthSessionRepository extends JpaRepository<AuthSession, Long> 
     int revokeAllForUser(@Param("userId") Long userId, @Param("keepId") Long keepId,
                          @Param("reason") String reason, @Param("now") Instant now);
 
+    /** V24 (D-24-3): ends every open session opened with the method, except Admins' (D-24-5). */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update AuthSession s set s.revokedAt = :now, s.revokedReason = :reason, s.updatedAt = :now "
+            + "where s.signInMethod = :method and s.revokedAt is null and s.expiresAt > :now "
+            + "and s.user.id in (select u.id from AppUser u where u.role <> :admin)")
+    int revokeBySignInMethod(@Param("method") com.visionmapping.entity.enums.SignInOrigin method,
+                             @Param("admin") String admin, @Param("reason") String reason, @Param("now") Instant now);
+
     /** V20 (SV-FR-16): a password change or reset closes every verified window of the person. */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update AuthSession s set s.verifiedUntil = null where s.user.id = :userId and s.verifiedUntil is not null")

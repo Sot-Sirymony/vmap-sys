@@ -4,8 +4,10 @@ import { ApiError } from '../api/apiClient';
 import { acceptInvitation, checkInvitation } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { GoogleSignInButton } from '../components/common/GoogleSignInButton';
 import { Loading } from '../components/common/Loading';
 import { useAuth } from '../context/AuthContext';
+import { useOfferedSignInMethods } from '../hooks/useOfferedSignInMethods';
 import { tr } from '../i18n/translate';
 import { AuthLayout } from '../layouts/AuthLayout';
 import type { InvitationInfo } from '../types/admin';
@@ -31,6 +33,8 @@ export function AcceptInvitationPage() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  // V24 (SA-FR-11): with password sign-in off, the invitation is accepted with Google.
+  const methods = useOfferedSignInMethods();
 
   useEffect(() => {
     if (!token) return;
@@ -101,6 +105,16 @@ export function AcceptInvitationPage() {
 
   return (
     <AuthLayout subtitle={tr('Welcome, {name}', { name: invitation.fullName })}>
+      {!methods.password && (
+        <>
+          <p className="auth-status-note" style={{ marginTop: 0, maxWidth: 'none' }}>
+            {tr('Password sign-in is turned off. Accept your invitation with Google, using {email}.', { email: invitation.email })}
+          </p>
+          <GoogleSignInButton onClick={() => navigate('/oauth/google')} />
+        </>
+      )}
+      {methods.password && (
+      <>
       <p className="auth-status-note" style={{ marginTop: 0, maxWidth: 'none' }}>
         {tr('Choose a password for {email}. Only you will know it.', { email: invitation.email })}
       </p>
@@ -135,9 +149,13 @@ export function AcceptInvitationPage() {
           {saving ? tr('Saving...') : tr('Save password and sign in')}
         </button>
       </form>
-      <p className="auth-link" style={{ textAlign: 'center' }}>
-        {tr('Your email is a Google account?')} <Link to="/oauth/google">{tr('Sign in with Google instead')}</Link>
-      </p>
+      {methods.google && (
+        <p className="auth-link" style={{ textAlign: 'center' }}>
+          {tr('Your email is a Google account?')} <Link to="/oauth/google">{tr('Sign in with Google instead')}</Link>
+        </p>
+      )}
+      </>
+      )}
     </AuthLayout>
   );
 }

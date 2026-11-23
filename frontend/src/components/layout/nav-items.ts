@@ -45,8 +45,8 @@ export type NavItem = {
   to: string;
   label: string;
   icon: LucideIcon;
-  /** V23 (UM-FR-05): shown only with this permission; everyone sees an item without it. */
-  permission?: Permission;
+  /** V23 (UM-FR-05): shown only with this permission (V24: or any one of these); everyone sees an item without it. */
+  permission?: Permission | Permission[];
 };
 
 export type NavGroup = {
@@ -138,8 +138,8 @@ export const navGroups: NavGroup[] = [
       // V23 (UM-FR-17, UM-FR-08): accounts and roles.
       { to: '/settings/users', label: tr('Users'), icon: UserRoundCog, permission: 'VIEW_USERS' },
       { to: '/settings/roles', label: tr('Roles'), icon: ShieldUser, permission: 'MANAGE_ROLES' },
-      // V24.0.0.0: Security access prototype; Admin only, like Manage roles.
-      { to: '/settings/security-access', label: tr('Security access'), icon: LockKeyhole, permission: 'MANAGE_ROLES' },
+      // V24 (D-24-2): Admins change sign-in methods; roles with "View security log" read them.
+      { to: '/settings/security-access', label: tr('Security access'), icon: LockKeyhole, permission: ['MANAGE_ROLES', 'VIEW_SECURITY_LOG'] },
       { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, permission: 'MANAGE_COHORTS' },
       { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, permission: 'MANAGE_AI_SETTINGS' },
       // V10 (SEC-09-05): the read-only security log.
@@ -150,11 +150,17 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
+/** Whether this person may see the item: no permission named, or the one (V24: any one of those) named. */
+export function canSeeNavItem(user: AuthUser | null | undefined, item: NavItem): boolean {
+  if (!item.permission) return true;
+  return Array.isArray(item.permission) ? item.permission.some((one) => can(user, one)) : can(user, item.permission);
+}
+
 /** The nav groups this person may see (V23: by permission, not role name). */
 export function navGroupsFor(user: AuthUser | null | undefined): NavGroup[] {
   return navGroups.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.permission || can(user, item.permission)),
+    items: group.items.filter((item) => canSeeNavItem(user, item)),
   }));
 }
 

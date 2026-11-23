@@ -66,6 +66,8 @@ public enum SecurityEventType {
     ROLE_CREATED,
     ROLE_UPDATED,
     ROLE_DELETED,
+    // V24 SA-FR-08: sign-in methods or the two-step scope changed by an Admin.
+    SECURITY_ACCESS_CHANGED,
     // V23 phase 5 (UM-FR-42): accounts an admin creates, edits and deletes, and their invitations.
     USER_CREATED_BY_ADMIN,
     USER_UPDATED,

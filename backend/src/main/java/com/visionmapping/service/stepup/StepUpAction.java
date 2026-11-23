@@ -28,7 +28,9 @@ public enum StepUpAction {
     /** V23 (UM-FR-11, UM-FR-14): creating, changing or deleting a role. */
     ADMIN_ROLE_EDIT(Rule.FRESH, 10, false, "change a role and its permissions", "ប្តូរតួនាទី និងសិទ្ធិរបស់វា"),
     /** V23 (UM-FR-36): permanently deleting another person's account. */
-    ADMIN_USER_DELETE(Rule.FRESH, 5, false, "permanently delete a person's account", "លុបគណនីរបស់មនុស្សម្នាក់ជាអចិន្ត្រៃយ៍");
+    ADMIN_USER_DELETE(Rule.FRESH, 5, false, "permanently delete a person's account", "លុបគណនីរបស់មនុស្សម្នាក់ជាអចិន្ត្រៃយ៍"),
+    /** V24 (SA-FR-05): turning sign-in methods on or off, or changing who needs two-step sign-in. */
+    ADMIN_SECURITY_ACCESS(Rule.FRESH, 10, false, "change sign-in methods", "ប្តូរវិធីចូលគណនី");
 
     /** Whether the verified window covers the action. */
     public enum Rule { WINDOW, FRESH }

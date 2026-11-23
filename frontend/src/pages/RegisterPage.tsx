@@ -4,6 +4,7 @@ import { register } from '../api/authApi';
 import { AuthField } from '../components/common/AuthField';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { GoogleSignInSection } from '../components/common/GoogleSignInButton';
+import { useOfferedSignInMethods } from '../hooks/useOfferedSignInMethods';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { tr } from '../i18n/translate';
 
@@ -17,6 +18,8 @@ export function RegisterPage() {
   const [joinCode, setJoinCode] = useState(searchParams.get('code') ?? '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // V24 (SA-FR-11): with password sign-in off, new accounts come through Google only.
+  const methods = useOfferedSignInMethods();
   const navigate = useNavigate();
 
   async function handleSubmit(event: FormEvent) {
@@ -53,8 +56,14 @@ export function RegisterPage() {
       {/* V14 (GA-FR-22): a new account made with Google keeps its session, like signing up does. */}
       <GoogleSignInSection
         onClick={() => navigate('/oauth/google', { state: { from: '/', remember: true } })}
-        divider={tr('or')}
+        divider={methods.password ? tr('or') : undefined}
       />
+      {!methods.password && (
+        <p className="auth-status-note" style={{ maxWidth: 'none' }}>
+          {tr('Sign-up with a password is turned off. Sign up with Google.')}
+        </p>
+      )}
+      {methods.password && (
       <form className="auth-form" onSubmit={handleSubmit}>
         <AuthField
           id="register-name"
@@ -115,6 +124,7 @@ export function RegisterPage() {
           {loading ? tr('Creating...') : tr('Create account')}
         </button>
       </form>
+      )}
       <p className="auth-link" style={{ textAlign: 'center' }}>
         {tr('Already have an account?')} <Link to="/login">{tr('Sign in')}</Link>
       </p>

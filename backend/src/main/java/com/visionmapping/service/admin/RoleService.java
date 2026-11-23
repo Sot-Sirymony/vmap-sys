@@ -154,7 +154,7 @@ public class RoleService {
             if (nowPrivileged && !wasPrivileged) {
                 twoFactorRequirement.roleGiven(holder);
             } else if (!nowPrivileged && wasPrivileged) {
-                holder.setTwoFactorDueAt(null);
+                twoFactorRequirement.roleTaken(holder);
             }
             if (permissionsChanged) {
                 notices.changed(AccountNotice.Kind.ROLE_UPDATED, holder, null, role.getName());
@@ -202,7 +202,7 @@ public class RoleService {
             if (privileged) {
                 twoFactorRequirement.roleGiven(holder);
             } else {
-                holder.setTwoFactorDueAt(null);
+                twoFactorRequirement.roleTaken(holder);
             }
             users.save(holder);
             securityEvents.record(SecurityEventType.ROLE_CHANGED, SecurityOutcome.SUCCESS, "user", holder.getId(),

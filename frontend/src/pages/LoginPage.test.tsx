@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../api/authApi';
-import * as oauthApi from '../api/oauthApi';
+import * as securityAccessApi from '../api/securityAccessApi';
 import { resetGoogleSignInStatus } from '../components/common/GoogleSignInButton';
 import { setCurrentLanguage } from '../i18n/translate';
 import { currentLocation, renderPage } from '../test/render';
@@ -10,6 +10,7 @@ import { LoginPage } from './LoginPage';
 
 vi.mock('../api/authApi');
 vi.mock('../api/oauthApi');
+vi.mock('../api/securityAccessApi');
 
 const REMEMBERED_EMAIL_KEY = 'visionMappingRememberedEmail';
 const session = { token: 'new-token', user: { id: 1, fullName: 'Sok Chan', email: 'chan@example.com', role: 'USER' } };
@@ -23,7 +24,7 @@ describe('LoginPage', () => {
     vi.clearAllMocks();
     localStorage.clear();
     vi.mocked(authApi.login).mockResolvedValue(session as never);
-    vi.mocked(oauthApi.getGoogleSignInStatus).mockResolvedValue({ enabled: true });
+    vi.mocked(securityAccessApi.getOfferedSignInMethods).mockResolvedValue({ password: true, google: true });
     resetGoogleSignInStatus();
   });
   afterEach(() => setCurrentLanguage('en'));
@@ -127,11 +128,22 @@ describe('LoginPage', () => {
   });
 
   it('hides Google sign-in when the server has not set it up (V14 GA-FR-03)', async () => {
-    vi.mocked(oauthApi.getGoogleSignInStatus).mockResolvedValue({ enabled: false });
+    vi.mocked(securityAccessApi.getOfferedSignInMethods).mockResolvedValue({ password: true, google: false });
     renderPage(<LoginPage />, { route: '/login' });
-    await waitFor(() => expect(oauthApi.getGoogleSignInStatus).toHaveBeenCalled());
+    await waitFor(() => expect(securityAccessApi.getOfferedSignInMethods).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
     expect(screen.queryByText('or sign in with email')).not.toBeInTheDocument();
+  });
+
+  it('V24 SA-FR-13: with password sign-in off it offers Google, and keeps a password link for admins', async () => {
+    vi.mocked(securityAccessApi.getOfferedSignInMethods).mockResolvedValue({ password: false, google: true });
+    renderPage(<LoginPage />, { route: '/login' });
+    expect(await screen.findByText('Password sign-in is turned off. Sign in with Google.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    expect(screen.queryByText('or sign in with email')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with a password' }));
+    expect(password()).toBeInTheDocument();
   });
 
   it('shows the form in Khmer (COV-NFR-08)', () => {

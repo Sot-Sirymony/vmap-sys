@@ -121,8 +121,8 @@ public class AdminUserActionsService {
         target.setRoleChangedAt(clock.instant());
         target.setRoleChangedById(actor.getId());
         if (!permissions.isPrivilegedRole(newRole.getKey())) {
-            // A participant is not asked for two-step sign-in (V21 D-21-2).
-            target.setTwoFactorDueAt(null);
+            // A participant is not asked for two-step sign-in (V21 D-21-2), unless everyone is (V24 D-24-4).
+            twoFactorRequirement.roleTaken(target);
         } else {
             // V21 TF-FR-32, UM-FR-06: a privileged role must set up two-step sign-in within the grace period.
             twoFactorRequirement.roleGiven(target);

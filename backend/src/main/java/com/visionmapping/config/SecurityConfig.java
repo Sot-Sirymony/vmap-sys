@@ -146,6 +146,8 @@ public class SecurityConfig {
                                 // V23 (UM-FR-24): the invitation link is the only credential the person has yet.
                                 "/api/auth/invitation/check",
                                 "/api/auth/invitation/accept",
+                                // V24 (SA-FR-03): which sign-in methods the sign-in pages offer. Read-only.
+                                "/api/auth/sign-in-methods",
                                 // V14 (BRD 14.0.0, Appendix B): Google sign-in. The
                                 // person is not signed in yet; state, PKCE and the
                                 // one-time codes are the keys.

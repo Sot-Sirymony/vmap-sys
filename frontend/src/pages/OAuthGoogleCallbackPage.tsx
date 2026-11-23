@@ -17,6 +17,8 @@ export const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
   unavailable: 'Google sign-in is not available for this account. Please use your email and password.',
   // V23 (UM-FR-32): Google proved the address, so the person is told plainly.
   blocked: 'This account is blocked. Contact your program admin.',
+  // V24 (SA-FR-12): an Admin turned Google sign-in off.
+  'google-off': 'Google sign-in is turned off. Sign in with your password.',
   'too-many': 'Too many Google sign-in attempts from this network. Try again in a few minutes.',
 };
 
