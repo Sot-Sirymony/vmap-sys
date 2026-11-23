@@ -1,73 +1,57 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
+import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import MenuItem from '@mui/material/MenuItem';
+import MuiButton from '@mui/material/Button';
+import Select from '@mui/material/Select';
+import Skeleton from '@mui/material/Skeleton';
+import { keyframes } from '@mui/material/styles';
+import { ArrowDown, ArrowUp, Rocket } from 'lucide-react';
 import { getDashboardSummary } from '../api/dashboardApi';
-import {
-  CategoryBreakdownChart,
-  PartnerPipelineChart,
-  ProgressTrendChart,
-  VisionAreaProgressChart,
-} from '../components/dashboard/charts';
-import { OTHER_CATEGORY_KEY } from '../components/dashboard/categoryKeys';
+import { updateTaskStatus } from '../api/taskApi';
 import { listVisionAreas } from '../api/visionAreaApi';
+import { ErrorMessage } from '../components/common/ErrorMessage';
 import { FilterSelect, optionsFromEntities } from '../components/common/FilterSelect';
+import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
+import { StatusChip } from '../components/common/StatusChip';
 import { AttentionPanel } from '../components/dashboard/AttentionPanel';
-import { DashboardSummary } from '../components/dashboard/DashboardSummary';
+import { ConfettiBurst, rememberCompletedGoals, shouldCelebrate } from '../components/dashboard/Celebration';
+import { ChartCard } from '../components/dashboard/ChartCard';
+import { ProgressTrendChart } from '../components/dashboard/charts';
 import { EnergyBudgetCard } from '../components/dashboard/EnergyBudgetCard';
 import { GettingStarted } from '../components/dashboard/GettingStarted';
 import { GratitudeCard } from '../components/dashboard/GratitudeCard';
+import { InsightTabs } from '../components/dashboard/InsightTabs';
+import { KpiCard } from '../components/dashboard/KpiCard';
+import { MobileCollapse } from '../components/dashboard/MobileCollapse';
+import { NextUpList, type NextUpTask } from '../components/dashboard/NextUpList';
 import { ProgressMetricsCard } from '../components/dashboard/ProgressMetricsCard';
-import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
+import { ProgressRing } from '../components/dashboard/ProgressRing';
+import { RankedProgressList, type RankedProgressItem } from '../components/dashboard/RankedProgressList';
+import { StackedStatusBar, WORK_STATUS_ORDER } from '../components/dashboard/StackedStatusBar';
+import { cardSurface, tabular } from '../components/dashboard/surface';
+import { ZoneHeader } from '../components/dashboard/ZoneHeader';
 import { ReportReminderNotice } from '../components/report/ReportReminderNotice';
-import { EmptyState } from '../components/common/EmptyState';
-import { ErrorMessage } from '../components/common/ErrorMessage';
-import { Loading } from '../components/common/Loading';
-import { PriorityBadge } from '../components/common/PriorityBadge';
-import { ProgressBar } from '../components/common/ProgressBar';
-import { StatusBadge } from '../components/common/StatusBadge';
-import Box from '@mui/material/Box';
-import MuiButton from '@mui/material/Button';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import CardHeader from '@mui/material/CardHeader';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useUrlFilter } from '../hooks/useUrlFilter';
-import type { DashboardSummary as DashboardSummaryData, PartnerStatus, Priority, VisionArea, WorkStatus } from '../types/vision';
-import { heatmapLevelColors, priorityColor, statusColor } from '../theme';
-import { obstacleTypeLabels, partnerStatusLabels } from '../utils/enumLabels';
-import { useThemeSettings } from '../context/ThemeModeContext';
-import { PageSection } from './PageSection';
-import { tr } from '../i18n/translate';
 import { formatDate } from '../i18n/formatDate';
-
-const PRIORITY_ORDER: Priority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-const PARTNER_STATUS_ORDER: PartnerStatus[] = ['TO_CONTACT', 'CONTACTED', 'AGREED', 'ACTIVE', 'WAITING', 'DECLINED', 'COMPLETED'];
-const HEATMAP_WEEKS = 12;
-// Chart palettes live in theme.ts (BR-15). Pipeline stages keep per-hue
-// meaning (real status information); obstacle types use the blue depth ramp
-// (arbitrary categories); the heatmap ramp encodes intensity. The original
-// rationale for each choice is documented next to the values in theme.ts.
-// FR-39.3 / BR-34: the status and priority hues are now resolved per render
-// rather than frozen at module load, because high contrast changes them (and
-// changes them per mode). A chart fill IS the colour — unlike a badge, whose
-// label text blends with --foreground and so corrects itself — so leaving these
-// static would have made the charts the one place the toggle didn't reach.
-// The partner pipeline still draws each stage in exactly its status colour
-// (FR-25.3, audit V-02), which is why it goes through the same resolver.
-const HEATMAP_LEVEL_COLORS = heatmapLevelColors;
+import { tr } from '../i18n/translate';
+import type { DashboardSummary as DashboardSummaryData, TaskItem, VisionArea } from '../types/vision';
+import { formatDelta, formatNumber, formatPercent } from '../utils/format';
+import { PageSection } from './PageSection';
 
 type DashboardPeriod = 'month' | 'quarter' | 'year';
+
+/** BRD 25 §8 — zones fade and rise in once, 200ms, staggered; off under reduced motion. */
+const fadeRise = keyframes`
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+`;
+
+const SLOW_LOAD_MS = 10_000;
 
 const PERIOD_OPTIONS = [
   { value: 'month', label: tr('This month') },
@@ -83,8 +67,8 @@ function isoDay(year: number, month1: number, day: number): string {
   return `${year}-${String(month1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// Calendar-aligned window for the two time-based tiles. All bounds are inclusive
-// and computed from the browser's local date.
+// Calendar-aligned window for the two time-based figures. All bounds are
+// inclusive and computed from the browser's local date.
 function periodRange(period: DashboardPeriod): { from: string; to: string } {
   const now = new Date();
   const year = now.getFullYear();
@@ -101,36 +85,58 @@ function periodRange(period: DashboardPeriod): { from: string; to: string } {
   return { from: isoDay(year, month + 1, 1), to: isoDay(year, month + 1, lastDay) };
 }
 
+/** "Good morning, Sokha" by the user's own clock (BRD 25 §3 header). */
+function greeting(fullName: string | undefined, now: Date = new Date()): string {
+  const name = fullName?.trim().split(/\s+/)[0];
+  const hour = now.getHours();
+  let text = tr('Good evening');
+  if (hour < 12) {
+    text = tr('Good morning');
+  } else if (hour < 18) {
+    text = tr('Good afternoon');
+  }
+  return name ? `${text}, ${name}` : text;
+}
+
+function toNextUp(task: TaskItem): NextUpTask {
+  return {
+    id: task.id,
+    title: task.title,
+    context: task.code,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    status: task.status,
+    blockerReason: task.blockerReason,
+  };
+}
+
+/**
+ * BRD 25 — the redesigned Dashboard. Three zones in a fixed reading order
+ * (D-25-2): Today (what to do next, how am I doing), Plan health (areas,
+ * goals and tasks), Insights (trend, obstacles, partners, reviews, and the
+ * account cards). One request feeds it all, as before.
+ */
 export function DashboardPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
-  // FR-39.3: chart fills follow the appearance settings, so high contrast
-  // reaches the charts and not only the badges.
-  const { settings: appearance, resolvedMode } = useThemeSettings();
-  const workStatusFill = (status: WorkStatus) => statusColor(status, resolvedMode, appearance.highContrast);
-  const partnerStatusFill = (status: PartnerStatus) => statusColor(status, resolvedMode, appearance.highContrast);
-  const priorityFill = (priority: Priority) => priorityColor(priority, resolvedMode, appearance.highContrast);
+  const { showToast } = useToast();
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  // In the URL, so a scoped dashboard can be bookmarked and shared.
+  const [slow, setSlow] = useState(false);
+  const [celebration, setCelebration] = useState(0);
+  // In the URL, so a scoped dashboard can be bookmarked and shared (DA-FR-16).
   const [filterVisionAreaId, setFilterVisionAreaId] = useUrlFilter('visionAreaId');
   const [periodValue, setPeriodValue] = useUrlFilter('period');
   const period = isPeriod(periodValue) ? periodValue : 'month';
+  const periodLabel = PERIOD_OPTIONS.find((option) => option.value === period)?.label.toLowerCase() ?? tr('this month');
   const { from, to } = periodRange(period);
-  // Local calendar date, for painting overdue due-dates in the priority list.
-  const now = new Date();
-  const todayIso = isoDay(now.getFullYear(), now.getMonth() + 1, now.getDate());
-  // Drill-down links carry the dashboard's vision-area scope, so the target
-  // page shows the same rows the widget counted. When no area is selected the
-  // links carry only their own value (status, priority, dates). The period
-  // window is not forwarded: it only maps onto task due dates, and the "Due"
-  // tile already carries that range explicitly.
+  // Drill-down links carry the dashboard's vision-area scope, so the target page
+  // shows the same rows the widget counted.
   const scopeSuffix = filterVisionAreaId ? `&visionAreaId=${filterVisionAreaId}` : '';
+  const scoped = (base: string) => (filterVisionAreaId ? `${base}${base.includes('?') ? '&' : '?'}visionAreaId=${filterVisionAreaId}` : base);
 
-  // Extracted so the gratitude card's quick-add/archive can refresh the
-  // summary in place, the same payload the initial load already fetches.
   function reloadSummary(showSpinner: boolean) {
     if (!token) {
       return;
@@ -152,9 +158,7 @@ export function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, filterVisionAreaId, from, to]);
 
-  // The dropdown always offers every area, even while the dashboard is scoped to
-  // one — otherwise picking an area would leave you unable to pick a different
-  // one, since the scoped summary only knows about the area you're already in.
+  // The dropdown always offers every area, even while the dashboard is scoped.
   useEffect(() => {
     if (!token) {
       return;
@@ -162,59 +166,56 @@ export function DashboardPage() {
     void listVisionAreas(token).then(setVisionAreas).catch(() => setVisionAreas([]));
   }, [token]);
 
-  // Everything below reshapes the single /api/dashboard payload for its
-  // widget — the per-entity list fetches this page used to make (8 requests
-  // per load) now happen server-side.
-  const priorityTasks = summary?.priorityTasks ?? [];
-  const tasksByStatus = summary?.tasksByStatus ?? {};
+  // BRD 25 §8: after 10 s of loading, say so calmly instead of leaving skeletons unexplained.
+  useEffect(() => {
+    if (!loading) {
+      setSlow(false);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setSlow(true), SLOW_LOAD_MS);
+    return () => window.clearTimeout(timer);
+  }, [loading]);
 
-  const tasksByPriority = PRIORITY_ORDER.reduce<Record<string, number>>((counts, priority) => {
-    counts[priority] = summary?.tasksByPriority?.[priority] ?? 0;
-    return counts;
-  }, {});
+  // DA-FR-14: celebrate once when more goals are complete than at the last visit.
+  // Only for the whole plan; a scoped view counts a different set of goals.
+  useEffect(() => {
+    if (!summary || filterVisionAreaId) {
+      return;
+    }
+    const completed = summary.goalsByStatus?.COMPLETED ?? 0;
+    const previous = rememberCompletedGoals(String(user?.id ?? 'me'), completed);
+    if (shouldCelebrate(previous, completed)) {
+      setCelebration((count) => count + 1);
+      showToast(tr('A goal is complete. One step closer to your dream.'));
+    }
+    // showToast is stable; the summary is what changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary, filterVisionAreaId, user?.id]);
 
-  const obstaclesByType = summary?.activeObstaclesByType ?? {};
+  async function completeTask(task: NextUpTask) {
+    if (!token) {
+      return;
+    }
+    try {
+      await updateTaskStatus(token, Number(task.id), 'COMPLETED');
+      showToast(tr('Task completed: {title}', { title: task.title }));
+      reloadSummary(false);
+    } catch (completeError) {
+      showToast(completeError instanceof Error ? completeError.message : tr('Could not complete the task.'));
+    }
+  }
 
-  const partnerCounts = PARTNER_STATUS_ORDER.reduce<Record<string, number>>((counts, status) => {
-    counts[status] = summary?.partnersByStatus?.[status] ?? 0;
-    return counts;
-  }, {});
-  const totalPartners = Object.values(partnerCounts).reduce((sum, count) => sum + count, 0);
-
-  const partnerPipelineData = [{ name: 'Partners', ...partnerCounts }];
-
-  const reviewCadence = summary?.reviewCadence ?? {};
-  const reviewHeatmapWeeks = buildReviewHeatmapWeeks(reviewCadence);
-  const cadenceReviewCount = Object.values(reviewCadence).reduce((sum, count) => sum + count, 0);
-
-  const progressTrend = (summary?.progressTrend ?? []).map((point) => ({
-    label: formatDate(new Date(`${point.weekEnd}T00:00:00`)),
-    progress: Number(point.progress),
-  }));
-
-  const visionAreaProgress = (summary?.visionAreaProgress ?? []).map((area) => ({
-    name: area.name,
-    progress: Number(area.progress),
-  }));
-
-  // The whole hierarchy hangs off Vision Areas, so zero areas means a brand
-  // new account — show the getting-started checklist instead of nine "0"
-  // tiles and six empty chart shells. Once areas exist the checklist stays,
-  // as a banner above the stats, until the first dream has goals (FR-21.1 —
-  // the old single-step card dead-ended after step one, audit H-01). Gated
-  // on !loading so it can't flash during fetch.
   const hasArea = (summary?.totalVisionAreas ?? 0) > 0;
   const hasDream = (summary?.activeDreams ?? 0) > 0;
   const hasGoal = (summary?.activeGoals ?? 0) > 0;
   const isFirstRun = !loading && !error && summary !== null && !hasArea;
   const showOnboardingBanner = !loading && !error && summary !== null && hasArea && (!hasDream || !hasGoal);
+  const cardState = loading && !summary ? 'loading' : 'ready';
 
   return (
     <PageSection
-      title={tr('Dashboard')}
-      subtitle={tr('Track progress across dreams, goals, steps, and tasks.')}
-      // The comp puts the scope controls and the primary action in the title
-      // row itself, not in a filter card below it.
+      title={greeting(user?.fullName)}
+      subtitle={`${formatDate(new Date(), { year: true })} · ${tr('{n} tasks due this week', { n: formatNumber(summary?.tasksDueThisWeek ?? 0) })}`}
       actions={
         <>
           <FilterSelect
@@ -227,7 +228,7 @@ export function DashboardPage() {
           <label>
             {tr('Period')}
             <FormControl size="small" sx={{ minWidth: 140 }}>
-              <Select SelectDisplayProps={{ 'aria-label': "Period" }} value={period} onChange={(event) => setPeriodValue(event.target.value)}>
+              <Select SelectDisplayProps={{ 'aria-label': 'Period' }} value={period} onChange={(event) => setPeriodValue(event.target.value)}>
                 {PERIOD_OPTIONS.map((option) => (
                   <MenuItem value={option.value} key={option.value}>{option.label}</MenuItem>
                 ))}
@@ -240,291 +241,320 @@ export function DashboardPage() {
         </>
       }
     >
-      {loading && <Loading variant="cards" rows={6} />}
-      {error && <ErrorMessage message={error} />}
-      {isFirstRun ? (
-        <GettingStarted hasArea={hasArea} hasDream={hasDream} hasGoal={hasGoal} />
-      ) : (
-      <>
-      {showOnboardingBanner && <GettingStarted hasArea={hasArea} hasDream={hasDream} hasGoal={hasGoal} />}
-      {/* FR-25.3: what to DO comes before what IS — the feed leads the page. */}
-      <ReportReminderNotice token={token} />
-      <AttentionPanel attention={summary?.attention} visionAreaId={filterVisionAreaId} />
-      <DashboardSummary
-        summary={summary}
-        periodLabel={PERIOD_OPTIONS.find((option) => option.value === period)?.label.toLowerCase() ?? tr('this month')}
-        dueInPeriodLink={`/tasks?dueFrom=${from}&dueTo=${to}${scopeSuffix}`}
-        visionAreaId={filterVisionAreaId}
-      />
-      <ProgressMetricsCard token={token} />
-      <ReminderSettingsCard token={token} />
-      <EnergyBudgetCard budget={summary?.energyBudget} />
-      <GratitudeCard token={token} gratitude={summary?.gratitude} onChanged={() => reloadSummary(false)} />
-      {/* The comp pairs the priority-task list with the dreams donut in one row. */}
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' }, alignItems: 'stretch' }}>
-      <Card>
-        <CardHeader title={tr('Priority tasks')} subheader={tr('The five highest-priority tasks that are not yet completed')} />
-        <CardContent>
-          {priorityTasks.length === 0 ? (
-            <EmptyState>{tr('No open priority tasks.')}</EmptyState>
-          ) : (
-            <TableContainer tabIndex={0} role="region" aria-label={tr('Priority tasks')}>
-            <Table className="data-table">
-              <TableHead>
-                <TableRow>
-                  <TableCell>{tr('Task')}</TableCell>
-                  <TableCell>{tr('Due')}</TableCell>
-                  <TableCell>{tr('Priority')}</TableCell>
-                  <TableCell>{tr('Status')}</TableCell>
-                  <TableCell>{tr('Progress')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {priorityTasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell sx={{ fontWeight: 500 }}>{task.title}</TableCell>
-                    {/* The comp paints an overdue due-date red; completed rows are exempt. */}
-                    <TableCell sx={task.dueDate < todayIso && task.status !== 'COMPLETED' ? { color: 'error.main', fontWeight: 600 } : undefined}>
-                      {task.dueDate}
-                    </TableCell>
-                    <TableCell><PriorityBadge priority={task.priority} /></TableCell>
-                    <TableCell><StatusBadge status={task.status} /></TableCell>
-                    <TableCell sx={{ width: 160 }}><ProgressBar value={Number(task.progressPercent)} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
-        <CategoryBreakdownChart
-          title={tr('Dreams by vision area')}
-          description={tr('Where active dreams are concentrated — click a slice to open those dreams')}
-          data={summary?.dreamsByVisionArea ?? {}}
-          variant="pie"
-          // FR-41: Vision Areas are categories with no inherent meaning, so the
-          // categorical pie palette is safe here — a slice means "this area",
-          // not "Completed". Status and priority charts stay on their own
-          // palettes for exactly that reason (BR-14). The chart assigns the
-          // fills itself and rolls the smallest areas into "Other areas" once
-          // they outrun the palette, so no two areas can share a colour.
-          otherLabel={tr('Other areas')}
-          // The payload keys this chart by area *name*, so the drill-down maps
-          // it back to the area's id before linking. The rolled-up slice spans
-          // several areas, so it opens the unfiltered list.
-          linkForKey={(name) => {
-            const area = visionAreas.find((candidate) => candidate.name === name);
-            return area ? `/dreams?visionAreaId=${area.id}` : '/dreams';
-          }}
-        />
-      </Box>
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
-        <CategoryBreakdownChart
-          title={tr('Goals by status')}
-          description={tr('Current distribution across all active goals — click a slice to open those goals')}
-          data={summary?.goalsByStatus ?? {}}
-          formatLabel={formatLabel}
-          variant="donut"
-          colorForKey={(key) => workStatusFill(key as WorkStatus)}
-          linkForKey={(key) => `/goals?status=${key}${scopeSuffix}`}
-        />
-        <CategoryBreakdownChart
-          title={tr('Tasks by status')}
-          description={tr('Current distribution across all tasks — click a slice to open that column')}
-          data={tasksByStatus}
-          formatLabel={formatLabel}
-          variant="donut"
-          colorForKey={(key) => workStatusFill(key as WorkStatus)}
-          linkForKey={(key) => `/tasks?status=${key}${scopeSuffix}`}
-        />
-        <CategoryBreakdownChart
-          title={tr('Tasks by priority')}
-          description={tr('Workload skew from Low to Critical — click a bar to open those tasks')}
-          data={tasksByPriority}
-          formatLabel={formatLabel}
-          variant="bar"
-          colorForKey={(key) => priorityFill(key as Priority)}
-          linkForKey={(key) => `/tasks?priority=${key}${scopeSuffix}`}
-        />
-        <CategoryBreakdownChart
-          title={tr('Top obstacles')}
-          description={tr('What\'s actually blocking active work right now — click a slice to open those obstacles')}
-          data={obstaclesByType}
-          formatLabel={(key) => obstacleTypeLabels[key as keyof typeof obstacleTypeLabels]}
-          variant="pie"
-          // Obstacle types are likewise non-semantic categories (FR-41). The
-          // chart ranks them and folds the tail; it used to keep the top four
-          // and then add a fifth "Other" slice, which wrapped the palette and
-          // painted that slice the same colour as the biggest type.
-          otherLabel={tr('Other types')}
-          // The rollup bucket spans several types, so it links to the plain list.
-          linkForKey={(key) => (key === OTHER_CATEGORY_KEY ? '/obstacles' : `/obstacles?type=${key}`)}
-        />
-        <Card>
-          <CardHeader title={tr('Progress trend')} subheader={tr('Portfolio-wide average task progress over the last 12 weeks')} />
-          <CardContent>
-            {progressTrend.length === 0 ? (
-              <EmptyState>{tr('No progress logged yet — update a task\'s progress to start the trend.')}</EmptyState>
-            ) : (
-              <Box sx={{ width: '100%', height: 220 }}>
-                <ProgressTrendChart data={progressTrend} />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader title={tr('Vision Area progress')} subheader={tr('Average goal progress per area — lowest first is what needs attention')} />
-          <CardContent>
-            {visionAreaProgress.length === 0 ? (
-              <EmptyState>{tr('No vision areas yet.')}</EmptyState>
-            ) : (
-              <Box sx={{ width: '100%', height: Math.max(220, visionAreaProgress.length * 44) }}>
-                <VisionAreaProgressChart data={visionAreaProgress} />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' } }}>
-      <Card>
-        <CardHeader title={tr('Partner engagement')} subheader={tr('Where partners sit in the pipeline, from first contact to done — click a stage to open those partners')} />
-        <CardContent>
-          {totalPartners === 0 ? (
-            <EmptyState>{tr('No partners yet.')}</EmptyState>
-          ) : (
+      {error && (
+        <Box sx={{ display: 'grid', gap: 1.5, justifyItems: 'start' }}>
+          <ErrorMessage message={error} />
+          <MuiButton variant="outlined" size="small" onClick={() => reloadSummary(true)}>{tr('Try again')}</MuiButton>
+        </Box>
+      )}
+      {slow && (
+        <Box role="status" sx={{ color: 'var(--text-secondary)', fontSize: '0.8125rem' }}>{tr('Still loading…')}</Box>
+      )}
+      {isFirstRun && <GettingStarted hasArea={hasArea} hasDream={hasDream} hasGoal={hasGoal} />}
+      {!isFirstRun && !error && (
+        <DashboardZones
+          summary={summary}
+          cardState={cardState}
+          visionAreas={visionAreas}
+          periodLabel={periodLabel}
+          dueLink={`/tasks?dueFrom=${from}&dueTo=${to}${scopeSuffix}`}
+          scopeSuffix={scopeSuffix}
+          scoped={scoped}
+          onComplete={completeTask}
+          celebration={celebration}
+          before={
             <>
-              <Box sx={{ width: '100%', height: 72 }}>
-                <PartnerPipelineChart
-                  data={partnerPipelineData}
-                  statuses={PARTNER_STATUS_ORDER}
-                  labelFor={(status) => partnerStatusLabels[status]}
-                  fillFor={partnerStatusFill}
-                  onSelectStatus={(status) => navigate(`/partners?status=${status}`)}
-                />
-              </Box>
-              <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', justifyContent: 'center', pt: 1.5 }}>
-                {PARTNER_STATUS_ORDER.map((status) => (
-                  <Stack
-                    key={status}
-                    component={Link}
-                    to={`/partners?status=${status}`}
-                    direction="row"
-                    spacing={0.75}
-                    sx={{ alignItems: 'center', minHeight: 24, px: 0.5, textDecoration: 'none', '&:hover .MuiTypography-root': { textDecoration: 'underline' } }}
-                  >
-                    <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: partnerStatusFill(status) }} />
-                    <Typography variant="caption" color="text.secondary">
-                      {partnerStatusLabels[status]} ({partnerCounts[status]})
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
+              {showOnboardingBanner && <GettingStarted hasArea={hasArea} hasDream={hasDream} hasGoal={hasGoal} />}
+              <ReportReminderNotice token={token} />
             </>
-          )}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader title={tr('Review cadence')} subheader={tr('Daily and weekly reviews logged over the last 12 weeks')} />
-        <CardContent>
-          {cadenceReviewCount === 0 ? (
-            <EmptyState>{tr('No daily or weekly reviews logged yet.')}</EmptyState>
-          ) : (
-            <Box sx={{ overflowX: 'auto' }}>
-              <Box sx={{ display: 'inline-flex', gap: '3px' }}>
-                {reviewHeatmapWeeks.map((week, weekIndex) => (
-                  <Box key={week[0]?.date ?? weekIndex} sx={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    {week.map((day) => (
-                      <Tooltip key={day.date} title={formatHeatmapTooltip(day)} arrow>
-                        <Box
-                          // Days yet to come carry no information to announce.
-                          role={day.isFuture ? undefined : 'img'}
-                          aria-hidden={day.isFuture ? true : undefined}
-                          sx={{
-                            width: 13,
-                            height: 13,
-                            borderRadius: '3px',
-                            bgcolor: day.isFuture ? 'transparent' : HEATMAP_LEVEL_COLORS[heatmapLevel(day.count)],
-                            border: day.isFuture ? '1px dashed' : 'none',
-                            borderColor: 'divider',
-                          }}
-                        />
-                      </Tooltip>
-                    ))}
-                  </Box>
-                ))}
-              </Box>
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', pt: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">{tr('Less')}</Typography>
-                {HEATMAP_LEVEL_COLORS.map((color) => (
-                  <Box key={color} sx={{ width: 13, height: 13, borderRadius: '3px', bgcolor: color }} />
-                ))}
-                <Typography variant="caption" color="text.secondary">{tr('More')}</Typography>
-              </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', pt: 1 }}>
-                {tr('{count} of the last 12 weeks include a diligence checkup.', { count: summary?.weeksWithDiligence ?? 0 })}
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-      </Box>
-      </>
+          }
+          accountCards={
+            <>
+              <EnergyBudgetCard budget={summary?.energyBudget} />
+              <GratitudeCard token={token} gratitude={summary?.gratitude} onChanged={() => reloadSummary(false)} />
+              <ProgressMetricsCard token={token} />
+              <ReminderSettingsCard token={token} />
+            </>
+          }
+          attention={<AttentionPanel attention={summary?.attention} visionAreaId={filterVisionAreaId} />}
+        />
       )}
     </PageSection>
   );
 }
 
-function formatLabel(value: string) {
-  return tr(value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()));
-}
+type ZonesProps = {
+  summary: DashboardSummaryData | null;
+  cardState: 'loading' | 'ready';
+  visionAreas: VisionArea[];
+  periodLabel: string;
+  dueLink: string;
+  scopeSuffix: string;
+  scoped: (base: string) => string;
+  onComplete: (task: NextUpTask) => void;
+  /** Increments to play the goal-completed burst (DA-FR-14). */
+  celebration: number;
+  before: ReactNode;
+  attention: ReactNode;
+  accountCards: ReactNode;
+};
 
-type HeatmapDay = { date: string; count: number; isFuture: boolean };
+const grid = {
+  display: 'grid',
+  gap: { xs: '12px', md: '16px', lg: '24px' },
+  gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(8, minmax(0, 1fr))', lg: 'repeat(12, minmax(0, 1fr))' },
+  alignItems: 'start',
+} as const;
 
-function buildReviewHeatmapWeeks(countsByDate: Record<string, number>): HeatmapDay[][] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(today);
-  endOfWeek.setDate(today.getDate() + (6 - today.getDay()));
-  const totalDays = HEATMAP_WEEKS * 7;
-  const start = new Date(endOfWeek);
-  start.setDate(endOfWeek.getDate() - totalDays + 1);
+const span = (md: number | string, lg: number | string) => ({
+  gridColumn: { xs: '1 / -1', md: typeof md === 'number' ? `span ${md}` : md, lg: typeof lg === 'number' ? `span ${lg}` : lg },
+});
 
-  const days: HeatmapDay[] = [];
-  for (let i = 0; i < totalDays; i += 1) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
-    const iso = date.toISOString().slice(0, 10);
-    days.push({ date: iso, count: countsByDate[iso] ?? 0, isFuture: date > today });
-  }
+function DashboardZones({ summary, cardState, visionAreas, periodLabel, dueLink, scopeSuffix, scoped, onComplete, celebration, before, attention, accountCards }: ZonesProps) {
+  const reduced = useReducedMotion();
+  const loadingCards = cardState === 'loading';
+  // Staggered entry per zone; nothing moves under reduced motion.
+  const enter = (index: number) => (reduced ? {} : { animation: `${fadeRise} 200ms var(--motion-ease) both`, animationDelay: `${index * 40}ms` });
+  const tasksByPriority = summary?.tasksByPriority ?? {};
+  const nextUp = (summary?.nextUpTasks ?? summary?.priorityTasks ?? []).map(toNextUp);
 
-  const weeks: HeatmapDay[][] = [];
-  for (let i = 0; i < days.length; i += 7) {
-    weeks.push(days.slice(i, i + 7));
-  }
-  return weeks;
-}
+  // Delta over the trend window: the last weekly point against the first.
+  const trend = (summary?.progressTrend ?? []).map((point) => ({
+    label: formatDate(new Date(`${point.weekEnd}T00:00:00`)),
+    progress: Number(point.progress),
+  }));
+  const delta = trend.length >= 2 ? trend[trend.length - 1].progress - trend[0].progress : null;
 
-function heatmapLevel(count: number) {
-  if (count <= 0) {
-    return 0;
-  }
-  if (count === 1) {
-    return 1;
-  }
-  if (count === 2) {
-    return 2;
-  }
-  if (count === 3) {
-    return 3;
-  }
-  return 4;
-}
+  // Areas: colour by their position among the user's areas (first five get a
+  // chart slot, the rest "Other"), so an area keeps its colour across cards.
+  const areaIndex = new Map([...visionAreas].sort((a, b) => a.id - b.id).map((area, index) => [area.name, { area, index }]));
+  const areaColor = (name: string) => {
+    const found = areaIndex.get(name);
+    return found && found.index < 5 ? `var(--chart-${found.index + 1})` : 'var(--chart-other)';
+  };
+  const dreamsByArea = summary?.dreamsByVisionArea ?? {};
+  const dreamCount = (name: string) => {
+    const count = dreamsByArea[name] ?? 0;
+    return count === 1 ? tr('1 dream') : tr('{n} dreams', { n: formatNumber(count) });
+  };
+  const areaItems: RankedProgressItem[] = (summary?.visionAreaProgress ?? []).map((entry) => {
+    const area = areaIndex.get(entry.name)?.area;
+    return {
+      id: entry.name,
+      label: entry.name,
+      value: Number(entry.progress),
+      caption: dreamCount(entry.name),
+      color: areaColor(entry.name),
+      to: area ? `/dreams?visionAreaId=${area.id}` : undefined,
+    };
+  });
 
-function formatHeatmapTooltip(day: HeatmapDay) {
-  if (day.isFuture) {
-    return '';
-  }
-  const label = formatDate(new Date(`${day.date}T00:00:00`), { year: true });
-  return tr(day.count === 1 ? '{date} — 1 review' : '{date} — {count} reviews', { date: label, count: day.count });
+  const goalsByStatus = summary?.goalsByStatus ?? {};
+  const tasksByStatus = summary?.tasksByStatus ?? {};
+  const statusTotal = WORK_STATUS_ORDER.reduce((sum, status) => sum + (goalsByStatus[status] ?? 0) + (tasksByStatus[status] ?? 0), 0);
+
+  const blockedWithoutPartner = summary?.attention?.blockedTasksWithoutPartner.length ?? 0;
+  const DeltaIcon = delta !== null && delta < 0 ? ArrowDown : ArrowUp;
+
+  return (
+    <Box sx={{ display: 'grid', gap: { xs: 2, md: 4 } }}>
+      {before}
+
+      {/* ---------------- Today ---------------- */}
+      <Box component="section" aria-labelledby="zone-today" sx={{ display: 'grid', gap: 2, ...enter(0) }}>
+        <ZoneHeader id="zone-today" label={tr('Today')} />
+        <Box sx={grid}>
+          <Box sx={{ ...span(5, 8), order: { xs: 2, md: 0 } }}>
+            <ChartCard title={tr('Next up')} caption={tr('Overdue first, then due today, then by priority')} state={cardState}>
+              <NextUpList tasks={nextUp} onComplete={onComplete} emptyMessage={tr('Nothing open right now. Add a task to a goal to see it here.')} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mt: 1.5, pt: 1.5, borderTop: '1px solid var(--divider)' }}>
+                <Box component="span" sx={{ ...tabular, fontSize: 'var(--font-caption)', color: 'var(--text-secondary)' }}>
+                  {tr('{critical} Critical · {high} High open', { critical: formatNumber(tasksByPriority.CRITICAL ?? 0), high: formatNumber(tasksByPriority.HIGH ?? 0) })}
+                </Box>
+                <Box component={Link} to={scoped('/tasks')} sx={{ color: 'var(--primary)', fontSize: '0.8125rem', fontWeight: 500, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+                  {tr('View all tasks')}
+                </Box>
+              </Box>
+            </ChartCard>
+          </Box>
+
+          <Box component="section" aria-label={tr('Overall progress')} sx={{ ...span(3, 4), ...cardSurface, order: { xs: 1, md: 0 } }}>
+            <Box component="h3" sx={{ m: 0, mb: 2, fontSize: '1rem', lineHeight: 1.5, fontWeight: 600, display: { xs: 'none', sm: 'block' } }}>{tr('Overall progress')}</Box>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, alignItems: 'center', textAlign: { xs: 'left', sm: 'center' }, gap: { xs: 2, sm: 1.5 } }}>
+              {loadingCards && <Skeleton variant="circular" width={120} height={120} aria-hidden="true" />}
+              <Box sx={{ display: loadingCards ? 'none' : { xs: 'block', sm: 'none' } }}><ProgressRing value={Number(summary?.averageProgress ?? 0)} label={tr('Overall progress')} size={72} thickness={12} /></Box>
+              <Box sx={{ display: loadingCards ? 'none' : { xs: 'none', sm: 'block' } }}><ProgressRing value={Number(summary?.averageProgress ?? 0)} label={tr('Overall progress')} size={140} /></Box>
+              <Box sx={{ display: 'grid', gap: 0.5, justifyItems: { xs: 'start', sm: 'center' } }}>
+                {delta !== null && (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: '0.8125rem', fontWeight: 600, color: delta < 0 ? 'var(--st-declined-fg)' : 'var(--st-done-fg)' }}>
+                    <DeltaIcon size={14} strokeWidth={2} aria-hidden="true" />
+                    {formatDelta(delta)}
+                    <Box component="span" sx={{ fontWeight: 400, color: 'var(--text-secondary)' }}>{tr('over 12 weeks')}</Box>
+                  </Box>
+                )}
+                <Box component="span" sx={{ fontSize: 'var(--font-caption)', color: 'var(--text-secondary)', maxWidth: '32ch' }}>
+                  {tr('{areas} areas · {dreams} dreams · {goals} goals · {tasks} open tasks', {
+                    areas: formatNumber(summary?.totalVisionAreas ?? 0),
+                    dreams: formatNumber(summary?.activeDreams ?? 0),
+                    goals: formatNumber(summary?.activeGoals ?? 0),
+                    tasks: formatNumber(summary?.activeTasks ?? 0),
+                  })}
+                </Box>
+                {(summary?.moonshotGoals ?? 0) + (summary?.moonshotDreams ?? 0) > 0 && (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 'var(--font-caption)', fontWeight: 600, color: 'var(--moonshot-fg)' }}>
+                    <Rocket size={14} aria-hidden="true" />
+                    {tr('{goals} moonshot goals · {dreams} moonshot dreams', { goals: formatNumber(summary?.moonshotGoals ?? 0), dreams: formatNumber(summary?.moonshotDreams ?? 0) })}
+                  </Box>
+                )}
+              </Box>
+            </Box>
+            <ConfettiBurst play={celebration} />
+          </Box>
+
+          {loadingCards && (
+            <Box aria-hidden="true" sx={{ ...span('1 / -1', '1 / -1'), order: { xs: 3, md: 0 }, display: 'grid', gap: { xs: 1, md: 2, lg: 3 }, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              {[0, 1, 2].map((index) => (
+                <Box key={index} sx={{ ...cardSurface, display: 'grid', gap: 1.25 }}>
+                  <Skeleton variant="rounded" height={12} width="50%" />
+                  <Skeleton variant="rounded" height={36} width="35%" />
+                </Box>
+              ))}
+            </Box>
+          )}
+          <Box component="section" aria-label={tr('Task pressure')} sx={{ ...span('1 / -1', '1 / -1'), order: { xs: 3, md: 0 }, display: loadingCards ? 'none' : 'grid', gap: { xs: 1, md: 2, lg: 3 }, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <KpiCard
+              label={tr('Due {period}', { period: periodLabel })}
+              value={summary?.tasksDueInPeriod ?? 0}
+              caption={tr('{n} completed {period}', { n: formatNumber(summary?.completedTasksInPeriod ?? 0), period: periodLabel })}
+              to={dueLink}
+            />
+            <KpiCard label={tr('Overdue Tasks')} value={summary?.overdueTasks ?? 0} clearWhenZero to={scoped('/tasks?overdue=true')} />
+            <KpiCard
+              label={tr('Blocked Tasks')}
+              value={summary?.blockedTasks ?? 0}
+              clearWhenZero
+              caption={blockedWithoutPartner > 0 ? tr('{n} need a partner', { n: formatNumber(blockedWithoutPartner) }) : undefined}
+              to={scoped('/tasks?status=BLOCKED')}
+            />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ---------------- Plan health ---------------- */}
+      <Box component="section" aria-labelledby="zone-health" sx={{ display: 'grid', gap: 2, ...enter(1) }}>
+        <ZoneHeader id="zone-health" label={tr('Plan health')} />
+        <Box sx={grid}>
+          <Box sx={span('1 / -1', 7)}>
+            <ChartCard
+              title={tr('Vision Area progress')}
+              caption={tr('Average goal progress per area — lowest first is what needs attention')}
+              state={areaItems.length === 0 && cardState === 'ready' ? 'empty' : cardState}
+              emptyMessage={tr('No vision areas yet.')}
+              table={
+                <table className="data-table">
+                  <thead><tr><th>{tr('Vision Area')}</th><th>{tr('Progress')}</th><th>{tr('Dreams')}</th></tr></thead>
+                  <tbody>
+                    {areaItems.map((item) => (
+                      <tr key={item.id}><td>{item.label}</td><td>{formatPercent(item.value)}</td><td>{formatNumber(dreamsByArea[item.label] ?? 0)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              }
+            >
+              <RankedProgressList items={areaItems} label={tr('Vision Area progress')} />
+            </ChartCard>
+          </Box>
+          <Box sx={span('1 / -1', 5)}>
+            <MobileCollapse label={tr('Show goals and tasks by status')}>
+            <ChartCard
+              title={tr('Goals and tasks by status')}
+              caption={tr('Completed sits on the right, so the bar fills towards green')}
+              state={statusTotal === 0 && cardState === 'ready' ? 'empty' : cardState}
+              emptyMessage={tr('No goals or tasks yet.')}
+              table={
+                <table className="data-table">
+                  <thead><tr><th>{tr('Status')}</th><th>{tr('Goals')}</th><th>{tr('Tasks')}</th></tr></thead>
+                  <tbody>
+                    {WORK_STATUS_ORDER.map((status) => (
+                      <tr key={status}>
+                        <td><StatusChip status={status} /></td>
+                        <td><Link to={scoped(`/goals?status=${status}`)}>{formatNumber(goalsByStatus[status] ?? 0)}</Link></td>
+                        <td><Link to={scoped(`/tasks?status=${status}`)}>{formatNumber(tasksByStatus[status] ?? 0)}</Link></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              }
+            >
+              <Box sx={{ display: 'grid', gap: 2.5 }}>
+                <StackedStatusBar label={tr('Goals')} counts={goalsByStatus} />
+                <StackedStatusBar label={tr('Tasks')} counts={tasksByStatus} />
+              </Box>
+              {Object.keys(dreamsByArea).length > 0 && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.75, mt: 2.5, pt: 1.75, borderTop: '1px solid var(--divider)', fontSize: 'var(--font-caption)', color: 'var(--text-secondary)' }}>
+                  <span>{tr('Dreams by vision area')}</span>
+                  {Object.entries(dreamsByArea).map(([name, count]) => {
+                    const area = areaIndex.get(name)?.area;
+                    const content = (
+                      <>
+                        <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: areaColor(name) }} />
+                        {name} <Box component="b" sx={{ ...tabular, color: 'var(--text-primary)', fontWeight: 600 }}>{formatNumber(count)}</Box>
+                      </>
+                    );
+                    return area ? (
+                      <Box key={name} component={Link} to={`/dreams?visionAreaId=${area.id}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{content}</Box>
+                    ) : (
+                      <Box key={name} component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>{content}</Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </ChartCard>
+            </MobileCollapse>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* ---------------- Insights ---------------- */}
+      <Box component="section" aria-labelledby="zone-insights" sx={{ display: 'grid', gap: 2, ...enter(2) }}>
+        <ZoneHeader id="zone-insights" label={tr('Insights')} />
+        {attention}
+        <Box sx={grid}>
+          <Box sx={{ ...span('1 / -1', 7), order: { xs: 2, lg: 0 } }}>
+            <MobileCollapse label={tr('Show the progress trend')}>
+            <ChartCard
+              title={tr('Progress trend')}
+              caption={tr('Portfolio-wide average task progress over the last 12 weeks')}
+              state={trend.length === 0 && cardState === 'ready' ? 'empty' : cardState}
+              emptyMessage={tr('No progress logged yet — update a task\'s progress to start the trend.')}
+              table={
+                <table className="data-table">
+                  <thead><tr><th>{tr('Week ending')}</th><th>{tr('Progress')}</th></tr></thead>
+                  <tbody>{trend.map((point) => <tr key={point.label}><td>{point.label}</td><td>{formatPercent(point.progress)}</td></tr>)}</tbody>
+                </table>
+              }
+            >
+              <Box sx={{ width: '100%', height: 220 }} role="img" aria-label={trend.length >= 2 ? tr('Progress went from {from} to {to} over 12 weeks', { from: formatPercent(trend[0].progress), to: formatPercent(trend[trend.length - 1].progress) }) : tr('Progress trend')}>
+                <ProgressTrendChart data={trend} />
+              </Box>
+            </ChartCard>
+            </MobileCollapse>
+          </Box>
+          <Box sx={{ ...span('1 / -1', 5), order: { xs: 1, lg: 0 } }}>
+            <InsightTabs
+              obstaclesByType={summary?.activeObstaclesByType ?? {}}
+              blockedTasks={summary?.blockedTasks ?? 0}
+              partnersByStatus={summary?.partnersByStatus ?? {}}
+              reviewCadence={summary?.reviewCadence ?? {}}
+              weeksWithDiligence={summary?.weeksWithDiligence ?? 0}
+              scope={scopeSuffix}
+            />
+          </Box>
+        </Box>
+        <Box sx={{ display: 'grid', gap: { xs: '12px', md: '16px', lg: '24px' }, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }, alignItems: 'start' }}>
+          {accountCards}
+        </Box>
+      </Box>
+    </Box>
+  );
 }

@@ -12,12 +12,17 @@ type TooltipPayloadItem = {
 // A minimal, MUI-styled replacement for shadcn's ChartTooltipContent — used
 // as the `content` render prop for Recharts' own <Tooltip>, so charts stay
 // on plain Recharts + MUI without the shadcn chart wrapper.
-export function ChartTooltipContent({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) {
+// BRD 25 §7.1: raised surface, 8px radius, overlay shadow, a quiet title row,
+// then swatch · label · right-aligned tabular value.
+export function ChartTooltipContent({ active, payload, label }: { active?: boolean; payload?: TooltipPayloadItem[]; label?: string | number }) {
   if (!active || !payload?.length) {
     return null;
   }
   return (
-    <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, boxShadow: 'var(--shadow-8)', px: 1.5, py: 1 }}>
+    <Box sx={{ bgcolor: 'var(--surface-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-8)', px: 1.5, py: 1.25, minWidth: 120, fontVariantNumeric: 'tabular-nums' }}>
+      {label !== undefined && label !== '' && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>{label}</Typography>
+      )}
       {payload.map((item, index) => (
         <Stack key={index} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <Box sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: item.payload?.fill ?? item.color, flexShrink: 0 }} />

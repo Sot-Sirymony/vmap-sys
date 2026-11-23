@@ -13,6 +13,63 @@ demo.vision.mapping@example.com
 Password123
 ```
 
+## Dashboard (V25)
+
+The Dashboard is the first page after you sign in. It answers two questions at a glance, *what should I do next* and
+*how am I doing*, and reads in three parts from top to bottom. A preview of the design is in
+[design/v25-dashboard-preview.html](design/v25-dashboard-preview.html).
+
+**Today**
+
+- **Next up** lists up to five open tasks: overdue first, then tasks due today, then the rest by priority and due
+  date. A late task shows how many days late it is. A Blocked or Waiting task shows its status and the reason you
+  gave. Tick the circle to mark a task done. A Blocked task may first need a note saying what changed; the
+  message tells you if so.
+- **Overall progress** is the ring: the average progress across your plan, how much it moved over the last 12
+  weeks, and how many areas, dreams, goals and open tasks you have.
+- **Due this month**, **Overdue Tasks** and **Blocked Tasks** each open the Tasks board filtered to exactly those
+  tasks. When nothing is overdue or blocked, the figure says **All clear**.
+
+**Plan health**
+
+- **Vision Area progress** lists your areas with the lowest progress first, so the top row is the one that needs
+  attention. Click an area to see its dreams.
+- **Goals and tasks by status** shows one bar for goals and one for tasks, with Completed on the right, so the bar
+  fills towards green as you finish things. Paused is striped. Under the bars: how many dreams each area holds.
+
+**Insights**
+
+- The attention panel lists places your plan is stuck, such as blocked tasks with no partner.
+- **Progress trend** shows the last 12 weeks.
+- The tabs show **Obstacles** (open obstacles by type, largest first), **Partners** (where your partners are, from
+  first contact to done) and **Reviews** (how many weeks in a row you have reviewed, and a 12-week calendar).
+- Your energy budget, gratitude, progress metrics and reminder cards sit at the bottom.
+
+Every chart has **View as table**, which shows the same numbers as a table (useful with a screen reader). Use **Vision
+Area** and **Period** at the top to narrow the page; the address keeps your choice, so you can bookmark it.
+
+When you finish a goal, the next time you open the Dashboard it celebrates once, with a short burst of confetti and a
+message. With **Reduce motion** on (Appearance, or your device's setting), nothing on the Dashboard moves: numbers
+appear at once and there is no confetti.
+
+On a phone, the page is ordered by what you most need: your progress, then Next up, then the three figures. The trend
+and the status bars open from **Show …** buttons.
+
+**Colours mean the same everywhere (V25).**
+
+| Colour and icon | Means |
+| --- | --- |
+| Blue, dot in a circle | In progress, active, contacted |
+| Indigo, hourglass | Waiting on someone |
+| Orange, crossed octagon | Blocked (a task that cannot move) |
+| Berry, exclamation | An open obstacle or issue |
+| Red, slashed circle | Declined |
+| Green, tick | Completed, resolved |
+| Grey, empty circle | Not started |
+| Dark slate, pause | Paused or archived |
+
+Every status also has its word, so you never need to rely on colour alone.
+
 ## Create a Vision Map
 
 1. Open `Vision Areas`.

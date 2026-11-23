@@ -749,6 +749,16 @@ Returns:
 - tasksDueThisWeek
 - goalsByStatus
 - dreamsByVisionArea
+- tasksDueInPeriod, completedTasksInPeriod (for the `from`/`to` window)
+- tasksByStatus, tasksByPriority, activeObstaclesByType, partnersByStatus, reviewCadence
+- progressTrend, visionAreaProgress
+- priorityTasks: the five open tasks with the highest priority (earliest due date first among equals)
+- nextUpTasks (V25, DA-FR-02): up to five open tasks for the dashboard's *Next up*: overdue first, then due today,
+  then the rest; within each group highest priority, then earliest due date. Unlike `priorityTasks`, an overdue Low
+  task comes before a Critical task due next month
+- weeksWithDiligence, moonshotGoals, moonshotDreams, attention, energyBudget, gratitude
+
+Query parameters: `visionAreaId` (optional scope), `from` and `to` (the period window, `YYYY-MM-DD`).
 
 ### Appearance Preferences
 

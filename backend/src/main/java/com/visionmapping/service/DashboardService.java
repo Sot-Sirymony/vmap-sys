@@ -139,6 +139,7 @@ public class DashboardService {
                 .progressTrend(DashboardTrend.build(data.progressLogs(), today, clock.getZone()))
                 .visionAreaProgress(buildAreaProgress(data.areas(), data.goals()))
                 .priorityTasks(topPriorityTasks(data.tasks()))
+                .nextUpTasks(nextUpTasks(data.tasks(), today))
                 .weeksWithDiligence(countWeeksWithDiligence(data.reviews(), today))
                 .moonshotGoals(data.goals().stream().filter(Goal::isMoonshot).count())
                 .moonshotDreams(data.dreams().stream().filter(Dream::isMoonshot).count())
@@ -303,6 +304,36 @@ public class DashboardService {
                 })
                 .sorted(Comparator.comparing(DashboardSummaryResponse.AreaProgress::progress))
                 .toList();
+    }
+
+    /**
+     * V25 DA-FR-02, the dashboard's "Next up": overdue tasks first, then tasks
+     * due today, then the rest; within each group the highest priority, then the
+     * earliest due date (undated last). Completed tasks never appear. Unlike
+     * {@link #topPriorityTasks}, an overdue Low task outranks a Critical one due
+     * next month, because the question is "what should I do next".
+     */
+    private List<TaskItemResponse> nextUpTasks(List<TaskItem> tasks, LocalDate today) {
+        return tasks.stream()
+                .filter(task -> task.getStatus() != WorkStatus.COMPLETED)
+                .sorted(Comparator.comparingInt((TaskItem task) -> urgencyGroup(task, today))
+                        .thenComparing(Comparator.comparingInt((TaskItem task) -> task.getPriority().ordinal()).reversed())
+                        .thenComparing(TaskItem::getDueDate, Comparator.nullsLast(Comparator.naturalOrder())))
+                .limit(TOP_PRIORITY_TASK_LIMIT)
+                .map(mapper::toResponse)
+                .toList();
+    }
+
+    /** 0 = overdue, 1 = due today, 2 = everything else (later or undated). */
+    private static int urgencyGroup(TaskItem task, LocalDate today) {
+        LocalDate due = task.getDueDate();
+        if (due == null) {
+            return 2;
+        }
+        if (due.isBefore(today)) {
+            return 0;
+        }
+        return due.isEqual(today) ? 1 : 2;
     }
 
     /** Highest priority first; among equal priorities the earliest due date wins, undated tasks last. */

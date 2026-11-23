@@ -39,6 +39,9 @@ public record DashboardSummaryResponse(
         List<TrendPoint> progressTrend,
         List<AreaProgress> visionAreaProgress,
         List<TaskItemResponse> priorityTasks,
+        // V25 DA-FR-02: the dashboard's "Next up" list. Overdue first, then due
+        // today, then highest priority and earliest due date; open tasks only.
+        List<TaskItemResponse> nextUpTasks,
         long weeksWithDiligence,
         long moonshotGoals,
         long moonshotDreams,
@@ -58,6 +61,7 @@ public record DashboardSummaryResponse(
         progressTrend = Copies.list(progressTrend);
         visionAreaProgress = Copies.list(visionAreaProgress);
         priorityTasks = Copies.list(priorityTasks);
+        nextUpTasks = Copies.list(nextUpTasks);
     }
 
 

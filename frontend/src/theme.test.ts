@@ -15,6 +15,7 @@ import {
   priorityColors,
   statusColor,
   statusColors,
+  statusColorsDark,
   surfaceTokens,
   themePresets,
   toneFromStored,
@@ -381,7 +382,7 @@ describe('categorical pie palette (FR-41)', () => {
 
   const CASES = [
     { mode: 'light' as const, hc: false, card: '#ffffff', label: pieLabelColor.light },
-    { mode: 'dark' as const, hc: false, card: '#252423', label: pieLabelColor.dark },
+    { mode: 'dark' as const, hc: false, card: '#171A1F', label: pieLabelColor.dark },
     { mode: 'light' as const, hc: true, card: '#ffffff', label: pieLabelColor.light },
     { mode: 'dark' as const, hc: true, card: '#0f0f0f', label: pieLabelColor.dark },
   ];
@@ -618,7 +619,8 @@ describe('background tones (FR-40)', () => {
    */
   it('gives the light canvas a real step below the card', () => {
     const theme = buildTheme('light');
-    expect(theme.palette.background.default).toBe(grey[100]);
+    // BRD 25: the V25 canvas (design/tokens.ts neutrals.light.canvas).
+    expect(theme.palette.background.default).toBe('#F6F7F9');
     expect(theme.palette.background.default).not.toBe(theme.palette.background.paper);
   });
 
@@ -680,9 +682,10 @@ describe('status and priority under high contrast (BR-34)', () => {
   const PRIORITIES: PriorityToken[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
   it('leaves the normal palettes untouched', () => {
+    // BRD 25: the normal status palette is mode-specific (lighter fills in dark).
     for (const token of STATUS_SAMPLE) {
       expect(statusColor(token, 'light', false)).toBe(statusColors[token]);
-      expect(statusColor(token, 'dark', false)).toBe(statusColors[token]);
+      expect(statusColor(token, 'dark', false)).toBe(statusColorsDark[token]);
     }
     for (const token of PRIORITIES) {
       expect(priorityColor(token, 'light', false)).toBe(priorityColors[token]);

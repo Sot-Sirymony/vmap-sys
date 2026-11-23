@@ -1026,6 +1026,8 @@ export type DashboardSummary = {
   progressTrend: DashboardTrendPoint[];
   visionAreaProgress: DashboardAreaProgress[];
   priorityTasks: TaskItem[];
+  /** V25 DA-FR-02: overdue → due today → priority → due date, open tasks only (max 5). */
+  nextUpTasks?: TaskItem[];
   weeksWithDiligence: number;
   moonshotGoals: number;
   moonshotDreams: number;

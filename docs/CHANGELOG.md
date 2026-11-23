@@ -17,6 +17,87 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 25.0.0 — Dashboard appearance redesign (all 6 phases built; awaiting deploy, UAT and the Khmer review)
+
+BRD [`VMS_BRD_V25.0.0.md`](VMS_BRD_V25.0.0.md), from the product owner's design brief of 23 Nov 2026. Visual direction
+"Calm Fluent" (D-25-1); the Dashboard becomes Today → Health → Insights (D-25-2). No data, permission or API change.
+
+**Phase 1 (design preview, no app change):** [`design/v25-dashboard-preview.html`](design/v25-dashboard-preview.html),
+a static preview with sample data in light and dark, English and Khmer, with first-run, loading, error and coach
+states, for design sign-off (DAC-09).
+
+**Phase 2 (tokens and colour fixes, app-wide):** `frontend/src/design/tokens.ts` is the one token source (D-25-6).
+`theme.ts` maps every status to a meaning family and reads its fill from the tokens, with a separate dark-mode set
+(`statusColorsDark`), so `statusColor()` is now mode-aware. The default accent becomes Fluent 2 brand-80 (`#0F6CBD` /
+`#4FA3F0`), and the neutrals move to the V25 canvas, card and text values. Motion is 150 / 200 / 250 ms on
+`cubic-bezier(0.2, 0, 0, 1)`. `global.css` follows, adds the V25 variables (`--st-*`, `--chart-*`, `--heat-*`,
+`--surface-*`, `--divider`, `--border-strong`, `--text-tertiary`), and aliases `--canvas`, `--surface` and
+`--text-*` to the variables tones override.
+
+Colour fixes (D-25-4):
+- *Open* obstacles and issues are berry, no longer the *Blocked* orange.
+- *Waiting* is indigo.
+- Blocked/Completed and Moving/Waiting are split by lightness. Every pair of work statuses now clears ΔE 10 under
+  protan and deutan simulation; V24's Waiting and In progress were about 1–2 apart.
+- *Paused* has its own slate.
+- *High* priority moves to `#C2410A` so it never reads as Blocked.
+
+Khmer: Noto Sans Khmer is self-hosted (`@fontsource-variable/noto-sans-khmer`) and declared for the Khmer Unicode
+range only, so it downloads only when Khmer is on screen. Khmer text gets a taller line height and no letter-spacing
+(D-25-9).
+
+`design/tokens.test.ts` enforces contrast, colourblind separation and that `global.css` matches the tokens. The full
+frontend suite passes (162 files, 1344 tests); the build passes.
+
+**Phase 3 (components, not yet on a page):** the V25 building blocks.
+- `StatusChip` shows every status as colour + icon + label.
+- `KpiCard`: big tabular number that counts up, an optional delta, and "All clear" at zero.
+- `ChartCard`: card shell with a "View as table" toggle and its own loading, empty and error states.
+- `ProgressRing` and `StackedStatusBar`. Completed sits last in the bar, Paused is striped, and the counts are listed
+  under the bar.
+- `RankedProgressList`: lowest first, with target ticks and "Show all".
+- `NextUpList`: overdue → today → priority → due date, with relative due labels, quick complete and a read-only coach
+  mode.
+- `ZoneHeader`, and `chartTheme.tsx`, the shared Recharts styling, read from the CSS variables.
+
+Motion respects both the device setting and Appearance → Reduce motion. A test keeps hex colours out of the new
+files. 165 test files, 1389 tests pass; the build passes.
+
+**Phase 4 (the redesigned Dashboard):** the page now reads Today → Plan health → Insights.
+- **Today:** a greeting, then *Next up* (overdue first, then due today, then by priority, with blocker reasons and a
+  done checkbox). Beside it, the overall progress ring with its change over 12 weeks and the portfolio counts. Below,
+  three linked figures: Due in the period, Overdue and Blocked, showing "All clear" at zero.
+- **Plan health:** vision areas ranked lowest first, goals and tasks as stacked status bars, and dreams by area.
+- **Insights:** the attention panel, the restyled 12-week trend, and Obstacles / Partners / Reviews tabs. The review
+  heatmap uses the V25 blue scale and shows a review streak. The energy, gratitude, progress-metric and reminder
+  cards stay.
+- Every chart has "View as table".
+- The vision-area and period filters, the drill-down links and the getting-started steps are unchanged.
+
+API: `GET /api/dashboard` adds `nextUpTasks`; existing fields are unchanged. Khmer drafts are added for the new text.
+Frontend: 165 files, 1398 tests pass. Backend: 1095 tests pass. Both builds pass.
+
+**Phase 5 (motion and phone layout):**
+- **Goal celebration.** When more goals are complete than at your last visit, the progress card plays a short confetti
+  burst and a toast says "A goal is complete. One step closer to your dream." It plays once, never on a first visit
+  or in an area-scoped view, and never confetti under reduced motion.
+- **Loading.** Skeletons keep the final layout, with "Still loading…" after 10 seconds.
+- **Motion.** The zones fade in once (200 ms, staggered), and buttons give press feedback.
+- **Phones.** The Insights tabs move above the trend, and the trend and status cards open from "Show …" buttons.
+
+Frontend: 166 files, 1409 tests pass; the build passes.
+
+**Phase 6 (documents):**
+- [`UAT_V25.md`](UAT_V25.md), with acceptance checks DAC-01 to DAC-10 and feature checks DAF-01 to DAF-11.
+- [`km-review-v25.csv`](km-review-v25.csv), 52 Khmer drafts for review.
+- A Dashboard section in [`USER_GUIDE.md`](USER_GUIDE.md), including what each status colour and icon means.
+- The dashboard fields in [`API.md`](API.md), including `nextUpTasks`.
+
+Still open: approval to remove the V24 dashboard components the page no longer uses, and the area target ticks
+(Q-25-2), which need a server calculation.
+
+---
+
 ## 24.0.0 — Security access: sign-in methods (all 5 phases built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V24.0.0.md`](VMS_BRD_V24.0.0.md), from the 24.0.0.0 prototype

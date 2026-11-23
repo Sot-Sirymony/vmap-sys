@@ -6,6 +6,33 @@
  * registration (that import was removed along with the shadcn component
  * scaffold; the app is MUI-only now).
  */
+/*
+ * BRD 25 (D-25-9) — Khmer. Noto Sans Khmer, self-hosted, declared for the Khmer
+ * Unicode range only: it never replaces a Latin face, and the browser fetches
+ * the file only when Khmer text is on screen (DA-NFR-04). The family name sits
+ * in theme.ts's SYSTEM_STACK and in the :root font-family below.
+ */
+@font-face {
+  font-family: 'Noto Sans Khmer Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../node_modules/@fontsource-variable/noto-sans-khmer/files/noto-sans-khmer-khmer-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+1780-17FF, U+19E0-19FF, U+200C-200D, U+25CC;
+}
+
+/* Khmer stacks subscript consonants below the line, so it needs about 25% more
+   line height than Latin, and it must never be letter-spaced (BRD 25 §4). */
+:root:lang(km) body {
+  line-height: 1.75;
+}
+:root:lang(km) h1,
+:root:lang(km) h2,
+:root:lang(km) h3,
+:root:lang(km) .MuiTypography-root {
+  letter-spacing: 0;
+}
+
 :root {
   color: var(--foreground);
   background: var(--page);
@@ -13,7 +40,7 @@
      unlayered rule is what actually renders text — it beats the layered
      Tailwind `font-sans` class regardless of source order — so the default
      below has to stay in step with theme.ts's SYSTEM_STACK. */
-  font-family: var(--font-family, "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif);
+  font-family: var(--font-family, "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, "Noto Sans Khmer Variable", Roboto, Helvetica, Arial, sans-serif);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   /* Native controls (checkboxes, radios, date inputs) follow the accent, so
@@ -24,23 +51,23 @@
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--foreground) 24%, transparent) transparent;
   --background: #ffffff;
-  --foreground: #242424;
+  --foreground: #1B1F24;
   --card: #ffffff;
-  --card-foreground: #242424;
+  --card-foreground: #1B1F24;
   --popover: #ffffff;
-  --popover-foreground: #242424;
-  --primary: #0078d4;
+  --popover-foreground: #1B1F24;
+  --primary: #0F6CBD;
   --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #242424;
-  --muted: #f5f5f5;
-  --muted-foreground: #454F5B;  /* grey-700 (FR-44) */
-  --accent: #deecf9;
-  --accent-foreground: #005a9e;
+  --secondary: #F1F3F5;
+  --secondary-foreground: #1B1F24;
+  --muted: #F1F3F5;
+  --muted-foreground: #57606A;  /* grey-700 (FR-44) */
+  --accent: #EBF3FC;
+  --accent-foreground: #0B5A9E;
   --destructive: #d13438;
-  --border: #e1e1e1;
-  --input: #e1e1e1;
-  --ring: #0078d4;
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #0F6CBD;
   /* FR-48 — Modern is the baseline shape. --radius carries the panel tier;
      the explicit scale below is absolute (not calc-derived) so the Classic
      override can flatten every tier to one value uniformly. */
@@ -50,26 +77,26 @@
   --radius-lg: 12px;   /* panels, kanban columns, list/table cards, toasts */
   --radius-xl: 16px;   /* MUI Card, dialogs, auth panel (= styleShape cardRadius) */
   --radius-pill: 999px; /* chips, nav pills, progress bars */
-  --sidebar: #f5f5f5;
-  --sidebar-foreground: #242424;
-  --sidebar-primary: #0078d4;
+  --sidebar: #F1F3F5;
+  --sidebar-foreground: #1B1F24;
+  --sidebar-primary: #0F6CBD;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #deecf9;
-  --sidebar-accent-foreground: #005a9e;
-  --sidebar-border: #e1e1e1;
-  --sidebar-ring: #0078d4;
+  --sidebar-accent: #EBF3FC;
+  --sidebar-accent-foreground: #0B5A9E;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #0F6CBD;
   /* Semantic tones used by the page CSS below, so dark mode is a variable
      swap rather than a second stylesheet. */
-  --page: #F9FAFB;               /* page canvas, one step under cards — grey-100 (FR-44) */
-  --background-subtle: #F9FAFB;  /* archived rows — grey-100 */
+  --page: #F6F7F9;               /* page canvas, one step under cards — grey-100 (FR-44) */
+  --background-subtle: #F6F7F9;  /* archived rows — grey-100 */
   --border-soft: #F4F6F8;        /* table row separators — grey-200 */
   /* FR-43: the neutral text steps come from the grey ramp (700/600/600) rather
      than three separately-chosen slate values, so they relate to each other and
      to the borders. All three clear 4.5:1 on white; grey-600 measures 4.88:1,
      which is exactly what a tertiary text colour should be. */
-  --text-label: #454F5B;         /* form/filter labels — grey-700 */
-  --text-soft: #454F5B;          /* tertiary text — grey-700, 7.29:1 worst case (FR-44) */
-  --text-faint: #454F5B;         /* codes, empty-state hints — grey-700 (FR-26.4/FR-44) */
+  --text-label: #57606A;         /* form/filter labels — V25 text-secondary */
+  --text-soft: #57606A;          /* tertiary text — grey-700, 7.29:1 worst case (FR-44) */
+  --text-faint: #57606A;         /* codes, empty-state hints — grey-700 (FR-26.4/FR-44) */
   /* FR-43: informational banners now use the info ramp's documented roles —
      lighter as the wash, light as the rule, darker as the text (10.81:1). */
   --info-bg: #CAFDF5;            /* informational banners / coaching panels */
@@ -83,12 +110,12 @@
      darkened where needed to keep the % label at 4.5:1 on white. */
   --progress-low: #d13438;       /* 0–24%: just started */
   --progress-mid: #FFAB00;       /* 25–74%: in progress — warning.main amber, far from the red */
-  --progress-high: #0078d4;      /* 75–99%: nearly done */
-  --progress-done: #107c10;      /* 100%: done */
+  --progress-high: #0F6CBD;      /* 75–99%: nearly done */
+  --progress-done: #0E6B0E;      /* 100%: done */
   --progress-low-text: #b4262a;
   --progress-mid-text: #7A4100;  /* warning.darker: amber text needs it for 4.5:1 */
-  --progress-high-text: #0063b1;
-  --progress-done-text: #0e6b0e;
+  --progress-high-text: #0B5A9E;
+  --progress-done-text: #0B5E0B;
   --hint: #0d7d70;               /* field hints */
   --moonshot-fg: #6b21a8;        /* moonshot text; light-legible violet */
   /* FR-47 — the palette as plain CSS variables, for styles that cannot reach
@@ -175,10 +202,63 @@
   --font-title-page: 1.5rem;    /* page title (h1, one per page) */
   /* FR-20.4 motion tokens — mirrors theme.ts `transitions`. fast: hover
      feedback; base: open/close; slow: layout shifts. */
-  --motion-fast: 100ms;
-  --motion-base: 180ms;
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
   --motion-slow: 250ms;
-  --motion-ease: cubic-bezier(0.33, 0, 0.67, 1);
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  /* BRD 25 (D-25-6) — the V25 tokens, GENERATED FROM src/design/tokens.ts.
+     design/tokens.test.ts parses this block and the dark block below and fails
+     on any drift, the same guard FR-47 uses for --palette-*. The four aliases
+     point at the variables tones and high contrast already override, so
+     --canvas follows a Warm or Cool tone exactly as --page does.
+     Status families: fill (--st-x) for icons and chart marks, -bg and -fg for
+     chips. Charts: five categorical slots plus --chart-other; --heat-0..4 is
+     the review heatmap scale. */
+  --canvas: var(--page);
+  --surface: var(--card);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F1F3F5;
+  --divider: #EEF0F3;
+  --border-strong: #8A939F;
+  --text-tertiary: #646C78;
+  --chart-other: #8A939F;
+  --st-moving: #0F6CBD;
+  --st-moving-bg: #EBF3FC;
+  --st-moving-fg: #0B5A9E;
+  --st-waiting: #3B2596;
+  --st-waiting-bg: #EFECF9;
+  --st-waiting-fg: #3B2596;
+  --st-blocked: #E46C1E;
+  --st-blocked-bg: #FDF0E7;
+  --st-blocked-fg: #A8400C;
+  --st-open: #B4009E;
+  --st-open-bg: #FBEAF8;
+  --st-open-fg: #9C0089;
+  --st-declined: #C50F1F;
+  --st-declined-bg: #FDECEE;
+  --st-declined-fg: #B00E1C;
+  --st-done: #0E6B0E;
+  --st-done-bg: #E9F4E9;
+  --st-done-fg: #0B5E0B;
+  --st-idle: #6B7380;
+  --st-idle-bg: #F1F3F5;
+  --st-idle-fg: #57606A;
+  --st-held: #3F4650;
+  --st-held-bg: #EEF0F3;
+  --st-held-fg: #3F4650;
+  --chart-1: #2F6FDE;
+  --chart-2: #E07A1F;
+  --chart-3: #0F8A7C;
+  --chart-4: #D25AA8;
+  --chart-5: #2A2370;
+  --heat-0: #EEF0F3;
+  --heat-1: #C7DDF5;
+  --heat-2: #8BB8EA;
+  --heat-3: #3F85D4;
+  --heat-4: #0F5AA6;
 }
 
 /*
@@ -188,38 +268,38 @@
  * #3b3a39), matching theme.ts.
  */
 [data-theme="dark"] {
-  --background: #1b1a19;
-  --foreground: #f3f2f1;
-  --card: #252423;
-  --card-foreground: #f3f2f1;
-  --popover: #252423;
-  --popover-foreground: #f3f2f1;
-  --primary: #4ba0e1;
-  --primary-foreground: #1b1a19;
-  --secondary: #323130;
-  --secondary-foreground: #f3f2f1;
-  --muted: #323130;
-  --muted-foreground: #a19f9d;
-  --accent: #0e3a5c;
-  --accent-foreground: #9ec9ec;
+  --background: #0E1014;
+  --foreground: #E8EAED;
+  --card: #171A1F;
+  --card-foreground: #E8EAED;
+  --popover: #1E2228;
+  --popover-foreground: #E8EAED;
+  --primary: #4FA3F0;
+  --primary-foreground: #0E1014;
+  --secondary: #252A31;
+  --secondary-foreground: #E8EAED;
+  --muted: #252A31;
+  --muted-foreground: #A8B0BA;
+  --accent: #1A2A3B;
+  --accent-foreground: #8AC3F5;
   --destructive: #e37d80;
-  --border: #3b3a39;
-  --input: #3b3a39;
-  --ring: #4ba0e1;
-  --sidebar: #252423;
-  --sidebar-foreground: #f3f2f1;
-  --sidebar-primary: #4ba0e1;
-  --sidebar-primary-foreground: #1b1a19;
-  --sidebar-accent: #0e3a5c;
-  --sidebar-accent-foreground: #9ec9ec;
-  --sidebar-border: #3b3a39;
-  --sidebar-ring: #4ba0e1;
-  --page: #1b1a19;
-  --background-subtle: #201f1e;
-  --border-soft: #2d2c2b;
+  --border: #2A2F37;
+  --input: #2A2F37;
+  --ring: #4FA3F0;
+  --sidebar: #171A1F;
+  --sidebar-foreground: #E8EAED;
+  --sidebar-primary: #4FA3F0;
+  --sidebar-primary-foreground: #0E1014;
+  --sidebar-accent: #1A2A3B;
+  --sidebar-accent-foreground: #8AC3F5;
+  --sidebar-border: #2A2F37;
+  --sidebar-ring: #4FA3F0;
+  --page: #0E1014;
+  --background-subtle: #12151A;
+  --border-soft: #23272E;
   --text-label: #c8c6c4;
-  --text-soft: #a19f9d;
-  --text-faint: #8f8d8b;
+  --text-soft: #A8B0BA;
+  --text-faint: #8E97A3;
   --info-bg: #10243d;
   --info-border: #1e4976;
   --info-text: #9ec9ec;
@@ -228,8 +308,8 @@
   --danger-bg: #3a1d1f;
   --progress-low: #e37d80;
   --progress-mid: #f5c451;
-  --progress-high: #6cb8f6;
-  --progress-done: #6bbf6c;
+  --progress-high: #4FA3F0;
+  --progress-done: #72D872;
   --progress-low-text: #f0a3a5;
   --progress-mid-text: #f5d38a;
   --progress-high-text: #9ec9ec;
@@ -244,6 +324,47 @@
   --shadow-4: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
   --shadow-8: 0 4px 8px -2px rgba(0, 0, 0, 0.35), 0 16px 40px -6px rgba(0, 0, 0, 0.55);
   --shadow-16: 0 8px 16px -6px rgba(0, 0, 0, 0.40), 0 32px 64px -12px rgba(0, 0, 0, 0.65);
+  /* BRD 25 V25 tokens, dark values — generated from design/tokens.ts. */
+  --surface-raised: #1E2228;
+  --surface-sunken: #12151A;
+  --divider: #23272E;
+  --border-strong: #6B7480;
+  --text-tertiary: #8E97A3;
+  --chart-other: #6B7480;
+  --st-moving: #4FA3F0;
+  --st-moving-bg: #203040;
+  --st-moving-fg: #4FA3F0;
+  --st-waiting: #7B6BE6;
+  --st-waiting-bg: #27273F;
+  --st-waiting-fg: #ABA0F5;
+  --st-blocked: #E0612A;
+  --st-blocked-bg: #372521;
+  --st-blocked-fg: #F08A5D;
+  --st-open: #EE6FD3;
+  --st-open-bg: #39283C;
+  --st-open-fg: #EE6FD3;
+  --st-declined: #F47A84;
+  --st-declined-bg: #3A292F;
+  --st-declined-fg: #F47A84;
+  --st-done: #72D872;
+  --st-done-bg: #26382C;
+  --st-done-fg: #72D872;
+  --st-idle: #98A1AD;
+  --st-idle-bg: #2C3036;
+  --st-idle-fg: #98A1AD;
+  --st-held: #D3D8DE;
+  --st-held-bg: #35383E;
+  --st-held-fg: #D3D8DE;
+  --chart-1: #4A86F0;
+  --chart-2: #F09A4A;
+  --chart-3: #1E8F81;
+  --chart-4: #F290D2;
+  --chart-5: #D9D4FF;
+  --heat-0: #1E2228;
+  --heat-1: #1D3550;
+  --heat-2: #245487;
+  --heat-3: #3477C2;
+  --heat-4: #6BB3F3;
 }
 
 /*

@@ -1,20 +1,17 @@
 import { createTheme } from '@mui/material/styles';
 import { tr } from './i18n/translate';
+import { brand as v25Brand, neutrals, statusTones, type StatusFamily } from './design/tokens';
 
 /**
- * Fluent 2 design tokens (Microsoft's Fluent Design System). Values match
- * Fluent's own published tokens rather than an invented palette — see
- * global.css's :root block for the same values as plain CSS custom
- * properties (used by a handful of non-MUI elements).
- *   --primary        #0078d4  Communication Blue (brand)
- *   --primary hover  #106ebe
- *   --primary pressed #005a9e
- *   --primary tint   #deecf9
- *   neutralForeground1 #242424  (body text)
- *   neutralForeground2 #616161  (secondary text)
- *   neutralStroke      #e1e1e1  (borders)
- *   neutralBackground3 #f5f5f5  (recessed panels, table headers)
- *   destructive        #d13438  Fluent "Danger"
+ * BRD 25 (D-25-6): colour values come from `design/tokens.ts`, the one token
+ * source shared with global.css and the charts. This file maps them onto MUI and
+ * onto the app's status, priority and accent vocabularies.
+ *
+ *   brand (default accent)  #0F6CBD light / #4FA3F0 dark   Fluent 2 brand-80
+ *   body text               #1B1F24 light / #E8EAED dark
+ *   secondary text          #57606A light / #A8B0BA dark
+ *   borders                 #E5E7EB light / #2A2F37 dark
+ *   page canvas             #F6F7F9 light / #0E1014 dark
  *
  * Font: Segoe UI Variable is Fluent's signature face. An unlayered
  * `:root { font-family: ... }` rule in global.css is what actually renders
@@ -27,74 +24,91 @@ import { tr } from './i18n/translate';
  * by StatusBadge and the dashboard's status charts so a "Completed" green is
  * the same green everywhere.
  *
- * Four chromatic slots carry meaning; the two neutral steps mean "no activity":
- *   blue    work is moving      IN_PROGRESS, ACTIVE, CONTACTED, SENT, REPLIED
- *   purple  waiting on someone  WAITING, FOLLOWED_UP
- *   orange  needs attention     BLOCKED, OPEN
- *   red     negative outcome    DECLINED
- *   green   done                COMPLETED, RESOLVED, CLOSED
- *   neutral not started / idle  the rest (two lightness steps so NOT_STARTED
- *                               and PAUSED stay distinct as adjacent chart bars)
+ * Each status belongs to one meaning family (BRD 25 §5.2, D-25-4):
+ *   moving   blue    IN_PROGRESS, ACTIVE, CONTACTED, AGREED, SENT, REPLIED, PLANNED
+ *   waiting  indigo  WAITING, FOLLOWED_UP, IN_REVIEW
+ *   blocked  orange  BLOCKED (work only)
+ *   open     berry   OPEN (obstacles, issue reports)
+ *   declined red     DECLINED
+ *   done     green   COMPLETED, RESOLVED, CLOSED
+ *   idle     grey    NOT_STARTED, IDEA, TO_CONTACT, DRAFT
+ *   held     slate   PAUSED, ARCHIVED, ACCEPTED, WONT_FIX (a darker step than
+ *                    idle in light mode, lighter in dark, so the two stay
+ *                    distinct as adjacent chart bars)
  *
- * WAITING is purple, not amber. Amber-vs-orange (the previous WAITING/BLOCKED
- * pair) collapses to near-identical under red-green colorblindness — measured
- * ΔE 3.6 against a ΔE 12 target — so the two states that most need telling
- * apart were the two a colorblind user could not distinguish. Purple clears it.
+ * V25 fixed two faults in the V24 palette:
+ *   - Orange meant both BLOCKED and OPEN. OPEN is now berry.
+ *   - WAITING purple (#8764b8) and IN_PROGRESS blue (#0078d4) were ΔE ~1–2
+ *     apart for red-green colour blindness. WAITING is now an indigo split from
+ *     the blue by lightness, and BLOCKED is split from COMPLETED the same way.
+ *     Every pair of work statuses now clears ΔE 10 (OKLab, Machado protan and
+ *     deutan); `design/tokens.test.ts` enforces it.
  *
- * The remaining green↔orange pair sits at ΔE 8.9 (the 8–12 floor band), which
- * is only permissible because status is never encoded as color alone: every
- * badge carries its text label, and every chart has an axis label or legend.
+ * Status is still never encoded as colour alone: every badge carries its label.
  *
- * Hex values are Fluent's own tokens, matching the rest of this file.
+ * Unlike V24, the palette is mode-specific: dark mode uses lighter fills that
+ * keep 3:1 on the dark surface. `statusColor()` picks the right one.
  */
-const NEUTRAL_IDLE = '#a19f9d'; // Fluent neutralForeground disabled-ish
-const NEUTRAL_HELD = '#605e5c'; // Fluent neutralForeground3, darker than idle
-const BLUE_MOVING = '#0078d4'; // Communication Blue (same as brand primary)
-const PURPLE_WAITING = '#8764b8'; // Fluent purple
-const ORANGE_ATTENTION = '#d83b01'; // Fluent severe-warning orange
-const RED_NEGATIVE = '#d13438'; // Fluent Danger (same as palette.error)
-const GREEN_DONE = '#107c10'; // Fluent Success
-
-export const statusColors = {
+const STATUS_FAMILY = {
   // WorkStatus — goals, steps, tasks
-  NOT_STARTED: NEUTRAL_IDLE,
-  IN_PROGRESS: BLUE_MOVING,
-  WAITING: PURPLE_WAITING,
-  BLOCKED: ORANGE_ATTENTION,
-  PAUSED: NEUTRAL_HELD,
-  COMPLETED: GREEN_DONE,
+  NOT_STARTED: 'idle',
+  IN_PROGRESS: 'moving',
+  WAITING: 'waiting',
+  BLOCKED: 'blocked',
+  PAUSED: 'held',
+  COMPLETED: 'done',
 
   // DreamStatus / LifecycleStatus
-  IDEA: NEUTRAL_IDLE,
-  ACTIVE: BLUE_MOVING,
-  ARCHIVED: NEUTRAL_HELD,
+  IDEA: 'idle',
+  ACTIVE: 'moving',
+  ARCHIVED: 'held',
 
   // PartnerStatus
-  TO_CONTACT: NEUTRAL_IDLE,
-  CONTACTED: BLUE_MOVING,
-  AGREED: BLUE_MOVING,
-  DECLINED: RED_NEGATIVE,
+  TO_CONTACT: 'idle',
+  CONTACTED: 'moving',
+  AGREED: 'moving',
+  DECLINED: 'declined',
 
   // ObstacleStatus
-  OPEN: ORANGE_ATTENTION,
-  RESOLVED: GREEN_DONE,
-  ACCEPTED: NEUTRAL_HELD,
+  OPEN: 'open',
+  RESOLVED: 'done',
+  ACCEPTED: 'held',
 
   // CommunicationStatus
-  DRAFT: NEUTRAL_IDLE,
-  SENT: BLUE_MOVING,
-  FOLLOWED_UP: PURPLE_WAITING,
-  REPLIED: BLUE_MOVING,
-  CLOSED: GREEN_DONE,
+  DRAFT: 'idle',
+  SENT: 'moving',
+  FOLLOWED_UP: 'waiting',
+  REPLIED: 'moving',
+  CLOSED: 'done',
 
   // IssueReportStatus (FR-38) — OPEN/IN_PROGRESS/RESOLVED/CLOSED reuse the
-  // tokens above; these three are the states unique to the triage lifecycle.
-  IN_REVIEW: PURPLE_WAITING,
-  PLANNED: BLUE_MOVING,
-  WONT_FIX: NEUTRAL_HELD,
-} as const;
+  // families above; these three are the states unique to the triage lifecycle.
+  IN_REVIEW: 'waiting',
+  PLANNED: 'moving',
+  WONT_FIX: 'held',
+} as const satisfies Record<string, StatusFamily>;
 
-export type StatusToken = keyof typeof statusColors;
+export type StatusToken = keyof typeof STATUS_FAMILY;
+
+/** The meaning family of a status, or undefined for an enum this build does not know. */
+export function statusFamily(token: string): StatusFamily | undefined {
+  return (STATUS_FAMILY as Record<string, StatusFamily>)[token];
+}
+
+function statusFills(mode: 'light' | 'dark'): Record<StatusToken, string> {
+  const tones = statusTones[mode];
+  return Object.fromEntries(
+    Object.entries(STATUS_FAMILY).map(([token, family]) => [token, tones[family].fill]),
+  ) as Record<StatusToken, string>;
+}
+
+/** Light-mode status fills. */
+export const statusColors = statusFills('light');
+/** Dark-mode status fills (BRD 25). */
+export const statusColorsDark = statusFills('dark');
+
+const NEUTRAL_IDLE = statusTones.light.idle.fill;
+const BLUE_MOVING = statusTones.light.moving.fill;
 
 /**
  * Priority palette — an escalation scale, not a set of categories. Priority is
@@ -119,13 +133,17 @@ export type StatusToken = keyof typeof statusColors;
  * dashboard's priority chart has axis labels.
  *
  * Kept distinct from the status hues above so a HIGH-priority chip never reads
- * as a BLOCKED chip: different orange (#ca5010 vs #d83b01), different red
- * (#a4262c vs #d13438).
+ * as a BLOCKED chip. V25: BLOCKED moved to a brighter orange (#E46C1E light,
+ * #E0612A dark), which the old HIGH (#ca5010) sat only ΔE 5.9 from in dark mode,
+ * so HIGH is now a deeper rust: ΔE ≥ 9.0 from BLOCKED in both modes and from
+ * CRITICAL, and well clear of MEDIUM, under protan/deutan simulation (OKLab,
+ * Machado), and 5.18:1 on white. `design/tokens.test.ts` enforces the BLOCKED
+ * and CRITICAL distances.
  */
 export const priorityColors = {
   LOW: NEUTRAL_IDLE,
   MEDIUM: '#eaa300', // Fluent gold
-  HIGH: '#ca5010', // Fluent orange, shade
+  HIGH: '#C2410A', // rust (V25)
   CRITICAL: '#a4262c', // Fluent red, shade
 } as const;
 
@@ -220,7 +238,7 @@ export const moonshotTint = '#f3edfd';
 // now draws each stage in exactly the color its status badge uses — the
 // one-source-of-truth rule beats per-chart hue tuning. CONTACTED and ACTIVE
 // share the "work is moving" blue by design; the legend's counts tell them
-// apart, and WAITING is the same colorblind-safe purple as everywhere else.
+// apart, and WAITING is the same colorblind-safe indigo as everywhere else.
 export const partnerPipelineColors = {
   TO_CONTACT: statusColors.TO_CONTACT,
   CONTACTED: statusColors.CONTACTED,
@@ -392,10 +410,11 @@ type AccentSet = {
 };
 
 export const accentOptions: Record<AccentId, { label: string; light: AccentSet; dark: AccentSet }> = {
+  // BRD 25: the default accent is Fluent 2 brand-80, from design/tokens.ts.
   blue: {
     label: tr('Blue'),
-    light: { main: '#0078d4', hover: '#006abb', pressed: '#005a9f', contrastText: '#ffffff', tint: '#deecf9', tintForeground: '#005a9e' },
-    dark: { main: '#4ba0e1', hover: '#6bb1e6', pressed: '#408ac1', contrastText: '#1b1a19', tint: '#0e3a5c', tintForeground: '#9ec9ec' },
+    light: { ...v25Brand.light },
+    dark: { ...v25Brand.dark },
   },
   teal: {
     label: tr('Teal'),
@@ -627,8 +646,15 @@ export type Density = 'comfortable' | 'compact';
  */
 export type FontFamilyId = 'system' | 'publicSans' | 'inter' | 'dmSans' | 'nunitoSans' | 'montserrat' | 'lexend' | 'plusJakartaSans';
 
-/** The tail every stack shares — Fluent's face first, then each platform's own. */
-const SYSTEM_STACK = '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif';
+/**
+ * The tail every stack shares — Fluent's face first, then each platform's own.
+ *
+ * BRD 25 (D-25-9): "Noto Sans Khmer Variable" sits before the generic faces so
+ * Khmer text always has a proper face. global.css declares it for the Khmer
+ * Unicode range only, so it never replaces a Latin face and its file downloads
+ * only when Khmer text is on screen.
+ */
+export const SYSTEM_STACK = '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, "Noto Sans Khmer Variable", Roboto, Helvetica, Arial, sans-serif';
 
 export type FontFamilyDefinition = {
   id: FontFamilyId;
@@ -1172,12 +1198,13 @@ export function surfaceTokens(mode: 'light' | 'dark', highContrast = false): Sur
           error: '#ff9ba0',
         }
       : {
-          background: '#1b1a19',
-          card: '#252423',
-          foreground: '#f3f2f1',
-          mutedForeground: '#a19f9d',
-          secondary: '#323130',
-          border: '#3b3a39',
+          // BRD 25 §5.1 dark neutrals (design/tokens.ts).
+          background: neutrals.dark.canvas,
+          card: neutrals.dark.surface,
+          foreground: neutrals.dark.textPrimary,
+          mutedForeground: neutrals.dark.textSecondary,
+          secondary: '#252A31',
+          border: neutrals.dark.border,
           error: '#e37d80',
         };
   }
@@ -1203,18 +1230,21 @@ export function surfaceTokens(mode: 'light' | 'dark', highContrast = false): Sur
         // CssBaseline sets body from palette.background.default, and that was
         // white, so cards never stood out from the page in light mode. The
         // canvas belongs here, where it is actually rendered.
-        background: grey[100],
-        card: '#ffffff',
-        foreground: grey[800],
+        // BRD 25 §5.1: the V25 neutrals (design/tokens.ts) replace the grey
+        // ramp steps here. Same roles; a cooler canvas and a slightly lighter
+        // secondary text that still clears 4.5:1 on every tone.
+        background: neutrals.light.canvas,
+        card: neutrals.light.surface,
+        foreground: neutrals.light.textPrimary,
         // FR-44: grey-700, not grey-600. Secondary text sits on the page canvas
         // as well as on cards (a page subtitle is not inside a card), and
         // grey-600 measures only 4.88:1 on white — it drops under 4.5:1 the
         // moment a background tone tints the canvas, failing on Cool (4.37) and
         // Soft (4.27). grey-700 holds 7.29:1 in the worst case while keeping a
         // clear step below the grey-800 body text.
-        mutedForeground: grey[700],
-        secondary: grey[200],
-        border: grey[300],
+        mutedForeground: neutrals.light.textSecondary,
+        secondary: neutrals.light.surfaceSunken,
+        border: neutrals.light.border,
         error: palette.error.dark,
       };
 }
@@ -1247,8 +1277,9 @@ const HC_LIGHT = {
   neutralIdle: '#5d5a58',
   neutralHeld: '#3b3a39',
   blue: '#00508f',
-  purple: '#5c3d8f',
+  indigo: '#2A1A80', // V25 WAITING family, one step darker than #3B2596
   orange: '#a32c00',
+  berry: '#8A0079', // V25 OPEN family, one step darker than #B4009E
   red: '#a4262c',
   green: '#0a5c0a',
 } as const;
@@ -1257,45 +1288,28 @@ const HC_DARK = {
   neutralIdle: '#b8b5b2',
   neutralHeld: '#d6d3d1',
   blue: '#7cc0f0',
-  purple: '#c4a5e8',
+  indigo: '#B3A8FF',
   orange: '#ff8a4d',
+  berry: '#F59BE3',
   red: '#ff9ba0',
   green: '#6fd070',
 } as const;
 
 function highContrastStatusMap(mode: 'light' | 'dark'): Record<StatusToken, string> {
   const c = mode === 'dark' ? HC_DARK : HC_LIGHT;
-  return {
-    NOT_STARTED: c.neutralIdle,
-    IN_PROGRESS: c.blue,
-    WAITING: c.purple,
-    BLOCKED: c.orange,
-    PAUSED: c.neutralHeld,
-    COMPLETED: c.green,
-
-    IDEA: c.neutralIdle,
-    ACTIVE: c.blue,
-    ARCHIVED: c.neutralHeld,
-
-    TO_CONTACT: c.neutralIdle,
-    CONTACTED: c.blue,
-    AGREED: c.blue,
-    DECLINED: c.red,
-
-    OPEN: c.orange,
-    RESOLVED: c.green,
-    ACCEPTED: c.neutralHeld,
-
-    DRAFT: c.neutralIdle,
-    SENT: c.blue,
-    FOLLOWED_UP: c.purple,
-    REPLIED: c.blue,
-    CLOSED: c.green,
-
-    IN_REVIEW: c.purple,
-    PLANNED: c.blue,
-    WONT_FIX: c.neutralHeld,
+  const byFamily: Record<StatusFamily, string> = {
+    moving: c.blue,
+    waiting: c.indigo,
+    blocked: c.orange,
+    open: c.berry,
+    declined: c.red,
+    done: c.green,
+    idle: c.neutralIdle,
+    held: c.neutralHeld,
   };
+  return Object.fromEntries(
+    Object.entries(STATUS_FAMILY).map(([token, family]) => [token, byFamily[family]]),
+  ) as Record<StatusToken, string>;
 }
 
 function highContrastPriorityMap(mode: 'light' | 'dark'): Record<PriorityToken, string> {
@@ -1314,14 +1328,15 @@ function highContrastPriorityMap(mode: 'light' | 'dark'): Record<PriorityToken, 
  */
 function fallbackHue(mode: 'light' | 'dark', highContrast: boolean): string {
   if (!highContrast) {
-    return neutralFallback;
+    return mode === 'dark' ? statusTones.dark.idle.fill : neutralFallback;
   }
   return mode === 'dark' ? HC_DARK.neutralIdle : HC_LIGHT.neutralIdle;
 }
 
 /** The status hue in effect, honouring high contrast (BR-34). */
 export function statusColor(token: StatusToken, mode: 'light' | 'dark' = 'light', highContrast = false): string {
-  const palette = highContrast ? highContrastStatusMap(mode) : statusColors;
+  const base = mode === 'dark' ? statusColorsDark : statusColors;
+  const palette = highContrast ? highContrastStatusMap(mode) : base;
   return palette[token] ?? fallbackHue(mode, highContrast);
 }
 
@@ -1343,10 +1358,9 @@ export function priorityColor(token: PriorityToken, mode: 'light' | 'dark' = 'li
  *   brand (dark-legible)     #4ba0e1  (a lighter step of the Communication
  *                            Blue ramp — #0078d4 falls under 3:1 on #252423)
  *
- * The status/priority palettes above are shared with charts and badges and
- * stay identical in both modes: they are mid-tone hues chosen to survive on
- * either surface, and a "Completed" green that changed between modes would
- * break the one-source-of-truth rule they exist for.
+ * BRD 25: the status palette is mode-specific (lighter fills in dark mode, so
+ * every fill keeps 3:1 on its surface); the meaning family never changes with
+ * the mode. The priority palette is still shared by both modes.
  */
 export function buildTheme(
   mode: 'light' | 'dark',
@@ -1470,14 +1484,21 @@ export function buildTheme(
     // its prefers-reduced-motion block zeroes every animation for users who
     // asked for that (BR-19).
     transitions: {
+      // BRD 25 §8: fast 150 / base 200 / slow 250 (design/tokens.ts `motion`).
       duration: {
-        shortest: 100,
-        shorter: 100,
-        short: 180,
-        standard: 180,
+        shortest: 150,
+        shorter: 150,
+        short: 200,
+        standard: 200,
         complex: 250,
-        enteringScreen: 180,
-        leavingScreen: 100,
+        enteringScreen: 200,
+        leavingScreen: 150,
+      },
+      easing: {
+        easeInOut: 'cubic-bezier(0.2, 0, 0, 1)',
+        easeOut: 'cubic-bezier(0.2, 0, 0, 1)',
+        easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
+        sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
       },
     },
     // The toast stack in global.css sits on this same scale (--z-toast: 1400,

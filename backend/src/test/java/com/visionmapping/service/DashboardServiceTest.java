@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.visionmapping.dto.response.DashboardSummaryResponse;
+import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
@@ -530,6 +531,35 @@ class DashboardServiceTest {
 
         assertThat(summary.priorityTasks()).hasSize(5);
         assertThat(summary.priorityTasks()).noneMatch(task -> task.status() == WorkStatus.COMPLETED);
+    }
+
+    @Test
+    void dashboardNextUpPutsOverdueThenTodayBeforePriority() {
+        VisionStep step = step(20L, goal(10L, dream(1L, visionArea(1L)), WorkStatus.NOT_STARTED, BigDecimal.ZERO, false),
+                WorkStatus.NOT_STARTED, BigDecimal.ZERO, false, false);
+        LocalDate today = LocalDate.now();
+        TaskItem criticalLater = task(31L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        criticalLater.setPriority(Priority.CRITICAL);
+        criticalLater.setDueDate(today.plusDays(20));
+        TaskItem lowOverdue = task(32L, step, WorkStatus.BLOCKED, BigDecimal.ZERO);
+        lowOverdue.setPriority(Priority.LOW);
+        lowOverdue.setDueDate(today.minusDays(3));
+        TaskItem mediumToday = task(33L, step, WorkStatus.IN_PROGRESS, BigDecimal.ZERO);
+        mediumToday.setPriority(Priority.MEDIUM);
+        mediumToday.setDueDate(today);
+        TaskItem highSoon = task(34L, step, WorkStatus.NOT_STARTED, BigDecimal.ZERO);
+        highSoon.setDueDate(today.plusDays(2));
+        TaskItem highOverdueDone = task(35L, step, WorkStatus.COMPLETED, BigDecimal.valueOf(100));
+        highOverdueDone.setDueDate(today.minusDays(1));
+
+        when(taskItemRepository.findByUser_IdAndArchivedFalse(1L))
+                .thenReturn(List.of(criticalLater, lowOverdue, mediumToday, highSoon, highOverdueDone));
+
+        DashboardSummaryResponse summary = service.buildDashboardSummary();
+
+        assertThat(summary.nextUpTasks()).extracting(TaskItemResponse::id).containsExactly(32L, 33L, 31L, 34L);
+        // The priority list keeps its own order: highest priority first.
+        assertThat(summary.priorityTasks().get(0).id()).isEqualTo(31L);
     }
 
     @Test
