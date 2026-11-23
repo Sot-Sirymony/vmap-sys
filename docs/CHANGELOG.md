@@ -17,7 +17,7 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
-## 23.0.0 — User, role and permission management (phases 1–5 of 7 built)
+## 23.0.0 — User, role and permission management (all 7 phases built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V23.0.0.md`](VMS_BRD_V23.0.0.md). Product owner answers on 22 Nov 2026: custom roles with editable
 permissions (Q-01), no separate user-manager role (Q-02), block before delete (Q-03), no reason in the block notice
@@ -81,7 +81,25 @@ code, emails the person first, then uses the self-deletion erase routine in the 
 the viewer and the reason, never the name or email. Events `USER_CREATED_BY_ADMIN`, `USER_UPDATED`,
 `USER_DELETED_BY_ADMIN`, `INVITATION_SENT`, `INVITATION_ACCEPTED`; an Admin deleted raises an alert, and deletions
 count with blocks towards the "more than 5 in an hour" alert. The account detail adds `invitationPending`,
-`invitationExpiresAt` and `coachedCohorts` for the dialogs. New settings `INVITATION_URL`, `INVITATION_TTL_DAYS`.
+`invitationExpiresAt` and `coachedCohorts` (id and name) for the dialogs. New settings `INVITATION_URL`, `INVITATION_TTL_DAYS`.
+
+**Phase 6 (the pages):** **Users** (`/settings/users`, *View users*): search, filters by role, status, two-step state
+and cohort, sort, counts, 10/25/50/100 rows per page, and a detail panel with only the actions the viewer may take
+(edit, change role with a new coach for each coached cohort, block, unblock, resend invitation, send password reset
+email, reset two-step sign-in, delete permanently once blocked, with the email typed). **Add user** sends the
+invitation. **Roles** (`/settings/roles`, *Manage roles*): every role and what it allows; create, edit (with what
+changes and how many people it affects, needed permissions added together, *Manage roles* never offered, a new coach
+for each cohort when *Coach cohorts* is removed) and delete (holders moved first). **Invitation page** (`/invitation`):
+greets the person, sets their password and signs them in, or explains a used or expired link. Also: the Account page
+shows your role and its permissions (UM-FR-45); Cohorts show "coach blocked"; Google sign-in on a blocked account now
+says "This account is blocked. Contact your program admin." (new reason `blocked`). Khmer drafts for every new string,
+for review. Backend: cohorts answer `coachBlocked`; the account detail's `coachedCohorts` carry id and name.
+
+**Phase 7 (documents):** [`UAT_V23.md`](UAT_V23.md) (UMC-01 to UMC-19, each with its automated test),
+[`km-review-v23.csv`](km-review-v23.csv) (133 Khmer drafts), `USER_GUIDE.md` (your role, accepting an invitation, Users
+and Roles for admins), `THREAT_MODEL.md` section 6, `ASVS_L2_CHECK.md` V8 rows, and business rule 14 in `CLAUDE.md`
+gains the D-23-3 sentence (Q-08). A test was added for abuse case 19 (more than 5 blocks in an hour raise an alert),
+which had no automated check.
 
 ## 21.0.0 — Two-factor sign-in (live 22 Nov 2026; awaiting UAT, sign-off of F-02 to F-04 and Q-09, and the Khmer review)
 

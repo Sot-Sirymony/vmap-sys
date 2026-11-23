@@ -52,6 +52,9 @@ class AdminUserActionsFlowTests {
     @Autowired
     private PermissionService permissions;
 
+    @Autowired
+    private com.visionmapping.security.audit.SecurityAlertService alerts;
+
     @AfterEach
     void restoreCoach() {
         jdbc.update("delete from role_permissions where role_key = 'COACH' and permission in ('VIEW_USERS', 'MANAGE_USERS')");
@@ -210,6 +213,19 @@ class AdminUserActionsFlowTests {
 
         send(post("/api/admin/users/" + owner.id() + "/unblock"), admin.token(), Map.of("reason", REASON)).andExpect(status().isOk());
         mockMvc.perform(get("/api/shared-plans/" + link)).andExpect(status().isOk());
+    }
+
+    /** Abuse case 19 (UM-FR-43): a stolen admin session blocking many accounts raises an alert after the fifth. */
+    @Test
+    void blockingMoreThanFiveAccountsInAnHourRaisesAnAlert() throws Exception {
+        Person admin = person("ADMIN");
+        for (int i = 0; i < 6; i++) {
+            Person target = person("USER");
+            send(post("/api/admin/users/" + target.id() + "/block"), admin.token(), Map.of("reason", REASON))
+                    .andExpect(status().isOk());
+        }
+
+        assertThat(alerts.recentAlerts()).anyMatch(alert -> alert.contains("User " + admin.id() + " blocked or deleted more than 5"));
     }
 
     // ---------- helpers ----------

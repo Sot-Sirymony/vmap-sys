@@ -1218,8 +1218,10 @@ give; a privileged role needs a fresh `ADMIN_ROLE_CHANGE` code. Refusals: an ema
 400; resending after the person chose a password 409; resetting or resending for a blocked account 409. Delete works
 only on a blocked account (409 otherwise), needs `confirmEmail` equal to the account email (400 otherwise), a reason of
 10 to 300 characters and a fresh `ADMIN_USER_DELETE` code, and erases the account as self-deletion does. The detail
-also answers `invitationPending`, `invitationExpiresAt` and `coachedCohorts` (the cohorts left without a coach on
-delete).
+also answers `invitationPending`, `invitationExpiresAt` and `coachedCohorts` (`[{ id, name }]`: the cohorts that need
+a new coach on a role change, or are left without one on delete). Cohorts (`/api/admin/cohorts`) answer
+`coachBlocked` when the coach's account is blocked. Google sign-in on a blocked account returns
+`#result=error&reason=blocked`.
 
 Public, for the person invited (20 attempts per 15 minutes per network):
 

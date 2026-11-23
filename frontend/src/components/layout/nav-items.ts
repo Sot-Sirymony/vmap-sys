@@ -30,6 +30,8 @@ import {
   Target,
   TrafficCone,
   UserCog,
+  UserRoundCog,
+  ShieldUser,
   Users,
   UsersRound,
   type LucideIcon,
@@ -132,6 +134,9 @@ export const navGroups: NavGroup[] = [
       { to: '/settings/account', label: tr('Account'), icon: UserCog },
       // V9: the coach workspace and cohort management.
       { to: '/coach', label: tr('Coaching'), icon: Users, permission: 'COACH_COHORTS' },
+      // V23 (UM-FR-17, UM-FR-08): accounts and roles.
+      { to: '/settings/users', label: tr('Users'), icon: UserRoundCog, permission: 'VIEW_USERS' },
+      { to: '/settings/roles', label: tr('Roles'), icon: ShieldUser, permission: 'MANAGE_ROLES' },
       { to: '/settings/cohorts', label: tr('Cohorts'), icon: UsersRound, permission: 'MANAGE_COHORTS' },
       { to: '/settings/ai', label: tr('AI settings'), icon: Sparkles, permission: 'MANAGE_AI_SETTINGS' },
       // V10 (SEC-09-05): the read-only security log.

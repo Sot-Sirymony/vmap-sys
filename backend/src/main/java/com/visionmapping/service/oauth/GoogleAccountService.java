@@ -203,6 +203,9 @@ public class GoogleAccountService {
 
     /** GA-FR-17: a disabled account is never signed in or linked through Google. */
     private static AppUser activeOrRefuse(AppUser user) {
+        if (user.getStatus() == UserStatus.DISABLED) {
+            throw new GoogleSignInException(GoogleSignInFailure.BLOCKED, "The account is blocked");
+        }
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new GoogleSignInException(GoogleSignInFailure.UNAVAILABLE, "The account is not active");
         }

@@ -183,15 +183,16 @@ class GoogleSignInOutcomeFlowTests extends GoogleSignInTestSupport {
 
         // A code issued before the account was disabled.
         exchange(unused).andExpect(status().isBadRequest());
-        assertThat(googleAnswers(true, "/", sub, email, "Disabled")).isEqualTo(FRONTEND_CALLBACK + "result=error&reason=unavailable");
+        // V23 (UM-FR-32): Google proved the address, so the person is told the account is blocked.
+        assertThat(googleAnswers(true, "/", sub, email, "Disabled")).isEqualTo(FRONTEND_CALLBACK + "result=error&reason=blocked");
 
         String passwordEmail = unique("disabled-password") + "@example.com";
         register(passwordEmail);
         jdbcTemplate.update("update app_users set status = 'DISABLED' where email = ?", passwordEmail);
         assertThat(googleAnswers(true, "/", sub(), passwordEmail, "Disabled"))
-                .isEqualTo(FRONTEND_CALLBACK + "result=error&reason=unavailable");
+                .isEqualTo(FRONTEND_CALLBACK + "result=error&reason=blocked");
         assertThat(jdbcTemplate.queryForObject("select count(*) from security_events where event_type = 'GOOGLE_SIGN_IN_FAILED' "
-                + "and detail = 'unavailable'", Integer.class)).isGreaterThanOrEqualTo(2);
+                + "and detail = 'blocked'", Integer.class)).isGreaterThanOrEqualTo(2);
     }
 
     @Test

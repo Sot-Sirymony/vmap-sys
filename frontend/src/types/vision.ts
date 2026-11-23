@@ -683,6 +683,8 @@ export type Cohort = {
   aiEnabled: boolean;
   // V15 (AH-FR-57): pages where the page assistant and helpers are off for this cohort.
   aiPagesOff?: AssistantPage[];
+  // V23 (UM-FR-34): the coach's account is blocked.
+  coachBlocked?: boolean;
 };
 
 export type CohortMember = {
@@ -2212,7 +2214,9 @@ export type CommentaryDraft = {
 /** V20 (BRD 20.0.0): the actions that need a "Verify it's you" code. */
 export type StepUpAction = 'CHANGE_PASSWORD' | 'EXPORT_DATA' | 'CHANGE_REMINDER_EMAIL' | 'CONFIRM_REMINDER_EMAIL' | 'DELETE_ACCOUNT'
   | 'TWO_FACTOR_SETTINGS' | 'ADMIN_TWO_FACTOR_RESET'
-  | 'ADMIN_ROLE_CHANGE' | 'ADMIN_AI_KEY' | 'ADMIN_COHORT_COACH';
+  | 'ADMIN_ROLE_CHANGE' | 'ADMIN_AI_KEY' | 'ADMIN_COHORT_COACH'
+  // V23: blocking or unblocking, editing a role, permanently deleting an account.
+  | 'ADMIN_USER_BLOCK' | 'ADMIN_ROLE_EDIT' | 'ADMIN_USER_DELETE';
 
 /**
  * V20: a code was sent. delivery is EMAIL, LOG (development: the code is in the

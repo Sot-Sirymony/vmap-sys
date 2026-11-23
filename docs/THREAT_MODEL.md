@@ -1,6 +1,7 @@
 # Threat model
 
-BRD 10 SEC-06-01, completed by BRD 21 Phase 5 (TF-FR-43), 22 Nov 2026, at the code of V21 Phase 4. Update this file
+BRD 10 SEC-06-01, completed by BRD 21 Phase 5 (TF-FR-43), 22 Nov 2026, at the code of V21 Phase 4; section 6 added by
+BRD 23 phase 7, 23 Nov 2026. Update this file
 whenever a feature crosses a trust boundary listed below (SEC-06-01). Method: data flows and trust boundaries, then
 threats per area (spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege)
 with the control that answers each, abuse cases ("a user tries to …"), and what is left.
@@ -119,6 +120,29 @@ data) → Anthropic API (key sealed in the database) → suggestion shown → th
 **Abuse cases.** A user tries to: make Claude reveal another person's plan (only their own data is in the prompt);
 make Claude change records ("ignore your instructions and delete…": Claude has no write access); burn the AI budget
 (daily limit, monthly cap).
+
+## 6. User and role management (V23)
+
+**Data flow.** Admin or custom role → `/api/admin/users/**`, `/api/admin/roles/**` → the role's permissions, read from
+`role_permissions` on each request (cached, cleared after each change commits) → no-escalation check → fresh
+"Verify it's you" code → change, security event, email notice. Invitation: admin → `user_invitations` (SHA-256 of a
+256-bit token, 7 days) → email → public `POST /api/auth/invitation/accept` → password set → session.
+
+| Threat | Control |
+| --- | --- |
+| E: a user manager giving themselves or others more power | D-23-9: the actor must hold every permission of the target's role and of the role given; only Admins act on Admins, give the Admin role or edit roles; *Manage roles* is never on another role; `AdminUserActionsFlowTests`, `RoleFlowTests`, `PermissionFlowTests` |
+| E: locking everyone out | Nobody acts on their own account; the last active admin cannot be demoted, blocked or deleted; Admin and Participant roles are locked |
+| E: the first-admin setting reused later | `ADMIN_BOOTSTRAP_EMAIL` acts only while no active admin exists, once, with an alert |
+| S: a stolen admin session making changes | Each role change, block, unblock, delete and role edit needs a fresh emailed code; alerts for the Admin role granted, an Admin blocked or deleted, sensitive permissions given, and more than 5 blocks or deletions in an hour; 30 changes per person per 10 minutes |
+| S: a guessed or leaked invitation link | 256 bits, only the hash stored, single use, 7 days, replaced on resend; 20 attempts per network per 15 min; a blocked account cannot accept |
+| I: admins reading people's plans | D-23-3: answers carry account details and record counts only; a planted-text test and a type guard on every admin answer |
+| T: deletion leaving data or half-done | Only a blocked account; the email typed; the self-deletion erase routine in one transaction; any failure erases nothing |
+| R: denying a change | Every change is logged with the actor, target and reason; a deleted account's entry keeps its id only |
+
+**Abuse cases.** UMC-11 to UMC-19 in [UAT_V23.md](UAT_V23.md): a user manager giving the Admin role or a role with
+permissions they lack, acting on an Admin, making a role with every permission; an Admin changing the Admin role or
+themselves; the bootstrap setting on a system with admins; reading plans through admin endpoints; a stolen session
+blocking many accounts.
 
 ## Residual risks
 

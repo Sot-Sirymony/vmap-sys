@@ -122,8 +122,8 @@ public class AdminUserService {
                 .map(AdminUserService::event)
                 .toList();
         // UM-FR-36: the delete dialog names the cohorts that would be left without a coach.
-        List<String> coached = cohorts.findByCoach_IdAndArchivedFalseOrderByNameAsc(id).stream()
-                .map(com.visionmapping.entity.Cohort::getName).toList();
+        List<AdminUserDetailResponse.CohortRef> coached = cohorts.findByCoach_IdAndArchivedFalseOrderByNameAsc(id).stream()
+                .map(cohort -> new AdminUserDetailResponse.CohortRef(cohort.getId(), cohort.getName())).toList();
         boolean awaiting = invitations.awaitingAcceptance(user);
         return new AdminUserDetailResponse(summary(user, twoFactor, roleNames()), createdBy(user), user.getRoleChangedAt(),
                 nameOf(user.getRoleChangedById()), user.getBlockedAt(), nameOf(user.getBlockedById()), counts, events,

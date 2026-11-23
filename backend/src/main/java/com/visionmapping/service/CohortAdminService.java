@@ -180,7 +180,8 @@ public class CohortAdminService {
         return new CohortResponse(cohort.getId(), cohort.getName(), cohort.getJoinCode(),
                 coach == null ? null : coach.getId(), coach == null ? null : coach.getFullName(), coach == null ? null : coach.getEmail(),
                 cohort.getStartDate(), cohort.isArchived(), appUserRepository.countByCohort_Id(cohort.getId()), cohort.isAiEnabled(),
-                PageSwitches.split(cohort.getAiPagesOff()));
+                PageSwitches.split(cohort.getAiPagesOff()),
+                coach != null && coach.getStatus() == com.visionmapping.entity.enums.UserStatus.DISABLED);
     }
 
     private void requireAdmin() {

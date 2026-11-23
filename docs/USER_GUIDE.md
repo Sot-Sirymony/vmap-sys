@@ -276,6 +276,42 @@ up now** or **Skip for now**. After that, only the Security page works until it 
 **Two-step sign-in** page lists admins, coaches and everyone who uses it, with **Reset** for a lost device (give a
 reason; you cannot reset your own).
 
+## Your role, and accepting an invitation (V23)
+
+**Account → Your role** shows your role and what it lets you do, in plain words. Your program admin sets it. If your
+role can do more than use your own plan, your account must use two-step sign-in.
+
+If a program admin made your account, you get an email "You are invited to Vision Map". Open the link, choose your
+password (at least 8 characters) and you are signed in. The link works once, for 7 days; if it has expired, ask your
+admin to send a new one. If your email is a Google account, you can choose **Sign in with Google instead**.
+
+If your account is blocked, signing in says so. Contact your program admin.
+
+## Users and roles (V23, for program admins)
+
+**Users** (*Settings*, needs *View users*) lists every account. Search by name or email, filter by role, status,
+two-step sign-in and cohort, and sort by newest, name or last sign-in. Select a person to open their details: role,
+status, cohort, how the account was made, last sign-in, how many vision areas, dreams, goals, steps and tasks they
+have (never what they wrote), and recent security events. Only the actions you may take on that person are shown.
+
+- **Add user**: name, email, role and cohort. The person gets an invitation to choose their own password; nobody else
+  ever knows it. **Resend invitation** sends a new link and stops the old one.
+- **Edit**: name and cohort. The email is how the person signs in, so it cannot be changed here.
+- **Change role**, **Block** and **Unblock**: each needs a reason (kept in the security log, not shown to the person)
+  and a "Verify it's you" code. Blocking signs the person out everywhere and pauses their share links; their data is
+  kept. If a coach moves to a role that cannot coach, choose a new coach, or none, for each of their cohorts.
+- **Send password reset email** sends the person the usual reset link. You never see it.
+- **Delete permanently** (needs *Delete users*): only for a blocked account. Type the person's email exactly, give a
+  reason and a code. Their account and everything in it are erased; this cannot be undone.
+- You cannot change your own role, block or delete yourself, and the last active admin always stays. You cannot
+  change an account, or give a role, that has permissions you do not have.
+
+**Roles** (*Settings*, Admins only) shows every role and what it allows. **New role** makes a role from the list of
+permissions (choosing one adds what it needs, for example *Manage users* adds *View users*). Coach's permissions can
+change; Admin and Participant cannot. Before saving, the editor says what changes and how many people it affects;
+changes apply on their next request, and they are emailed. A role that can do more than use one's own plan requires
+two-step sign-in. To delete a role, choose the role its people move to.
+
 ## Verify it's you (V20)
 
 Some changes are risky enough that the app checks it is really you, even though you are signed in: changing your

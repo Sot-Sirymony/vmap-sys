@@ -62,6 +62,9 @@ const AiSettingsPage = lazy(() => import('./pages/AiSettingsPage').then((m) => (
 const SharedPlanPage = lazy(() => import('./pages/SharedPlanPage').then((m) => ({ default: m.SharedPlanPage })));
 const SharedReportPage = lazy(() => import('./pages/SharedReportPage').then((m) => ({ default: m.SharedReportPage })));
 const TwoFactorAdminPage = lazy(() => import('./pages/TwoFactorAdminPage').then((m) => ({ default: m.TwoFactorAdminPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
+const RolesPage = lazy(() => import('./pages/RolesPage').then((m) => ({ default: m.RolesPage })));
+const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage').then((m) => ({ default: m.AcceptInvitationPage })));
 const SecuritySettingsPage = lazy(() => import('./pages/SecuritySettingsPage').then((m) => ({ default: m.SecuritySettingsPage })));
 
 export function App() {
@@ -73,6 +76,8 @@ export function App() {
         {/* Public: recovery is for users who cannot sign in. */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Public: V23 (UM-FR-24) a person an admin added chooses their password. */}
+        <Route path="/invitation" element={<AcceptInvitationPage />} />
         {/* Public: the Google OAuth flow happens while signed out. */}
         <Route path="/oauth/google" element={<OAuthGoogleStartPage />} />
         <Route path="/oauth/google/callback" element={<OAuthGoogleCallbackPage />} />
@@ -123,6 +128,9 @@ export function App() {
             {/* V9: coaches and cohorts */}
             <Route path="/settings/cohorts" element={<CohortsPage />} />
             <Route path="/settings/security-log" element={<SecurityLogPage />} />
+            {/* V23: users and roles */}
+            <Route path="/settings/users" element={<UsersPage />} />
+            <Route path="/settings/roles" element={<RolesPage />} />
             <Route path="/settings/two-factor" element={<TwoFactorAdminPage />} />
             <Route path="/settings/ai" element={<AiSettingsPage />} />
             <Route path="/dream-coach" element={<DreamCoachPage />} />

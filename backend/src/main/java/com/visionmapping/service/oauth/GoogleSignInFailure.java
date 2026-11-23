@@ -16,6 +16,11 @@ public enum GoogleSignInFailure {
     GOOGLE("google"),
     /** GA-FR-02, GA-FR-17: the feature is off, or the account cannot sign in. */
     UNAVAILABLE("unavailable"),
+    /**
+     * V23 (UM-FR-32): the account is blocked. Said plainly, as for a right password:
+     * Google has already proved the person owns the address.
+     */
+    BLOCKED("blocked"),
     /** GA-SEC-09: too many Google sign-in steps from this network. */
     TOO_MANY("too-many");
 

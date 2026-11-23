@@ -188,6 +188,7 @@ function CohortRow({ token, cohort, onChanged, onReload }: CohortRowProps) {
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{cohort.name}</Typography>
               <Typography variant="body2" color="text.secondary">
                 {cohort.coachName ? tr('Coach: {name}', { name: cohort.coachName }) : tr('No coach yet')}
+                {cohort.coachBlocked && ` · ${tr('coach blocked')}`}
                 {cohort.startDate ? ` · ${tr('Starts: {date}', { date: cohort.startDate })}` : ''}
                 {` · ${tr('{count} member(s)', { count: cohort.memberCount })}`}
               </Typography>

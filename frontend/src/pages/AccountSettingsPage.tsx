@@ -16,6 +16,7 @@ import { AiConsentCard } from '../components/common/AiConsentCard';
 import { CohortCard } from '../components/common/CohortCard';
 import { ReminderSettingsCard } from '../components/common/ReminderSettingsCard';
 import { SignInMethodsCard } from '../components/common/SignInMethodsCard';
+import { MyRoleCard } from '../components/common/MyRoleCard';
 import { isStepUpCancelled, useStepUp } from '../components/step-up/useStepUp';
 import { useAuth } from '../context/AuthContext';
 import { useSignInMethods } from '../hooks/useSignInMethods';
@@ -114,6 +115,7 @@ export function AccountSettingsPage() {
           </CardContent>
         </Card>
 
+        <MyRoleCard user={user} />
         <SignInMethodsCard methods={methods} />
 
         <CohortCard token={token} />

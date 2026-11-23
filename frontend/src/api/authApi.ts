@@ -9,6 +9,7 @@ import type {
   RegisterRequest,
   ResetPasswordRequest,
 } from '../types/auth';
+import type { InvitationInfo } from '../types/admin';
 
 /** V21: the session, or the second step when two-factor sign-in is on. */
 export function login(request: LoginRequest) {
@@ -77,5 +78,18 @@ export function resetPassword(request: ResetPasswordRequest) {
   return apiClient<void>('/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify(request),
+  });
+}
+
+/** V23 (UM-FR-24): whose account an invitation link opens; 410 when it was used, replaced or has expired. */
+export function checkInvitation(invitationToken: string) {
+  return apiClient<InvitationInfo>('/auth/invitation/check', { method: 'POST', body: JSON.stringify({ token: invitationToken }) });
+}
+
+/** V23 (UM-FR-24): choose a password from the invitation; answers like signing in. */
+export function acceptInvitation(invitationToken: string, password: string, rememberMe: boolean) {
+  return apiClient<SignInAnswer>('/auth/invitation/accept', {
+    method: 'POST',
+    body: JSON.stringify({ token: invitationToken, password, rememberMe }),
   });
 }

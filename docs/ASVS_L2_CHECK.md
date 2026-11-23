@@ -1,7 +1,7 @@
 # OWASP ASVS 5.0 Level 2 check
 
 BRD 10 (security standard: OWASP Top 10:2025 with ASVS 5.0 Level 2 as the checklist) and BRD 21 Phase 5 (TF-FR-44,
-TF-FR-45), 22 Nov 2026, at the code of V21 Phase 5.
+TF-FR-45), 22 Nov 2026, at the code of V21 Phase 5. V8 rows updated for BRD 23 (user and role management), 23 Nov 2026.
 
 **How to read this.** Rows are grouped by the ASVS 5.0 chapters (V1 to V17) and describe each Level 1 and Level 2
 control area in plain words, with the evidence in the code or tests. Status: **Met**, **Partly met** (the gap is a
@@ -14,7 +14,7 @@ misses as a new finding.
 
 | Status | Rows |
 | --- | --- |
-| Met | 70 |
+| Met | 71 |
 | Partly met | 3 (F-02, F-03, F-04 internal TLS) |
 | Partly met, fixed | 3 (F-08 in this phase; F-05 and F-04 counts after release) |
 | Not met | 2 (F-01, F-07) |
@@ -105,9 +105,10 @@ the product owner's signature, or a follow-up with a date (TF-FR-45).
 | --- | --- | --- |
 | Deny by default | Met | `anyRequest().authenticated()`; public list kept in one place and in the sweep test |
 | Object-level access (another person's record) | Met | Owner checks in services; another person's record answers 404; `AccessControlSweepTests` over every route |
-| Function-level access (roles) | Met | Path rules for `/api/admin/**` and `/api/coach/**`, checked again in services; role read from the database each request |
+| Function-level access (roles) | Met | V23: every action names a permission; `/api/admin/**` needs an administrative permission and `/api/coach/**` *Coach cohorts*, checked again in services; the role's permissions are read from the database on each request (cache cleared after each change commits); `PermissionFlowTests` |
+| No privilege escalation through user or role management (V23) | Met | D-23-9 no-escalation check; only Admins edit roles; *Manage roles* never on another role; no action on one's own account; last active admin kept; `AdminUserActionsFlowTests`, `RoleFlowTests`, abuse cases UMC-11 to UMC-19 |
 | Coach access limited to their cohorts, read-only | Met | Business rule 14; coach views logged |
-| Admin actions protected | Met | Fresh step-up code; logged; alerts for sensitive ones |
+| Admin actions protected | Met | Fresh step-up code; logged; alerts for sensitive ones. V23: role changes, blocks, deletes and role edits each need a fresh code and a reason; more than 5 blocks or deletions in an hour alert |
 
 ## V9 Self-contained Tokens
 

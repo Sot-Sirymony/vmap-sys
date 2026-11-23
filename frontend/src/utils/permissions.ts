@@ -55,3 +55,30 @@ export function can(user: AuthUser | null | undefined, permission: Permission): 
 export function isPrivileged(user: AuthUser | null | undefined): boolean {
   return permissionsOf(user).some((permission) => permission !== 'USE_OWN_PLAN');
 }
+
+/** UM-FR-45: each permission in plain words, for the person's own Account page (labels match the server catalogue). */
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  USE_OWN_PLAN: 'Use own plan',
+  COACH_COHORTS: 'Coach cohorts',
+  VIEW_USERS: 'View users',
+  MANAGE_USERS: 'Manage users',
+  DELETE_USERS: 'Delete users',
+  RESET_TWO_FACTOR: 'Reset two-step sign-in',
+  MANAGE_COHORTS: 'Manage cohorts',
+  MANAGE_MODULE_CONTENT: 'Manage module content',
+  MANAGE_INTERFACE_TEXT: 'Manage interface text',
+  HANDLE_SUPPORT: 'Handle support',
+  MANAGE_AI_SETTINGS: 'Manage AI settings',
+  VIEW_AI_REPORTS: 'View AI reports',
+  VIEW_SECURITY_LOG: 'View security log',
+  MANAGE_ROLES: 'Manage roles',
+};
+
+/**
+ * D-23-9: the viewer may act on an account, or give a role, only if they hold
+ * every permission it has. Used to hide buttons and options; the server checks again.
+ */
+export function holdsAll(user: AuthUser | null | undefined, needed: readonly string[]): boolean {
+  const mine = permissionsOf(user) as string[];
+  return needed.every((permission) => mine.includes(permission));
+}

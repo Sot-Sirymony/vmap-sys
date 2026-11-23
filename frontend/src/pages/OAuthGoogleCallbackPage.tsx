@@ -15,6 +15,8 @@ export const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
   verification: 'We could not confirm your Google account. Please try again.',
   google: 'Google did not answer in time. Please try again.',
   unavailable: 'Google sign-in is not available for this account. Please use your email and password.',
+  // V23 (UM-FR-32): Google proved the address, so the person is told plainly.
+  blocked: 'This account is blocked. Contact your program admin.',
   'too-many': 'Too many Google sign-in attempts from this network. Try again in a few minutes.',
 };
 

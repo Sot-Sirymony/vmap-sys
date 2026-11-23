@@ -14,7 +14,7 @@ import java.util.Map;
  * @param recentEvents   the last 20 security events by or about the account
  * @param invitationPending   V23 phase 5: invited and has not chosen a password yet
  * @param invitationExpiresAt when the latest invitation link stops working; null if none works
- * @param coachedCohorts      names of active cohorts this person coaches (the delete dialog)
+ * @param coachedCohorts      active cohorts this person coaches (the role change and delete dialogs)
  */
 public record AdminUserDetailResponse(
         AdminUserSummaryResponse account,
@@ -27,8 +27,12 @@ public record AdminUserDetailResponse(
         List<SecurityEventResponse> recentEvents,
         boolean invitationPending,
         Instant invitationExpiresAt,
-        List<String> coachedCohorts
+        List<CohortRef> coachedCohorts
 ) {
+
+    /** An active cohort the person coaches. */
+    public record CohortRef(Long id, String name) {
+    }
 
     public AdminUserDetailResponse {
         recordCounts = Copies.map(recordCounts);

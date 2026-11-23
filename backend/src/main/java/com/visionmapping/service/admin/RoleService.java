@@ -99,7 +99,7 @@ public class RoleService {
 
     /** UM-FR-09. */
     public RoleResponse create(RoleRequest request, @Nullable String stepUp) {
-        AppUser actor = requireRoleManager();
+        requireRoleManager();
         String name = request.name().trim();
         if (roles.existsByNameIgnoreCase(name)) {
             throw new BusinessRuleException("A role named " + name + " already exists.");
@@ -116,7 +116,7 @@ public class RoleService {
 
     /** UM-FR-10 to UM-FR-13. */
     public RoleResponse update(String key, RoleRequest request, @Nullable String stepUp) {
-        AppUser actor = requireRoleManager();
+        requireRoleManager();
         Role role = role(key);
         if (LOCKED.contains(role.getKey())) {
             throw new StateConflictException(role.getName() + " cannot be changed.");
@@ -265,12 +265,13 @@ public class RoleService {
 
     /** A stable key from the name, for example "Program assistant" → "PROGRAM_ASSISTANT". */
     private String newKey(String name) {
-        String base = Normalizer.normalize(name, Normalizer.Form.NFKD).toUpperCase(Locale.ROOT)
-                .replaceAll("[^A-Z0-9]+", "_").replaceAll("^_+|_+$", "");
+        String base = trimUnderscores(Normalizer.normalize(name, Normalizer.Form.NFKD).toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "_"));
+        // Cut to leave room for a "_2" suffix, then trim again so the cut never ends in "_".
+        base = trimUnderscores(base.substring(0, Math.min(base.length(), 34)));
         if (base.isEmpty()) {
             base = "ROLE";
         }
-        base = base.substring(0, Math.min(base.length(), 34));
         String key = base;
         for (int n = 2; roles.existsById(key) || UserRole.ADMIN.name().equals(key) || UserRole.USER.name().equals(key)
                 || UserRole.COACH.name().equals(key); n++) {
@@ -279,7 +280,20 @@ public class RoleService {
         return key;
     }
 
-    private Map<Cohort, AppUser> handover(Role role, List<AdminRoleChangeRequest.CohortCoachChange> changes) {
+    /** Leading and trailing underscores removed, without a regex (no precedence or backtracking questions). */
+    static String trimUnderscores(String value) {
+        int start = 0;
+        int end = value.length();
+        while (start < end && value.charAt(start) == '_') {
+            start++;
+        }
+        while (end > start && value.charAt(end - 1) == '_') {
+            end--;
+        }
+        return value.substring(start, end);
+    }
+
+    private Map<Cohort, AppUser> handover(Role role,List<AdminRoleChangeRequest.CohortCoachChange> changes) {
         List<Cohort> coached = users.findByRole(role.getKey()).stream()
                 .flatMap(holder -> cohorts.findByCoach_IdAndArchivedFalseOrderByNameAsc(holder.getId()).stream())
                 .toList();

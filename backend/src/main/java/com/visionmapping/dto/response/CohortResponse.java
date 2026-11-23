@@ -15,7 +15,9 @@ public record CohortResponse(
         long memberCount,
         boolean aiEnabled,
         // V15 (AH-FR-57).
-        List<String> aiPagesOff) {
+        List<String> aiPagesOff,
+        // V23 (UM-FR-34): the coach's account is blocked; participants keep their own access.
+        boolean coachBlocked) {
 
     public CohortResponse {
         aiPagesOff = com.visionmapping.util.Copies.list(aiPagesOff);
