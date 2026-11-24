@@ -9,20 +9,22 @@ import Typography from '@mui/material/Typography';
 import {
   ArrowDown, ArrowUp, CircleCheck, CircleDashed, CircleX, ListChecks, Minus, TriangleAlert, type LucideIcon,
 } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { ReportFilter } from '../../api/reportApi';
 import { statusColors } from '../../theme';
-import type { ManagementReport, ReportHealth, ReportHealthReason } from '../../types/vision';
+import type { ManagementReport, ObstacleType, Priority, ReportHealth, ReportHealthReason } from '../../types/vision';
 import {
   ATTENTION_LABELS, CHANGE_LABELS, HEALTH_LABELS, REMOVED_REASON_LABELS, attentionLink, blockedTasksLink, changeValue, changeWords,
-  goalChangeText, healthParts, healthReasonText, overdueTasksLink, periodLabel, reportDate, signed, unplacedLink,
+  goalChangeText, healthReasonText, overdueTasksLink, periodLabel, reportDate, signed, unplacedLink,
 } from '../../utils/managementReport';
 import type { ReportComparison } from '../../types/vision';
-import { DashboardCard } from '../dashboard/DashboardCard';
 import { DataTable, type DataTableColumn } from '../common/DataTable';
 import { ProgressBar } from '../common/ProgressBar';
 import { Button } from '../common/Button';
-import { BlockersChart, GoalProgressChart, PriorityChart, ProgressTrendCard, TasksByStatusChart } from './ReportCharts';
+import { BlockersChart, GoalProgressChart, PriorityChart, ProgressTrendCard, ReportChartCard, TasksByStatusChart } from './ReportCharts';
+import { surface } from '../../design/surface';
+import { obstacleTypeLabels, priorityLabels } from '../../utils/enumLabels';
 import { tr } from '../../i18n/translate';
 
 const HEALTH_ICONS: Record<ReportHealth, { icon: LucideIcon; color: string }> = {
@@ -126,8 +128,9 @@ function ChangeLine({ value, words }: Readonly<{ value: number; words: string }>
   );
 }
 
+// Pixel strings, not numbers: in MUI's sx, width: 1 means 100%, which made these labels as wide as their parent.
 const visuallyHidden = {
-  position: 'absolute', width: 1, height: 1, p: 0, m: -1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+  position: 'absolute', width: '1px', height: '1px', p: 0, m: '-1px', overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
 } as const;
 
 /**
@@ -193,12 +196,199 @@ function WhatChangedCard({ comparison, onShowDetails }: Readonly<{ comparison: R
 }
 
 type GoalRow = ManagementReport['goals'][number] & { id: number };
+type ReportGoal = ManagementReport['goals'][number];
+type AttentionItem = ManagementReport['attention'][number];
+
+/** Tinted pill and bar colours per health, from the status tokens (text colours meet 4.5:1 on their tint). */
+const HEALTH_TONE: Record<ReportHealth, { bg: string; fg: string; fill: string }> = {
+  RED: { bg: 'var(--st-declined-bg)', fg: 'var(--st-declined-fg)', fill: 'var(--st-declined)' },
+  AMBER: { bg: 'var(--st-blocked-bg)', fg: 'var(--st-blocked-fg)', fill: 'var(--st-blocked)' },
+  DONE_OPEN_WORK: { bg: 'var(--st-waiting-bg)', fg: 'var(--st-waiting-fg)', fill: 'var(--st-waiting)' },
+  GREEN: { bg: 'var(--st-done-bg)', fg: 'var(--st-done-fg)', fill: 'var(--st-done)' },
+  DONE: { bg: 'var(--st-moving-bg)', fg: 'var(--st-moving-fg)', fill: 'var(--st-moving)' },
+};
+
+const PRIORITY_ORDER: readonly Priority[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+const PRIORITY_FILL: Record<Priority, string> = {
+  CRITICAL: 'var(--st-declined)', HIGH: 'var(--st-declined)', MEDIUM: 'var(--st-blocked)', LOW: 'var(--primary)',
+};
+
+/** The prototype's status pill: label in words, tinted by health. */
+function HealthPill({ health }: Readonly<{ health: ReportHealth }>) {
+  const tone = HEALTH_TONE[health];
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', px: 1.25, py: 0.25, borderRadius: 'var(--radius-pill)',
+      fontSize: 'var(--font-caption)', fontWeight: 600, whiteSpace: 'nowrap', bgcolor: tone.bg, color: tone.fg }}>
+      {tr(HEALTH_LABELS[health])}
+    </Box>
+  );
+}
+
+const valueColor = { red: 'var(--st-declined-fg)', amber: 'var(--st-blocked-fg)', green: 'var(--st-done-fg)' } as const;
 
 /**
- * V18 MR-FR-07 to MR-FR-13: the Summary tab. V19 RM-FR-33 to RM-FR-36: with a
- * comparison, each tile shows its change, the goal table a Change column, and
- * a What changed card follows the period; without one, comparisonHint (if
- * given) says how to get one.
+ * One KPI tile (prototype "tile"): label, big value, a sub line, and for tiles
+ * that open a filtered list, a "View … →" hint; the whole tile is the link.
+ */
+function SummaryTile({ label, value, valueLabel, sub, tone, to, hint, extra }: Readonly<{
+  label: string; value: ReactNode; valueLabel?: string; sub?: ReactNode; tone?: keyof typeof valueColor; to?: string; hint?: string; extra?: ReactNode;
+}>) {
+  const body = (
+    <>
+      <Typography component="span" sx={{ fontSize: 'var(--font-meta)', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</Typography>
+      <Typography component="span" sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2, fontVariantNumeric: 'tabular-nums', color: tone ? valueColor[tone] : 'inherit' }}>
+        {valueLabel ? <><span aria-hidden="true">{value}</span><Box component="span" sx={visuallyHidden}>{valueLabel}</Box></> : value}
+      </Typography>
+      {sub && <Typography component="span" sx={{ fontSize: 'var(--font-caption)', color: 'var(--text-secondary)' }}>{sub}</Typography>}
+      {extra}
+      {to && hint && (
+        <Typography component="span" sx={{ fontSize: 'var(--font-caption)', color: 'var(--primary)', fontWeight: 600, mt: 'auto' }}>
+          {hint} <span aria-hidden="true">→</span>
+        </Typography>
+      )}
+    </>
+  );
+  const tileSx = { ...surface('card', { interactive: Boolean(to) }), display: 'flex', flexDirection: 'column', gap: 0.75, color: 'inherit', textDecoration: 'none' };
+  return to ? <Box component={Link} to={to} sx={tileSx}>{body}</Box> : <Box sx={tileSx}>{body}</Box>;
+}
+
+/** A labelled bar row (prototype "bar-row"); the colour repeats what the text already says. */
+function BarRow({ label, value, percent, fill }: Readonly<{ label: ReactNode; value: ReactNode; percent: number; fill: string }>) {
+  return (
+    <Box sx={{ display: 'grid', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, fontSize: 'var(--font-meta)' }}>
+        <span>{label}</span><Box component="span" sx={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{value}</Box>
+      </Box>
+      <Box sx={{ height: 10, bgcolor: 'var(--surface-sunken)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
+        <Box sx={{ height: '100%', width: `${Math.max(0, Math.min(100, percent))}%`, bgcolor: fill, borderRadius: 'var(--radius-pill)' }} />
+      </Box>
+    </Box>
+  );
+}
+
+/** Prototype chart 1: progress by goal, coloured by health, with health in words too. */
+function GoalProgressBars({ goals }: Readonly<{ goals: ReportGoal[] }>) {
+  const sorted = [...goals].sort((a, b) => Number(b.progress) - Number(a.progress));
+  const high = goals.filter((goal) => Number(goal.progress) >= 70).length;
+  const lowest = sorted[sorted.length - 1];
+  const summary = lowest
+    ? tr('{high} of {total} goal(s) are above 70%; the lowest is {title} at {percent}%.', {
+      high, total: goals.length, title: lowest.goalTitle, percent: Math.round(Number(lowest.progress)) })
+    : tr('No goals in this scope.');
+  return (
+    <ReportChartCard title={tr('Progress by goal')} summary={summary} height="auto"
+      headers={[tr('Goal'), tr('Progress'), tr('Health')]}
+      rows={sorted.map((goal) => ({ label: goal.goalTitle, values: [`${Math.round(Number(goal.progress))}%`, tr(HEALTH_LABELS[goal.health])] }))}>
+      <Box sx={{ display: 'grid', gap: 1.25 }}>
+        {sorted.map((goal) => (
+          <BarRow key={goal.goalId} label={goal.goalTitle} percent={Number(goal.progress)} fill={HEALTH_TONE[goal.health].fill}
+            value={`${Math.round(Number(goal.progress))}% · ${tr(HEALTH_LABELS[goal.health])}`} />
+        ))}
+      </Box>
+    </ReportChartCard>
+  );
+}
+
+/** Prototype chart 2: open tasks by priority, on track and overdue. */
+function PriorityBars({ report }: Readonly<{ report: ManagementReport }>) {
+  const rows = PRIORITY_ORDER
+    .map((priority) => report.openTasksByPriority.find((row) => row.priority === priority))
+    .filter((row): row is ManagementReport['openTasksByPriority'][number] => Boolean(row) && (row!.onTrack + row!.overdue) > 0);
+  const max = Math.max(1, ...rows.map((row) => row.onTrack + row.overdue));
+  const overdue = rows.reduce((sum, row) => sum + row.overdue, 0);
+  const urgentOverdue = rows.filter((row) => row.priority === 'HIGH' || row.priority === 'CRITICAL').reduce((sum, row) => sum + row.overdue, 0);
+  const summary = overdue === 0
+    ? tr('No open task is overdue.')
+    : tr('{urgent} of {overdue} overdue task(s) are high or critical priority.', { urgent: urgentOverdue, overdue });
+  return (
+    <ReportChartCard title={tr('Open tasks by priority')} summary={summary} height="auto"
+      headers={[tr('Priority'), tr('On track'), tr('Overdue')]}
+      rows={rows.map((row) => ({ label: tr(priorityLabels[row.priority]), values: [row.onTrack, row.overdue] }))}>
+      <Box sx={{ display: 'grid', gap: 1.25 }}>
+        {rows.length === 0 && <Typography variant="body2">{tr('No open tasks.')}</Typography>}
+        {rows.map((row) => (
+          <BarRow key={row.priority} percent={((row.onTrack + row.overdue) / max) * 100} fill={PRIORITY_FILL[row.priority]}
+            value={row.onTrack + row.overdue}
+            label={tr('{priority} priority ({onTrack} on track, {overdue} overdue)', {
+              priority: tr(priorityLabels[row.priority]), onTrack: row.onTrack, overdue: row.overdue })} />
+        ))}
+      </Box>
+    </ReportChartCard>
+  );
+}
+
+const listItemSx = {
+  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5, py: 1.5,
+  borderBottom: '1px solid var(--divider)', '&:last-of-type': { borderBottom: 'none', pb: 0 },
+} as const;
+
+/** Prototype "Goal health": each goal with why, and its health as a pill (MR-FR-11, RM-FR-01). */
+function GoalHealthList({ goals }: Readonly<{ goals: ReportGoal[] }>) {
+  const sorted = [...goals].sort((a, b) => HEALTH_RANK[a.health] - HEALTH_RANK[b.health]);
+  return (
+    <Box component="section" aria-label={tr('Goal health')} sx={surface('card')}>
+      <Typography component="h3" sx={{ fontSize: '1rem', fontWeight: 600, mb: 1 }}>{tr('Goal health')}</Typography>
+      {sorted.length === 0 && <Typography variant="body2">{tr('No goals in this scope.')}</Typography>}
+      <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+        {sorted.map((goal) => {
+          const reasons = (goal.reasons ?? []).map(healthReasonText).join(' · ');
+          return (
+            <Box component="li" key={goal.goalId} sx={listItemSx} data-testid={`goal-health-${goal.goalId}`}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography component="p" sx={{ fontWeight: 600, fontSize: 'var(--font-body)', m: 0 }}>{goal.goalTitle}</Typography>
+                {reasons && <Typography component="p" sx={{ fontSize: 'var(--font-meta)', color: 'var(--text-secondary)', m: 0 }}>{reasons}</Typography>}
+              </Box>
+              <HealthPill health={goal.health} />
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
+
+/** The action word for a "needs attention" item, by where it is fixed. */
+function fixWord(item: AttentionItem): string {
+  switch (item.itemType) {
+    case 'OBSTACLE': return tr('Resolve');
+    case 'STEP': return tr('Open step');
+    case 'GOAL': return tr('Open goal');
+    default: return tr('Open task');
+  }
+}
+
+/** Prototype "Needs attention (up to 10)": what, why, and a link to fix it (MR-FR-12). */
+function NeedsAttentionList({ items }: Readonly<{ items: AttentionItem[] }>) {
+  return (
+    <Box component="section" aria-label={tr('Needs attention')} sx={surface('card')}>
+      <Typography component="h3" sx={{ fontSize: '1rem', fontWeight: 600, mb: 1 }}>{tr('Needs attention (up to 10)')}</Typography>
+      {items.length === 0 && <Typography variant="body2">{tr('Nothing needs attention right now.')}</Typography>}
+      <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+        {items.map((item) => (
+          <Box component="li" key={`${item.itemType}-${item.itemId}-${item.kind}`} sx={listItemSx}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography component="p" sx={{ fontWeight: 600, fontSize: 'var(--font-body)', m: 0 }}>{item.title}</Typography>
+              <Typography component="p" sx={{ fontSize: 'var(--font-meta)', color: 'var(--text-secondary)', m: 0 }}>
+                {tr(ATTENTION_LABELS[item.kind])}{item.context ? ` · ${item.context}` : ''}
+              </Typography>
+            </Box>
+            <Box component={Link} to={attentionLink(item)} sx={{ fontSize: 'var(--font-meta)', fontWeight: 600, color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap', '&:hover': { textDecoration: 'underline' } }}>
+              {fixWord(item)}<Box component="span" sx={visuallyHidden}>: {item.title}</Box> <span aria-hidden="true">→</span>
+            </Box>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * V18 MR-FR-07 to MR-FR-13, laid out as the Optimize Report-management
+ * prototype (docs/Optimize Repot-management/summary.html): header, six tiles,
+ * progress by goal and open tasks by priority (each with Show as table), then
+ * goal health beside needs attention. V19's period figures and What changed
+ * follow, and the other charts and the full goal table are under More detail.
+ * With a comparison, each tile shows its change (RM-FR-33).
  */
 export function ReportSummary({ report, filter, onShowDetails, comparisonHint, shared = false }: Readonly<{
   report: ManagementReport;
@@ -211,11 +401,23 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint, s
    */
   shared?: boolean;
 }>) {
+  const [moreOpen, setMoreOpen] = useState(false);
   const showGoals = !shared || report.goals.length > 0;
   const { headline } = report;
   const comparison = report.comparison ?? null;
   const goalRows: GoalRow[] = report.goals.map((goal) => ({ ...goal, id: goal.goalId }));
   const change = (value: number, words: string) => (comparison ? <ChangeLine value={value} words={words} /> : undefined);
+  const health = headline.goalsByHealth;
+  const activeGoals = report.goals.filter((goal) => goal.health !== 'DONE').length;
+  const scopeName = report.scope.kind === 'ALL' ? tr('All dreams') : report.scope.label ?? '';
+  const dueBy = new Date(`${report.asOf}T00:00:00`);
+  dueBy.setDate(dueBy.getDate() + 14);
+  const blockerKinds = Object.entries(report.blockersByKind)
+    .filter(([, count]) => (count ?? 0) > 0)
+    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+    .slice(0, 2)
+    .map(([kind, count]) => `${count} ${tr(obstacleTypeLabels[kind as ObstacleType]).toLowerCase()}`)
+    .join(', ');
   const columns: DataTableColumn<GoalRow>[] = [
     ...(report.scope.kind === 'DREAM' ? [] : [{
       key: 'dream', label: tr('Dream'), sortValue: (row: GoalRow) => row.dreamTitle, render: (row: GoalRow) => row.dreamTitle,
@@ -250,35 +452,36 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint, s
   ];
 
   return (
-    <Stack spacing={2}>
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' } }}>
-        <DashboardCard label={tr('Overall progress')} value={`${headline.overallProgress}%`}
-          extra={comparison && change(comparison.headline.overallProgress, changeWords('progress', comparison.headline.overallProgress, ''))} />
-        <DashboardCard
-          label={tr('Goals by health')}
-          value={report.goals.length}
-          extra={(
-            <Typography variant="caption" color="text.secondary">
-              {healthParts(report).map((part) => `${part.count} ${tr(HEALTH_LABELS[part.health]).toLowerCase()}`).join(' · ')}
-            </Typography>
-          )}
-        />
-        <DashboardCard label={tr('Overdue tasks')} value={headline.overdueTasks} tone={headline.overdueTasks > 0 ? 'critical' : 'neutral'}
-          to={!shared && headline.overdueTasks > 0 ? overdueTasksLink(filter) : undefined}
-          extra={comparison && change(comparison.headline.overdueTasks, changeWords('count', comparison.headline.overdueTasks, tr('overdue tasks')))} />
-        <DashboardCard label={tr('Blocked tasks')} value={headline.blockedTasks} tone={headline.blockedTasks > 0 ? 'warning' : 'neutral'}
-          to={!shared && headline.blockedTasks > 0 ? blockedTasksLink(filter) : undefined}
-          extra={comparison && change(comparison.headline.blockedTasks, changeWords('count', comparison.headline.blockedTasks, tr('blocked tasks')))} />
-        <DashboardCard label={tr('Open blockers')} value={headline.openBlockers} tone={headline.openBlockers > 0 ? 'warning' : 'neutral'}
-          extra={comparison && change(comparison.headline.openBlockers, changeWords('count', comparison.headline.openBlockers, tr('open blockers')))} />
-        <DashboardCard label={tr('Due in 14 days')} value={headline.dueSoonTasks}
-          extra={comparison && change(comparison.headline.dueSoonTasks, changeWords('count', comparison.headline.dueSoonTasks, tr('tasks due soon')))} />
+    <Stack spacing={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
+        <Box>
+          <Typography component="h2" sx={{ fontSize: '1.25rem', fontWeight: 600, m: 0 }}>{tr('Summary')}</Typography>
+          <Typography component="p" sx={{ fontSize: 'var(--font-body-sm)', color: 'var(--text-secondary)', m: 0 }}>
+            {tr('Scope:')} <strong>{scopeName}</strong> • {tr('Generated {date}', { date: reportDate(report.asOf) })}
+          </Typography>
+        </Box>
       </Box>
 
-      <PeriodCard report={report} />
-
-      {comparison && <WhatChangedCard comparison={comparison} onShowDetails={onShowDetails} />}
-      {!comparison && comparisonHint && <Alert severity="info">{comparisonHint}</Alert>}
+      <Box component="section" aria-label={tr('Key metrics')} sx={{ display: 'grid', gap: 1.75, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+        <SummaryTile label={tr('Overall progress')} value={`${headline.overallProgress}%`}
+          sub={tr('Across {count} active goal(s)', { count: activeGoals })}
+          extra={comparison && change(comparison.headline.overallProgress, changeWords('progress', comparison.headline.overallProgress, ''))} />
+        <SummaryTile label={tr('Goals by health')}
+          value={`${health.GREEN ?? 0} / ${health.AMBER ?? 0} / ${health.RED ?? 0}`}
+          valueLabel={tr('{onTrack} on track, {atRisk} at risk, {offTrack} off track', { onTrack: health.GREEN ?? 0, atRisk: health.AMBER ?? 0, offTrack: health.RED ?? 0 })}
+          sub={<span aria-hidden="true">{tr('On track • At risk • Off track')}</span>} />
+        <SummaryTile label={tr('Overdue tasks')} value={headline.overdueTasks} tone={headline.overdueTasks > 0 ? 'red' : undefined}
+          to={!shared && headline.overdueTasks > 0 ? overdueTasksLink(filter) : undefined} hint={tr('View overdue tasks')}
+          extra={comparison && change(comparison.headline.overdueTasks, changeWords('count', comparison.headline.overdueTasks, tr('overdue tasks')))} />
+        <SummaryTile label={tr('Blocked tasks')} value={headline.blockedTasks} tone={headline.blockedTasks > 0 ? 'amber' : undefined}
+          to={!shared && headline.blockedTasks > 0 ? blockedTasksLink(filter) : undefined} hint={tr('View blocked tasks')}
+          extra={comparison && change(comparison.headline.blockedTasks, changeWords('count', comparison.headline.blockedTasks, tr('blocked tasks')))} />
+        <SummaryTile label={tr('Open blockers')} value={headline.openBlockers} sub={blockerKinds || tr('None open')}
+          extra={comparison && change(comparison.headline.openBlockers, changeWords('count', comparison.headline.openBlockers, tr('open blockers')))} />
+        <SummaryTile label={tr('Due in next 14 days')} value={headline.dueSoonTasks} tone={headline.dueSoonTasks > 0 ? 'green' : undefined}
+          sub={tr('Due by {date}', { date: reportDate(dueBy.toISOString().slice(0, 10)) })}
+          extra={comparison && change(comparison.headline.dueSoonTasks, changeWords('count', comparison.headline.dueSoonTasks, tr('tasks due soon')))} />
+      </Box>
 
       {!shared && report.unplacedObstacles > 0 && (
         <Alert severity="warning" action={<Link to={unplacedLink(filter)}>{tr('Show them')}</Link>}>
@@ -286,44 +489,45 @@ export function ReportSummary({ report, filter, onShowDetails, comparisonHint, s
         </Alert>
       )}
 
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-        {showGoals && <GoalProgressChart report={report} />}
-        <TasksByStatusChart report={report} />
-        <PriorityChart report={report} />
-        <BlockersChart report={report} />
-        <Box sx={{ gridColumn: '1 / -1' }}><ProgressTrendCard report={report} /></Box>
+      <Box component="section" aria-label={tr('Progress and task charts')} sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))' }}>
+        {showGoals && <GoalProgressBars goals={report.goals} />}
+        <PriorityBars report={report} />
       </Box>
 
-      {showGoals && (
-      <Card component="section" aria-label={tr('Goal health')}>
-        <CardHeader title={tr('Goal health')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }}
-          subheader={tr('Off track: overdue, or a blocked task or critical blocker. At risk: overdue work, an open blocker, or more than 20 points behind schedule. Done – open work: completed, but tasks are still open.')} />
-        <CardContent sx={{ pt: 0 }}>
-          <DataTable rows={goalRows} columns={columns} emptyMessage={tr('No goals in this scope.')} defaultSortKey="health" />
-        </CardContent>
-      </Card>
-      )}
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))' }}>
+        {showGoals && <GoalHealthList goals={report.goals} />}
+        {!shared && <NeedsAttentionList items={report.attention} />}
+      </Box>
 
-      {!shared && (
-      <Card component="section" aria-label={tr('Needs attention')}>
-        <CardHeader title={tr('Needs attention')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }} />
-        <CardContent sx={{ pt: 0 }}>
-          {report.attention.length === 0 ? (
-            <Typography variant="body2">{tr('Nothing needs attention right now.')}</Typography>
-          ) : (
-            <Box component="ol" sx={{ m: 0, pl: 3, display: 'grid', gap: 1 }}>
-              {report.attention.map((item) => (
-                <li key={`${item.itemType}-${item.itemId}-${item.kind}`}>
-                  <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>{tr(ATTENTION_LABELS[item.kind])}: </Typography>
-                  <Link to={attentionLink(item)}>{item.title}</Link>
-                  <Typography variant="body2" component="span" color="text.secondary"> · {item.context}</Typography>
-                </li>
-              ))}
+      <PeriodCard report={report} />
+      {comparison && <WhatChangedCard comparison={comparison} onShowDetails={onShowDetails} />}
+      {!comparison && comparisonHint && <Alert severity="info">{comparisonHint}</Alert>}
+
+      <Box>
+        <Button variant="secondary" aria-expanded={moreOpen} aria-controls="report-more-detail" onClick={() => setMoreOpen((open) => !open)}>
+          {moreOpen ? tr('Hide more detail') : tr('More detail: all charts and the goal table')}
+        </Button>
+        {moreOpen && (
+          <Stack id="report-more-detail" spacing={2} sx={{ mt: 2 }}>
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+              <TasksByStatusChart report={report} />
+              <BlockersChart report={report} />
+              {showGoals && <GoalProgressChart report={report} />}
+              <PriorityChart report={report} />
+              <Box sx={{ gridColumn: '1 / -1' }}><ProgressTrendCard report={report} /></Box>
             </Box>
-          )}
-        </CardContent>
-      </Card>
-      )}
+            {showGoals && (
+              <Card component="section" aria-label={tr('Goal details')}>
+                <CardHeader title={tr('Goal details')} titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }}
+                  subheader={tr('Off track: overdue, or a blocked task or critical blocker. At risk: overdue work, an open blocker, or more than 20 points behind schedule. Done – open work: completed, but tasks are still open.')} />
+                <CardContent sx={{ pt: 0 }}>
+                  <DataTable rows={goalRows} columns={columns} emptyMessage={tr('No goals in this scope.')} defaultSortKey="health" />
+                </CardContent>
+              </Card>
+            )}
+          </Stack>
+        )}
+      </Box>
     </Stack>
   );
 }

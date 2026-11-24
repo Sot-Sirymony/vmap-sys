@@ -89,9 +89,38 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     expect(screen.getByText('2 blocker(s) are not on a step yet, so they are not counted on any goal.')).toBeInTheDocument();
   });
 
+  it('lays the Summary out as the prototype: header, six tiles, two charts, goal health beside needs attention', async () => {
+    renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
+    expect(await screen.findByRole('heading', { name: 'Summary', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText(/Generated/)).toBeInTheDocument();
+    const tiles = screen.getByRole('region', { name: 'Key metrics' });
+    expect(within(tiles).getByText('Across 2 active goal(s)')).toBeInTheDocument();
+    expect(within(tiles).getByText('0 on track, 1 at risk, 1 off track')).toBeInTheDocument();
+    expect(within(tiles).getByText('2 money, 1 knowledge')).toBeInTheDocument();
+    expect(within(tiles).getByText('View overdue tasks')).toBeInTheDocument();
+    expect(within(tiles).getByText(/^Due by /)).toBeInTheDocument();
+    const charts = screen.getByRole('region', { name: 'Progress and task charts' });
+    expect(within(charts).getByRole('region', { name: 'Progress by goal' })).toHaveTextContent('1 of 3 goal(s) are above 70%; the lowest is Collect the data at 20%.');
+    expect(within(charts).getByText('High priority (8 on track, 3 overdue)')).toBeInTheDocument();
+    // The other charts and the full goal table wait under More detail.
+    expect(screen.queryByRole('region', { name: 'Tasks by status' })).not.toBeInTheDocument();
+  });
+
   it('summarises each chart in words and offers the same numbers as a table (MRC-03, MR-FR-13)', async () => {
     renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
-    const status = await screen.findByRole('region', { name: 'Tasks by status' });
+    const progress = await screen.findByRole('region', { name: 'Progress by goal' });
+    await userEvent.click(within(progress).getByRole('button', { name: 'Show as table' }));
+    const redRow = within(progress).getByRole('cell', { name: 'Collect the data' }).closest('tr') as HTMLElement;
+    expect(within(redRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Collect the data', '20%', 'Off track']);
+
+    const priority = screen.getAllByRole('region', { name: 'Open tasks by priority' })[0];
+    expect(within(priority).getByText('4 of 5 overdue task(s) are high or critical priority.')).toBeInTheDocument();
+    await userEvent.click(within(priority).getByRole('button', { name: 'Show as table' }));
+    const highRow = within(priority).getByRole('cell', { name: 'High' }).closest('tr') as HTMLElement;
+    expect(within(highRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['High', '8', '3']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'More detail: all charts and the goal table' }));
+    const status = screen.getByRole('region', { name: 'Tasks by status' });
     expect(within(status).getByText('12 of 40 tasks are completed.')).toBeInTheDocument();
     await userEvent.click(within(status).getByRole('button', { name: 'Show as table' }));
     const completedRow = within(status).getByRole('cell', { name: 'Completed' }).closest('tr') as HTMLElement;
@@ -99,25 +128,20 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     await userEvent.click(within(status).getByRole('button', { name: 'Show as chart' }));
     expect(within(status).queryByRole('table')).not.toBeInTheDocument();
 
-    const priority = screen.getByRole('region', { name: 'Open tasks by priority' });
-    expect(within(priority).getByText('28 open task(s), 13 of them high or critical.')).toBeInTheDocument();
-    await userEvent.click(within(priority).getByRole('button', { name: 'Show as table' }));
-    const highRow = within(priority).getByRole('cell', { name: 'High' }).closest('tr') as HTMLElement;
-    expect(within(highRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['High', '8', '3']);
-
     const blockers = screen.getByRole('region', { name: 'Blocked items' });
     expect(within(blockers).getByText('2 blocked task(s) and 3 open blocker(s) on steps or tasks.')).toBeInTheDocument();
     await userEvent.click(within(blockers).getByRole('button', { name: 'Show as table' }));
     expect(within(blockers).getByRole('cell', { name: 'Money' })).toBeInTheDocument();
 
-    const progress = screen.getByRole('region', { name: 'Progress by goal' });
-    await userEvent.click(within(progress).getByRole('button', { name: 'Show as table' }));
-    expect(within(progress).getByRole('cell', { name: '1. Collect the data' })).toBeInTheDocument();
+    const detailedProgress = screen.getAllByRole('region', { name: 'Progress by goal' })[1];
+    await userEvent.click(within(detailedProgress).getByRole('button', { name: 'Show as table' }));
+    expect(within(detailedProgress).getByRole('cell', { name: '1. Collect the data' })).toBeInTheDocument();
   });
 
   it('shows the 12-week trend in words and as a table, or says there is no history yet (MR-FR-14)', async () => {
     const { unmount } = renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
-    const trend = await screen.findByRole('region', { name: 'Progress over the last 12 weeks' });
+    await userEvent.click(await screen.findByRole('button', { name: 'More detail: all charts and the goal table' }));
+    const trend = screen.getByRole('region', { name: 'Progress over the last 12 weeks' });
     expect(within(trend).getByText('Average task progress went from 20% to 42% over 3 week(s).')).toBeInTheDocument();
     await userEvent.click(within(trend).getByRole('button', { name: 'Show as table' }));
     const row = within(trend).getByRole('cell', { name: '2026-11-09' }).closest('tr') as HTMLElement;
@@ -126,22 +150,30 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
 
     vi.mocked(reportApi.getManagementReport).mockResolvedValue(report({ trend: [] }));
     renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
-    const empty = await screen.findByRole('region', { name: 'Progress over the last 12 weeks' });
+    await userEvent.click(await screen.findByRole('button', { name: 'More detail: all charts and the goal table' }));
+    const empty = screen.getByRole('region', { name: 'Progress over the last 12 weeks' });
     expect(within(empty).getByText('No progress history yet. It builds up as tasks move.')).toBeInTheDocument();
   });
 
   it('rates each goal with a label, not colour alone, and lists what needs attention (MRC-04, MR-FR-12)', async () => {
     renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
     const health = await screen.findByRole('region', { name: 'Goal health' });
-    const redRow = within(health).getByText('Collect the data').closest('tr') as HTMLElement;
-    expect(within(redRow).getByText('Off track')).toBeInTheDocument();
-    expect(within(redRow).getByText('Call the hall manager')).toBeInTheDocument();
+    expect(within(screen.getByTestId('goal-health-1')).getByText('Off track')).toBeInTheDocument();
     expect(within(health).getByText('At risk')).toBeInTheDocument();
     expect(within(health).getByText('Done')).toBeInTheDocument();
+    // Off track first.
+    expect(within(health).getAllByRole('listitem')[0]).toHaveTextContent('Collect the data');
 
     const attention = screen.getByRole('region', { name: 'Needs attention' });
-    expect(within(attention).getByRole('link', { name: 'No budget' })).toHaveAttribute('href', '/obstacles?goalId=1');
-    expect(within(attention).getByRole('link', { name: 'Print forms' })).toHaveAttribute('href', '/tasks?stepId=4');
+    expect(within(attention).getByRole('link', { name: /Resolve\s*: No budget/ })).toHaveAttribute('href', '/obstacles?goalId=1');
+    expect(within(attention).getByRole('link', { name: /Open task\s*: Print forms/ })).toHaveAttribute('href', '/tasks?stepId=4');
+    expect(within(attention).getByText('Critical blocker · Collect the data › Run the survey')).toBeInTheDocument();
+
+    // The next action is in the full goal table under More detail.
+    await userEvent.click(screen.getByRole('button', { name: 'More detail: all charts and the goal table' }));
+    const details = screen.getByRole('region', { name: 'Goal details' });
+    const redRow = within(details).getByText('Collect the data').closest('tr') as HTMLElement;
+    expect(within(redRow).getByText('Call the hall manager')).toBeInTheDocument();
   });
 
   it('reports on one dream or one vision area, kept in the URL (MRC-02)', async () => {
@@ -151,9 +183,10 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     renderPage(<ManagementReportPage />, { route: '/vision-map/report?dreamId=7', path: '/vision-map/report' });
     expect(await screen.findByText(/Publish a study · This month · as of/)).toBeInTheDocument();
     expect(reportApi.getManagementReport).toHaveBeenCalledWith('token', { dreamId: 7 });
-    // One dream: the goal health table has no Dream column, and tiles link within the dream.
-    const health = screen.getByRole('region', { name: 'Goal health' });
-    expect(within(health).queryByRole('columnheader', { name: /Dream/ })).not.toBeInTheDocument();
+    // One dream: the goal table has no Dream column, and tiles link within the dream.
+    await userEvent.click(screen.getByRole('button', { name: 'More detail: all charts and the goal table' }));
+    const details = screen.getByRole('region', { name: 'Goal details' });
+    expect(within(details).queryByRole('columnheader', { name: /Dream/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Overdue tasks/ })).toHaveAttribute('href', '/tasks?overdue=true&dreamId=7');
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Report on' }));
@@ -175,11 +208,9 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
 
   it('rmFr01: says why each goal has its health, in words under the label', async () => {
     renderPage(<ManagementReportPage />, { route: '/vision-map/report', path: '/vision-map/report' });
-    const health = await screen.findByRole('region', { name: 'Goal health' });
-    const redRow = within(health).getByText('Collect the data').closest('tr') as HTMLElement;
-    expect(within(redRow).getByText('Target date passed 15 day(s) ago · Critical blocker: No budget')).toBeInTheDocument();
-    const amberRow = within(health).getByText('Write the paper').closest('tr') as HTMLElement;
-    expect(within(amberRow).getByText('Progress 45% with 70% of the time gone')).toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Goal health' });
+    expect(within(screen.getByTestId('goal-health-1')).getByText('Target date passed 15 day(s) ago · Critical blocker: No budget')).toBeInTheDocument();
+    expect(within(screen.getByTestId('goal-health-2')).getByText('Progress 45% with 70% of the time gone')).toBeInTheDocument();
   });
 
   it('rmFr02: a completed goal with open tasks is "Done – open work" and needs finishing or reopening', async () => {
@@ -196,7 +227,7 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     expect(within(health).getByText('Completed, but 2 task(s) are still open')).toBeInTheDocument();
     const attention = screen.getByRole('region', { name: 'Needs attention' });
     expect(within(attention).getByText(/Reopen or finish/)).toBeInTheDocument();
-    expect(within(attention).getByRole('link', { name: 'Build the team' })).toHaveAttribute('href', '/tasks?goalId=5');
+    expect(within(attention).getByRole('link', { name: /Open goal\s*: Build the team/ })).toHaveAttribute('href', '/tasks?goalId=5');
   });
 
   it('rmFr08: shows what happened in the period, and notes when status figures are today\'s', async () => {
@@ -343,8 +374,9 @@ describe('ManagementReportPage (V18 MR-FR-01 to MR-FR-13)', () => {
     expect(screen.getByText('2 fewer overdue tasks')).toBeInTheDocument();
     expect(screen.getByText('1 more open blockers')).toBeInTheDocument();
     expect(screen.getAllByText('no change since the compared report').length).toBeGreaterThan(0);
-    // RM-FR-34: a Change column.
-    const health = screen.getByRole('region', { name: 'Goal health' });
+    // RM-FR-34: a Change column, in the full goal table.
+    await userEvent.click(screen.getByRole('button', { name: 'More detail: all charts and the goal table' }));
+    const health = screen.getByRole('region', { name: 'Goal details' });
     expect(within(health).getByText('At risk → Off track · +12 points · Target Oct 15, 2026 → Nov 1, 2026 · (renamed)')).toBeInTheDocument();
     expect(within(health).getByText('New')).toBeInTheDocument();
     // RM-FR-35: up to 15 lines, most important first, and the rest on the Details tab.

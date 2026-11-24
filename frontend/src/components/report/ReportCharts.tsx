@@ -4,7 +4,6 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
-import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
 import { ChartTooltipContent } from '../dashboard/ChartTooltipContent';
 import { chartPrimary, statusColors } from '../../theme';
@@ -25,7 +24,8 @@ export function ReportChartCard({ title, summary, headers, rows, height = 240, c
   summary: string;
   headers: string[];
   rows: Row[];
-  height?: number;
+  /** Pixels for a Recharts chart; 'auto' for content that sizes itself, such as a bar list. */
+  height?: number | 'auto';
   children: ReactNode;
 }>) {
   const [asTable, setAsTable] = useState(false);
@@ -35,9 +35,16 @@ export function ReportChartCard({ title, summary, headers, rows, height = 240, c
         title={title}
         titleTypographyProps={{ variant: 'subtitle1', component: 'h3', fontWeight: 600 }}
         action={(
-          <Link component="button" type="button" variant="body2" aria-pressed={asTable} onClick={() => setAsTable((current) => !current)}>
+          // Optimize Report-management prototype: a small bordered toggle.
+          <Box component="button" type="button" aria-pressed={asTable} onClick={() => setAsTable((current) => !current)}
+            sx={{
+              font: 'inherit', fontSize: 'var(--font-caption)', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer',
+              color: 'var(--text-primary)', bgcolor: 'var(--style-inset-bg)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', px: 1.25, py: 0.5, mt: 0.5,
+              '&:hover': { borderColor: 'var(--border-strong)' },
+            }}>
             {asTable ? tr('Show as chart') : tr('Show as table')}
-          </Link>
+          </Box>
         )}
       />
       <CardContent sx={{ pt: 0 }}>
@@ -57,7 +64,9 @@ export function ReportChartCard({ title, summary, headers, rows, height = 240, c
             </tbody>
           </Box>
         ) : (
-          <Box sx={{ height }} aria-hidden="true">{children}</Box>
+          // Hidden from assistive tech (the table has the same numbers) and inert, so Recharts'
+          // own focusable layer is not reachable by keyboard inside a hidden region (axe aria-hidden-focus).
+          <Box sx={{ height }} aria-hidden="true" inert>{children}</Box>
         )}
       </CardContent>
     </Card>

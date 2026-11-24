@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — Summary Tab Prototype</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-soft: #eff6ff;
+      --green: #16a34a;
+      --green-soft: #dcfce7;
+      --amber: #d97706;
+      --amber-soft: #fef3c7;
+      --red: #dc2626;
+      --red-soft: #fee2e2;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, "Noto Sans Khmer", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container { max-width: 1120px; margin: 0 auto; }
+
+    /* Focus ring for accessibility */
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    /* Section Header */
+    .summary-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-header h2 { margin: 0; font-size: 1.25rem; }
+    .meta-text { font-size: 0.875rem; color: var(--muted); }
+
+    /* KPI Tiles Grid */
+    .tiles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    a.tile:hover {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+    }
+    .tile-label { font-size: 0.8125rem; color: var(--muted); font-weight: 500; }
+    .tile-value { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+    .tile-sub { font-size: 0.75rem; color: var(--muted); }
+    .tile-link-hint { font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-top: auto; }
+    .text-red { color: var(--red); }
+    .text-amber { color: var(--amber); }
+    .text-green { color: var(--green); }
+
+    /* Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .card-title { margin: 0; font-size: 1rem; font-weight: 600; }
+    .card-summary { margin: 0 0 14px; font-size: 0.875rem; color: var(--muted); }
+
+    .btn-toggle {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .btn-toggle:hover { background: #e2e8f0; }
+
+    /* Simple Bar Visuals */
+    .bar-list { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; flex-direction: column; gap: 4px; }
+    .bar-meta { display: flex; justify-content: space-between; font-size: 0.8125rem; }
+    .bar-track {
+      height: 10px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill { height: 100%; border-radius: 999px; background: var(--primary); }
+    .bar-fill.green { background: var(--green); }
+    .bar-fill.amber { background: var(--amber); }
+    .bar-fill.red { background: var(--red); }
+
+    /* Accessible Data Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+    .data-table th, .data-table td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table th { color: var(--muted); font-weight: 600; }
+    .hidden { display: none; }
+
+    /* Bottom Split: Goal Health & Needs Attention */
+    .split-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+    }
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .item-title { font-weight: 600; font-size: 0.9rem; margin: 0 0 2px; }
+    .item-reason { font-size: 0.8125rem; color: var(--muted); margin: 0; }
+
+    /* Status Pills */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-green { background: var(--green-soft); color: var(--green); }
+    .badge-amber { background: var(--amber-soft); color: var(--amber); }
+    .badge-red { background: var(--red-soft); color: var(--red); }
+    .badge-blue { background: var(--primary-soft); color: var(--primary); }
+
+    .fix-link {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .fix-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <main class="container" aria-label="Report Summary Tab">
+    <!-- Header -->
+    <div class="summary-header">
+      <div>
+        <h2>Summary</h2>
+        <div class="meta-text">Scope: <strong>All dreams</strong> • Generated 24 Nov 2026</div>
+      </div>
+    </div>
+
+    <!-- 1. KPI Tiles -->
+    <section class="tiles-grid" aria-label="Key metrics">
+      <div class="tile">
+        <span class="tile-label">Overall progress</span>
+        <span class="tile-value">68%</span>
+        <span class="tile-sub">Across 4 active goals</span>
+      </div>
+
+      <div class="tile">
+        <span class="tile-label">Goals by health</span>
+        <span class="tile-value">2 / 1 / 1</span>
+        <span class="tile-sub">On track • At risk • Off track</span>
+      </div>
+
+      <a href="#tasks?filter=overdue" class="tile">
+        <span class="tile-label">Overdue tasks</span>
+        <span class="tile-value text-red">4</span>
+        <span class="tile-link-hint">View overdue tasks →</span>
+      </a>
+
+      <a href="#tasks?filter=blocked" class="tile">
+        <span class="tile-label">Blocked tasks</span>
+        <span class="tile-value text-amber">3</span>
+        <span class="tile-link-hint">View blocked tasks →</span>
+      </a>
+
+      <div class="tile">
+        <span class="tile-label">Open blockers</span>
+        <span class="tile-value">2</span>
+        <span class="tile-sub">1 external, 1 resource</span>
+      </div>
+
+      <div class="tile">
+        <span class="tile-label">Due in next 14 days</span>
+        <span class="tile-value text-green">7</span>
+        <span class="tile-sub">5 on track, 2 at risk</span>
+      </div>
+    </section>
+
+    <!-- 2. Charts with "Show as table" toggle -->
+    <section class="charts-grid" aria-label="Progress and task charts">
+      <!-- Chart 1: Progress by goal -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Progress by goal</h3>
+          <button class="btn-toggle" type="button" onclick="toggleTable(this, 'goal-chart', 'goal-table')" aria-expanded="false">
+            Show as table
+          </button>
+        </div>
+        <p class="card-summary">2 goals are above 70%; 1 goal is lagging behind at 35%.</p>
+
+        <div id="goal-chart" class="bar-list">
+          <div class="bar-row">
+            <div class="bar-meta"><span>Launch Mobile App</span><span>85%</span></div>
+            <div class="bar-track"><div class="bar-fill green" style="width: 85%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Grow Community</span><span>72%</span></div>
+            <div class="bar-track"><div class="bar-fill green" style="width: 72%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Hire Core Team</span><span>55%</span></div>
+            <div class="bar-track"><div class="bar-fill amber" style="width: 55%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Secure Seed Funding</span><span>35%</span></div>
+            <div class="bar-track"><div class="bar-fill red" style="width: 35%"></div></div>
+          </div>
+        </div>
+
+        <table id="goal-table" class="data-table hidden">
+          <caption class="hidden">Progress by goal</caption>
+          <thead>
+            <tr><th scope="col">Goal</th><th scope="col">Progress</th><th scope="col">Health</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Launch Mobile App</td><td>85%</td><td>On track</td></tr>
+            <tr><td>Grow Community</td><td>72%</td><td>On track</td></tr>
+            <tr><td>Hire Core Team</td><td>55%</td><td>At risk</td></tr>
+            <tr><td>Secure Seed Funding</td><td>35%</td><td>Off track</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Chart 2: Open tasks by priority -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Open tasks by priority</h3>
+          <button class="btn-toggle" type="button" onclick="toggleTable(this, 'priority-chart', 'priority-table')" aria-expanded="false">
+            Show as table
+          </button>
+        </div>
+        <p class="card-summary">Most overdue tasks (3 of 4) are high priority.</p>
+
+        <div id="priority-chart" class="bar-list">
+          <div class="bar-row">
+            <div class="bar-meta"><span>High priority (6 on track, 3 overdue)</span><span>9</span></div>
+            <div class="bar-track"><div class="bar-fill red" style="width: 75%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Medium priority (8 on track, 1 overdue)</span><span>9</span></div>
+            <div class="bar-track"><div class="bar-fill amber" style="width: 75%"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Low priority (4 on track, 0 overdue)</span><span>4</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width: 33%"></div></div>
+          </div>
+        </div>
+
+        <table id="priority-table" class="data-table hidden">
+          <caption class="hidden">Open tasks by priority</caption>
+          <thead>
+            <tr><th scope="col">Priority</th><th scope="col">On track</th><th scope="col">Overdue</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>High</td><td>6</td><td>3</td></tr>
+            <tr><td>Medium</td><td>8</td><td>1</td></tr>
+            <tr><td>Low</td><td>4</td><td>0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. Goal Health & Needs Attention -->
+    <section class="split-grid" aria-label="Goal health and urgent items">
+      <!-- Goal Health -->
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom: 12px;">Goal health</h3>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Secure Seed Funding</p>
+            <p class="item-reason">2 overdue tasks and 1 open blocker</p>
+          </div>
+          <span class="badge badge-red">Off track</span>
+        </div>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Hire Core Team</p>
+            <p class="item-reason">1 task blocked waiting on agency</p>
+          </div>
+          <span class="badge badge-amber">At risk</span>
+        </div>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Launch Mobile App</p>
+            <p class="item-reason">All milestones on schedule</p>
+          </div>
+          <span class="badge badge-green">On track</span>
+        </div>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Setup Legal Entity</p>
+            <p class="item-reason">Completed 10 Nov 2026</p>
+          </div>
+          <span class="badge badge-blue">Done</span>
+        </div>
+      </div>
+
+      <!-- Needs Attention -->
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom: 12px;">Needs attention (up to 10)</h3>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Finalise investor pitch deck</p>
+            <p class="item-reason">Overdue by 5 days • High priority</p>
+          </div>
+          <a href="#fix/task-101" class="fix-link">Open task →</a>
+        </div>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Waiting on recruitment agency shortlist</p>
+            <p class="item-reason">Open blocker for 8 days</p>
+          </div>
+          <a href="#fix/blocker-22" class="fix-link">Resolve →</a>
+        </div>
+        <div class="list-item">
+          <div>
+            <p class="item-title">Review beta user feedback</p>
+            <p class="item-reason">Due in 2 days • Unassigned</p>
+          </div>
+          <a href="#fix/task-109" class="fix-link">Open task →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function toggleTable(btn, chartId, tableId) {
+      const chart = document.getElementById(chartId);
+      const table = document.getElementById(tableId);
+      const showingTable = !table.classList.contains("hidden");
+
+      if (showingTable) {
+        table.classList.add("hidden");
+        chart.classList.remove("hidden");
+        btn.textContent = "Show as table";
+        btn.setAttribute("aria-expanded", "false");
+      } else {
+        chart.classList.add("hidden");
+        table.classList.remove("hidden");
+        btn.textContent = "Show as chart";
+        btn.setAttribute("aria-expanded", "true");
+      }
+    }
+  </script>
+</body>
+</html>

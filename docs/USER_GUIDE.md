@@ -296,13 +296,19 @@ Choose what to report on: **All dreams**, **One vision area** or **One dream**. 
 address bar, so you can bookmark a view. Every view says what it covers and the date.
 
 **Summary tab**
-- Tiles: overall progress, goals by health, overdue tasks, blocked tasks, open blockers and tasks due in 14 days. The
-  overdue and blocked tiles open the Tasks page showing exactly those tasks.
-- Charts: progress by goal, tasks by status, open tasks by priority (on track and overdue), blocked items by kind and
-  progress over the last 12 weeks. Each has a one-line summary; `Show as table` gives the same numbers as a table.
-- Goal health: each goal is **Off track** (overdue, or a blocked task or critical blocker), **At risk** (overdue work,
-  an open blocker, or more than 20 points behind its schedule), **On track** or **Done**.
-- Needs attention: up to 10 items, most urgent first, each linking to where you can fix it.
+- At the top: the scope and the date the report was generated.
+- Six tiles: overall progress (across your active goals), goals by health (on track / at risk / off track), overdue
+  tasks, blocked tasks, open blockers (with their main kinds) and tasks due in the next 14 days. The overdue and
+  blocked tiles are links ("View overdue tasks →") to the Tasks page showing exactly those tasks.
+- Two charts: **Progress by goal** (each bar coloured by the goal's health, with the health in words) and **Open tasks
+  by priority** (on track and overdue). Each has a one-line summary; `Show as table` gives the same numbers as a table.
+- **Goal health** beside **Needs attention**: each goal with why it is **Off track** (overdue, or a blocked task or
+  critical blocker), **At risk** (overdue work, an open blocker, or more than 20 points behind its schedule), **On
+  track** or **Done**; and up to 10 items that need you, most urgent first, each with a link to fix it (Open task,
+  Resolve, Open step or Open goal).
+- Below: the figures for the chosen period, and for a compared report, What changed. **More detail** opens the other
+  charts (tasks by status, blocked items by kind, progress over 12 weeks) and the full goal table with target dates,
+  counts and next actions.
 
 **Export tab**
 - `Export to Excel` downloads a workbook with a Summary sheet, a Report sheet (one row per task: Goals, Steps, Tasks,

@@ -13,6 +13,7 @@ const ROUTES: ((seed: Seed) => string)[] = [
   () => '/dreams',
   (seed) => `/dreams/${seed.dreamId}`,
   () => '/vision-map',
+  () => '/vision-map/report',
   () => '/goals',
   () => '/steps',
   () => '/steps/undated',
@@ -31,7 +32,7 @@ const ROUTES: ((seed: Seed) => string)[] = [
   () => '/settings/account',
 ];
 
-const NAMES = ['/', '/today', '/journal', '/assessment', '/strengths', '/modules', '/plan', '/vision-areas', '/dreams', '/dreams/:id', '/vision-map',
+const NAMES = ['/', '/today', '/journal', '/assessment', '/strengths', '/modules', '/plan', '/vision-areas', '/dreams', '/dreams/:id', '/vision-map', '/vision-map/report',
   '/goals', '/steps', '/steps/undated', '/tasks', '/obstacles', '/partners', '/partners/:id', '/work-style', '/communication', '/reviews',
   '/insights', '/issue-reports', '/import-export', '/settings/appearance', '/settings/security', '/settings/account'];
 

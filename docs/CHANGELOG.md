@@ -534,6 +534,16 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Management Report Summary tab, per the Optimize Report-management prototype** (`docs/Optimize Repot-management/summary.html`):
+a Summary header with scope and generated date; six tiles with sub-lines and "View … →" links; Progress by goal and Open
+tasks by priority as bar lists with Show as table; Goal health (reasons and a health pill) beside Needs attention (with
+Open task / Resolve / Open step / Open goal links). The period figures and What changed stay below; the other three charts
+and the full goal table moved under **More detail**. The due-in-14-days tile shows "Due by {date}" instead of the
+prototype's on-track / at-risk split, which the report does not calculate. Fixes found on the way: hidden report charts are
+now `inert` (Recharts left a focusable layer inside a screen-reader-hidden area), and the visually hidden labels in the
+report and dashboard used `width: 1` (100% in MUI), which could cause sideways scrolling on phones. The report page joins
+the e2e accessibility sweep (desktop, dark, phone).
+
 Work on `main` after the last BRD v2.0.0 feature commit. None of this changes a
 requirement; it is internal quality and UX work.
 
