@@ -269,6 +269,14 @@ public final class AiPlanResponses {
                               String successDefinition, java.time.LocalDate targetDate, Long requestId) {
     }
 
+    /** V31 v1 step 3 (DC-FR-48): a dream's review rhythm. */
+    public record ReviewRhythm(Long dreamId, boolean daily, String weeklyDay, Integer monthlyDay, boolean quarterly) {
+    }
+
+    /** V31 v1 step 3 (DC-FR-50): a review the rhythm says is due, and since when. */
+    public record DueReview(Long dreamId, String dreamTitle, String reviewType, java.time.LocalDate dueSince) {
+    }
+
     // V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50).
 
     /**

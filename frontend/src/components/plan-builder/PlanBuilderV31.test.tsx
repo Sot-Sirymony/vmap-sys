@@ -43,7 +43,7 @@ function Harness({ initial, stage, onAdd = vi.fn() }: {
       {stage === 'review' && (
         <ReviewStage content={content} onChange={change} existingSteps={[]} busy={false} onGoTo={vi.fn()} onAdd={onAdd}
           dreamId={5} token="t" language="en" aiReady={false} saveDraft={vi.fn().mockResolvedValue(undefined)}
-          capacity={null} onCapacityChange={vi.fn()} />
+          />
       )}
       <output data-testid="draft">{JSON.stringify(content)}</output>
     </MemoryRouter>

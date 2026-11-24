@@ -496,7 +496,7 @@ public class PlanAssistantService {
         try {
             content = drafts.stored(dream.getId());
         } catch (ResourceNotFoundException exception) {
-            content = new PlanDraftContent(List.of(), List.of(), List.of(), List.of(), false, null);
+            content = new PlanDraftContent(List.of(), List.of(), List.of(), List.of(), false, null, null);
         }
         Map<String, Ref> refs = new LinkedHashMap<>();
         StringBuilder out = dreamRecords(dream, refs, true);

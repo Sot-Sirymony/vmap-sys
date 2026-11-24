@@ -138,6 +138,21 @@ class AccountAndProgressFlowTests {
         verify(reminderMailer, times(1)).send(eq(email), contains("A step"));
     }
 
+    /** V31 v1 step 3 (DC-FR-50): a review a dream's rhythm makes due is named in the daily reminder. */
+    @Test
+    void theDailyReminderNamesReviewsTheRhythmMakesDue() throws Exception {
+        String email = "rhythm-reminder-" + System.nanoTime() + "@example.com";
+        String token = register(email);
+        long userId = userId(email);
+        long dreamId = dream(token, "Run a marathon");
+        send(put("/api/dreams/" + dreamId + "/review-rhythm"), token, Map.of("daily", true)).andExpect(status().isOk());
+        send(put("/api/account/reminders"), token, Map.of("enabled", true, "timeZone", "Asia/Phnom_Penh")).andExpect(status().isOk());
+        clearInvocations(reminderMailer);
+
+        reminderService.remindIfDue(userId, TODAY.atTime(8, 5).atZone(ZoneId.of("Asia/Phnom_Penh")).toInstant());
+        verify(reminderMailer, times(1)).send(eq(email), contains("A daily review of \"Run a marathon\" is due."));
+    }
+
     @Test
     void remindersGoToTheChosenAddressAndFallBackToTheLoginEmail() throws Exception {
         String email = "chosen-" + System.nanoTime() + "@example.com";

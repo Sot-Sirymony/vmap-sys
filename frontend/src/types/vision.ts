@@ -1663,7 +1663,7 @@ export type DraftRisk = {
 // V11 Phase 2 (PB-FR-30): a Build my plan draft. An item with existingId stands for a goal or step already in the
 // plan; it is never changed, only given new children. Everything else is new and is saved when the plan is added.
 // V31 v1 step 2: INNER and DATES are new; HELPERS is now part of STEPS and is kept only for drafts saved before.
-export type PlanStage = 'CLARIFY' | 'INNER' | 'GOALS' | 'STEPS' | 'TASKS' | 'HELPERS' | 'DATES' | 'REVIEW';
+export type PlanStage = 'CLARIFY' | 'INNER' | 'GOALS' | 'STEPS' | 'TASKS' | 'HELPERS' | 'DATES' | 'SCHEDULE' | 'REVIEW';
 
 export type DraftTask = {
   key: string;
@@ -1731,7 +1731,15 @@ export type PlanDraftContent = {
   coachCreated?: boolean;
   // V31 v1 step 2 (DC-FR-22): the participant's choice on the inner blockers stage.
   innerBlockers?: 'READY' | 'SKIPPED' | null;
+  // V31 v1 step 3 (DC-FR-48): the review rhythm chosen on the Schedule stage, saved with the plan.
+  reviewRhythm?: ReviewRhythmChoice | null;
 };
+
+// V31 v1 step 3 (DC-FR-48 to DC-FR-50): how often to review one dream, and the reviews it makes due.
+export type Weekday = 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+export type ReviewRhythmChoice = { daily: boolean; weeklyDay?: Weekday | null; monthlyDay?: number | null; quarterly: boolean };
+export type ReviewRhythm = ReviewRhythmChoice & { dreamId: number };
+export type DueReview = { dreamId: number; dreamTitle: string; reviewType: ReviewType; dueSince: string };
 
 // V31 v1 step 1 (DC-FR-12 to DC-FR-17): AI help for the area and dream stages, before the dream exists.
 export type VisionStatementDraft = { statement?: string | null; requestId?: number | null };

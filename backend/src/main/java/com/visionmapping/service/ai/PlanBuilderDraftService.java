@@ -92,6 +92,7 @@ public class PlanBuilderDraftService {
     private final com.visionmapping.repository.AiUsageLogRepository usageLogRepository;
     private final PlanRuleService ruleService;
     private final PlanAccuracyService accuracy;
+    private final com.visionmapping.service.ReviewRhythmService rhythms;
 
     @Transactional(readOnly = true)
     public Optional<PlanDraftResponse> get(Long dreamId) {
@@ -279,6 +280,10 @@ public class PlanBuilderDraftService {
             check(request, "Risk", risk.title());
             obstacleIds.add(obstacleService.createObstacle(request).id());
             count(outcomes, risk.requestId(), risk.edited());
+        }
+        // V31 v1 step 3 (DC-FR-48, DC-FR-57): the review rhythm chosen on the Schedule stage is saved with the plan.
+        if (content.reviewRhythm() != null) {
+            rhythms.save(dream.getId(), content.reviewRhythm());
         }
         feedback.recordDraftOutcomes(outcomes);
         accuracy.recordSave(lookup.userId(), dream.getId(), draft.getSessionKey(), report, accepted);

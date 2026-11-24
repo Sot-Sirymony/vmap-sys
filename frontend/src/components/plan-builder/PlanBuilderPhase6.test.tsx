@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { checkPlanDraft, fixPlanDraft, savePlanCapacity } from '../../api/aiPlanApi';
 import type { DraftStep, PlanCapacity, PlanDraftContent } from '../../types/vision';
 import { ReviewStage } from './ReviewStage';
+import { CapacityCheck } from './ScheduleStage';
 import {
   type DraftUpdate, addSteps, applyAiFix, applyIssueFix, emptyGoal, emptyStep, emptyTask, overloadedWeeks, spreadDates, weekStart,
 } from './draftModel';
@@ -32,7 +33,9 @@ function Harness({ initial, capacity = null, saveDraft = vi.fn().mockResolvedVal
   return (
     <MemoryRouter>
       <ReviewStage content={content} onChange={change} existingSteps={[]} busy={false} onGoTo={vi.fn()} onAdd={vi.fn()}
-        dreamId={5} token="t" language="en" aiReady saveDraft={saveDraft} capacity={cap} onCapacityChange={setCap} />
+        dreamId={5} token="t" language="en" aiReady saveDraft={saveDraft} />
+      {/* V31 v1 step 3: hours a week moved to the Schedule stage. */}
+      <CapacityCheck content={content} onChange={change} capacity={cap} onCapacityChange={setCap} token="t" />
       <output data-testid="draft">{JSON.stringify(content)}</output>
     </MemoryRouter>
   );

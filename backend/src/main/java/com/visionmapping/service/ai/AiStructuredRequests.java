@@ -36,8 +36,11 @@ public class AiStructuredRequests {
      */
     public <T> Tracked<T> askTracked(AppUser user, String apiKey, String feature, String language, String records, String task,
                                      Class<T> type) {
-        return askWith(CoachingGuidelines.system(language, firstName(user.getFullName()), aiSettingsService.current().getCoachingGuidelines()),
-                user, apiKey, feature, records, task, type);
+        String guidelines = CoachingGuidelines.system(language, firstName(user.getFullName()), aiSettingsService.current().getCoachingGuidelines());
+        // V31 v1 step 3 (BRD 31 section 4): plan building follows the Dream Coach's method and accuracy rules.
+        boolean planBuilding = AiPlanFeedbackService.PLAN_FEATURES.contains(feature) && !PlanAssistantService.FEATURE.equals(feature);
+        return askWith(planBuilding ? CoachingGuidelines.withDreamCoachRules(guidelines) : guidelines, user, apiKey, feature, records,
+                task, type);
     }
 
     /** An answer and the usage-log row it was recorded in. */

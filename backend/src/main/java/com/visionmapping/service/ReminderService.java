@@ -50,6 +50,7 @@ public class ReminderService {
     private final AiReminderService aiReminderService;
     private final StepUpService stepUpService;
     private final AccountNotices accountNotices;
+    private final ReviewRhythmService reviewRhythms;
 
     @Value("${app.reminders.send-hour:8}")
     private int sendHour;
@@ -167,7 +168,10 @@ public class ReminderService {
         boolean reviewDue = daily && dailyPlanService.weeklyReviewDueFor(user.getId(), today);
         boolean inactive = daily && isInactive(user, now);
         boolean reportDue = today.equals(ReportReminders.lastDue(user.getReportReminder(), user.getReportReminderDay(), today));
-        if (items.isEmpty() && !reviewDue && !inactive && !reportDue) {
+        // V31 v1 step 3 (DC-FR-50, D-31-9): reviews a dream's rhythm makes due, only for people who turned reminders on.
+        List<com.visionmapping.dto.response.AiPlanResponses.DueReview> dreamReviews = daily
+                ? reviewRhythms.dueFor(user.getId(), today) : List.of();
+        if (items.isEmpty() && !reviewDue && !inactive && !reportDue && dreamReviews.isEmpty()) {
             return null;
         }
         List<String> lines = new ArrayList<>();
@@ -185,6 +189,8 @@ public class ReminderService {
         if (reviewDue) {
             lines.add("Your weekly review is due.");
         }
+        dreamReviews.stream().limit(MAX_LISTED_ITEMS).forEach(review -> lines.add(
+                "A %s review of \"%s\" is due.".formatted(review.reviewType().toLowerCase(), review.dreamTitle())));
         if (inactive) {
             lines.add("You have not updated anything for %d days or more. One small step counts.".formatted(inactiveAfterDays));
         }

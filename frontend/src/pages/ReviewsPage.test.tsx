@@ -297,4 +297,16 @@ describe('ReviewsPage (CLAUDE.md page 10)', { timeout: 30000 }, () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('ការត្រួតពិនិត្យការខិតខំ')).toBeInTheDocument();
   });
+
+  it('lists reviews a dream rhythm makes due and starts one with its type and dream filled in (V31 DC-FR-50)', async () => {
+    vi.mocked(reviewApi.listDueReviews).mockResolvedValue([
+      { dreamId: 2, dreamTitle: 'Run a marathon', reviewType: 'MONTHLY', dueSince: '2026-11-01' },
+    ]);
+    renderPage(<ReviewsPage />);
+    expect(await screen.findByText(/Monthly review of "Run a marathon"/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Start this review' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('combobox', { name: 'Type' })).toHaveTextContent('Monthly');
+    expect(within(dialog).getByRole('combobox', { name: 'Dream' })).toHaveTextContent('Run a marathon');
+  });
 });

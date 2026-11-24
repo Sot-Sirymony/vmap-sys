@@ -25,3 +25,11 @@ export function formatDate(date: Date, { weekday = false, year = false }: DatePa
     ...(year ? { year: 'numeric' } : {}),
   });
 }
+
+/** V31 v1 step 3: a month and year, such as "Apr 2027" or "មេសា 2027". */
+export function formatMonth(date: Date) {
+  if (currentLanguage() === 'km') {
+    return `${KM_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}

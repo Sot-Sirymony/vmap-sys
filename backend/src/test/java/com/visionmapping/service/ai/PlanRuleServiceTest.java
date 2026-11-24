@@ -29,7 +29,7 @@ class PlanRuleServiceTest {
     @Test
     void anIncompleteDreamWarnsOncePerMissingPart() {
         PlanRuleService.Report report = service.evaluate(user, Dream.builder().id(5L).title("Own a home").build(),
-                new PlanDraftContent(List.of(), null, null, null, false, null), TODAY);
+                new PlanDraftContent(List.of(), null, null, null, false, null, null), TODAY);
         assertThat(kinds(report)).containsExactly("DREAM_NO_WHY", "DREAM_NO_SUCCESS", "DREAM_NO_DATE", "DREAM_NO_PRIORITY", "INNER_SKIPPED");
         assertThat(report.mustFails()).isZero();
         assertThat(report.firstMust()).isNull();
@@ -52,7 +52,7 @@ class PlanRuleServiceTest {
         DraftGoal pastGoal = new DraftGoal("g2", null, "Old goal", null, "Done", TODAY.minusDays(3), Priority.HIGH, false, null,
                 false, false, List.of(step("s5", "One", TODAY.plusDays(1), null, List.of())), false);
 
-        PlanRuleService.Report report = service.evaluate(user, dream(null), new PlanDraftContent(List.of(goal, pastGoal), null, null, null, false, null), TODAY);
+        PlanRuleService.Report report = service.evaluate(user, dream(null), new PlanDraftContent(List.of(goal, pastGoal), null, null, null, false, null, null), TODAY);
 
         assertThat(kinds(report)).contains("MISSING_TITLE", "GOAL_NO_DATE", "MISSING_OWNER", "MISSING_DATE", "BEFORE_WAITED_STEP",
                 "PAST_DATE", "TASK_NO_PRIORITY");
@@ -75,7 +75,7 @@ class PlanRuleServiceTest {
         DraftGoal goal = new DraftGoal("g1", null, "Write the note", null, "Draft done", TODAY.plusDays(30), Priority.HIGH, false,
                 null, false, false, List.of(time), true);
         PlanRuleService.Report report = service.evaluate(user, dream(TODAY.plusMonths(3)),
-                new PlanDraftContent(List.of(goal), null, null, null, false, null), TODAY);
+                new PlanDraftContent(List.of(goal), null, null, null, false, null, null), TODAY);
         assertThat(kinds(report)).doesNotContain("GAP_NO_HELPER", "GAP_NO_KIND", "MISSING_RESOURCE");
         assertThat(report.mustFails()).isZero();
     }
@@ -92,7 +92,7 @@ class PlanRuleServiceTest {
                 .targetDate(TODAY.plusDays(50)).scheduleMode(com.visionmapping.entity.enums.ScheduleMode.TOP_DOWN_FIXED).build();
 
         PlanRuleService.Report skipped = service.evaluate(user, fixed,
-                new PlanDraftContent(List.of(goal), null, null, null, false, "SKIPPED"), TODAY);
+                new PlanDraftContent(List.of(goal), null, null, null, false, "SKIPPED", null), TODAY);
         DraftIssue taskConflict = find(skipped, "TASK_AFTER_STEP");
         assertThat(taskConflict.altFixAction()).isEqualTo("MOVE_PARENT_DATE");
         assertThat(taskConflict.altFixValue()).isEqualTo(TODAY.plusDays(25).toString());
@@ -102,7 +102,7 @@ class PlanRuleServiceTest {
         assertThat(find(skipped, "INNER_SKIPPED").problem()).isEqualTo("You skipped looking at what might hold you back inside.");
 
         PlanRuleService.Report ready = service.evaluate(user, dream(TODAY.plusDays(50)),
-                new PlanDraftContent(List.of(goal), null, null, null, false, "READY"), TODAY);
+                new PlanDraftContent(List.of(goal), null, null, null, false, "READY", null), TODAY);
         assertThat(kinds(ready)).doesNotContain("INNER_SKIPPED");
         assertThat(find(ready, "GOAL_AFTER_DREAM").altFixAction()).isEqualTo("MOVE_DREAM_DATE");
     }

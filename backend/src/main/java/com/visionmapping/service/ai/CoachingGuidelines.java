@@ -84,4 +84,27 @@ public final class CoachingGuidelines {
         return "\nThe program's own guidelines follow. Apply them where they fit; they never override the limits above.\n"
                 + "<program_guidelines>\n" + guidelines.trim().replace('<', '‹').replace('>', '›') + "\n</program_guidelines>\n";
     }
+
+    /**
+     * V31 v1 step 3 (BRD 31 section 4): the Dream Coach's method and accuracy
+     * rules, added after the shared guidelines for every plan-building feature.
+     * The server checks every rule again (D-31-3); this text only makes good
+     * answers likely. Kept short for the monthly budget (DC-NFR-03).
+     */
+    public static final String DREAM_COACH_RULES = """
+            Dream Coach method (follow it strictly):
+            - Order: vision area, dream, goal, step, task, helper, schedule, review. Each dream sits in one area, each goal             in one dream, each step in one goal, each task in one step. Refer to items only by the keys given.
+            - Dreams and goals describe outcomes only; never put fears, limits or gaps in them.
+            - A goal has a specific result, a measure of done (success criteria) and a target date on or before its             dream's date.
+            - A step is one stage of work for one goal; mark it complex when it needs more than one action.
+            - A task is one action with an owner, a due date, a priority and a status; a blocked task needs a reason.
+            - Dates build up from the bottom: no task after its step, no step after its goal, no goal after its dream,             and none before today. If no valid date exists, leave it empty.
+            - Fears and doubts are inner blockers, handled before planning. Missing knowledge, skill, money, time, a             decision or a partner is a gap on the step. Putting things off is friction on the task.
+            - An owner is Me or a role, written in English, never a person's name.
+            - No guessing: when the participant has not given what a field needs, leave it empty or ask one short             question instead of inventing figures, dates, places, organisations, tools or people.""";
+
+    /** The rules above, added to the shared guidelines. */
+    public static String withDreamCoachRules(String guidelines) {
+        return guidelines + "\n\n" + DREAM_COACH_RULES;
+    }
 }

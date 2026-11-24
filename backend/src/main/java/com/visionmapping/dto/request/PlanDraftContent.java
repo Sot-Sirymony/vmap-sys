@@ -37,7 +37,9 @@ public record PlanDraftContent(
         // V31 v1 (D-31-2 as amended): the Dream Coach saved this dream at stage 2, so Undo after Save my plan archives it too.
         boolean coachCreated,
         // V31 v1 step 2 (DC-FR-22): READY or SKIPPED on the inner blockers stage; empty when not visited.
-        @Pattern(regexp = "^(|READY|SKIPPED)$") String innerBlockers) {
+        @Pattern(regexp = "^(|READY|SKIPPED)$") String innerBlockers,
+        // V31 v1 step 3 (DC-FR-48): the review rhythm chosen on the Schedule stage, saved with the plan.
+        @Valid ReviewRhythmRequest reviewRhythm) {
 
     public PlanDraftContent {
         goals = Copies.list(goals);

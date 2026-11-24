@@ -1,6 +1,6 @@
 import type {
   AssistantChange, DraftFix, DraftGoal, DraftHelper, DraftIssue, DraftRisk, DraftStep, DraftTask, Dream, Goal, GoalSuggestion, HelperSuggestion, PlanClarification,
-  Priority, RiskSuggestion, PlanDraftContent, PlanStage, StepSuggestion,
+  Priority, ReviewRhythmChoice, RiskSuggestion, PlanDraftContent, PlanStage, StepSuggestion,
   TaskSuggestion, VisionStep, WeekLoad,
 } from '../../types/vision';
 
@@ -25,8 +25,40 @@ export const STAGES: { id: PlanStage; label: string }[] = [
   { id: 'STEPS', label: 'Steps, gaps and helpers' },
   { id: 'TASKS', label: 'Tasks' },
   { id: 'DATES', label: 'Dates' },
+  { id: 'SCHEDULE', label: 'Schedule and review' },
   { id: 'REVIEW', label: 'Check and add' },
 ];
+
+/** The latest date in the plan: the dream's target date, or the latest new goal, step or task date. */
+export function planEnd(content: PlanDraftContent, dreamDate?: string | null): string | null {
+  const dates = [dreamDate ?? null];
+  for (const goal of content.goals) {
+    dates.push(goal.targetDate ?? null);
+    for (const step of goal.steps) {
+      dates.push(step.targetDate ?? null);
+      step.tasks.forEach((task) => dates.push(task.dueDate ?? null));
+    }
+  }
+  return dates.filter((date): date is string => !!date).sort().at(-1) ?? null;
+}
+
+/**
+ * V31 v1 step 3 (DC-FR-49): the suggested review rhythm for a plan's length:
+ * up to 3 months, daily and weekly; up to 12 months, daily, weekly and monthly;
+ * longer, weekly, monthly and quarterly. The weekly review is on Sunday and the
+ * monthly one on the 1st until the participant chooses.
+ */
+export function defaultRhythm(content: PlanDraftContent, dreamDate: string | null | undefined, today: Date): ReviewRhythmChoice {
+  const end = planEnd(content, dreamDate);
+  const months = end ? (new Date(`${end}T00:00:00`).getTime() - today.getTime()) / (30.44 * 86_400_000) : 12;
+  if (months <= 3) {
+    return { daily: true, weeklyDay: 'SUN', monthlyDay: null, quarterly: false };
+  }
+  if (months <= 12) {
+    return { daily: true, weeklyDay: 'SUN', monthlyDay: 1, quarterly: false };
+  }
+  return { daily: false, weeklyDay: 'SUN', monthlyDay: 1, quarterly: true };
+}
 
 /** A stage saved before V31 v1 step 2 that is now part of another one. */
 export function currentStage(stage: PlanStage): PlanStage {

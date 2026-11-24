@@ -109,6 +109,8 @@ public class AccountService {
             // V27: Streamline reviews (their items go with them, ON DELETE CASCADE), repeat rules and status
             // history, which reference tasks and steps, so before them.
             "streamline_reviews",
+            // V31 v1 step 3: review rhythms reference dreams.
+            "dream_review_rhythms",
             "task_repeat_rules",
             "task_status_changes",
             "progress_logs",

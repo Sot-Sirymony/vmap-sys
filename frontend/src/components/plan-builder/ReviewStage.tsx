@@ -6,17 +6,19 @@ import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { checkPlanDraft, fixPlanDraft, savePlanCapacity } from '../../api/aiPlanApi';
+import { checkPlanDraft, fixPlanDraft } from '../../api/aiPlanApi';
 import { useRuleCheck } from './useRuleCheck';
 import { formatDate } from '../../i18n/formatDate';
 import { tr } from '../../i18n/translate';
-import type { DraftCheck, DraftFix, DraftIssue, PlanCapacity, PlanDraftContent, PlanRule, PlanStage, VisionStep } from '../../types/vision';
+import type {
+  DraftCheck, DraftFix, DraftIssue, Dream, Goal, PlanDraftContent, PlanRule, PlanStage, ReviewRhythmChoice, VisionStep, Weekday,
+} from '../../types/vision';
+import { obstacleTypeLabels, workStatusLabels } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import { SuggestionRating } from '../ai/SuggestionRating';
-import { type DraftUpdate, STAGES, applyAiFix, applyIssueFix, countNew, overloadedWeeks, readiness, spreadDates } from './draftModel';
+import { type DraftUpdate, STAGES, applyAiFix, applyIssueFix, countNew, readiness } from './draftModel';
 
 type Props = {
   content: PlanDraftContent;
@@ -32,8 +34,9 @@ type Props = {
   language: string;
   aiReady: boolean;
   saveDraft: () => Promise<void>;
-  capacity: PlanCapacity | null;
-  onCapacityChange: (capacity: PlanCapacity) => void;
+  // V31 v1 step 3 (DC-FR-51): the dream and its saved goals, for the plan tree.
+  dream?: Dream;
+  existingGoals?: Goal[];
 };
 
 function summary(counts: ReturnType<typeof countNew>) {
@@ -102,10 +105,11 @@ export function fixLabel(issue: DraftIssue) {
  * pass/fail list. MUST fails block Save my plan; each rule with SHOULD fails
  * needs "I understand"; the save waits until the list matches the draft. The
  * server checks again when saving. Check my draft adds the AI review
- * (PB-FR-28, PB-FR-29). Hours a week flags weeks with too much work (PB-FR-16).
+ * (PB-FR-28, PB-FR-29). V31 v1 step 3: the plan tree (DC-FR-51) sits on top;
+ * hours a week (PB-FR-16) moved to the Schedule stage.
  */
 export function ReviewStage({
-  content, onChange, existingSteps, busy, onGoTo, onAdd, dreamId, token, language, aiReady, saveDraft, capacity, onCapacityChange,
+  content, onChange, existingSteps, busy, onGoTo, onAdd, dreamId, token, language, aiReady, saveDraft, dream, existingGoals = [],
 }: Props) {
   const counts = countNew(content);
   // Helpers and risks are not in the server rules yet; their field checks stay here.
@@ -132,6 +136,7 @@ export function ReviewStage({
   return (
     <Stack spacing={2}>
       <Typography variant="body1">{summary(counts)}</Typography>
+      {counts.total > 0 && <PlanTree content={content} dream={dream} existingGoals={existingGoals} existingSteps={existingSteps} />}
       {helperErrors.length > 0 && (
         <Alert severity="error">
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{tr('Fix these before adding:')}</Typography>
@@ -176,7 +181,6 @@ export function ReviewStage({
         <DraftChecker dreamId={dreamId} token={token} language={language} aiReady={aiReady} saveDraft={saveDraft}
           onChange={onChange} />
       )}
-      <CapacityCheck content={content} onChange={onChange} capacity={capacity} onCapacityChange={onCapacityChange} token={token} />
 
       <Box>
         <Button disabled={!canSave} onClick={() => onAdd(accepted.filter((rule) => shouldRules.includes(rule)))}>{tr('Save my plan')}</Button>
@@ -187,6 +191,82 @@ export function ReviewStage({
           : tr('Everything is added together, or nothing is. You can undo right after.')}
       </Typography>
     </Stack>
+  );
+}
+
+const WEEKDAY_NAMES: Record<Weekday, string> = {
+  MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday', SUN: 'Sunday',
+};
+
+/** V31 v1 step 3: the review rhythm in words, for the summary. */
+export function rhythmWords(rhythm: ReviewRhythmChoice | null | undefined) {
+  if (!rhythm) {
+    return tr('No review rhythm chosen yet.');
+  }
+  const parts = [
+    rhythm.daily ? tr('daily check-in') : null,
+    rhythm.weeklyDay ? tr('weekly on {day}', { day: tr(WEEKDAY_NAMES[rhythm.weeklyDay]) }) : null,
+    rhythm.monthlyDay ? tr('monthly on day {day}', { day: rhythm.monthlyDay }) : null,
+    rhythm.quarterly ? tr('quarterly') : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length ? tr('Reviews: {list}.', { list: parts.join(', ') }) : tr('No reviews chosen.');
+}
+
+/**
+ * V31 v1 step 3 (DC-FR-51): the whole plan as a tree, dream to goals, steps
+ * and tasks, with gaps, helpers and risks; items already saved are marked.
+ */
+function PlanTree({ content, dream, existingGoals, existingSteps }: {
+  content: PlanDraftContent;
+  dream?: Dream;
+  existingGoals: Goal[];
+  existingSteps: VisionStep[];
+}) {
+  const helpersFor = (key: string) => (content.helpers ?? []).filter((helper) => helper.linkKey === key);
+  const risksFor = (key: string) => (content.risks ?? []).filter((risk) => risk.linkKey === key);
+  const saved = <Chip size="small" variant="outlined" label={tr('Already in your plan')} sx={{ ml: 0.5 }} />;
+  const date = (value?: string | null) => (value ? ` · ${day(value)}` : '');
+  return (
+    <Box component="section" aria-label={tr('Your plan')}
+      sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)' }}>
+      <Typography variant="subtitle2">{dream ? `${tr('Dream')}: ${dream.title}${date(dream.targetDate)}` : tr('Your plan')}</Typography>
+      <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+        {content.goals.map((goal) => {
+          const savedGoal = goal.existingId != null ? existingGoals.find((item) => item.id === goal.existingId) : undefined;
+          return (
+            <Typography component="li" variant="body2" key={goal.key} sx={{ mt: 0.5 }}>
+              <strong>{goal.title || savedGoal?.title || tr('Untitled')}</strong>{date(goal.targetDate ?? savedGoal?.targetDate)}
+              {goal.existingId != null && saved}
+              <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                {goal.steps.map((step) => {
+                  const savedStep = step.existingId != null ? existingSteps.find((item) => item.id === step.existingId) : undefined;
+                  return (
+                    <Typography component="li" variant="body2" key={step.key}>
+                      {step.title || savedStep?.title || tr('Untitled')}{date(step.targetDate ?? savedStep?.targetDate)}
+                      {step.existingId != null && saved}
+                      {step.gapKind && ` · ${tr('Gap')}: ${obstacleTypeLabels[step.gapKind]}`}
+                      {helpersFor(step.key).map((helper) => ` · ${tr('Helper')}: ${helper.partnerName || helper.name || helper.role}`).join('')}
+                      {risksFor(step.key).map((risk) => ` · ${tr('Risk')}: ${risk.title}`).join('')}
+                      {step.tasks.length > 0 && (
+                        <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                          {step.tasks.map((task) => (
+                            <Typography component="li" variant="body2" key={task.key} color="text.secondary">
+                              {task.title || tr('Untitled')}{date(task.dueDate)} · {task.owner || tr('No owner')}
+                              {task.status && task.status !== 'NOT_STARTED' ? ` · ${workStatusLabels[task.status]}` : ''}
+                            </Typography>
+                          ))}
+                        </Box>
+                      )}
+                    </Typography>
+                  );
+                })}
+              </Box>
+            </Typography>
+          );
+        })}
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{rhythmWords(content.reviewRhythm)}</Typography>
+    </Box>
   );
 }
 
@@ -343,72 +423,6 @@ function Proposal({ proposal, onApply, onDismiss }: { proposal: DraftFix; onAppl
         <Typography variant="body2">{tr('No change to suggest. Edit it yourself.')}</Typography>
       )}
     </Alert>
-  );
-}
-
-/** PB-FR-16: hours a week, and weeks where the draft adds more work than that. */
-function CapacityCheck({ content, onChange, capacity, onCapacityChange, token }: {
-  content: PlanDraftContent;
-  onChange: (update: DraftUpdate) => void;
-  capacity: PlanCapacity | null;
-  onCapacityChange: (capacity: PlanCapacity) => void;
-  token: string;
-}) {
-  const [hours, setHours] = useState(capacity?.hoursPerWeek != null ? String(capacity.hoursPerWeek) : '');
-  const [notice, setNotice] = useState('');
-  const [error, setError] = useState('');
-  const planned = capacity?.planned ?? [];
-  const perWeek = capacity?.hoursPerWeek ?? null;
-  const weeks = overloadedWeeks(content, planned, perWeek);
-
-  async function save() {
-    const value = hours.trim() === '' ? null : Number(hours);
-    if (value === (perWeek ?? null) || (value != null && (Number.isNaN(value) || value < 0.5 || value > 100))) {
-      return;
-    }
-    setError('');
-    try {
-      onCapacityChange(await savePlanCapacity(token, value));
-    } catch (saveError) {
-      setError(saveError instanceof Error ? tr(saveError.message) : tr('Unable to save your hours.'));
-    }
-  }
-
-  function spread() {
-    if (!perWeek) {
-      return;
-    }
-    const result = spreadDates(content, planned, perWeek);
-    onChange(result.content);
-    setNotice(result.moved > 0
-      ? tr('Moved {count} item(s) a week or more later.', { count: result.moved })
-      : tr('Nothing could move without going past its step or goal date. Change the dates or hours yourself.'));
-  }
-
-  return (
-    <Box sx={{ display: 'grid', gap: 1 }}>
-      <TextField size="small" type="number" label={tr('Hours a week you have for your plans')} value={hours} sx={{ maxWidth: 320 }}
-        slotProps={{ htmlInput: { min: 0.5, max: 100, step: 0.5 } }} helperText={tr('Optional. Used to flag weeks with too much work.')}
-        onChange={(event) => setHours(event.target.value)} onBlur={() => void save()} />
-      {error && <Alert severity="error">{error}</Alert>}
-      {weeks.length > 0 && (
-        <Alert severity="warning" action={<Button variant="secondary" onClick={spread}>{tr('Spread the dates')}</Button>}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-            {tr('These weeks have more work than your {hours} hours:', { hours: perWeek ?? 0 })}
-          </Typography>
-          <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
-            {weeks.map((week) => (
-              <Typography component="li" variant="body2" key={week.weekStart}>
-                {tr('Week of {date}: {total} h ({draft} h new in this draft)', {
-                  date: day(week.weekStart), total: Math.round(week.total * 10) / 10, draft: Math.round(week.draft * 10) / 10,
-                })}
-              </Typography>
-            ))}
-          </Box>
-        </Alert>
-      )}
-      {notice && <Alert severity="info" onClose={() => setNotice('')}>{notice}</Alert>}
-    </Box>
   );
 }
 

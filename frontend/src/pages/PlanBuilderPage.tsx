@@ -24,6 +24,7 @@ import { Loading } from '../components/common/Loading';
 import { ClarifyStage } from '../components/plan-builder/ClarifyStage';
 import { DatesStage } from '../components/plan-builder/DatesStage';
 import { InnerStage } from '../components/plan-builder/InnerStage';
+import { ScheduleStage } from '../components/plan-builder/ScheduleStage';
 import { GoalsStage } from '../components/plan-builder/GoalsStage';
 import { HelpersStage } from '../components/plan-builder/HelpersStage';
 import { type NewContact, NewContactsOutreach } from '../components/plan-builder/NewContactsOutreach';
@@ -281,7 +282,7 @@ export function PlanBuilderPage() {
   };
 
   // The plan assistant has no section of its own for inner blockers; it helps as on Clarify.
-  const assistantSection: AssistantSection = stage === 'INNER' ? 'CLARIFY' : stage;
+  const assistantSection: AssistantSection = stage === 'INNER' ? 'CLARIFY' : stage === 'SCHEDULE' ? 'DATES' : stage;
   const currentTopic = { section: assistantSection };
   const saveNow = async () => {
     if (token) {
@@ -413,11 +414,14 @@ export function PlanBuilderPage() {
               <DatesStage content={content} onChange={change} dreamId={dream.id} token={token ?? ''} language={language}
                 saveDraft={saveNow} onMoveDreamDate={moveDreamDate} dreamDate={dream.targetDate} />
             )}
+            {stage === 'SCHEDULE' && (
+              <ScheduleStage content={content} onChange={change} dreamId={dream.id} dreamDate={dream.targetDate} token={token ?? ''}
+                capacity={capacity} onCapacityChange={setCapacity} />
+            )}
             {stage === 'REVIEW' && (
               <ReviewStage content={content} onChange={change} existingSteps={steps} busy={busy} onGoTo={goTo} onAdd={(accepted) => void addPlan(accepted)}
                 dreamId={dream.id} token={token ?? ''} language={language} aiReady={aiReady}
-                saveDraft={saveNow}
-                capacity={capacity} onCapacityChange={setCapacity} />
+                saveDraft={saveNow} dream={dream} existingGoals={goals} />
             )}
           </CardContent>
         </Card>

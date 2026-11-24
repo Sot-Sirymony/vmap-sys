@@ -17,6 +17,22 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 31.0.0 — Dream Coach: v1 step 3, schedule, review rhythm and plan tree (built; awaiting deploy, UAT and the Khmer review)
+
+**Backend.** Migration **V97** `dream_review_rhythms` (one per dream: daily, weekly day, monthly day 1–28, quarterly;
+removed with the account). `GET`/`PUT /api/dreams/{id}/review-rhythm` (204 when none) and `GET /api/reviews/due`: a
+review is due from the start of its period until one of that kind is written for the dream; archived dreams make
+nothing due. The draft's `reviewRhythm` is saved by Save my plan. The daily reminder adds `A weekly review of "…" is
+due.` lines. Plan-building AI features get the Dream Coach rules in their system prompt.
+
+**Frontend.** New stage **Schedule and review** between Dates and Check and add: hours a week and Spread the dates
+(moved here), a month-by-month count of new work, and the review rhythm (starts from the saved one or the suggestion
+for the plan's length; "Use the suggested rhythm"). Check and add opens with the plan tree: dream, goals, steps with
+gap, helper and risk, tasks with owner and status, and the rhythm. The Reviews page shows "Reviews due" with "Start
+this review". 23 more Khmer drafts.
+
+The shared answer envelope of BRD §4.1 is not built (Q-31-7), so DCM-08 is still unmeasured.
+
 ## 31.0.0 — Dream Coach: v1 step 2, inner blockers, merged helpers and a Dates stage (built; awaiting deploy, UAT and the Khmer review)
 
 **Backend.** The draft gains `innerBlockers` (READY or SKIPPED). Rule R-05 adds a SHOULD line `INNER_SKIPPED` when the

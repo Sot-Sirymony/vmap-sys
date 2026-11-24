@@ -9,4 +9,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long>, UserScope
 
     /** FR-70: when the last review of this type happened. */
     Optional<Review> findFirstByUser_IdAndReviewTypeAndArchivedFalseOrderByReviewDateDesc(Long userId, ReviewType reviewType);
+
+    /** V31 v1 step 3 (DC-FR-50): whether a review of this kind for this dream was done since a time. */
+    boolean existsByUser_IdAndRelatedDream_IdAndReviewTypeAndArchivedFalseAndReviewDateGreaterThanEqual(Long userId, Long dreamId,
+            ReviewType reviewType, java.time.LocalDateTime since);
 }

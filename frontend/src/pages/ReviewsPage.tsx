@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { FormEvent, useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import { listDreams } from '../api/dreamApi';
-import { archiveReview, permanentlyDeleteReview, createReview, listReviews, restoreReview, updateReview } from '../api/reviewApi';
+import { archiveReview, permanentlyDeleteReview, createReview, listDueReviews, listReviews, restoreReview, updateReview } from '../api/reviewApi';
 import { listVisionAreas } from '../api/visionAreaApi';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -26,7 +26,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { Textarea } from '../components/common/Textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCrudEntity } from '../hooks/useCrudEntity';
-import type { Dream, Review, ReviewRequest, ReviewType, VisionArea } from '../types/vision';
+import type { DueReview, Dream, Review, ReviewRequest, ReviewType, VisionArea } from '../types/vision';
 import { reviewTypeLabels } from '../utils/enumLabels';
 import { matchesSearch } from '../utils/search';
 import { PageSection } from './PageSection';
@@ -117,6 +117,9 @@ export function ReviewsPage() {
     undoableArchive: true,
   });
   const [visionAreas, setVisionAreas] = useState<VisionArea[]>([]);
+  // V31 v1 step 3 (DC-FR-50): reviews a dream's rhythm makes due, and the create form opened from one of them.
+  const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
+  const [creating, setCreating] = useState(false);
   const [dreams, setDreams] = useState<Dream[]>([]);
   const [reviewType, setReviewType] = useState<ReviewType>('WEEKLY');
   const [reviewDate, setReviewDate] = useState(nowForDateTimeInput());
@@ -267,6 +270,27 @@ export function ReviewsPage() {
     setDiligence(EMPTY_DILIGENCE);
     setDiligenceNote('');
     setGratitudeNote('');
+  }
+
+  useEffect(() => {
+    if (!token) {
+      return undefined;
+    }
+    let cancelled = false;
+    listDueReviews(token).then((due) => !cancelled && setDueReviews(due ?? [])).catch(() => !cancelled && setDueReviews([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [token, crud.items]);
+
+  /** DC-FR-50: open the create form for a due review, with its type and dream filled in. */
+  function startDueReview(review: DueReview) {
+    setReviewType(review.reviewType);
+    setReviewDate(nowForDateTimeInput());
+    setRelatedDreamId(String(review.dreamId));
+    const dream = dreams.find((item) => item.id === review.dreamId);
+    setRelatedVisionAreaId(dream ? String(dream.visionAreaId) : '');
+    setCreating(true);
   }
 
   const filteredReviews = crud.items.filter((review) => {
@@ -508,7 +532,24 @@ export function ReviewsPage() {
 
   return (
     <PageSection title={tr('Reviews')} subtitle={tr('Record daily, weekly, monthly, and quarterly reflections.')}>
+      {dueReviews.length > 0 && (
+        <Card sx={{ mb: 2 }} component="section" aria-label={tr('Reviews due')}>
+          <CardContent>
+            <strong>{tr('Reviews due')}</strong>
+            <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+              {dueReviews.map((review) => (
+                <li key={`${review.dreamId}:${review.reviewType}`} style={{ marginBottom: 6 }}>
+                  {tr('{type} review of "{dream}"', { type: reviewTypeLabels[review.reviewType], dream: review.dreamTitle })}{' '}
+                  <Button variant="secondary" onClick={() => startDueReview(review)}>{tr('Start this review')}</Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
       <CrudModalForm
+        creating={creating}
+        onCreatingChange={setCreating}
         editing={crud.editingId !== null}
         createLabel={tr('Create review')}
         editTitle="Edit Review"
