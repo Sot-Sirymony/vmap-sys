@@ -23,6 +23,7 @@ import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.CycleTimeCalculator;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.util.Copies;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -158,6 +159,12 @@ public class BlockerAnalysisService {
 
     private record Snapshot(String dreamText, List<BlockerItem> items, java.util.Set<Long> heldUpStepIds,
                             List<BlockerCandidate> candidates, Map<String, BlockerCandidate> openItems) {
+        private Snapshot {
+            items = Copies.list(items);
+            heldUpStepIds = Copies.set(heldUpStepIds);
+            candidates = Copies.list(candidates);
+            openItems = Copies.map(openItems);
+        }
     }
 
     private Snapshot collect(AppUser user, Dream dream, LocalDate today) {
