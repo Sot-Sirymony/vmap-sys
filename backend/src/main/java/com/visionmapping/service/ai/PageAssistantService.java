@@ -97,7 +97,9 @@ public class PageAssistantService {
             "MESSAGE_FIELD_HELP", "MESSAGE_CHECK", "MESSAGE_ADAPT", "MESSAGE_OBJECTIONS", "MESSAGE_BODY", "MEETING_PREP",
             "THANK_YOU_DRAFT", "FOLLOW_UP_DRAFT", "REPLY_HELP", "WORK_STYLE_EXPLAIN", "WORK_STYLE_TIPS", "WORK_STYLE_PARTNER",
             // V27 SR-FR-14: Streamline review suggestions, rated and counted the same way.
-            StreamlineAiService.FEATURE);
+            StreamlineAiService.FEATURE,
+            // V30: Streamline AI picks and summary advice.
+            StreamlineAiService.PICK_FEATURE, StreamlineAiService.ADVICE_FEATURE);
     /** Conversation tag prefix, so page conversations never mix with plan assistant ones (AH-FR-11). */
     public static final String SECTION_PREFIX = "PAGE:";
     static final int MAX_CHANGES = 5;
@@ -177,6 +179,7 @@ public class PageAssistantService {
     private final org.springframework.transaction.support.TransactionTemplate transactions;
     private final Clock clock;
     private final PermissionService permissions;
+    private final com.visionmapping.service.StreamlineReviewService streamlineReviews;
 
     /** What the area on screen holds: records for Claude, sources, rule issues and the fields cards may change. */
     record View(String page, String area, String records, List<String> sources, List<PageIssue> issues,
@@ -314,6 +317,7 @@ public class PageAssistantService {
             case "OBSTACLES" -> obstaclesView(user, request);
             case "COMMUNICATION" -> communicationView(user, request);
             case "WORK_STYLE" -> workStyleView(user, request);
+            case "STREAMLINE" -> streamlineView(request);
             default -> throw new IllegalArgumentException("Unknown page: " + request.page());
         };
     }
@@ -603,6 +607,32 @@ public class PageAssistantService {
     }
 
     // ---------- helpers ----------
+
+    /**
+     * V30 (D-30-10): the open Streamline review, as the review's AI suggestions
+     * see it (codes, titles, statuses, estimates, cycle times and the source type
+     * only, never names of people). Chat only: no change cards.
+     */
+    private View streamlineView(PageAssistantRequest request) {
+        if (request.itemId() == null) {
+            throw new com.visionmapping.exception.BusinessRuleException("Open a Streamline review to use the assistant.");
+        }
+        // Ownership first: another user's review answers 404 (BR-30-1).
+        com.visionmapping.dto.response.StreamlineResponses.Review review = streamlineReviews.get(request.itemId());
+        StringBuilder out = header("Streamline review", request.area());
+        out.append("Review ").append(review.code()).append(", ").append(review.status()).append(", stage ")
+                .append(review.currentStage()).append(" of 5 (question, delete, simplify, speed up, automate).\n");
+        out.append(StreamlineAiService.records(review));
+        com.visionmapping.dto.response.StreamlineResponses.Summary summary = review.summary();
+        out.append("So far: ").append(summary.deleted()).append(" deleted, ").append(summary.merged()).append(" merged, ")
+                .append(summary.kept()).append(" kept, ").append(summary.addedBack()).append(" brought back; steps ")
+                .append(summary.stepsBefore()).append(" -> ").append(summary.stepsAfter()).append(", tasks ")
+                .append(summary.tasksBefore()).append(" -> ").append(summary.tasksAfter()).append(".\n");
+        return new View("STREAMLINE", request.area(), out.toString(), List.of(SOURCE_PAGE), List.of(), Map.of(),
+                "You are the page assistant on a Streamline review: a five-stage review that trims one goal or step, in "
+                + "order: question the requirement, delete, simplify, speed up, automate. Answer questions about this "
+                + "review only, in plain words, and point to the stage where the user can act. Never invent items.");
+    }
 
     private StringBuilder header(String pageName, String area) {
         return new StringBuilder("Today is ").append(LocalDate.now(clock)).append(". The participant is on the ")

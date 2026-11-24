@@ -12,19 +12,7 @@ import { Link, useParams } from 'react-router';
 import { ApiError } from '../api/apiClient';
 import { listPartners } from '../api/partnerApi';
 import {
-  abandonStreamlineReview,
-  bulkQuestionStreamline,
-  completeStreamlineStage,
-  deleteStreamlineItem,
-  getParticipantStreamlineReview,
-  getStreamlineReview,
-  mergeStreamlineItem,
-  repeatStreamlineItem,
-  restoreStreamlineItem,
-  setStreamlineTarget,
-  simplifyStreamlineItem,
-  skipStreamlineStage,
-  updateStreamlineItem,
+  abandonStreamlineReview, adviseStreamlineSummary, bulkQuestionStreamline, completeStreamlineStage, deleteStreamlineItem, getParticipantStreamlineReview, getStreamlineReview, mergeStreamlineItem, repeatStreamlineItem, restoreStreamlineItem, setStreamlineTarget, simplifyStreamlineItem, skipStreamlineStage, updateStreamlineItem,
 } from '../api/streamlineApi';
 import { Button } from '../components/common/Button';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
@@ -41,12 +29,13 @@ import {
   type StageActions,
 } from '../components/streamline/StreamlineStages';
 import { StreamlineSuggestionsPanel } from '../components/streamline/StreamlineSuggestionsPanel';
+import { PageAssistantProvider, PageHelpButton } from '../components/ai/page-assistant/PageAssistant';
 import { days, hours, STAGE_INTROS, STAGE_NAMES, STAGE_PROMPTS, STATE_LABELS } from '../components/streamline/streamlineLabels';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { surface } from '../design/surface';
-import { tr } from '../i18n/translate';
-import type { StreamlineItem, StreamlineReview } from '../types/streamline';
+import { currentLanguage, tr } from '../i18n/translate';
+import type { StreamlineAdvice, StreamlineItem, StreamlineReview } from '../types/streamline';
 import { PageSection } from './PageSection';
 
 /** BR-27-8: the server refuses to empty a goal or step without confirmation; this is how the page recognises it. */
@@ -99,6 +88,7 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
   const readOnly = coach || !review || review.status !== 'OPEN';
 
   /** Runs one review action and shows the updated review, or the server's reason. */
+  // Resolves after the review is updated; rejects on failure (after showing the error), so V30 bulk apply can stop.
   const run = useCallback(async (action: () => Promise<StreamlineReview>, after?: (updated: StreamlineReview) => void) => {
     setActionError('');
     try {
@@ -107,8 +97,10 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
       after?.(updated);
     } catch (runError) {
       setActionError(runError instanceof Error ? tr(runError.message) : tr('That did not work. Try again.'));
+      throw runError;
     }
   }, []);
+  const quiet = (promise: Promise<void>) => promise.catch(() => undefined);
 
   const actions = useMemo<StageActions | null>(() => {
     if (!token || !review) return null;
@@ -118,52 +110,67 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
         action: { label: tr('Undo'), onClick: () => void run(() => restoreStreamlineItem(token, id, item.id)) },
       });
     return {
-      updateItem: (itemId, update) => void run(() => updateStreamlineItem(token, id, itemId, update)),
-      bulkQuestion: (itemIds, answers) => void run(() => bulkQuestionStreamline(token, id, { itemIds, ...answers })),
+      updateItem: (itemId, update) => run(() => updateStreamlineItem(token, id, itemId, update)),
+      bulkQuestion: (itemIds, answers) => quiet(run(() => bulkQuestionStreamline(token, id, { itemIds, ...answers }))),
       deleteItem: (item) => {
         const attempt = (confirm: boolean) => deleteStreamlineItem(token, id, item.id, confirm);
         setActionError('');
-        attempt(false)
+        return attempt(false)
           .then((updated) => { setReview(updated); undoToast(item, tr('deleted')); })
           .catch((deleteError) => {
             if (needsEmptyConfirmation(deleteError)) {
               setConfirmEmpty(() => () => attempt(true).then((updated) => { undoToast(item, tr('deleted')); return updated; }));
             } else {
               setActionError(deleteError instanceof Error ? tr(deleteError.message) : tr('That did not work. Try again.'));
+              throw deleteError;
             }
           });
       },
-      restoreItem: (item) => void run(() => restoreStreamlineItem(token, id, item.id), () => showToast(tr('{code} is back.', { code: item.code }))),
+      restoreItem: (item) => quiet(run(() => restoreStreamlineItem(token, id, item.id), () => showToast(tr('{code} is back.', { code: item.code })))),
       mergeItem: (item, targetItemId) => {
         const attempt = (confirm: boolean) => mergeStreamlineItem(token, id, item.id, targetItemId, confirm);
         setActionError('');
-        attempt(false)
+        return attempt(false)
           .then((updated) => { setReview(updated); undoToast(item, tr('merged')); })
           .catch((mergeError) => {
             if (needsEmptyConfirmation(mergeError)) {
               setConfirmEmpty(() => () => attempt(true));
             } else {
               setActionError(mergeError instanceof Error ? tr(mergeError.message) : tr('That did not work. Try again.'));
+              throw mergeError;
             }
           });
       },
-      simplify: (item, body) => void run(() => simplifyStreamlineItem(token, id, item.id, body)),
-      setTarget: (value) => void run(() => setStreamlineTarget(token, id, value)),
-      repeat: (item, cadence) => void run(() => repeatStreamlineItem(token, id, item.id, cadence), () => showToast(tr('{code} will repeat.', { code: item.code }))),
+      simplify: (item, body) => run(() => simplifyStreamlineItem(token, id, item.id, body)),
+      setTarget: (value) => quiet(run(() => setStreamlineTarget(token, id, value))),
+      repeat: (item, cadence) => run(() => repeatStreamlineItem(token, id, item.id, cadence), () => showToast(tr('{code} will repeat.', { code: item.code }))),
     };
   }, [token, review, run, showToast]);
 
+  // The stage panels get actions that never reject (errors are already shown); only bulk apply needs to know of failures.
+  const safeActions = useMemo<StageActions | null>(() => {
+    if (!actions) return null;
+    const calm = <A extends unknown[]>(action: (...args: A) => void | Promise<void>) => (...args: A) => {
+      void Promise.resolve(action(...args)).catch(() => undefined);
+    };
+    return {
+      updateItem: calm(actions.updateItem), bulkQuestion: calm(actions.bulkQuestion), deleteItem: calm(actions.deleteItem),
+      restoreItem: calm(actions.restoreItem), mergeItem: calm(actions.mergeItem), simplify: calm(actions.simplify),
+      setTarget: calm(actions.setTarget), repeat: calm(actions.repeat),
+    };
+  }, [actions]);
+
   if (error) return <PageSection title={tr('Streamline review')} subtitle=""><ErrorMessage message={error} onRetry={() => void load()} /></PageSection>;
-  if (!review || !actions || !token) return <PageSection title={tr('Streamline review')} subtitle=""><Loading /></PageSection>;
+  if (!review || !actions || !safeActions || !token) return <PageSection title={tr('Streamline review')} subtitle=""><Loading /></PageSection>;
 
   const names = STAGE_NAMES();
   const states = STATE_LABELS();
   const stage = viewStage ?? (review.status === 'OPEN' ? review.currentStage : 5);
   const isCurrent = review.status === 'OPEN' && stage === review.currentStage;
-  const stageProps = { review, readOnly: readOnly || !review.stages[stage - 1].unlocked, actions, partners };
+  const stageProps = { review, readOnly: readOnly || !review.stages[stage - 1].unlocked, actions: safeActions, partners };
   const anchor = review.anchorType === 'GOAL' ? tr('Goal') : tr('Step');
 
-  return (
+  const page = (
     <PageSection
       title={tr('Streamline: {title}', { title: review.anchorTitle })}
       subtitle={tr('{code} · {anchor} {anchorCode} · {status}', {
@@ -176,6 +183,8 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <MuiButton size="small" variant="outlined" component={Link} to={coach ? `/coach/participants/${participantId}` : '/streamline'}>{tr('All reviews')}</MuiButton>
           {!coach && review.status === 'OPEN' && <Button variant="secondary" onClick={() => setAbandonOpen(true)}>{tr('Abandon')}</Button>}
+          {/* V30 (D-30-10): ask the AI about this review. */}
+          {!coach && <PageHelpButton />}
         </Box>
       }
     >
@@ -198,7 +207,7 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
         </Stepper>
       </Box>
 
-      {review.status !== 'OPEN' && <SummaryCard review={review} />}
+      {review.status !== 'OPEN' && <SummaryCard review={review} token={token} advice={!coach && review.status === 'COMPLETED'} />}
 
       <Box component="section" aria-labelledby="stage-title" sx={{ ...surface('card'), display: 'grid', gap: 2 }}>
         <Box sx={{ display: 'grid', gap: 0.5 }}>
@@ -272,10 +281,12 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
       )}
     </PageSection>
   );
+  // D-30-11: a coach's read-only view has no AI controls.
+  return coach ? page : <PageAssistantProvider page="STREAMLINE" itemId={review.id}>{page}</PageAssistantProvider>;
 }
 
 /** BRD 27 §2.4: cut / added back / simpler / faster / automated. Counts, never percentages (Q-27-7). */
-function SummaryCard({ review }: { review: StreamlineReview }) {
+function SummaryCard({ review, token, advice }: { review: StreamlineReview; token: string; advice: boolean }) {
   const { summary } = review;
   const cutCount = summary.deleted + summary.merged;
   return (
@@ -293,6 +304,48 @@ function SummaryCard({ review }: { review: StreamlineReview }) {
       </Typography>
       {summary.nothingBroughtBack && (
         <Alert severity="info" data-testid="add-back-hint">{tr('You brought nothing back. You may be able to cut more next time.')}</Alert>
+      )}
+      {advice && <SummaryAdvice token={token} reviewId={review.id} />}
+    </Box>
+  );
+}
+
+/** V30 (D-30-9, SA-FR-07): 2 to 4 points on what to do next. Advice only. */
+function SummaryAdvice({ token, reviewId }: { token: string; reviewId: number }) {
+  const [points, setPoints] = useState<StreamlineAdvice['points'] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function ask() {
+    setBusy(true);
+    setError('');
+    try {
+      setPoints((await adviseStreamlineSummary(token, reviewId, currentLanguage())).points);
+    } catch (adviceError) {
+      setError(adviceError instanceof Error ? tr(adviceError.message) : tr('AI help is temporarily unavailable.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Box sx={{ ...surface('inset'), p: 1.5, display: 'grid', gap: 1 }} role="region" aria-label={tr('AI advice')}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+        <Typography variant="subtitle2">{tr('AI advice')}</Typography>
+        <Button variant="secondary" disabled={busy} onClick={() => void ask()}>
+          {busy ? tr('Thinking…') : points ? tr('Ask again') : tr('Get AI advice')}
+        </Button>
+      </Box>
+      {error && <Alert severity="warning">{error}</Alert>}
+      {points && points.length === 0 && <Typography variant="body2">{tr('No advice this time.')}</Typography>}
+      {points && points.length > 0 && (
+        <Box component="ul" sx={{ m: 0, pl: 2.5, display: 'grid', gap: 0.5 }}>
+          {points.map((point, index) => (
+            <li key={index}>
+              <Typography variant="body2">{point.itemCode && <strong>{point.itemCode}: </strong>}{point.text}</Typography>
+            </li>
+          ))}
+        </Box>
       )}
     </Box>
   );

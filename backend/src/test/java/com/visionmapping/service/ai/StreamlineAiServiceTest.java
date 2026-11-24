@@ -43,9 +43,49 @@ class StreamlineAiServiceTest {
         assertThat(records).contains("T-001", "asked for by PARTNER").doesNotContain("Dara Sok").doesNotContain("T-003");
     }
 
+    @Test
+    void v30_stage1AnswerDraftsNeedAValidSourceAndAnOwnerUnlessNotSure() {
+        StreamlineResponses.Review review = review();
+        List<StreamlineAiService.Suggestion> stage1 = StreamlineAiService.check(review, 1, new StreamlineAiService.SuggestionDrafts(List.of(
+                answer("T-001", "MENTOR", "Research mentor", "Needed for the ethics form", "NEEDED"),
+                answer("T-002", "SELF", "", "My own idea", "NOT_SURE"),          // SELF with no owner becomes "Me"
+                answer("S-001", "PARTNER", "", "Someone asked", "NEEDED"),        // no owner: dropped
+                answer("T-002", "BOSS", "Boss", "x", "NEEDED"),                   // not a source: dropped
+                answer("S-001", "NOT_SURE", "", "", "NOT_SURE"))));               // NOT_SURE needs no owner
+        assertThat(stage1).extracting(StreamlineAiService.Suggestion::code).containsExactly("T-001", "T-002", "S-001");
+        assertThat(stage1.get(0).requirementSource()).isEqualTo(RequirementSource.MENTOR);
+        assertThat(stage1.get(0).requirementOwner()).isEqualTo("Research mentor");
+        assertThat(stage1.get(0).whyNeeded()).isEqualTo("Needed for the ethics form");
+        assertThat(stage1.get(1).requirementOwner()).isEqualTo("Me");
+        assertThat(stage1.get(2).requirementOwner()).isNull();
+    }
+
+    @Test
+    void v30_simplifyKeepsANewTitleOnlyWhenItDiffers() {
+        StreamlineResponses.Review review = review();
+        List<StreamlineAiService.Suggestion> stage3 = StreamlineAiService.check(review, 3, new StreamlineAiService.SuggestionDrafts(List.of(
+                simplify("T-001", "Call the bank once", "Only the deposit question"),
+                simplify("T-002", "title t-002", ""),     // same as the current title: no new title
+                simplify("S-001", "  ", ""))));           // blank: no new title
+        assertThat(stage3).hasSize(3);
+        assertThat(stage3.get(0).newTitle()).isEqualTo("Call the bank once");
+        assertThat(stage3.get(0).newDescription()).isEqualTo("Only the deposit question");
+        assertThat(stage3.get(1).newTitle()).isNull();
+        assertThat(stage3.get(2).newTitle()).isNull();
+    }
+
+    private static StreamlineAiService.SuggestionDraft answer(String code, String source, String owner, String why, String verdict) {
+        return new StreamlineAiService.SuggestionDraft(code, "ANSWER", "", "reason", "", verdict, "", "", source, owner, why, "", "");
+    }
+
+    private static StreamlineAiService.SuggestionDraft simplify(String code, String title, String description) {
+        return new StreamlineAiService.SuggestionDraft(code, "SIMPLIFY", "detail", "reason", "", "", "", "", "", "", "", title, description);
+    }
+
     private static StreamlineAiService.SuggestionDraft draft(String code, String action, String target, String verdict, String lever,
                                                              String cadence) {
-        return new StreamlineAiService.SuggestionDraft(code, action, "detail", "reason", target, verdict, lever, cadence);
+        return new StreamlineAiService.SuggestionDraft(code, action, "detail", "reason", target, verdict, lever, cadence,
+                "", "", "", "", "");
     }
 
     private static StreamlineResponses.Review review() {

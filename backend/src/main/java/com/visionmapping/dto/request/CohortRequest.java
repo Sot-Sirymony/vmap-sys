@@ -14,7 +14,7 @@ public record CohortRequest(
         // V9 (AI-FR-24): left out keeps the current setting.
         Boolean aiEnabled,
         // V15 (AH-FR-57): pages where the page assistant and helpers are off for this cohort. Left out keeps them.
-        @Size(max = 6) List<@Pattern(regexp = PageAssistantRequest.PAGES) String> aiPagesOff) {
+        @Size(max = 7) List<@Pattern(regexp = PageAssistantRequest.PAGES) String> aiPagesOff) {
 
     public CohortRequest {
         aiPagesOff = com.visionmapping.util.Copies.list(aiPagesOff);

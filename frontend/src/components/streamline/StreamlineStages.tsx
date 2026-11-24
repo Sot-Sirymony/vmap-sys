@@ -33,15 +33,18 @@ import {
 } from './streamlineLabels';
 
 /** The actions a stage panel can take; the page turns each into an API call. */
+/** Each action may return a promise, so V30 "Apply all" can run them one after another (D-30-6). */
+type Done = void | Promise<void>;
+
 export type StageActions = {
-  updateItem: (itemId: number, update: Parameters<typeof import('../../api/streamlineApi').updateStreamlineItem>[3]) => void;
-  bulkQuestion: (itemIds: number[], answers: { requirementSource?: RequirementSource; requirementOwner?: string; verdict?: StreamlineVerdict }) => void;
-  deleteItem: (item: StreamlineItem) => void;
-  restoreItem: (item: StreamlineItem) => void;
-  mergeItem: (item: StreamlineItem, targetItemId: number) => void;
-  simplify: (item: StreamlineItem, body: StreamlineSimplify) => void;
-  setTarget: (days: number) => void;
-  repeat: (item: StreamlineItem, cadence: RepeatCadence) => void;
+  updateItem: (itemId: number, update: Parameters<typeof import('../../api/streamlineApi').updateStreamlineItem>[3]) => Done;
+  bulkQuestion: (itemIds: number[], answers: { requirementSource?: RequirementSource; requirementOwner?: string; verdict?: StreamlineVerdict }) => Done;
+  deleteItem: (item: StreamlineItem) => Done;
+  restoreItem: (item: StreamlineItem) => Done;
+  mergeItem: (item: StreamlineItem, targetItemId: number) => Done;
+  simplify: (item: StreamlineItem, body: StreamlineSimplify) => Done;
+  setTarget: (days: number) => Done;
+  repeat: (item: StreamlineItem, cadence: RepeatCadence) => Done;
 };
 
 type StageProps = { review: StreamlineReview; readOnly: boolean; actions: StageActions; partners: { id: number; name: string }[] };

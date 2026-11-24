@@ -48,6 +48,7 @@ function renderReview() {
 }
 
 describe('StreamlineReviewPage (BRD 27)', () => {
+  beforeEach(() => sessionStorage.clear());
   beforeEach(() => {
     vi.mocked(getAiStatus).mockResolvedValue({ available: true, reason: 'OK', consentGiven: true, dailyLimit: 20, messagesLeftToday: 20 });
   });
@@ -145,7 +146,7 @@ describe('StreamlineReviewPage (BRD 27)', () => {
     vi.mocked(api.deleteStreamlineItem).mockResolvedValue(atStage2);
     renderReview();
 
-    await user.click(await screen.findByRole('button', { name: 'Suggest for this stage' }));
+    // V30 D-30-5: the suggestions load by themselves; nothing is applied until the user chooses.
     const card = await screen.findByTestId('ai-suggestion');
     expect(api.deleteStreamlineItem).not.toHaveBeenCalled();
     await user.click(within(card).getByRole('button', { name: 'Apply' }));
@@ -164,6 +165,35 @@ describe('StreamlineReviewPage (BRD 27)', () => {
     expect(await screen.findByText('0 of 3')).toBeInTheDocument();
     expect(screen.getByTestId('add-back-hint')).toHaveTextContent('You brought nothing back.');
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+  });
+
+  it('gives advice on a completed review only when asked (V30 D-30-9)', async () => {
+    const user = userEvent.setup();
+    const done = review({
+      status: 'COMPLETED', currentStage: 5, completedAt: '2026-11-24T10:00:00Z',
+      stages: [1, 2, 3, 4, 5].map((number) => ({ number, state: 'DONE' as const, reason: null, unlocked: true })),
+    });
+    vi.mocked(api.getStreamlineReview).mockResolvedValue(done);
+    vi.mocked(api.adviseStreamlineSummary).mockResolvedValue({ requestId: 5, points: [
+      { text: 'Start this step a week earlier.', itemCode: 'S-001' },
+      { text: 'Batch the bank calls.', itemCode: null },
+    ] });
+    renderReview();
+
+    await user.click(await screen.findByRole('button', { name: 'Get AI advice' }));
+    expect(api.adviseStreamlineSummary).toHaveBeenCalledWith('token', 9, 'en');
+    expect(await screen.findByText('Batch the bank calls.')).toBeInTheDocument();
+    expect(screen.getByText('S-001:')).toBeInTheDocument();
+  });
+
+  it('offers no AI advice to a coach (V30 D-30-11)', async () => {
+    vi.mocked(api.getParticipantStreamlineReview).mockResolvedValue(review({
+      status: 'COMPLETED', currentStage: 5, completedAt: '2026-11-24T10:00:00Z',
+      stages: [1, 2, 3, 4, 5].map((number) => ({ number, state: 'DONE' as const, reason: null, unlocked: true })),
+    }));
+    renderPage(<StreamlineReviewPage coach />, { role: 'COACH', route: '/coach/participants/7/streamline/9', path: '/coach/participants/:userId/streamline/:reviewId' });
+    expect(await screen.findByText(/Coaches can read it but not change it/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Get AI advice' })).not.toBeInTheDocument();
   });
 
   it('is read-only for a coach (D-27-10)', async () => {

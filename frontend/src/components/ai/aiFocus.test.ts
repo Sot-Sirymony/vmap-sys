@@ -25,6 +25,9 @@ describe('Dream Coach focus (AI-FR-01, AI-FR-02, AI-FR-05)', () => {
     expect(quickActionsFor('/communication')).not.toContain('Who could help with my plan?');
     expect(assistantPageFor('/modules/7')).toBe('MODULE');
     expect(assistantPageFor('/partners')).toBeNull();
+    // V30 (D-30-10): an open Streamline review has the page assistant; the list keeps the Dream Coach.
+    expect(assistantPageFor('/streamline/12')).toBe('STREAMLINE');
+    expect(assistantPageFor('/streamline')).toBeNull();
   });
 
   it('turns the sources a reply used into a short reason', () => {

@@ -11,6 +11,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { CANDIDATE_REASONS, STAGE_NAMES } from '../components/streamline/streamlineLabels';
 import { RepeatingTasksCard } from '../components/streamline/RepeatingTasksCard';
+import { StreamlineAiPicks } from '../components/streamline/StreamlineAiPicks';
 import { useAuth } from '../context/AuthContext';
 import { surface } from '../design/surface';
 import { tr } from '../i18n/translate';
@@ -103,6 +104,8 @@ export function StreamlineListPage() {
       subtitle={tr('Trim a goal or a step in five stages: question, delete, simplify, speed up, then automate. Start from the Streamline action on any goal or step.')}
     >
       {startError && <Alert severity="warning">{startError}</Alert>}
+      {/* V30 (D-30-4): AI picks first; the rule cards below still work without AI. */}
+      {token && <StreamlineAiPicks token={token} onStart={(pick) => void start(pick.anchorType === 'GOAL' ? { goalId: pick.anchorId } : { stepId: pick.anchorId })} />}
       <StreamlineCandidates candidates={candidates} onStart={(candidate) => void start(candidate.anchorType === 'GOAL' ? { goalId: candidate.anchorId } : { stepId: candidate.anchorId })} />
       {error && <ErrorMessage message={error} />}
       {!reviews && !error && <Loading />}

@@ -22,6 +22,10 @@ export function assistantPageFor(pathname: string): AssistantPage | null {
   if (pathname.startsWith('/work-style')) {
     return 'WORK_STYLE';
   }
+  // V30 (D-30-10): an open review only; the list page keeps the Dream Coach.
+  if (/^\/streamline\/\d+/.test(pathname)) {
+    return 'STREAMLINE';
+  }
   return null;
 }
 

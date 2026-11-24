@@ -17,6 +17,32 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 30.0.0 — A stronger AI assistant for Streamline (built; awaiting deploy, UAT and the Khmer review)
+
+BRD [`VMS_BRD_V30.0.0.md`](VMS_BRD_V30.0.0.md) (30.0.0, draft; the seven improvements chosen by the product owner on
+24 Nov 2026; Q-30-1 to Q-30-3 open). No migration.
+
+**Backend.** `POST /api/streamline-reviews/ai-candidates` (`STREAMLINE_PICK`): AI ranks up to 5 of the user's open goals
+and steps without an open review, read from counts only; any other key is dropped. The rule cards
+(`GET /candidates`) are now ranked by need and their order is stable. Stage suggestions gain stage 1 **ANSWER**
+drafts (source, owner as a role, why, verdict; checked per BR-30-3) and **SIMPLIFY** `newTitle` / `newDescription`
+(kept only when different). `POST /{id}/summary-advice` (`STREAMLINE_ADVICE`): 2 to 4 points on a completed review,
+with item codes checked against the review. The page assistant gains page `STREAMLINE` (the open review, chat only,
+ownership checked; page switch lists allow 7 pages). Tests: `StreamlineAiFlowTests` (7) and two more
+`StreamlineAiServiceTest` cases.
+
+**Frontend.** Streamline page: an **AI picks** card above the (now ranked) rule cards, with Start review. Review page:
+suggestions load by themselves once per review and stage in the session (**Suggest again** asks again); tick boxes
+with **Apply selected (n)** and **Apply all**, one at a time, stopping at the first failure; editable **Draft answer**
+cards in stage 1 and an editable **New title** on Simplify cards; **Get AI advice** on a completed review's summary;
+the page assistant's **Ask** button (not for coaches). "Streamline" added to the admin and cohort page switches. Khmer
+drafts in `km.ts` and `km-review-v30.csv`. Tests: `StreamlineAiPicks`, five more suggestions-panel tests, two
+review-page tests and the page mapping; the API contract snapshot gains both endpoints.
+
+**Pending.** `UAT_V30.md`, the Khmer review, the user guide section.
+
+---
+
 ## 29.0.0 — Archive one or several items at once from the Vision Map tree (built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V29.0.0.md`](VMS_BRD_V29.0.0.md) (29.0.1, draft). 29.0.0 first added an archive reason text box; the

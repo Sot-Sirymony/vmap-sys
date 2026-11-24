@@ -169,6 +169,19 @@ const WORK_STYLE_PARTNER: AreaHelp = {
   quickActions: ['How do I work well with this person?', 'Adapt my message to them', 'Help me estimate their style'],
 };
 
+/** V30 (D-30-10): the Streamline review page. */
+const STREAMLINE_REVIEW: AreaHelp = {
+  label: 'this Streamline review',
+  needs: 'The goal or step being trimmed, its steps and tasks, and the stage you are on: question, delete, simplify, speed up, automate.',
+  why: 'Trimming first means less work to speed up or automate later.',
+  questions: [
+    'Which item would nobody miss?',
+    'Where does work sit and wait?',
+    'What do you do every week by hand?',
+  ],
+  quickActions: ['What should I cut first?', 'Why is this goal slow?', 'What could repeat by itself?'],
+};
+
 const PAGE_HELP: Record<AssistantPage, Partial<Record<AreaKind, AreaHelp>> & { page: AreaHelp }> = {
   MODULES: { page: MODULES_LIST, list: MODULES_LIST },
   MODULE: { page: MODULE_EXERCISE, exercise: MODULE_EXERCISE },
@@ -176,6 +189,7 @@ const PAGE_HELP: Record<AssistantPage, Partial<Record<AreaKind, AreaHelp>> & { p
   OBSTACLES: { page: OBSTACLE_LIST, list: OBSTACLE_LIST, item: OBSTACLE_ITEM, form: OBSTACLE_ITEM },
   COMMUNICATION: { page: MESSAGE_LIST, list: MESSAGE_LIST, item: MESSAGE_WHOLE, message: MESSAGE_WHOLE, form: MESSAGE_WHOLE, field: MESSAGE_FIELD },
   WORK_STYLE: { page: WORK_STYLE_RESULT, result: WORK_STYLE_RESULT, question: WORK_STYLE_QUESTION, partner: WORK_STYLE_PARTNER },
+  STREAMLINE: { page: STREAMLINE_REVIEW },
 };
 
 /**
@@ -259,4 +273,5 @@ export const PAGE_LABELS: Record<AssistantPage, string> = {
   OBSTACLES: 'Obstacles',
   COMMUNICATION: 'Communication',
   WORK_STYLE: 'Work Style',
+  STREAMLINE: 'Streamline',
 };

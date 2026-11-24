@@ -22,7 +22,7 @@ public record PageAssistantRequest(
         Long itemId,
         @Size(max = 60) Map<@Size(max = 60) String, @Size(max = 4000) String> form) {
 
-    public static final String PAGES = "MODULES|MODULE|ASSESSMENT|OBSTACLES|COMMUNICATION|WORK_STYLE";
+    public static final String PAGES = "MODULES|MODULE|ASSESSMENT|OBSTACLES|COMMUNICATION|WORK_STYLE|STREAMLINE";
     public static final String AREA = "[a-zA-Z0-9:_.-]+";
 
     public PageAssistantRequest {

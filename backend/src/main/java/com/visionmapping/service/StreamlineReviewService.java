@@ -71,6 +71,8 @@ public class StreamlineReviewService {
     static final String TARGET = "Streamline review";
     /** D-27-4: a restore counts as added back for this long after the item was cut. */
     static final Duration ADD_BACK_WINDOW = Duration.ofDays(90);
+    /** V30: goal and step lines the AI reads when picking what to streamline. */
+    static final int PICK_LINES = 40;
 
     private final EntityLookup lookup;
     private final StreamlineReviewRepository reviews;
@@ -546,7 +548,10 @@ public class StreamlineReviewService {
 
     // ---------- Candidates (§6.2) ----------
 
-    /** §6.2: goals and steps worth streamlining, at most five, skipping any with an open review. */
+    /**
+     * §6.2: goals and steps worth streamlining, at most five, skipping any with an open review.
+     * V30 (D-30-4, SA-FR-02): ranked by need, so the five shown are the ones that need it most.
+     */
     @Transactional(readOnly = true)
     public List<StreamlineResponses.Candidate> candidates() {
         Long userId = lookup.userId();
@@ -556,7 +561,7 @@ public class StreamlineReviewService {
         Map<Long, List<VisionStep>> stepsByGoal = steps.stream().collect(Collectors.groupingBy(step -> step.getGoal().getId()));
         Map<Long, List<TaskItem>> tasksByStep = tasks.stream().collect(Collectors.groupingBy(task -> task.getStep().getId()));
         Set<String> seen = new HashSet<>();
-        List<StreamlineResponses.Candidate> out = new ArrayList<>();
+        List<Ranked> out = new ArrayList<>();
         for (Map.Entry<Long, List<VisionStep>> entry : stepsByGoal.entrySet()) {
             Goal goal = entry.getValue().get(0).getGoal();
             if (goal.isArchived() || goal.getStatus() == WorkStatus.COMPLETED
@@ -568,15 +573,17 @@ public class StreamlineReviewService {
                     .filter(task -> task.getStatus() != WorkStatus.COMPLETED).toList();
             long overdue = goalTasks.stream().filter(task -> task.getDueDate() != null && task.getDueDate().isBefore(today)).count();
             if (openSteps > 7) {
-                add(out, seen, "GOAL", goal.getId(), goal.getCode(), goal.getTitle(), "MANY_STEPS", openSteps + " open steps");
+                add(out, seen, openSteps * 10 + overdue, "GOAL", goal.getId(), goal.getCode(), goal.getTitle(), "MANY_STEPS",
+                        openSteps + " open steps");
             } else if (goalTasks.size() >= 3 && overdue * 10 > goalTasks.size() * 3) {
-                add(out, seen, "GOAL", goal.getId(), goal.getCode(), goal.getTitle(), "OVERDUE", overdue + " of " + goalTasks.size() + " open tasks overdue");
+                add(out, seen, overdue * 10, "GOAL", goal.getId(), goal.getCode(), goal.getTitle(), "OVERDUE",
+                        overdue + " of " + goalTasks.size() + " open tasks overdue");
             }
         }
         for (VisionStep step : steps) {
             long open = tasksByStep.getOrDefault(step.getId(), List.of()).stream().filter(task -> task.getStatus() != WorkStatus.COMPLETED).count();
             if (open > 10 && !reviews.existsByStep_IdAndUser_IdAndStatus(step.getId(), userId, StreamlineStatus.OPEN)) {
-                add(out, seen, "STEP", step.getId(), step.getCode(), step.getTitle(), "MANY_TASKS", open + " open tasks");
+                add(out, seen, open * 10, "STEP", step.getId(), step.getCode(), step.getTitle(), "MANY_TASKS", open + " open tasks");
             }
         }
         // A task done by hand with the same title at least 4 times in 60 days: an automation candidate.
@@ -588,20 +595,84 @@ public class StreamlineReviewService {
             if (group.size() >= 4) {
                 VisionStep step = group.get(group.size() - 1).getStep();
                 if (!step.isArchived() && !reviews.existsByStep_IdAndUser_IdAndStatus(step.getId(), userId, StreamlineStatus.OPEN)) {
-                    add(out, seen, "STEP", step.getId(), step.getCode(), step.getTitle(), "REPEATED_WORK",
+                    add(out, seen, group.size() * 5L, "STEP", step.getId(), step.getCode(), step.getTitle(), "REPEATED_WORK",
                             "\"" + group.get(0).getTitle() + "\" done " + group.size() + " times in 60 days");
                 }
             }
         }
-        return out.stream().limit(5).toList();
+        return out.stream()
+                .sorted(Comparator.comparingLong(Ranked::weight).reversed().thenComparing(ranked -> ranked.candidate().code()))
+                .limit(5).map(Ranked::candidate).toList();
     }
 
-    private static void add(List<StreamlineResponses.Candidate> out, Set<String> seen, String type, Long id, String code, String title,
+    private record Ranked(StreamlineResponses.Candidate candidate, long weight) {
+    }
+
+    private static void add(List<Ranked> out, Set<String> seen, long weight, String type, Long id, String code, String title,
                             String reason, String detail) {
         if (seen.add(type + id)) {
-            out.add(new StreamlineResponses.Candidate(type, id, code, title, reason, detail));
+            out.add(new Ranked(new StreamlineResponses.Candidate(type, id, code, title, reason, detail), weight));
         }
     }
+
+    /** V30 (D-30-4): what the AI reads to pick goals and steps to streamline, and the keys it may answer with. */
+    public record PickContext(String records, Map<String, StreamlineResponses.Candidate> allowed) {
+        public PickContext {
+            allowed = com.visionmapping.util.Copies.map(allowed);
+        }
+    }
+
+    /** Open goals and steps without an open review, with counts only (D-30-3: no names of people). */
+    @Transactional(readOnly = true)
+    public PickContext pickContext() {
+        Long userId = lookup.userId();
+        java.time.LocalDate today = java.time.LocalDate.now(clock);
+        List<VisionStep> steps = stepRepository.findByUser_IdAndArchivedFalse(userId).stream()
+                .filter(step -> step.getStatus() != WorkStatus.COMPLETED && !step.getGoal().isArchived()).toList();
+        Map<Long, List<TaskItem>> tasksByStep = taskRepository.findByUser_IdAndArchivedFalse(userId).stream()
+                .filter(task -> task.getStatus() != WorkStatus.COMPLETED)
+                .collect(Collectors.groupingBy(task -> task.getStep().getId()));
+        Map<Long, List<VisionStep>> stepsByGoal = steps.stream().collect(Collectors.groupingBy(step -> step.getGoal().getId(),
+                java.util.TreeMap::new, Collectors.toList()));
+        StringBuilder out = new StringBuilder("Today is ").append(today).append(". Open goals and steps:\n");
+        Map<String, StreamlineResponses.Candidate> allowed = new java.util.LinkedHashMap<>();
+        int lines = 0;
+        for (List<VisionStep> goalSteps : stepsByGoal.values()) {
+            Goal goal = goalSteps.get(0).getGoal();
+            if (lines >= PICK_LINES || goal.getStatus() == WorkStatus.COMPLETED
+                    || reviews.existsByGoal_IdAndUser_IdAndStatus(goal.getId(), userId, StreamlineStatus.OPEN)) {
+                continue;
+            }
+            List<TaskItem> goalTasks = goalSteps.stream().flatMap(step -> tasksByStep.getOrDefault(step.getId(), List.of()).stream()).toList();
+            out.append("[GOAL-").append(goal.getId()).append("] ").append(goal.getCode()).append(' ')
+                    .append(com.visionmapping.service.ai.AiContextBuilder.clip(goal.getTitle())).append(" | ")
+                    .append(counts(goalSteps.size(), goalTasks, today)).append('\n');
+            allowed.put("GOAL-" + goal.getId(), new StreamlineResponses.Candidate("GOAL", goal.getId(), goal.getCode(), goal.getTitle(), "AI", null));
+            lines++;
+            for (VisionStep step : goalSteps) {
+                List<TaskItem> stepTasks = tasksByStep.getOrDefault(step.getId(), List.of());
+                if (lines >= PICK_LINES || stepTasks.size() < 3
+                        || reviews.existsByStep_IdAndUser_IdAndStatus(step.getId(), userId, StreamlineStatus.OPEN)) {
+                    continue;
+                }
+                out.append("  [STEP-").append(step.getId()).append("] ").append(step.getCode()).append(' ')
+                        .append(com.visionmapping.service.ai.AiContextBuilder.clip(step.getTitle())).append(" | ")
+                        .append(counts(0, stepTasks, today)).append('\n');
+                allowed.put("STEP-" + step.getId(), new StreamlineResponses.Candidate("STEP", step.getId(), step.getCode(), step.getTitle(), "AI", null));
+                lines++;
+            }
+        }
+        return new PickContext(out.toString(), allowed);
+    }
+
+    private static String counts(int openSteps, List<TaskItem> openTasks, java.time.LocalDate today) {
+        long overdue = openTasks.stream().filter(task -> task.getDueDate() != null && task.getDueDate().isBefore(today)).count();
+        long waiting = openTasks.stream().filter(task -> task.getStatus() == WorkStatus.WAITING).count();
+        long blocked = openTasks.stream().filter(task -> task.getStatus() == WorkStatus.BLOCKED).count();
+        return (openSteps > 0 ? openSteps + " open steps, " : "") + openTasks.size() + " open tasks, " + overdue + " overdue, "
+                + waiting + " waiting, " + blocked + " blocked";
+    }
+
 
     // ---------- Building the response ----------
 

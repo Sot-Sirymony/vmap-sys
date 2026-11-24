@@ -1,15 +1,6 @@
 import { apiClient } from './apiClient';
 import type {
-  RepeatCadence,
-  StreamlineCandidate,
-  StreamlineItemUpdate,
-  StreamlineListItem,
-  StreamlineReview,
-  StreamlineSimplify,
-  StreamlineSuggestions,
-  StreamlineVerdict,
-  RequirementSource,
-  StreamlineRepeatRule,
+  RepeatCadence, RequirementSource, StreamlineAdvice, StreamlineCandidate, StreamlineItemUpdate, StreamlineListItem, StreamlinePicks, StreamlineRepeatRule, StreamlineReview, StreamlineSimplify, StreamlineSuggestions, StreamlineVerdict,
 } from '../types/streamline';
 
 // V27 (BRD 27): the Streamline review API.
@@ -85,6 +76,16 @@ export function abandonStreamlineReview(token: string, id: number) {
 
 export function suggestStreamline(token: string, id: number, stage: number, language: string) {
   return send<StreamlineSuggestions>(token, `${base}/${id}/stages/${stage}/suggestions?language=${language}`, 'POST');
+}
+
+/** V30 SA-FR-01: AI-ranked goals and steps to streamline. Suggestions only. */
+export function pickStreamlineCandidates(token: string, language: string) {
+  return send<StreamlinePicks>(token, `${base}/ai-candidates?language=${language}`, 'POST');
+}
+
+/** V30 SA-FR-07: advice on a completed review. */
+export function adviseStreamlineSummary(token: string, id: number, language: string) {
+  return send<StreamlineAdvice>(token, `${base}/${id}/summary-advice?language=${language}`, 'POST');
 }
 
 /** D-27-10: a coach's read-only view of a participant's reviews. */

@@ -12,6 +12,7 @@ export const SWITCHABLE_PAGES: { page: AssistantPage; label: string }[] = [
   { page: 'OBSTACLES', label: 'Obstacles' },
   { page: 'COMMUNICATION', label: 'Communication' },
   { page: 'WORK_STYLE', label: 'Work Style' },
+  { page: 'STREAMLINE', label: 'Streamline' },
 ];
 
 /**

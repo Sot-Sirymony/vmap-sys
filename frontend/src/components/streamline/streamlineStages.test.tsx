@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderPage } from '../../test/render';
 import type { StreamlineItem, StreamlineReview } from '../../types/streamline';
 import { AutomateStage, SimplifyStage, SpeedStage, type StageActions } from './StreamlineStages';
@@ -146,6 +146,8 @@ describe('Streamline labels', () => {
 });
 
 describe('Streamline AI suggestions (SR-FR-14, D-27-9)', () => {
+  beforeEach(() => sessionStorage.clear());
+
   it('names the reason for every unavailable state', () => {
     expect(aiUnavailableMessage('NO_CONSENT')).toContain('AI consent');
     expect(aiUnavailableMessage('DAILY_LIMIT')).toContain("today's AI requests");
@@ -173,7 +175,7 @@ describe('Streamline AI suggestions (SR-FR-14, D-27-9)', () => {
     const act = actions();
     renderPage(<StreamlineSuggestionsPanel token="token" review={review([task, other])} stage={2} actions={act} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Suggest for this stage' }));
+    // V30 D-30-5: the suggestions load by themselves.
     await waitFor(() => expect(screen.getAllByTestId('ai-suggestion')).toHaveLength(9));
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     while (screen.queryAllByRole('button', { name: 'Apply' }).length > 0) {
@@ -197,9 +199,110 @@ describe('Streamline AI suggestions (SR-FR-14, D-27-9)', () => {
       .mockResolvedValueOnce({ requestId: 2, stage: 1, suggestions: [] });
     renderPage(<StreamlineSuggestionsPanel token="token" review={review([item({})])} stage={1} actions={actions()} />);
 
-    await user.click(await screen.findByRole('button', { name: 'Suggest for this stage' }));
     expect(await screen.findByText('AI help is temporarily unavailable.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Suggest for this stage' }));
+    await user.click(screen.getByRole('button', { name: 'Suggest again' }));
     expect(await screen.findByText('No suggestions for this stage.')).toBeInTheDocument();
+  });
+});
+
+describe('Streamline AI suggestions, V30 (BRD 30)', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.mocked(getAiStatus).mockResolvedValue({ available: true, reason: 'OK', consentGiven: true, dailyLimit: 20, messagesLeftToday: 20 });
+  });
+
+  const base = { detail: 'Detail', reason: 'Reason', targetItemId: null, verdict: null, lever: null, cadence: null, title: 'x' } as const;
+
+  it('loads suggestions once per review and stage in the session; Suggest again asks again (D-30-5)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(streamlineApi.suggestStreamline).mockResolvedValue({ requestId: 1, stage: 2, suggestions: [] });
+    const { unmount } = renderPage(<StreamlineSuggestionsPanel token="token" review={review([item({})])} stage={2} actions={actions()} />);
+    await waitFor(() => expect(streamlineApi.suggestStreamline).toHaveBeenCalledTimes(1));
+    unmount();
+
+    renderPage(<StreamlineSuggestionsPanel token="token" review={review([item({})])} stage={2} actions={actions()} />);
+    await user.click(await screen.findByRole('button', { name: 'Suggest again' }));
+    expect(streamlineApi.suggestStreamline).toHaveBeenCalledTimes(2);
+  });
+
+  it('applies the ticked cards one after another, then all the rest (D-30-6)', async () => {
+    const user = userEvent.setup();
+    const task = item({ id: 2, code: 'T-001' });
+    vi.mocked(streamlineApi.suggestStreamline).mockResolvedValue({ requestId: 1, stage: 5, suggestions: [
+      { ...base, itemId: 2, code: 'T-001', action: 'QUESTION' },
+      { ...base, itemId: 2, code: 'T-001', action: 'DELEGATE' },
+      { ...base, itemId: 2, code: 'T-001', action: 'REMIND' },
+      { ...base, itemId: 2, code: 'T-001', action: 'REPEAT', cadence: 'WEEKLY' },
+    ] });
+    const order: string[] = [];
+    const act = actions();
+    vi.mocked(act.updateItem).mockImplementation(async (_id, update) => { order.push(String(update.automation)); });
+    vi.mocked(act.repeat).mockImplementation(async () => { order.push('REPEAT'); });
+    renderPage(<StreamlineSuggestionsPanel token="token" review={review([task])} stage={5} actions={act} />);
+
+    // A question has nothing to apply, so it has no tick box.
+    await screen.findAllByTestId('ai-suggestion');
+    expect(screen.queryByRole('checkbox', { name: 'Select T-001 Ask yourself' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Select T-001 Remind me' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select T-001 Delegate' }));
+    await user.click(screen.getByRole('button', { name: 'Apply selected (2)' }));
+    expect(await screen.findByText('Applied 2 suggestion(s).')).toBeInTheDocument();
+    expect(order).toEqual(['DELEGATE', 'REMIND']);
+
+    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    expect(screen.getAllByTestId('ai-suggestion')).toHaveLength(1);
+    expect(order).toEqual(['DELEGATE', 'REMIND']);
+  });
+
+  it('stops applying at the first failure and says how many were applied', async () => {
+    const user = userEvent.setup();
+    const task = item({ id: 2, code: 'T-001' });
+    vi.mocked(streamlineApi.suggestStreamline).mockResolvedValue({ requestId: 1, stage: 5, suggestions: [
+      { ...base, itemId: 2, code: 'T-001', action: 'DELEGATE' },
+      { ...base, itemId: 2, code: 'T-001', action: 'REPEAT', cadence: 'WEEKLY' },
+      { ...base, itemId: 2, code: 'T-001', action: 'REMIND' },
+    ] });
+    const act = actions();
+    vi.mocked(act.repeat).mockRejectedValue(new Error('Server error'));
+    renderPage(<StreamlineSuggestionsPanel token="token" review={review([task])} stage={5} actions={act} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Apply all' }));
+    expect(await screen.findByText('Applied 1 of 3. The rest were not applied.')).toBeInTheDocument();
+    expect(act.updateItem).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('ai-suggestion')).toHaveLength(2);
+  });
+
+  it('saves an edited stage 1 draft answer (D-30-7)', async () => {
+    const user = userEvent.setup();
+    const task = item({ id: 2, code: 'T-001', requirementSource: null, requirementOwner: null, verdict: null });
+    vi.mocked(streamlineApi.suggestStreamline).mockResolvedValue({ requestId: 1, stage: 1, suggestions: [
+      { ...base, itemId: 2, code: 'T-001', action: 'ANSWER', verdict: 'NEEDED', requirementSource: 'MENTOR', requirementOwner: 'Mentor',
+        whyNeeded: 'Needed for the ethics form' },
+    ] });
+    const act = actions();
+    renderPage(<StreamlineSuggestionsPanel token="token" review={review([task])} stage={1} actions={act} />);
+
+    const owner = await screen.findByRole('textbox', { name: 'Asked for by (a role)' });
+    await user.clear(owner);
+    await user.type(owner, 'Research mentor');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(act.updateItem).toHaveBeenCalledWith(2, { requirementSource: 'MENTOR', requirementOwner: 'Research mentor',
+      whyNeeded: 'Needed for the ethics form', verdict: 'NEEDED' });
+  });
+
+  it('changes the title with an edited Simplify suggestion (D-30-8)', async () => {
+    const user = userEvent.setup();
+    const task = item({ id: 2, code: 'T-001' });
+    vi.mocked(streamlineApi.suggestStreamline).mockResolvedValue({ requestId: 1, stage: 3, suggestions: [
+      { ...base, itemId: 2, code: 'T-001', action: 'SIMPLIFY', newTitle: 'One-page report' },
+    ] });
+    const act = actions();
+    renderPage(<StreamlineSuggestionsPanel token="token" review={review([task])} stage={3} actions={act} />);
+
+    const title = await screen.findByRole('textbox', { name: 'New title' });
+    await user.clear(title);
+    await user.type(title, 'Half-page report');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(act.simplify).toHaveBeenCalledWith(task, { title: 'Half-page report', note: 'Detail' });
   });
 });

@@ -1149,7 +1149,7 @@ export type AiFocus = {
 };
 
 // V15 (AH-FR-01): the pages that have the page assistant.
-export type AssistantPage = 'MODULES' | 'MODULE' | 'ASSESSMENT' | 'OBSTACLES' | 'COMMUNICATION' | 'WORK_STYLE';
+export type AssistantPage = 'MODULES' | 'MODULE' | 'ASSESSMENT' | 'OBSTACLES' | 'COMMUNICATION' | 'WORK_STYLE' | 'STREAMLINE';
 
 export type PageAssistantRequest = {
   page: AssistantPage;

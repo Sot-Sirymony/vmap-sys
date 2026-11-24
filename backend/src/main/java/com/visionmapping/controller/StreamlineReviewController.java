@@ -126,4 +126,17 @@ public class StreamlineReviewController {
                                                        @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
         return aiService.suggest(id, stage, language);
     }
+
+    /** V30 SA-FR-01 (D-30-4): AI-ranked goals and steps to streamline. Suggestions only. */
+    @PostMapping("/ai-candidates")
+    public StreamlineAiService.Picks aiCandidates(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return aiService.pick(language);
+    }
+
+    /** V30 SA-FR-07 (D-30-9): advice on a completed review. Advice only. */
+    @PostMapping("/{id}/summary-advice")
+    public StreamlineAiService.Advice summaryAdvice(@PathVariable Long id,
+                                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return aiService.advise(id, language);
+    }
 }
