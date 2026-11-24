@@ -119,7 +119,7 @@ export function QuestionStage({ review, readOnly, actions }: StageProps) {
               variant="secondary"
               disabled={selected.length === 0 || (!bulkSource && !bulkOwner && !bulkVerdict)}
               onClick={() => {
-                actions.bulkQuestion(selected, {
+                void actions.bulkQuestion(selected, {
                   requirementSource: bulkSource || undefined,
                   requirementOwner: bulkOwner || undefined,
                   verdict: bulkVerdict || undefined,
@@ -148,16 +148,16 @@ export function QuestionStage({ review, readOnly, actions }: StageProps) {
             </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '180px 160px 1fr auto' }, gap: 1, alignItems: 'center' }}>
               <TextField select size="small" label={tr('Who asked for it')} value={item.requirementSource ?? ''} disabled={readOnly}
-                onChange={(event) => actions.updateItem(item.id, { requirementSource: event.target.value as RequirementSource })}>
+                onChange={(event) => void actions.updateItem(item.id, { requirementSource: event.target.value as RequirementSource })}>
                 {(Object.keys(sources) as RequirementSource[]).map((key) => <MenuItem key={key} value={key}>{sources[key]}</MenuItem>)}
               </TextField>
               <TextField size="small" label={tr('Name')} defaultValue={item.requirementOwner ?? ''} disabled={readOnly}
                 helperText={item.requirementSource === 'NOT_SURE' ? tr('Not needed when you are not sure') : undefined}
-                onBlur={(event) => event.target.value !== (item.requirementOwner ?? '') && actions.updateItem(item.id, { requirementOwner: event.target.value })} />
+                onBlur={(event) => event.target.value !== (item.requirementOwner ?? '') && void actions.updateItem(item.id, { requirementOwner: event.target.value })} />
               <TextField size="small" label={tr('Why is it needed?')} defaultValue={item.whyNeeded ?? ''} disabled={readOnly}
-                onBlur={(event) => event.target.value !== (item.whyNeeded ?? '') && actions.updateItem(item.id, { whyNeeded: event.target.value })} />
+                onBlur={(event) => event.target.value !== (item.whyNeeded ?? '') && void actions.updateItem(item.id, { whyNeeded: event.target.value })} />
               <ToggleButtonGroup exclusive size="small" value={item.verdict} disabled={readOnly} aria-label={tr('Verdict for {code}', { code: item.code })}
-                onChange={(_, value: StreamlineVerdict | null) => value && actions.updateItem(item.id, { verdict: value })}>
+                onChange={(_, value: StreamlineVerdict | null) => value && void actions.updateItem(item.id, { verdict: value })}>
                 {(Object.keys(verdicts) as StreamlineVerdict[]).map((key) => <ToggleButton key={key} value={key}>{verdicts[key]}</ToggleButton>)}
               </ToggleButtonGroup>
             </Box>
@@ -193,7 +193,7 @@ export function DeleteStage({ review, readOnly, actions }: StageProps) {
                 {item.restoredAt && <Chip size="small" color="success" label={tr('Brought back')} />}
               </Box>
               {!readOnly && item.archived && review.status !== 'ABANDONED' && (
-                <Button variant="secondary" onClick={() => actions.restoreItem(item)}>{tr('Restore')}</Button>
+                <Button variant="secondary" onClick={() => void actions.restoreItem(item)}>{tr('Restore')}</Button>
               )}
             </Box>
           ))}
@@ -217,15 +217,15 @@ function DeleteRow({ item, review, readOnly, actions, verdictLabel }: { item: St
         </Box>
         {!readOnly && (
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Button variant="danger" onClick={() => actions.deleteItem(item)}>{tr('Delete')}</Button>
-            <Button variant="secondary" onClick={() => actions.updateItem(item.id, { keep: true })}>{tr('Keep')}</Button>
+            <Button variant="danger" onClick={() => void actions.deleteItem(item)}>{tr('Delete')}</Button>
+            <Button variant="secondary" onClick={() => void actions.updateItem(item.id, { keep: true })}>{tr('Keep')}</Button>
             {targets.length > 0 && (
               <>
                 <TextField select size="small" label={tr('Merge into')} value={mergeTarget} sx={{ minWidth: 180 }}
                   onChange={(event) => setMergeTarget(event.target.value)}>
                   {targets.map((target) => <MenuItem key={target.id} value={String(target.id)}>{target.code} · {target.title}</MenuItem>)}
                 </TextField>
-                <Button variant="secondary" disabled={!mergeTarget} onClick={() => actions.mergeItem(item, Number(mergeTarget))}>{tr('Merge')}</Button>
+                <Button variant="secondary" disabled={!mergeTarget} onClick={() => void actions.mergeItem(item, Number(mergeTarget))}>{tr('Merge')}</Button>
               </>
             )}
           </Box>
@@ -233,7 +233,7 @@ function DeleteRow({ item, review, readOnly, actions, verdictLabel }: { item: St
       </Box>
       {needsReason && (
         <TextField size="small" label={tr('Why keep it, if it is not needed?')} defaultValue={item.keepReason ?? ''} disabled={readOnly} required
-          onBlur={(event) => event.target.value !== (item.keepReason ?? '') && actions.updateItem(item.id, { keepReason: event.target.value })} />
+          onBlur={(event) => event.target.value !== (item.keepReason ?? '') && void actions.updateItem(item.id, { keepReason: event.target.value })} />
       )}
     </Box>
   );
@@ -276,7 +276,7 @@ function SimplifyRow({ item, readOnly, actions }: { item: StreamlineItem; readOn
         <Box component="form" sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' } }}
           onSubmit={(event) => {
             event.preventDefault();
-            actions.simplify(item, {
+            void actions.simplify(item, {
               title: title !== item.title ? title : undefined,
               estimatedHours: estimate === '' ? undefined : Number(estimate),
               owner: owner || undefined,
@@ -344,7 +344,7 @@ export function SpeedStage({ review, readOnly, actions }: StageProps) {
         ))}
       </Box>
       <Box component="form" sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}
-        onSubmit={(event) => { event.preventDefault(); if (target) actions.setTarget(Number(target)); }}>
+        onSubmit={(event) => { event.preventDefault(); if (target) void actions.setTarget(Number(target)); }}>
         <TextField size="small" type="number" label={tr('Target days from start to done')} value={target} disabled={readOnly}
           onChange={(event) => setTarget(event.target.value)} slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }} />
         {!readOnly && <Button type="submit" variant="secondary" disabled={!target}>{tr('Set target')}</Button>}
@@ -366,7 +366,7 @@ export function SpeedStage({ review, readOnly, actions }: StageProps) {
                 return (
                   <Chip key={lever} label={levers[lever]} title={hints[lever]} color={on ? 'primary' : 'default'} variant={on ? 'filled' : 'outlined'}
                     aria-pressed={on} disabled={readOnly}
-                    onClick={readOnly ? undefined : () => actions.updateItem(item.id, {
+                    onClick={readOnly ? undefined : () => void actions.updateItem(item.id, {
                       speedLevers: on ? item.speedLevers.filter((value) => value !== lever) : [...item.speedLevers, lever],
                     })} />
                 );
@@ -417,18 +417,18 @@ function AutomateRow({ item, readOnly, actions, labels, cadences, partners }: {
               <TextField select size="small" label={tr('How often')} value={cadence} onChange={(event) => setCadence(event.target.value as RepeatCadence)} sx={{ minWidth: 150 }}>
                 {(Object.keys(cadences) as RepeatCadence[]).map((key) => <MenuItem key={key} value={key}>{cadences[key]}</MenuItem>)}
               </TextField>
-              <Button variant="secondary" onClick={() => actions.repeat(item, cadence)}>{tr('Make it repeat')}</Button>
+              <Button variant="secondary" onClick={() => void actions.repeat(item, cadence)}>{tr('Make it repeat')}</Button>
             </>
           )}
-          <Button variant="secondary" onClick={() => actions.updateItem(item.id, { automation: 'REMIND' })}>{labels.REMIND}</Button>
+          <Button variant="secondary" onClick={() => void actions.updateItem(item.id, { automation: 'REMIND' })}>{labels.REMIND}</Button>
           <TextField select size="small" label={labels.DELEGATE} value={item.delegatePartnerId ? String(item.delegatePartnerId) : ''} sx={{ minWidth: 220 }}
-            onChange={(event) => actions.updateItem(item.id, event.target.value === 'none'
+            onChange={(event) => void actions.updateItem(item.id, event.target.value === 'none'
               ? { automation: 'DELEGATE' }
               : { automation: 'DELEGATE', delegatePartnerId: Number(event.target.value) })}>
             <MenuItem value="none">{tr('No partner')}</MenuItem>
             {partners.map((partner) => <MenuItem key={partner.id} value={String(partner.id)}>{partner.name}</MenuItem>)}
           </TextField>
-          <Button variant="secondary" onClick={() => actions.updateItem(item.id, { automation: 'MANUAL' })}>{labels.MANUAL}</Button>
+          <Button variant="secondary" onClick={() => void actions.updateItem(item.id, { automation: 'MANUAL' })}>{labels.MANUAL}</Button>
         </Box>
       )}
     </Box>

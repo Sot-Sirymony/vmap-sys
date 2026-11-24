@@ -1,10 +1,14 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { currentLocation, renderPage } from '../test/render';
 import type { StreamlineCandidate, StreamlineListItem } from '../types/streamline';
 
 vi.mock('../api/streamlineApi');
+// V30: the AI picks card asks for the AI status; answer it here instead of over the network.
+vi.mock('../api/aiApi', () => ({
+  getAiStatus: vi.fn().mockResolvedValue({ available: false, reason: 'NO_CONSENT', consentGiven: false, dailyLimit: 20, messagesLeftToday: 20 }),
+}));
 
 const api = await import('../api/streamlineApi');
 const { StreamlineListPage, StreamlineStartPage } = await import('./StreamlineListPage');
@@ -51,7 +55,8 @@ describe('StreamlineListPage (SR-FR-11)', () => {
     const cards = await screen.findByRole('region', { name: 'Worth streamlining' });
     await user.click(within(cards).getAllByRole('button', { name: 'Run a Streamline review' })[1]);
     expect(api.startStreamlineReview).toHaveBeenCalledWith('token', { stepId: 8 });
-    expect(currentLocation()).toBe('/streamline/12');
+    // The page navigates once the start request resolves.
+    await waitFor(() => expect(currentLocation()).toBe('/streamline/12'));
   });
 
   it('hides a dismissed suggestion, and says why a review could not start', async () => {
