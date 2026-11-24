@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material/styles';
+import { alpha, createTheme } from '@mui/material/styles';
 import { tr } from './i18n/translate';
 import { brand as v25Brand, neutrals, statusTones, styleTokens, type InterfaceStyle, type StatusFamily } from './design/tokens';
 
@@ -523,6 +523,9 @@ export function matchPreset(mode: 'light' | 'dark' | 'system', accent: AccentId)
  * 3.17:1 against white, so MUI's automatic pick would produce unreadable chips.
  */
 const PALETTE_CONTRAST_TEXT = grey[800];
+
+/** Buttons are pills in every interface style (docs/Optimize Appearance/button.md). */
+export const BUTTON_RADIUS = '9999px';
 
 export type Density = 'comfortable' | 'compact';
 
@@ -1352,12 +1355,78 @@ export function createAppTheme({
     components: {
       // MUI's contained Button defaults to uppercase text + a drop shadow;
       // the current design is flat, sentence-case, and semibold.
+      // Button design system (docs/Optimize Appearance/button.md): a pill
+      // shape and four states (normal, hover, pressed, disabled) for each of
+      // the filled, outline and text variants. A left icon is the filled
+      // variant with `startIcon`. Colours come from the user's accent, not a
+      // fixed blue, so the accent picker and the contrast floors still apply.
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
-          // BRD 26: buttons and inputs share --style-radius-control, so a
-          // button and the field beside it always agree.
-          root: { textTransform: 'none', fontWeight: 600, borderRadius: 'var(--style-radius-control)' },
+          root: ({ ownerState }) => {
+            const tone =
+              ownerState.color === 'error'
+                ? { main: tokens.error, pressed: palette.error.darker, contrast: dark ? PALETTE_CONTRAST_TEXT : '#ffffff' }
+                : { main: brand.main, pressed: brand.pressed, contrast: brand.contrastText };
+            // Outline and text buttons in a neutral colour use body text, not
+            // the pale `secondary` fill, which is unreadable as text.
+            const neutral = ownerState.color !== 'primary' && ownerState.color !== 'error';
+            const ring = `0 0 0 4px ${alpha(tone.main, dark ? 0.35 : 0.22)}`;
+            const disabledFill = dark ? grey[800] : grey[200];
+            const disabledText = dark ? grey[600] : grey[400];
+            const base = {
+              textTransform: 'none' as const,
+              fontWeight: 500,
+              borderRadius: BUTTON_RADIUS,
+              paddingInline: 16,
+              transition: 'background-color 150ms ease, box-shadow 150ms ease, color 150ms ease, border-color 150ms ease',
+              '&:focus-visible': { outline: `2px solid ${tone.main}`, outlineOffset: 2 },
+            };
+            if (ownerState.variant === 'contained') {
+              return {
+                ...base,
+                backgroundColor: tone.main,
+                color: tone.contrast,
+                '&:hover': { backgroundColor: tone.main, boxShadow: ring },
+                '&:active': { backgroundColor: tone.pressed, boxShadow: 'none' },
+                '&.Mui-disabled': { backgroundColor: disabledFill, color: disabledText, boxShadow: 'none' },
+              };
+            }
+            if (ownerState.variant === 'outlined') {
+              const text = neutral ? tokens.foreground : tone.main;
+              return {
+                ...base,
+                backgroundColor: toned?.card ?? tokens.card,
+                color: text,
+                border: `1px solid ${border}`,
+                '&:hover': {
+                  backgroundColor: neutral ? (dark ? grey[800] : grey[200]) : alpha(tone.main, 0.08),
+                  borderColor: border,
+                },
+                '&:active': {
+                  backgroundColor: neutral ? grey[600] : tone.pressed,
+                  borderColor: neutral ? grey[600] : tone.pressed,
+                  color: neutral ? '#ffffff' : tone.contrast,
+                },
+                '&.Mui-disabled': { backgroundColor: disabledFill, color: disabledText, border: '1px solid transparent' },
+              };
+            }
+            // Text: no fill until hover, then a soft tint of the button colour.
+            const textColour = neutral ? tokens.foreground : tone.main;
+            return {
+              ...base,
+              paddingInline: 12,
+              color: textColour,
+              '&:hover': { backgroundColor: alpha(textColour, 0.1) },
+              '&:active': { backgroundColor: alpha(textColour, 0.2) },
+              '&.Mui-disabled': { color: alpha(disabledText, 0.9) },
+            };
+          },
+          // The left icon reads as a small badge beside the label.
+          startIcon: { marginRight: 6, '& > *:nth-of-type(1)': { fontSize: '1.05em' } },
+          sizeSmall: { minHeight: 32, paddingBlock: 4 },
+          sizeMedium: { minHeight: 38, paddingBlock: 6 },
+          sizeLarge: { minHeight: 46, paddingBlock: 8, fontSize: '0.95rem' },
         },
       },
       MuiOutlinedInput: {

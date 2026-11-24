@@ -3084,7 +3084,6 @@ export const km: Record<string, string> = {
   'Goals by health': 'គោលដៅតាមសុខភាព',
   'Blocked tasks': 'កិច្ចការជាប់គាំង',
   'Open blockers': 'ឧបសគ្គដែលនៅបើក',
-  'Due in 14 days': 'ដល់កំណត់ក្នុងរយៈពេល ១៤ ថ្ងៃ',
   '{count} blocker(s) are not on a step yet, so they are not counted on any goal.': 'ឧបសគ្គ {count} មិនទាន់នៅលើជំហាន ដូច្នេះមិនត្រូវបានរាប់លើគោលដៅណាមួយទេ។',
   'Goal health': 'សុខភាពគោលដៅ',
   'Off track: overdue, or a blocked task or critical blocker. At risk: overdue work, an open blocker, or more than 20 points behind schedule. Done – open work: completed, but tasks are still open.': 'ខុសផ្លូវ៖ ហួសកំណត់ ឬមានកិច្ចការជាប់គាំង ឬឧបសគ្គធ្ងន់ធ្ងរ។ មានហានិភ័យ៖ ការងារហួសកំណត់ ឧបសគ្គដែលនៅបើក ឬយឺតជាងកាលវិភាគលើសពី ២០ ពិន្ទុ។ រួចរាល់ – នៅមានការងារ៖ បានបញ្ចប់ ប៉ុន្តែកិច្ចការនៅបើក។',

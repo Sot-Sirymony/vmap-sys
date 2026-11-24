@@ -38,7 +38,7 @@ const HEALTH_ICONS: Record<ReportHealth, { icon: LucideIcon; color: string }> = 
 const HEALTH_RANK: Record<ReportHealth, number> = { RED: 0, AMBER: 1, DONE_OPEN_WORK: 2, GREEN: 3, DONE: 4 };
 
 /** MR-FR-11, MR-NFR-07: health as an icon and a text label, never colour alone. */
-export function HealthBadge({ health }: Readonly<{ health: ReportHealth }>) {
+function HealthBadge({ health }: Readonly<{ health: ReportHealth }>) {
   const { icon: Icon, color } = HEALTH_ICONS[health];
   return (
     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
@@ -111,7 +111,7 @@ function PeriodCard({ report }: Readonly<{ report: ManagementReport }>) {
 }
 
 /** RM-FR-35: the What changed card shows this many lines; the rest are counted. */
-export const MAX_CHANGES_SHOWN = 15;
+const MAX_CHANGES_SHOWN = 15;
 
 /**
  * RM-FR-33, RM-NFR-09: a headline change as an arrow and signed text, with

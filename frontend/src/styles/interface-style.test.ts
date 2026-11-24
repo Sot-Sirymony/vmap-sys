@@ -92,9 +92,10 @@ describe('interface style (FR-48, BRD 26)', () => {
     expect(root).toMatchObject({ padding: 'var(--style-card-pad)' });
   });
 
-  it('takes button, input and chip radii from the tokens', () => {
+  it('takes input and chip radii from the tokens, and keeps buttons as pills', () => {
     const theme = createAppTheme({ mode: 'light', style: 'classic' });
-    expect(overrides(theme, 'MuiButton').root).toMatchObject({ borderRadius: 'var(--style-radius-control)' });
+    const buttonRoot = overrides(theme, 'MuiButton').root as unknown as (props: { ownerState: object }) => object;
+    expect(buttonRoot({ ownerState: { variant: 'contained', color: 'primary' } })).toMatchObject({ borderRadius: '9999px' });
     expect(overrides(theme, 'MuiOutlinedInput').root).toMatchObject({ borderRadius: 'var(--style-radius-control)' });
     expect(overrides(theme, 'MuiChip').root).toMatchObject({ borderRadius: 'var(--style-radius-chip)' });
   });

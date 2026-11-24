@@ -1,15 +1,26 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import MuiButton from '@mui/material/Button';
 
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'text';
+
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: ButtonVariant;
+  /** Small icon shown to the left of the label (the "left icon" button). */
+  startIcon?: ReactNode;
   children: ReactNode;
 };
 
-const VARIANT_MAP: Record<'primary' | 'secondary' | 'danger', { variant: 'contained'; color: 'primary' | 'secondary' | 'error' }> = {
+// Button design system (docs/Optimize Appearance/button.md):
+//   primary   → FILLED  (accent fill, white text)
+//   secondary → OUTLINE (white fill, thin grey border, dark text)
+//   danger    → FILLED in the error colour
+//   text      → TEXT    (no fill, accent text, tint on hover)
+// The theme (MuiButton in theme.ts) draws the hover, pressed and disabled states.
+const VARIANT_MAP: Record<ButtonVariant, { variant: 'contained' | 'outlined' | 'text'; color: 'primary' | 'secondary' | 'error' }> = {
   primary: { variant: 'contained', color: 'primary' },
-  secondary: { variant: 'contained', color: 'secondary' },
+  secondary: { variant: 'outlined', color: 'secondary' },
   danger: { variant: 'contained', color: 'error' },
+  text: { variant: 'text', color: 'primary' },
 };
 
 export function Button({ variant = 'primary', children, type = 'button', color: _nativeColor, ...props }: ButtonProps) {
