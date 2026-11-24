@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Checkbox from '@mui/material/Checkbox';
@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { checkPlanDraft, fixPlanDraft, savePlanCapacity } from '../../api/aiPlanApi';
+import { useRuleCheck } from './useRuleCheck';
 import { formatDate } from '../../i18n/formatDate';
 import { tr } from '../../i18n/translate';
 import type { DraftCheck, DraftFix, DraftIssue, PlanCapacity, PlanDraftContent, PlanRule, PlanStage, VisionStep } from '../../types/vision';
@@ -34,9 +35,6 @@ type Props = {
   capacity: PlanCapacity | null;
   onCapacityChange: (capacity: PlanCapacity) => void;
 };
-
-/** V31 DC-FR-04: the rules re-run this long after the last change. */
-export const CHECK_DELAY_MS = 1000;
 
 function summary(counts: ReturnType<typeof countNew>) {
   if (counts.total === 0) {
@@ -76,21 +74,24 @@ export const RULE_NAMES: Record<PlanRule, string> = {
 const RULES = Object.keys(RULE_NAMES) as PlanRule[];
 
 /** Where a fix that opens another stage goes. */
-const GO_TO: Partial<Record<NonNullable<DraftIssue['fixAction']>, PlanStage>> = {
-  GO_TO_CLARIFY: 'CLARIFY', GO_TO_GOALS: 'GOALS', GO_TO_STEPS: 'STEPS', GO_TO_TASKS: 'TASKS', GO_TO_HELPERS: 'HELPERS',
+export const GO_TO: Partial<Record<NonNullable<DraftIssue['fixAction']>, PlanStage>> = {
+  GO_TO_CLARIFY: 'CLARIFY', GO_TO_INNER: 'INNER', GO_TO_GOALS: 'GOALS', GO_TO_STEPS: 'STEPS', GO_TO_TASKS: 'TASKS',
+  // V31 v1 step 2: helpers and risks are part of the Steps stage.
+  GO_TO_HELPERS: 'STEPS',
 };
 
-function fixLabel(issue: DraftIssue) {
+export function fixLabel(issue: DraftIssue) {
   switch (issue.fixAction) {
     case 'SET_OWNER_ME': return tr('Make it mine');
     case 'SET_DATE': return issue.fixValue ? tr('Use {date}', { date: day(issue.fixValue) }) : null;
     case 'SET_PRIORITY': return tr('Use Medium');
     case 'APPROVE': return tr('Approve');
     case 'GO_TO_CLARIFY': return tr('Go to Clarify');
+    case 'GO_TO_INNER': return tr('Go to Inner blockers');
     case 'GO_TO_GOALS': return tr('Go to Goals');
     case 'GO_TO_STEPS': return tr('Go to Steps');
     case 'GO_TO_TASKS': return tr('Go to Tasks');
-    case 'GO_TO_HELPERS': return tr('Go to Helpers and risks');
+    case 'GO_TO_HELPERS': return tr('Go to Steps');
     default: return null;
   }
 }
@@ -109,51 +110,10 @@ export function ReviewStage({
   const counts = countNew(content);
   // Helpers and risks are not in the server rules yet; their field checks stay here.
   const helperErrors = readiness(content, existingSteps).filter(({ item }) => item.level === 'error' && item.stage === 'HELPERS');
-  const version = JSON.stringify(content);
-  const [report, setReport] = useState<{ version: string; issues: DraftIssue[] } | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [checkError, setCheckError] = useState('');
+  const { report, issues, current, checking, error: checkError } = useRuleCheck({ content, dreamId, token, language, saveDraft });
   const [accepted, setAccepted] = useState<PlanRule[]>([]);
-  const saveRef = useRef(saveDraft);
-  useEffect(() => {
-    saveRef.current = saveDraft;
-  });
   const stageLabel = (stage: PlanStage) => tr(STAGES.find((item) => item.id === stage)?.label ?? stage);
 
-  useEffect(() => {
-    if (counts.total === 0) {
-      return undefined;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      setChecking(true);
-      setCheckError('');
-      void (async () => {
-        try {
-          await saveRef.current();
-          const result = await checkPlanDraft(token, dreamId, language, true);
-          if (!cancelled) {
-            setReport({ version, issues: (result?.issues ?? []).filter((issue) => !issue.fromAi) });
-          }
-        } catch (error) {
-          if (!cancelled) {
-            setCheckError(error instanceof Error ? tr(error.message) : tr('Unable to check your draft.'));
-          }
-        } finally {
-          if (!cancelled) {
-            setChecking(false);
-          }
-        }
-      })();
-    }, CHECK_DELAY_MS);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [version, counts.total, token, dreamId, language]);
-
-  const current = report !== null && report.version === version;
-  const issues = report?.issues ?? [];
   const must = issues.filter((issue) => issue.level === 'MUST');
   const shouldRules = RULES.filter((rule) => issues.some((issue) => issue.rule === rule && issue.level === 'SHOULD'));
   const unaccepted = shouldRules.filter((rule) => !accepted.includes(rule));

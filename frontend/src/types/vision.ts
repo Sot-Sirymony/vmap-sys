@@ -1562,7 +1562,9 @@ export type PlanAddResult = {
 // V11 Phase 6 (PB-FR-16, PB-FR-28, PB-FR-29): the draft check, its fixes and weekly capacity.
 export type DraftFixAction = 'SET_OWNER_ME' | 'SET_DATE' | 'GO_TO_STEPS' | 'GO_TO_TASKS' | 'FIX_WITH_AI'
   // V31: one-click fixes and links for the BRD 31 rules.
-  | 'SET_PRIORITY' | 'APPROVE' | 'GO_TO_CLARIFY' | 'GO_TO_GOALS' | 'GO_TO_HELPERS';
+  | 'SET_PRIORITY' | 'APPROVE' | 'GO_TO_CLARIFY' | 'GO_TO_GOALS' | 'GO_TO_HELPERS'
+  // V31 v1 step 2: the inner blockers stage, and the second fix for a date conflict.
+  | 'GO_TO_INNER' | 'MOVE_PARENT_DATE' | 'MOVE_DREAM_DATE';
 
 /** V31: the BRD 31 rules. A MUST fail blocks Save my plan, a SHOULD fail needs "I understand", INFO is advice. */
 export type PlanRule = 'R-01' | 'R-02' | 'R-03' | 'R-04' | 'R-05' | 'R-06' | 'R-07' | 'R-08';
@@ -1581,6 +1583,9 @@ export type DraftIssue = {
   fromAi: boolean;
   rule?: PlanRule | null;
   level?: RuleLevel | null;
+  // V31 v1 step 2 (DC-FR-42): move the parent later instead, when it can move.
+  altFixAction?: DraftFixAction | null;
+  altFixValue?: string | null;
 };
 
 export type DraftCheck = { issues: DraftIssue[]; aiChecked: boolean; requestId?: number | null };
@@ -1657,7 +1662,8 @@ export type DraftRisk = {
 
 // V11 Phase 2 (PB-FR-30): a Build my plan draft. An item with existingId stands for a goal or step already in the
 // plan; it is never changed, only given new children. Everything else is new and is saved when the plan is added.
-export type PlanStage = 'CLARIFY' | 'GOALS' | 'STEPS' | 'TASKS' | 'HELPERS' | 'REVIEW';
+// V31 v1 step 2: INNER and DATES are new; HELPERS is now part of STEPS and is kept only for drafts saved before.
+export type PlanStage = 'CLARIFY' | 'INNER' | 'GOALS' | 'STEPS' | 'TASKS' | 'HELPERS' | 'DATES' | 'REVIEW';
 
 export type DraftTask = {
   key: string;
@@ -1723,6 +1729,8 @@ export type PlanDraftContent = {
   risks?: DraftRisk[];
   // V31 v1: the Dream Coach saved this dream at stage 2, so Undo after Save my plan archives it too.
   coachCreated?: boolean;
+  // V31 v1 step 2 (DC-FR-22): the participant's choice on the inner blockers stage.
+  innerBlockers?: 'READY' | 'SKIPPED' | null;
 };
 
 // V31 v1 step 1 (DC-FR-12 to DC-FR-17): AI help for the area and dream stages, before the dream exists.

@@ -9,13 +9,15 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Link as RouterLink } from 'react-router';
 import { clarifyDream, saveClarifiedField } from '../../api/aiPlanApi';
+import { updateDream } from '../../api/dreamApi';
+import { dreamRequest } from '../../utils/entityRequests';
 import { formatDate } from '../../i18n/formatDate';
 import { tr } from '../../i18n/translate';
-import type { ClarifyField, ClarifyQuestion, Dream, PlanDraftContent } from '../../types/vision';
+import type { ClarifyField, ClarifyQuestion, Dream, PlanDraftContent, Priority } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import { type DraftUpdate, addClarification, missingDreamParts } from './draftModel';
-import { Prompts } from './parts';
+import { DateField, PrioritySelect, Prompts, twoColumns } from './parts';
 
 const FIELD_LABELS: Record<ClarifyField, string> = {
   WHY_IMPORTANT: 'Why it matters',
@@ -49,6 +51,29 @@ export function ClarifyStage({ dream, content, onChange, onDreamChange, token, l
   const [saveToDream, setSaveToDream] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<{ title: string; whyImportant: string; successDefinition: string;
+    targetDate: string | null; priority: Priority } | null>(null);
+
+  /** V31 v1 step 2 (DC-FR-18): confirm or correct the dream's own fields here, without leaving the guide. */
+  async function saveDream() {
+    if (!editing || !editing.title.trim()) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      onDreamChange(await updateDream(token, dream.id, {
+        ...dreamRequest(dream), title: editing.title.trim(), whyImportant: editing.whyImportant.trim() || undefined,
+        successDefinition: editing.successDefinition.trim() || undefined, targetDate: editing.targetDate ?? undefined,
+        priority: editing.priority,
+      }));
+      setEditing(null);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? tr(saveError.message) : tr('Unable to save your dream.'));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function ask(given = answers) {
     setBusy(true);
@@ -88,16 +113,41 @@ export function ClarifyStage({ dream, content, onChange, onDreamChange, token, l
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: 'grid', gap: 1 }}>
-        <Typography variant="h6">{dream.title}</Typography>
-        <Field label="Why it matters" value={dream.whyImportant} />
-        <Field label="What success looks like" value={dream.successDefinition} />
-        <Field label="Target date" value={dream.targetDate ? formatDate(new Date(`${dream.targetDate}T00:00:00`), { year: true }) : null} />
-      </Box>
+      {editing ? (
+        <Box sx={{ display: 'grid', gap: 1.5 }}>
+          <TextField size="small" label={tr('Dream')} value={editing.title} required slotProps={{ htmlInput: { maxLength: 220 } }}
+            onChange={(event) => setEditing({ ...editing, title: event.target.value })} />
+          <TextField size="small" label={tr('Why it matters')} value={editing.whyImportant} multiline
+            onChange={(event) => setEditing({ ...editing, whyImportant: event.target.value })} />
+          <TextField size="small" label={tr('What success looks like')} value={editing.successDefinition} multiline
+            onChange={(event) => setEditing({ ...editing, successDefinition: event.target.value })} />
+          <Box sx={twoColumns}>
+            <DateField label="Target date" value={editing.targetDate} onChange={(value) => setEditing({ ...editing, targetDate: value })} />
+            <PrioritySelect value={editing.priority} onChange={(value) => setEditing({ ...editing, priority: value })} />
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button disabled={busy || !editing.title.trim()} onClick={() => void saveDream()}>{tr('Save the dream')}</Button>
+            <Button variant="secondary" disabled={busy} onClick={() => setEditing(null)}>{tr('Cancel')}</Button>
+          </Box>
+        </Box>
+      ) : (
+        <Box sx={{ display: 'grid', gap: 1 }}>
+          <Typography variant="h6">{dream.title}</Typography>
+          <Field label="Why it matters" value={dream.whyImportant} />
+          <Field label="What success looks like" value={dream.successDefinition} />
+          <Field label="Target date" value={dream.targetDate ? formatDate(new Date(`${dream.targetDate}T00:00:00`), { year: true }) : null} />
+          <Box>
+            <Button variant="secondary" onClick={() => setEditing({ title: dream.title, whyImportant: dream.whyImportant ?? '',
+              successDefinition: dream.successDefinition ?? '', targetDate: dream.targetDate ?? null, priority: dream.priority ?? 'MEDIUM' })}>
+              {tr('Edit the dream here')}
+            </Button>
+          </Box>
+        </Box>
+      )}
       {missing.length > 0 ? (
         <Alert severity="info">
           {tr('A clear dream is easier to plan. Still missing: {parts}.', { parts: missing.map((part) => tr(part)).join(', ') })}{' '}
-          <Link component={RouterLink} to={`/dreams/${dream.id}`}>{tr('Edit the dream')}</Link>
+          <Link component={RouterLink} to={`/dreams/${dream.id}`}>{tr('Open the dream page')}</Link>
         </Alert>
       ) : (
         <Alert severity="success">{tr('Your dream says why it matters, what success looks like and when. You are ready to plan.')}</Alert>

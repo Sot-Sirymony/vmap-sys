@@ -17,6 +17,21 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 31.0.0 — Dream Coach: v1 step 2, inner blockers, merged helpers and a Dates stage (built; awaiting deploy, UAT and the Khmer review)
+
+**Backend.** The draft gains `innerBlockers` (READY or SKIPPED). Rule R-05 adds a SHOULD line `INNER_SKIPPED` when the
+stage was skipped or not visited. Date conflicts carry a second fix, `altFixAction` / `altFixValue`:
+`MOVE_PARENT_DATE` when the parent goal or step is new in the draft, `MOVE_DREAM_DATE` when the dream's date follows
+its goals (never for a fixed deadline). Helper and risk fixes now point to Steps. No migration.
+
+**Frontend.** Build my plan's stages: Clarify, **Inner blockers**, Goals, **Steps, gaps and helpers**, Tasks,
+**Dates**, Check and add. Inner blockers shows the two chains that hold the participant back most, from their latest
+check, with the program's practice, and offers the 2-minute check when there is no recent one; "I'm ready to plan" or
+"Skip for now". The helpers and risks panel sits under the steps. Dates lists every date conflict with "Bring it
+forward" and, when possible, "Move the parent" or "Move the dream". Clarify can edit the dream in place. The live rule
+check is shared by Dates and Check and add (`useRuleCheck`), and re-runs when the dream's date changes. 25 more Khmer
+drafts.
+
 ## 31.0.0 — Dream Coach: v1 step 1, start without a saved dream (built; awaiting deploy, UAT and the Khmer review)
 
 **Backend.** `POST /api/ai/plan/vision-statement` (`COACH_AREA`) words a vision statement from the participant's own

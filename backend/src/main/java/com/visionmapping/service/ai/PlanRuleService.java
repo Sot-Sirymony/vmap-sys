@@ -11,6 +11,7 @@ import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
 import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.VisionStep;
+import com.visionmapping.entity.enums.ScheduleMode;
 import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.repository.VisionStepRepository;
 import com.visionmapping.service.support.EntityLookup;
@@ -155,6 +156,7 @@ public class PlanRuleService {
                     "Merge or remove goals, or split the dream.", "GO_TO_GOALS", null);
         }
         checkRisks(run, content, stepKeys, goalKeys);
+        checkInnerBlockers(run, content);
         checkAiUnchanged(run);
         return run.report();
     }
@@ -203,6 +205,10 @@ public class PlanRuleService {
             if (dream.getTargetDate() != null && goal.targetDate().isAfter(dream.getTargetDate())) {
                 run.add("R-04", MUST, "GOAL_AFTER_DREAM", "GOAL", goal.key(), null, title, "This goal is due after its dream.",
                         "Bring it forward to the dream's date.", "SET_DATE", dream.getTargetDate().toString());
+                // DC-FR-42: a dream whose date follows its goals may move later; a fixed deadline may not (BR-40).
+                if (dream.getScheduleMode() != ScheduleMode.TOP_DOWN_FIXED) {
+                    run.alternative("MOVE_DREAM_DATE", goal.targetDate().toString());
+                }
             }
         }
         if (goal.requestId() != null && !goal.approved()) {
@@ -235,6 +241,10 @@ public class PlanRuleService {
             if (goalDate != null && step.targetDate().isAfter(goalDate)) {
                 run.add("R-04", MUST, "AFTER_GOAL_DATE", "STEP", step.key(), goal.key(), title, "This step is due after its goal.",
                         "Bring it forward to the goal's date.", "SET_DATE", goalDate.toString());
+                // DC-FR-42: only a goal that is new in this draft can move; saved goals are never changed here.
+                if (goal.existingId() == null) {
+                    run.alternative("MOVE_PARENT_DATE", step.targetDate().toString());
+                }
             }
             if (waitsFor != null && waitsFor.targetDate() != null && step.targetDate().isBefore(waitsFor.targetDate())) {
                 run.add("R-04", MUST, "BEFORE_WAITED_STEP", "STEP", step.key(), goal.key(), title,
@@ -256,7 +266,7 @@ public class PlanRuleService {
         } else if (GAP_NO_HELPER.containsKey(step.gapKind()) && !helpedSteps.contains(step.key())) {
             run.add("R-06", SHOULD, "GAP_NO_HELPER", "STEP", step.key(), goal.key(), title,
                     GAP_NO_HELPER.get(step.gapKind()),
-                    "Add a helper, or a step to find one.", "GO_TO_HELPERS", null);
+                    "Add a helper, or a step to find one.", "GO_TO_STEPS", null);
         }
     }
 
@@ -286,6 +296,9 @@ public class PlanRuleService {
             if (stepDate != null && task.dueDate().isAfter(stepDate)) {
                 run.add("R-04", MUST, "TASK_AFTER_STEP", "TASK", task.key(), step.key(), title, "This task is due after its step.",
                         "Bring it forward to the step's date.", "SET_DATE", stepDate.toString());
+                if (step.existingId() == null) {
+                    run.alternative("MOVE_PARENT_DATE", task.dueDate().toString());
+                }
             }
         }
         if (task.statusOrDefault() == WorkStatus.BLOCKED && blank(task.blockerReason())) {
@@ -304,9 +317,24 @@ public class PlanRuleService {
                     && goalKeys.contains(key.substring(NEW_STEP_FOR_RISK.length()));
             if (!onStep && !onNewStep) {
                 run.add("R-05", MUST, "RISK_NOT_ON_STEP", "RISK", risk.key(), null, risk.title(),
-                        "This risk is not on a step.", "Choose the step this risk holds up.", "GO_TO_HELPERS", null);
+                        "This risk is not on a step.", "Choose the step this risk holds up.", "GO_TO_STEPS", null);
             }
         }
+    }
+
+    /**
+     * R-05, D-31-7 (DC-FR-22): inner blockers come before mapping. Skipping or
+     * not visiting the stage warns once; it never blocks saving.
+     */
+    private static void checkInnerBlockers(Run run, PlanDraftContent content) {
+        if ("READY".equals(content.innerBlockers())) {
+            return;
+        }
+        String problem = "SKIPPED".equals(content.innerBlockers())
+                ? "You skipped looking at what might hold you back inside."
+                : "You have not looked at what might hold you back inside yet.";
+        run.add("R-05", SHOULD, "INNER_SKIPPED", "DREAM", "inner", null, null, problem,
+                "Take two minutes on the Inner blockers stage.", "GO_TO_INNER", null);
     }
 
     /** R-07: AI-suggested steps, tasks and risks kept exactly as suggested; one line for all. Goals need approval instead. */
@@ -365,6 +393,13 @@ public class PlanRuleService {
                  @Nullable String fixValue) {
             issues.add(new DraftIssue(kind, itemType, itemKey, parentKey, blank(title) ? null : title.trim(), problem, fix,
                     fixAction, fixValue, false, rule, level));
+        }
+
+        /** DC-FR-42: a second fix for the issue just added. */
+        void alternative(String action, String value) {
+            DraftIssue last = issues.remove(issues.size() - 1);
+            issues.add(new DraftIssue(last.kind(), last.itemType(), last.itemKey(), last.parentKey(), last.itemTitle(), last.problem(),
+                    last.fix(), last.fixAction(), last.fixValue(), last.fromAi(), last.rule(), last.level(), action, value));
         }
 
         Report report() {

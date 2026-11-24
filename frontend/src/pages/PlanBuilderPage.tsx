@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography';
 import { Link as RouterLink, useLocation, useNavigate, useParams } from 'react-router';
 import { getAiStatus } from '../api/aiApi';
 import { addPlanDraft, discardPlanDraft, getPlanCapacity, getPlanDraft, savePlanDraft, undoPlan } from '../api/aiPlanApi';
-import { archiveDream, listDreams } from '../api/dreamApi';
+import { archiveDream, listDreams, updateDream } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
@@ -22,18 +22,21 @@ import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { ClarifyStage } from '../components/plan-builder/ClarifyStage';
+import { DatesStage } from '../components/plan-builder/DatesStage';
+import { InnerStage } from '../components/plan-builder/InnerStage';
 import { GoalsStage } from '../components/plan-builder/GoalsStage';
 import { HelpersStage } from '../components/plan-builder/HelpersStage';
 import { type NewContact, NewContactsOutreach } from '../components/plan-builder/NewContactsOutreach';
 import { ReviewStage } from '../components/plan-builder/ReviewStage';
 import { StepsStage } from '../components/plan-builder/StepsStage';
 import { TasksStage } from '../components/plan-builder/TasksStage';
-import { type DraftUpdate, STAGES, applyAssistantChange, countNew, readiness, syncWithPlan } from '../components/plan-builder/draftModel';
+import { type DraftUpdate, STAGES, applyAssistantChange, countNew, currentStage, readiness, syncWithPlan } from '../components/plan-builder/draftModel';
 import { HelpWithSectionButton, PlanAssistantProvider } from '../components/ai/plan-assistant/PlanAssistant';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import { tr } from '../i18n/translate';
-import type { Dream, Goal, PlanAddResult, PlanCapacity, PlanDraftContent, PlanRule, PlanStage, TaskItem, VisionStep } from '../types/vision';
+import type { AssistantSection, Dream, Goal, PlanAddResult, PlanCapacity, PlanDraftContent, PlanRule, PlanStage, TaskItem, VisionStep } from '../types/vision';
+import { dreamRequest } from '../utils/entityRequests';
 import { PageSection } from './PageSection';
 
 const SAVE_DELAY_MS = 800;
@@ -119,7 +122,7 @@ export function PlanBuilderPage() {
         }
         setContent(fromCoach ? { ...startContent, coachCreated: true } : startContent);
         // V31 v1: the coach has already clarified the dream, so a new plan starts at the goals.
-        setStage(draft?.stage ?? (fromCoach ? 'GOALS' : 'CLARIFY'));
+        setStage(draft?.stage ? currentStage(draft.stage) : fromCoach ? 'GOALS' : 'CLARIFY');
         setResumed(draft !== null);
         setSession(draft ? { used: draft.aiRequestsUsed ?? 0, limit: draft.aiRequestLimit ?? 15 } : null);
         setError(plan.found ? '' : tr('Dream not found.'));
@@ -176,7 +179,8 @@ export function PlanBuilderPage() {
 
   function goTo(next: PlanStage) {
     dirty.current = true;
-    setStage(next);
+    // V31 v1 step 2: helpers and risks are part of the Steps stage.
+    setStage(currentStage(next));
     stageTop.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   }
 
@@ -271,13 +275,33 @@ export function PlanBuilderPage() {
   const index = STAGES.findIndex((item) => item.id === stage);
   const stageCount = (target: PlanStage) => {
     if (target === 'GOALS') return counts.goals;
-    if (target === 'STEPS') return counts.steps;
+    if (target === 'STEPS') return counts.steps + counts.helpers + counts.risks;
     if (target === 'TASKS') return counts.tasks;
-    if (target === 'HELPERS') return counts.helpers + counts.risks;
     return 0;
   };
 
-  const currentTopic = { section: stage };
+  // The plan assistant has no section of its own for inner blockers; it helps as on Clarify.
+  const assistantSection: AssistantSection = stage === 'INNER' ? 'CLARIFY' : stage;
+  const currentTopic = { section: assistantSection };
+  const saveNow = async () => {
+    if (token) {
+      await savePlanDraft(token, id, latest.current.stage, latest.current.content);
+      dirty.current = false;
+      setSaveState('saved');
+    }
+  };
+  /** V31 v1 step 2 (DC-FR-42): a later target date on the dream itself, when its goals need it. */
+  const moveDreamDate = async (date: string) => {
+    if (!token) {
+      return;
+    }
+    try {
+      // The Dates stage re-runs the rules when the dream's date changes.
+      setDream(await updateDream(token, dream.id, { ...dreamRequest(dream), targetDate: date }));
+    } catch (moveError) {
+      setActionError(moveError instanceof Error ? tr(moveError.message) : tr('Unable to save your dream.'));
+    }
+  };
   // PB-NFR-03: past the session's limit the guide carries on as a form.
   const sessionUsedUp = session !== null && session.used >= session.limit;
   const aiReady = aiAvailable && !sessionUsedUp;
@@ -358,36 +382,41 @@ export function PlanBuilderPage() {
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
               <Typography variant="h6">{`${index + 1}. ${tr(STAGES[index].label)}`}</Typography>
-              <HelpWithSectionButton section={stage} />
+              <HelpWithSectionButton section={assistantSection} />
             </Box>
             {stage === 'CLARIFY' && (
               <ClarifyStage dream={dream} content={content} onChange={change} onDreamChange={setDream} token={token ?? ''}
-                language={language} aiReady={aiReady} onDone={() => goTo('GOALS')} />
+                language={language} aiReady={aiReady} onDone={() => goTo('INNER')} />
+            )}
+            {stage === 'INNER' && (
+              <InnerStage content={content} onChange={change} token={token ?? ''} onDone={() => goTo('GOALS')} />
             )}
             {stage === 'GOALS' && (
               <GoalsStage dream={dream} content={content} onChange={change} token={token ?? ''} language={language} aiReady={aiReady} />
             )}
             {stage === 'STEPS' && (
-              <StepsStage dream={dream} content={content} onChange={change} existingSteps={steps} token={token ?? ''}
-                language={language} aiReady={aiReady} />
+              <Stack spacing={3}>
+                <StepsStage dream={dream} content={content} onChange={change} existingSteps={steps} token={token ?? ''}
+                  language={language} aiReady={aiReady} />
+                {/* V31 v1 step 2 (DC-FR-35): helpers and risks belong with the steps that need them. */}
+                <Box component="section" aria-label={tr('Helpers and risks')}>
+                  <Typography variant="subtitle1" component="h3" sx={{ mb: 1 }}>{tr('Helpers and risks')}</Typography>
+                  <HelpersStage dream={dream} content={content} onChange={change} token={token ?? ''} language={language} aiReady={aiReady} />
+                </Box>
+              </Stack>
             )}
             {stage === 'TASKS' && (
               <TasksStage dream={dream} content={content} onChange={change} existingSteps={steps} existingTasks={tasks}
                 token={token ?? ''} language={language} aiReady={aiReady} />
             )}
-            {stage === 'HELPERS' && (
-              <HelpersStage dream={dream} content={content} onChange={change} token={token ?? ''} language={language} aiReady={aiReady} />
+            {stage === 'DATES' && (
+              <DatesStage content={content} onChange={change} dreamId={dream.id} token={token ?? ''} language={language}
+                saveDraft={saveNow} onMoveDreamDate={moveDreamDate} dreamDate={dream.targetDate} />
             )}
             {stage === 'REVIEW' && (
               <ReviewStage content={content} onChange={change} existingSteps={steps} busy={busy} onGoTo={goTo} onAdd={(accepted) => void addPlan(accepted)}
                 dreamId={dream.id} token={token ?? ''} language={language} aiReady={aiReady}
-                saveDraft={async () => {
-                  if (token) {
-                    await savePlanDraft(token, id, latest.current.stage, latest.current.content);
-                    dirty.current = false;
-                    setSaveState('saved');
-                  }
-                }}
+                saveDraft={saveNow}
                 capacity={capacity} onCapacityChange={setCapacity} />
             )}
           </CardContent>

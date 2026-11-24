@@ -120,6 +120,11 @@ class PlanRuleFlowTests {
         JsonNode goalConflict = issue(check, "GOAL_AFTER_DREAM");
         assertThat(goalConflict.get("level").asText()).isEqualTo("MUST");
         assertThat(goalConflict.get("fixValue").asText()).isEqualTo(DREAM_DATE.toString());
+        // V31 v1 step 2 (DC-FR-42): the second fix moves a new parent, or a bottom-up dream, later.
+        assertThat(taskConflict.get("altFixAction").asText()).isEqualTo("MOVE_PARENT_DATE");
+        assertThat(taskConflict.get("altFixValue").asText()).isEqualTo(TODAY.plusWeeks(3).toString());
+        assertThat(goalConflict.get("altFixAction").asText()).isEqualTo("MOVE_DREAM_DATE");
+        assertThat(issue(check, "INNER_SKIPPED").get("level").asText()).isEqualTo("SHOULD");
         add(user, dreamId, null).andExpect(status().isBadRequest());
 
         // Fixed: saves.

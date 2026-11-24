@@ -17,14 +17,21 @@ import type {
  */
 export type DraftUpdate = PlanDraftContent | ((current: PlanDraftContent) => PlanDraftContent);
 
+// V31 v1 step 2 (BRD 31 §2): inner blockers before mapping, helpers and risks inside Steps, and a Dates stage.
 export const STAGES: { id: PlanStage; label: string }[] = [
   { id: 'CLARIFY', label: 'Clarify' },
+  { id: 'INNER', label: 'Inner blockers' },
   { id: 'GOALS', label: 'Goals' },
-  { id: 'STEPS', label: 'Steps' },
+  { id: 'STEPS', label: 'Steps, gaps and helpers' },
   { id: 'TASKS', label: 'Tasks' },
-  { id: 'HELPERS', label: 'Helpers and risks' },
+  { id: 'DATES', label: 'Dates' },
   { id: 'REVIEW', label: 'Check and add' },
 ];
+
+/** A stage saved before V31 v1 step 2 that is now part of another one. */
+export function currentStage(stage: PlanStage): PlanStage {
+  return stage === 'HELPERS' ? 'STEPS' : stage;
+}
 
 let counter = 0;
 export function newKey(prefix: string) {
@@ -381,6 +388,26 @@ export function applyIssueFix(content: PlanDraftContent, issue: DraftIssue): Pla
   return found.task
     ? updateTask(content, found.goal.key, found.step.key, found.task.key, patch as Partial<DraftTask>)
     : updateStep(content, found.goal.key, found.step.key, patch as Partial<DraftStep>);
+}
+
+/**
+ * V31 v1 step 2 (DC-FR-42): the second fix of a date conflict, moving a new
+ * parent goal or step later to the child's date. Moving the dream is not a
+ * draft change; the Dates stage saves it to the dream.
+ */
+export function applyParentDateFix(content: PlanDraftContent, issue: DraftIssue): PlanDraftContent {
+  if (issue.altFixAction !== 'MOVE_PARENT_DATE' || !issue.altFixValue || !issue.parentKey) {
+    return content;
+  }
+  const value = issue.altFixValue;
+  const goal = content.goals.find((item) => item.key === issue.parentKey && item.existingId == null);
+  if (goal) {
+    return updateGoal(content, goal.key, { targetDate: value });
+  }
+  const parent = locate(content, issue.parentKey);
+  return parent && !parent.task && parent.step.existingId == null
+    ? updateStep(content, parent.goal.key, parent.step.key, { targetDate: value })
+    : content;
 }
 
 /** PB-FR-29: Claude's proposed change, applied only when the participant chooses it. */

@@ -21,6 +21,7 @@ vi.mock('../api/aiPlanApi', () => ({
 }));
 vi.mock('../api/dreamApi', () => ({ listDreams: vi.fn(), archiveDream: vi.fn() }));
 vi.mock('../api/goalApi', () => ({ listGoals: vi.fn() }));
+vi.mock('../api/chainAssessmentApi', () => ({ getChainAssessments: vi.fn().mockResolvedValue({ assessments: [], retakeSuggested: false }) }));
 vi.mock('../api/stepApi', () => ({ listSteps: vi.fn() }));
 vi.mock('../api/taskApi', () => ({ listTasks: vi.fn() }));
 
@@ -59,6 +60,9 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
 
     expect(await screen.findByText('Target date', { selector: 'span' })).toBeInTheDocument();
     expect(await screen.findByText(/AI suggestions are off/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    // V31 v1 step 2: the inner blockers stage comes before the goals.
+    expect(await screen.findByRole('button', { name: "I'm ready to plan" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Next' }));
 
     expect(screen.queryByRole('button', { name: 'Suggest goals' })).not.toBeInTheDocument();

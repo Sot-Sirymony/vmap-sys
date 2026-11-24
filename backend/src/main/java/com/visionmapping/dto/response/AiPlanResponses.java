@@ -121,9 +121,18 @@ public final class AiPlanResponses {
     /**
      * V31: rule is the BRD 31 rule (R-01 to R-08) and level MUST, SHOULD or INFO.
      * A MUST issue blocks Save my plan; a SHOULD issue needs "I understand"; INFO is advice.
+     * V31 v1 step 2 (DC-FR-42): altFixAction and altFixValue are a second fix for a date conflict,
+     * MOVE_PARENT_DATE or MOVE_DREAM_DATE, offered only when the parent can move later.
      */
     public record DraftIssue(String kind, String itemType, String itemKey, String parentKey, String itemTitle, String problem,
-                             String fix, String fixAction, String fixValue, boolean fromAi, String rule, String level) {
+                             String fix, String fixAction, String fixValue, boolean fromAi, String rule, String level,
+                             String altFixAction, String altFixValue) {
+
+        /** An issue with one fix only. */
+        public DraftIssue(String kind, String itemType, String itemKey, String parentKey, String itemTitle, String problem,
+                          String fix, String fixAction, String fixValue, boolean fromAi, String rule, String level) {
+            this(kind, itemType, itemKey, parentKey, itemTitle, problem, fix, fixAction, fixValue, fromAi, rule, level, null, null);
+        }
     }
 
     public record DraftCheck(List<DraftIssue> issues, boolean aiChecked, Long requestId) {
