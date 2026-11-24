@@ -8,7 +8,8 @@ type UseCrudEntityConfig<T, TRequest> = {
   list: (token: string, includeArchived: boolean) => Promise<T[]>;
   create: (token: string, request: TRequest) => Promise<T>;
   update: (token: string, id: number, request: TRequest) => Promise<T>;
-  archive: (token: string, id: number) => Promise<void>;
+  /** V29: the optional reason is passed on only by pages that ask for one. */
+  archive: (token: string, id: number, reason?: string) => Promise<void>;
   restore?: (token: string, id: number) => Promise<void>;
   permanentlyDelete?: (token: string, id: number) => Promise<void>;
   saveMessage?: string;
@@ -109,12 +110,12 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     }
   }
 
-  async function remove(id: number) {
+  async function remove(id: number, reason?: string) {
     if (!token) {
       return;
     }
     try {
-      await archive(token, id);
+      await (reason ? archive(token, id, reason) : archive(token, id));
       await reload();
       if (undoableArchive) {
         showToast(archiveMessage, { action: { label: 'Undo', onClick: () => void undoArchive([id]) } });
@@ -126,12 +127,12 @@ export function useCrudEntity<T extends { id: number }, TRequest>(config: UseCru
     }
   }
 
-  async function removeMany(ids: number[]) {
+  async function removeMany(ids: number[], reason?: string) {
     if (!token || ids.length === 0) {
       return;
     }
     try {
-      await Promise.all(ids.map((id) => archive(token, id)));
+      await Promise.all(ids.map((id) => (reason ? archive(token, id, reason) : archive(token, id))));
       await reload();
       if (undoableArchive) {
         showToast(`Archived ${ids.length} item${ids.length === 1 ? '' : 's'}.`, { action: { label: 'Undo', onClick: () => void undoArchive(ids) } });

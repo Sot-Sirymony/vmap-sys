@@ -17,6 +17,31 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 29.0.0 — Archive reason and archiving several items on the Vision Map (built; awaiting deploy, UAT and the Khmer review)
+
+BRD [`VMS_BRD_V29.0.0.md`](VMS_BRD_V29.0.0.md) (29.0.0, draft; the product owner chose an optional reason, a select
+mode on the Vision Map, and the reason on the list pages too; Q-29-1 to Q-29-4 remain open).
+
+**Backend.** Migration `V95__archive_reason.sql`: `archive_reason VARCHAR(1000)` on `dreams`, `goals`, `vision_steps`
+and `task_items`. New `POST /api/{dreams,goals,steps,tasks}/{id}/archive` with an optional `{ reason }` (steps also
+`removePartner`); the old `DELETE` is unchanged. The reason is trimmed, blank is stored as none, and over 1,000
+characters answers 400. `archive(reason)` keeps the first reason when an item is archived again; the cascade copies the
+reason only to descendants it newly archives (D-29-3); restore clears it on the item and the parents it brings back
+(D-29-4). Plan item responses gain `archiveReason`. Tests: `ArchiveReasonFlowTests` (6).
+
+**Frontend.** `ArchiveConfirmDialog` adds "Why are you archiving this? (optional)" to the archive confirmation on the
+Vision Map tree (dream, goal, step, task), the Vision Map timeline, the row menus on the Dreams, Goals, Steps and Tasks
+pages, and their "Archive selected" (one reason for all; on Steps it carries into the "archive the partner too?"
+question). The tree gains **Select** mode: tick boxes on goal, step and task rows, "{n} selected", "Archive selected
+(n)" with one reason, and Clear; rows under another selected row are skipped (`topLevelSelection`), and a partial
+failure reports how many were archived. Archived rows show "Archived: {reason}". Khmer drafts in `km.ts` and
+`km-review-v29.csv`. Tests: `ArchiveConfirmDialog`, `selectionArchive`, two more `BulkArchiveAction` tests and four
+more `VisionMapTree` flow tests; the API contract snapshot records the archive endpoints with a reason.
+
+**Pending.** `UAT_V29.md`, the Khmer review, the user guide section.
+
+---
+
 ## 28.0.0 — Blocker analysis in the Vision Map plan assistant (built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V28.0.0.md`](VMS_BRD_V28.0.0.md) (28.0.1, draft; Q-28-1 to Q-28-6 await the product owner). Built at the

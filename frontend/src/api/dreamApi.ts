@@ -41,7 +41,11 @@ export function reorderDreams(token: string, visionAreaId: number, orderedIds: n
   });
 }
 
-export function archiveDream(token: string, id: number) {
+/** V29 AR-FR-04: with a reason, the archive endpoint saves it; without one, archiving works as before. */
+export function archiveDream(token: string, id: number, reason?: string) {
+  if (reason?.trim()) {
+    return apiClient<void>(`/dreams/${id}/archive`, { method: 'POST', token, body: JSON.stringify({ reason: reason.trim() }) });
+  }
   return apiClient<void>(`/dreams/${id}`, {
     method: 'DELETE',
     token,

@@ -165,10 +165,27 @@ public class Dream extends BaseAuditableEntity {
     @Setter(AccessLevel.NONE)
     private boolean archived;
 
+    /** V29 D-29-1: why it was archived, or null. Set only by archive(reason); restore() clears it. */
+    @Column(name = "archive_reason", length = 1000)
+    @Setter(AccessLevel.NONE)
+    private String archiveReason;
+
     /** A status the participant chose. The decision gate is checked by the service. */
     public void changeStatus(DreamStatus newStatus) {
         status = Objects.requireNonNull(newStatus, "status");
     }
+
+    /**
+     * V29 D-29-3, BR-29-5: archives with a reason, kept only when this dream was
+     * not archived yet, so an earlier archive keeps its own reason.
+     */
+    public void archive(@org.springframework.lang.Nullable String reason) {
+        if (!archived) {
+            archiveReason = reason == null || reason.isBlank() ? null : reason.strip();
+        }
+        archive();
+    }
+
 
     /** Rule 12: hidden, never deleted, and marked Archived. Children are archived by ArchiveCascade. */
     public void archive() {
@@ -185,6 +202,7 @@ public class Dream extends BaseAuditableEntity {
             return;
         }
         archived = false;
+        archiveReason = null;
         if (status == DreamStatus.ARCHIVED) {
             status = DreamStatus.PAUSED;
         }

@@ -97,7 +97,7 @@ describe('useTimelineActions', () => {
     await userEvent.click(screen.getByRole('button', { name: 'archive goal' }));
     expect(await screen.findByText(/also archives 3 step\(s\) and 4 task\(s\)/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(goalApi.archiveGoal).toHaveBeenCalledWith('token', 10);
+    expect(goalApi.archiveGoal).toHaveBeenCalledWith('token', 10, '');
     expect(onChanged).toHaveBeenCalled();
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
     expect(goalApi.restoreGoal).toHaveBeenCalledWith('token', 10);
@@ -110,14 +110,14 @@ describe('useTimelineActions', () => {
     await screen.findByText(/also archives 2 goal\(s\), 3 step\(s\), and 4 task\(s\)/);
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
     await waitFor(() => expect(onDreamArchived).toHaveBeenCalledWith(1));
-    expect(dreamApi.archiveDream).toHaveBeenCalledWith('token', 1);
+    expect(dreamApi.archiveDream).toHaveBeenCalledWith('token', 1, '');
   });
 
   it('archives and restores a task', async () => {
     setup();
     await userEvent.click(screen.getByRole('button', { name: 'archive task' }));
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(taskApi.archiveTask).toHaveBeenCalledWith('token', 31);
+    expect(taskApi.archiveTask).toHaveBeenCalledWith('token', 31, '');
     await userEvent.click(screen.getByRole('button', { name: 'restore step' }));
     expect(stepApi.restoreStep).toHaveBeenCalledWith('token', 20);
   });

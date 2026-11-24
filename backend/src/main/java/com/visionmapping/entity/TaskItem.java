@@ -148,6 +148,11 @@ public class TaskItem extends BaseAuditableEntity {
     @Setter(AccessLevel.NONE)
     private boolean archived;
 
+    /** V29 D-29-1: why it was archived, or null. Set only by archive(reason); restore() clears it. */
+    @Column(name = "archive_reason", length = 1000)
+    @Setter(AccessLevel.NONE)
+    private String archiveReason;
+
     /** V17 BL-FR-28: how many times this task has entered Blocked. Set only by the status rules below. */
     @Builder.Default
     @Column(name = "blocked_count", nullable = false)
@@ -243,6 +248,18 @@ public class TaskItem extends BaseAuditableEntity {
         return BigDecimal.valueOf(days).setScale(1, RoundingMode.HALF_UP);
     }
 
+    /**
+     * V29 D-29-3, BR-29-5: archives with a reason, kept only when this task was
+     * not archived yet, so an earlier archive keeps its own reason.
+     */
+    public void archive(@org.springframework.lang.Nullable String reason) {
+        if (!archived) {
+            archiveReason = reason == null || reason.isBlank() ? null : reason.strip();
+        }
+        archive();
+    }
+
+
     /** Rule 12: hidden, never deleted. */
     public void archive() {
         archived = true;
@@ -250,6 +267,7 @@ public class TaskItem extends BaseAuditableEntity {
 
     public void restore() {
         archived = false;
+        archiveReason = null;
     }
 
     /** V17 BL-FR-28: counts a move into Blocked; staying Blocked is not a new block. */

@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -213,9 +214,14 @@ public class DreamService {
     }
 
     public void archiveDream(Long id) {
+        archiveDream(id, null);
+    }
+
+    /** V29 AR-FR-04, AR-FR-05: archives with an optional reason, copied to what the cascade newly archives. */
+    public void archiveDream(Long id, @Nullable String reason) {
         Dream entity = lookup.dream(id);
-        entity.archive();
-        archiveCascade.archiveGoalsUnder(entity.getId());
+        entity.archive(reason);
+        archiveCascade.archiveGoalsUnder(entity.getId(), reason);
     }
 
     @Transactional(readOnly = true)

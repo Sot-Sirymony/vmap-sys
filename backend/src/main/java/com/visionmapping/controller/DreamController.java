@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import com.visionmapping.dto.request.ArchiveRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -85,6 +86,13 @@ public class DreamController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         service.archiveDream(id);
+    }
+
+    /** V29 AR-FR-04: archive with an optional reason (BR-29-1); the DELETE above keeps working without one. */
+    @PostMapping("/{id}/archive")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void archive(@PathVariable Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
+        service.archiveDream(id, request == null ? null : request.reason());
     }
     @PostMapping("/{id}/restore")
     @ResponseStatus(HttpStatus.NO_CONTENT)

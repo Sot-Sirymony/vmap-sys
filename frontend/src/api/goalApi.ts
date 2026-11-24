@@ -22,7 +22,11 @@ export function updateGoal(token: string, id: number, request: GoalRequest) {
   });
 }
 
-export function archiveGoal(token: string, id: number) {
+/** V29 AR-FR-04: with a reason, the archive endpoint saves it; without one, archiving works as before. */
+export function archiveGoal(token: string, id: number, reason?: string) {
+  if (reason?.trim()) {
+    return apiClient<void>(`/goals/${id}/archive`, { method: 'POST', token, body: JSON.stringify({ reason: reason.trim() }) });
+  }
   return apiClient<void>(`/goals/${id}`, {
     method: 'DELETE',
     token,

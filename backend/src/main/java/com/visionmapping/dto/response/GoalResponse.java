@@ -33,6 +33,8 @@ public record GoalResponse(
         Integer sortOrder,
         boolean archived,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        // V29 AR-FR-06: why it was archived, or null.
+        String archiveReason
 ) {
 }

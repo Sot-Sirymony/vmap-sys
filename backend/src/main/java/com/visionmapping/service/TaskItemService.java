@@ -302,8 +302,13 @@ public class TaskItemService {
     }
 
     public void archiveTask(Long id) {
+        archiveTask(id, null);
+    }
+
+    /** V29 AR-FR-04: archives with an optional reason. */
+    public void archiveTask(Long id, @Nullable String reason) {
         TaskItem entity = lookup.task(id);
-        entity.archive();
+        entity.archive(reason);
         progress.recalculateStep(entity.getStep());
     }
 

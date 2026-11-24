@@ -3,6 +3,7 @@ import { MoreVertical } from 'lucide-react';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import { ArchiveConfirmDialog } from './ArchiveConfirmDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { tr } from '../../i18n/translate';
 
@@ -11,7 +12,10 @@ const DEFAULT_DELETE_MESSAGE = 'Permanently delete this record and everything un
 
 type RowActionsMenuProps = {
   onEdit: () => void;
-  onArchive: () => void;
+  /** Called after the confirmation; with askArchiveReason, it gets the reason ('' when left empty). */
+  onArchive: (reason?: string) => void;
+  /** V29 AR-FR-01: ask for an optional archive reason in the confirmation. */
+  askArchiveReason?: boolean;
   /** When set and `archived` is true, the menu offers Restore instead of Edit/Archive. */
   onRestore?: () => void;
   /**
@@ -37,7 +41,7 @@ type RowActionsMenuProps = {
   label?: string;
 };
 
-export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanently, archived = false, confirmArchive, confirmDelete, extraActions = [], label = 'Row actions' }: RowActionsMenuProps) {
+export function RowActionsMenu({ onEdit, onArchive, askArchiveReason = false, onRestore, onDeletePermanently, archived = false, confirmArchive, confirmDelete, extraActions = [], label = 'Row actions' }: RowActionsMenuProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
@@ -92,7 +96,14 @@ export function RowActionsMenu({ onEdit, onArchive, onRestore, onDeletePermanent
           <MenuItem key="archive" onClick={() => void handleArchiveClick()}>{tr('Archive')}</MenuItem>,
         ])}
       </Menu>
-      {confirmMessage !== null && (
+      {confirmMessage !== null && askArchiveReason && (
+        <ArchiveConfirmDialog
+          message={confirmMessage}
+          onConfirm={(reason) => { setConfirmMessage(null); onArchive(reason); }}
+          onClose={() => setConfirmMessage(null)}
+        />
+      )}
+      {confirmMessage !== null && !askArchiveReason && (
         <ConfirmDialog
           title={tr('Confirm archive')}
           message={confirmMessage}

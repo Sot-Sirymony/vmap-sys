@@ -21,7 +21,11 @@ export function updateTask(token: string, id: number, request: TaskItemRequest) 
   });
 }
 
-export function archiveTask(token: string, id: number) {
+/** V29 AR-FR-04: with a reason, the archive endpoint saves it; without one, archiving works as before. */
+export function archiveTask(token: string, id: number, reason?: string) {
+  if (reason?.trim()) {
+    return apiClient<void>(`/tasks/${id}/archive`, { method: 'POST', token, body: JSON.stringify({ reason: reason.trim() }) });
+  }
   return apiClient<void>(`/tasks/${id}`, {
     method: 'DELETE',
     token,

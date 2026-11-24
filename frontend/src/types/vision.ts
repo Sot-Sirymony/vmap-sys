@@ -134,6 +134,8 @@ export type Dream = {
   // reorder. Server-managed only — never sent in a request.
   sortOrder?: number | null;
   archived: boolean;
+  /** V29 AR-FR-06: why it was archived, or null. */
+  archiveReason?: string | null;
 };
 
 export type DreamRequest = {
@@ -186,6 +188,8 @@ export type Goal = {
   // drag-and-drop reorder. Server-managed only — never sent in a request.
   sortOrder?: number | null;
   archived: boolean;
+  /** V29 AR-FR-06: why it was archived, or null. */
+  archiveReason?: string | null;
 };
 
 export type GoalRequest = {
@@ -229,6 +233,8 @@ export type VisionStep = {
   coversStepCode?: string | null;
   coversObstacleId?: number | null;
   createdPartnerId?: number | null;
+  /** V29 AR-FR-06: why it was archived, or null. */
+  archiveReason?: string | null;
 };
 
 export type VisionStepRequest = {
@@ -306,6 +312,8 @@ export type TaskItem = {
   cycleTimeDays?: number | null;
   // V27 SR-FR-09: the repeat rule this task was made from.
   repeatRuleId?: number | null;
+  /** V29 AR-FR-06: why it was archived, or null. */
+  archiveReason?: string | null;
 };
 
 export type TaskItemRequest = {

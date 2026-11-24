@@ -432,7 +432,8 @@ export function GoalsPage() {
     return (
       <RowActionsMenu
         onEdit={() => startEdit(goal)}
-        onArchive={() => void crud.archive(goal.id)}
+        askArchiveReason
+        onArchive={(reason) => void crud.archive(goal.id, reason)}
         onRestore={() => void crud.restore(goal.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(goal.id)}
         archived={goal.archived}
@@ -832,8 +833,9 @@ export function GoalsPage() {
                     selectedIds={selectedIds}
                     items={crud.items}
                     entityLabel={tr('goal(s)')}
-                    onArchive={async (ids) => {
-                      await crud.archiveMany(ids);
+                    askReason
+                  onArchive={async (ids, reason) => {
+                      await crud.archiveMany(ids, reason);
                       setSelectedIds(new Set());
                     }}
                     onRestore={async (ids) => {

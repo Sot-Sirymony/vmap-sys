@@ -36,6 +36,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -153,9 +154,14 @@ public class GoalService {
     }
 
     public void archiveGoal(Long id) {
+        archiveGoal(id, null);
+    }
+
+    /** V29 AR-FR-04, AR-FR-05: archives with an optional reason, copied to what the cascade newly archives. */
+    public void archiveGoal(Long id, @Nullable String reason) {
         Goal entity = lookup.goal(id);
-        entity.archive();
-        archiveCascade.archiveStepsUnder(entity.getId());
+        entity.archive(reason);
+        archiveCascade.archiveStepsUnder(entity.getId(), reason);
     }
 
     @Transactional(readOnly = true)

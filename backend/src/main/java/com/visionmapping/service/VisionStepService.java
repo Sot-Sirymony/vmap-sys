@@ -186,12 +186,17 @@ public class VisionStepService {
      * Contact partner it created, when the participant asks for that.
      */
     public void archiveStep(Long id, boolean removeCreatedPartner) {
+        archiveStep(id, removeCreatedPartner, null);
+    }
+
+    /** V29 AR-FR-04, AR-FR-05: archives with an optional reason, copied to what the cascade newly archives. */
+    public void archiveStep(Long id, boolean removeCreatedPartner, @Nullable String reason) {
         VisionStep entity = lookup.step(id);
         if (removeCreatedPartner && entity.getCreatedPartner() != null && !entity.getCreatedPartner().isArchived()) {
             entity.getCreatedPartner().setArchived(true);
         }
-        entity.archive();
-        archiveCascade.archiveTasksUnder(entity.getId());
+        entity.archive(reason);
+        archiveCascade.archiveTasksUnder(entity.getId(), reason);
         progress.recalculateGoal(entity.getGoal());
     }
 

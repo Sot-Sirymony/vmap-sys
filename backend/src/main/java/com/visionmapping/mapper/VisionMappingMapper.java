@@ -93,6 +93,7 @@ public class VisionMappingMapper {
                 .archived(entity.isArchived())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .archiveReason(entity.getArchiveReason())
                 .build();
     }
 
@@ -125,6 +126,7 @@ public class VisionMappingMapper {
                 .archived(entity.isArchived())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
+                .archiveReason(entity.getArchiveReason())
                 .build();
     }
 
@@ -136,7 +138,7 @@ public class VisionMappingMapper {
                 entity.getOverdueReschedules(), entity.getEstimatedHours(), id(entity.getStartsAfter()),
                 entity.getGapKind(), id(entity.getCoversStep()),
                 entity.getCoversStep() == null ? null : entity.getCoversStep().getCode(),
-                id(entity.getCoversObstacle()), id(entity.getCreatedPartner()));
+                id(entity.getCoversObstacle()), id(entity.getCreatedPartner()), entity.getArchiveReason());
     }
 
     public TaskItemResponse toResponse(TaskItem entity) {
@@ -168,6 +170,7 @@ public class VisionMappingMapper {
                 .startedAt(entity.getStartedAt())
                 .cycleTimeDays(entity.cycleTimeDays())
                 .repeatRuleId(entity.getRepeatRuleId())
+                .archiveReason(entity.getArchiveReason())
                 .build();
     }
 

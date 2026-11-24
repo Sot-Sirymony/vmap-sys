@@ -39,6 +39,8 @@ public record TaskItemResponse(
         Instant startedAt,
         BigDecimal cycleTimeDays,
         // V27 SR-FR-09: the repeat rule this task was made from.
-        Long repeatRuleId
+        Long repeatRuleId,
+        // V29 AR-FR-06: why it was archived, or null.
+        String archiveReason
 ) {
 }

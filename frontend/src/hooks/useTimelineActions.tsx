@@ -4,7 +4,7 @@ import { archiveGoal, createGoal, getGoalArchiveImpact, restoreGoal } from '../a
 import { archiveStep, createStep, getStepArchiveImpact, restoreStep } from '../api/stepApi';
 import { archiveTask, createTask, restoreTask } from '../api/taskApi';
 import { Button } from '../components/common/Button';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { ArchiveConfirmDialog } from '../components/common/ArchiveConfirmDialog';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Input } from '../components/common/Input';
 import { Modal } from '../components/common/Modal';
@@ -144,14 +144,15 @@ export function useTimelineActions({ token, steps, onChanged, onDreamArchived }:
     setArchiving((current) => (current && current.target === target ? { target, message } : current));
   }
 
-  async function confirmArchive(target: TimelineActionTarget) {
+  // V29 AR-FR-02: the reason is optional; empty archives as before.
+  async function confirmArchive(target: TimelineActionTarget, reason = '') {
     setArchiving(null);
     if (!token) return;
     try {
-      if (target.kind === 'dream') await archiveDream(token, target.id);
-      else if (target.kind === 'goal') await archiveGoal(token, target.id);
-      else if (target.kind === 'step') await archiveStep(token, target.id);
-      else await archiveTask(token, target.id);
+      if (target.kind === 'dream') await archiveDream(token, target.id, reason);
+      else if (target.kind === 'goal') await archiveGoal(token, target.id, reason);
+      else if (target.kind === 'step') await archiveStep(token, target.id, false, reason);
+      else await archiveTask(token, target.id, reason);
       showToast(tr('Archived "{title}".', { title: target.title }), {
         action: { label: tr('Undo'), onClick: () => void restore(target) },
       });
@@ -224,11 +225,9 @@ export function useTimelineActions({ token, steps, onChanged, onDreamArchived }:
         </Modal>
       )}
       {archiving && (
-        <ConfirmDialog
-          title={tr('Confirm archive')}
+        <ArchiveConfirmDialog
           message={archiving.message}
-          confirmLabel={tr('Archive')}
-          onConfirm={() => void confirmArchive(archiving.target)}
+          onConfirm={(reason) => void confirmArchive(archiving.target, reason)}
           onClose={() => setArchiving(null)}
         />
       )}

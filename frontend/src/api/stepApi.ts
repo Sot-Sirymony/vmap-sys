@@ -42,7 +42,13 @@ export function reorderSteps(token: string, goalId: number, orderedIds: number[]
 }
 
 // V17 BL-FR-21: removePartner also archives the partner a "find help" step created.
-export function archiveStep(token: string, id: number, removePartner = false) {
+/** V29 AR-FR-04: with a reason, the archive endpoint saves it; without one, archiving works as before. */
+export function archiveStep(token: string, id: number, removePartner = false, reason?: string) {
+  if (reason?.trim()) {
+    return apiClient<void>(`/steps/${id}/archive`, {
+      method: 'POST', token, body: JSON.stringify({ reason: reason.trim(), removePartner }),
+    });
+  }
   return apiClient<void>(`/steps/${id}${removePartner ? '?removePartner=true' : ''}`, {
     method: 'DELETE',
     token,

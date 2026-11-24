@@ -209,18 +209,65 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
     expect(await screen.findByText(/also archives 2 step\(s\) and 2 task\(s\)/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(goalApi.archiveGoal).toHaveBeenCalledWith('token', 11);
+    expect(goalApi.archiveGoal).toHaveBeenCalledWith('token', 11, '');
 
     await menu('Search literature', 'Step actions');
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
     expect(await screen.findByText(/also archives 2 task\(s\)/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(stepApi.archiveStep).toHaveBeenCalledWith('token', 20);
+    expect(stepApi.archiveStep).toHaveBeenCalledWith('token', 20, false, '');
 
     await menu('Search PubMed', 'Task actions');
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Archive' }));
-    expect(taskApi.archiveTask).toHaveBeenCalledWith('token', 30);
+    expect(taskApi.archiveTask).toHaveBeenCalledWith('token', 30, '');
+  });
+
+  it('saves the reason written in the archive confirmation (V29 AR-FR-01)', async () => {
+    renderTree();
+    await menu('Learn AI research tools', 'Goal actions');
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Why are you archiving this? (optional)' }), 'Replaced by a new goal');
+    await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
+    expect(goalApi.archiveGoal).toHaveBeenCalledWith('token', 11, 'Replaced by a new goal');
+  });
+
+  it('shows why an archived row was archived (V29 AR-FR-09)', () => {
+    renderTree({ goals: [conceptNote, { ...tools, archived: true, archiveReason: 'Done another way' }] });
+    expect(within(item('Learn AI research tools')).getByText('Archived: Done another way')).toBeInTheDocument();
+  });
+
+  it('archives several selected rows with one reason, skipping rows under a selected row (V29 AR-FR-07, AR-FR-08)', async () => {
+    const { onDataChange } = renderTree();
+    await userEvent.click(screen.getByRole('button', { name: 'Select' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Learn AI research tools' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Search literature' }));
+    // Under the selected step: archived with it, not on its own.
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Search PubMed' }));
+    expect(screen.getByText('3 selected')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Archive selected (3)' }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Why are you archiving this? (optional)' }), 'Plan changed');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Archive' }));
+
+    await waitFor(() => expect(onDataChange).toHaveBeenCalled());
+    expect(goalApi.archiveGoal).toHaveBeenCalledWith('token', 11, 'Plan changed');
+    expect(stepApi.archiveStep).toHaveBeenCalledWith('token', 20, false, 'Plan changed');
+    expect(taskApi.archiveTask).not.toHaveBeenCalled();
+    // Select mode ends after archiving.
+    expect(screen.queryByRole('checkbox', { name: 'Select Learn AI research tools' })).not.toBeInTheDocument();
+  });
+
+  it('reports how many were archived when one in the selection fails', async () => {
+    vi.mocked(stepApi.archiveStep).mockRejectedValue(new Error('Server error'));
+    renderTree();
+    await userEvent.click(screen.getByRole('button', { name: 'Select' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Learn AI research tools' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Search literature' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Archive selected (2)' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Archive' }));
+    expect(await screen.findByText('Archived 1 of 2. The rest could not be archived.')).toBeInTheDocument();
   });
 
   it('restores or permanently deletes archived goals, steps and tasks', async () => {
@@ -247,7 +294,7 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
     expect(await screen.findByText(/2 goal\(s\)/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(dreamApi.archiveDream).toHaveBeenCalledWith('token', 1);
+    expect(dreamApi.archiveDream).toHaveBeenCalledWith('token', 1, '');
     unmount();
 
     renderTree({ dream: { ...dream, archived: true } });

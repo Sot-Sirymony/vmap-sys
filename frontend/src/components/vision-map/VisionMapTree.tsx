@@ -50,6 +50,8 @@ import {
   obstacleTypeLabels, scheduleModeLabels, type DecisionChecklistKey,
 } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
+import { ArchiveConfirmDialog } from '../common/ArchiveConfirmDialog';
+import { topLevelSelection } from './selectionArchive';
 import { Input } from '../common/Input';
 import { CrudModalForm } from '../common/CrudModalForm';
 import { PriorityBadge } from '../common/PriorityBadge';
@@ -140,6 +142,14 @@ export function VisionMapTree({
   dream, visionAreaName, goals, steps, tasks, token, onDataChange, onDreamPermanentlyDeleted,
   priorityFilter = '', statusFilter = '', editRequest = null, addRequest = null,
 }: VisionMapTreeProps) {
+  // V29 AR-FR-07: select mode for archiving several goals, steps and tasks with one reason.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [confirmSelection, setConfirmSelection] = useState(false);
+  useEffect(() => {
+    setSelectMode(false);
+    setSelected([]);
+  }, [dream.id]);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { settings: themeSettings, resolvedMode } = useThemeSettings();
@@ -594,10 +604,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveDreamNode() {
+  async function archiveDreamNode(reason?: string) {
     setError('');
     try {
-      await archiveDream(token, dream.id);
+      await archiveDream(token, dream.id, reason);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive dream.'));
@@ -686,10 +696,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveGoalNode(goal: Goal) {
+  async function archiveGoalNode(goal: Goal, reason?: string) {
     setError('');
     try {
-      await archiveGoal(token, goal.id);
+      await archiveGoal(token, goal.id, reason);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive goal.'));
@@ -779,10 +789,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveStepNode(step: VisionStep) {
+  async function archiveStepNode(step: VisionStep, reason?: string) {
     setError('');
     try {
-      await archiveStep(token, step.id);
+      await archiveStep(token, step.id, false, reason);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive step.'));
@@ -915,10 +925,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveTaskNode(task: TaskItem) {
+  async function archiveTaskNode(task: TaskItem, reason?: string) {
     setError('');
     try {
-      await archiveTask(token, task.id);
+      await archiveTask(token, task.id, reason);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive task.'));
@@ -1116,6 +1126,48 @@ export function VisionMapTree({
 
   // Archived rows are frozen — same as every list page, only Restore / Delete
   // permanently apply, so the plain title replaces the rename affordance.
+  /** V29 AR-FR-09: why an archived row was archived, when "Show archived" is on. */
+  function archivedReasonLine(archived: boolean, reason?: string | null) {
+    return archived && reason ? <p className="map-meta map-archive-reason">{tr('Archived: {reason}', { reason })}</p> : null;
+  }
+
+  /** V29 AR-FR-07: a tick box on goal, step and task rows in select mode; archived rows cannot be picked. */
+  function selectBox(key: string, title: string, archived: boolean) {
+    if (!selectMode || archived) return null;
+    return (
+      <Checkbox
+        size="small"
+        checked={selected.includes(key)}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onChange={(event) => setSelected((current) => (event.target.checked
+          ? [...current, key] : current.filter((item) => item !== key)))}
+        slotProps={{ input: { 'aria-label': tr('Select {title}', { title }) } }}
+        sx={{ p: 0.5 }}
+      />
+    );
+  }
+
+  async function archiveSelection(reason: string) {
+    setConfirmSelection(false);
+    setError('');
+    const items = topLevelSelection(selected, steps, tasks);
+    let done = 0;
+    try {
+      for (const item of items) {
+        if (item.kind === 'goal') await archiveGoal(token, item.id, reason);
+        else if (item.kind === 'step') await archiveStep(token, item.id, false, reason);
+        else await archiveTask(token, item.id, reason);
+        done += 1;
+      }
+    } catch {
+      setError(tr('Archived {done} of {total}. The rest could not be archived.', { done, total: items.length }));
+    }
+    setSelected([]);
+    setSelectMode(false);
+    await onDataChange();
+  }
+
   function titleCell(row: RowInfo, title: string, archived: boolean) {
     if (archived) {
       return <span className="map-title map-title--archived">{title}</span>;
@@ -1646,6 +1698,38 @@ export function VisionMapTree({
         </CrudModalForm>
       )}
 
+    {!dream.archived && (
+      <Box className="map-select-bar" sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
+        <Button
+          type="button"
+          variant="secondary"
+          aria-pressed={selectMode}
+          onClick={() => {
+            setSelectMode((current) => !current);
+            setSelected([]);
+          }}
+        >
+          {selectMode ? tr('Done selecting') : tr('Select')}
+        </Button>
+        {selectMode && (
+          <>
+            <span role="status" aria-live="polite">{tr('{count} selected', { count: selected.length })}</span>
+            <Button type="button" variant="danger" disabled={selected.length === 0} onClick={() => setConfirmSelection(true)}>
+              {tr('Archive selected ({count})', { count: selected.length })}
+            </Button>
+            <Button type="button" variant="secondary" disabled={selected.length === 0} onClick={() => setSelected([])}>{tr('Clear')}</Button>
+          </>
+        )}
+      </Box>
+    )}
+    {confirmSelection && (
+      <ArchiveConfirmDialog
+        title={tr('Archive selected')}
+        message={tr('Archive {count} item(s)? Everything under them is archived too. Everything can be restored later with "Show archived".', { count: selected.length })}
+        onConfirm={(reason) => void archiveSelection(reason)}
+        onClose={() => setConfirmSelection(false)}
+      />
+    )}
     <div className="map-tree" role="tree" tabIndex={-1} aria-label={tr('Vision map for {title}', { title: dream.title })} onKeyDown={handleTreeKeyDown}>
       <div className="map-node map-node--dream" role="none">
         <div className={`map-row${dream.archived ? ' map-row--archived' : ''}`} {...rowShellProps(dreamRow)}>
@@ -1678,13 +1762,15 @@ export function VisionMapTree({
               <PriorityBadge priority={dream.priority} />
             </div>
             {dream.successDefinition && <p className="map-meta">{tr('Success looks like: {text}', { text: dream.successDefinition })}</p>}
+            {archivedReasonLine(dream.archived, dream.archiveReason)}
             <BlockerRollupLink count={rollupFor(blockerRollup.byDream, dream.id)} dreamId={dream.id} />
           </div>
           {statusCell(dreamRow, dream.status, dream.archived)}
           {rail(dreamProgress)}
           <RowActionsMenu
             onEdit={openDreamEdit}
-            onArchive={() => void archiveDreamNode()}
+            askArchiveReason
+            onArchive={(reason) => void archiveDreamNode(reason)}
             onRestore={() => void restoreDreamNode()}
             onDeletePermanently={() => void deleteDreamNode()}
             archived={dream.archived}
@@ -1713,6 +1799,7 @@ export function VisionMapTree({
                 <div className="map-node map-node--goal" role="none" key={goal.id}>
                   <div className={`map-row${goal.archived ? ' map-row--archived' : ''}${dragRowClass(goalKey)}`} {...rowShellProps(goalRow, goalDrag)}>
                     {chevron(goalRow)}
+                    {selectBox(goalKey, goal.title, goal.archived)}
                     <div className="map-main">
                       <div className="map-line">
                         <span className="map-code">{goal.code}</span>
@@ -1727,13 +1814,15 @@ export function VisionMapTree({
                         )}
                         <PriorityBadge priority={goal.priority} />
                       </div>
+                      {archivedReasonLine(goal.archived, goal.archiveReason)}
                       <BlockerRollupLink count={rollupFor(blockerRollup.byGoal, goal.id)} goalId={goal.id} />
                     </div>
                     {statusCell(goalRow, goal.status, goal.archived)}
                     {rail(Number(goal.progressPercent))}
                     <RowActionsMenu
                       onEdit={() => openGoalEdit(goal)}
-                      onArchive={() => void archiveGoalNode(goal)}
+                      askArchiveReason
+                      onArchive={(reason) => void archiveGoalNode(goal, reason)}
                       onRestore={() => void restoreGoalNode(goal)}
                       onDeletePermanently={() => void deleteGoalNode(goal)}
                       archived={goal.archived}
@@ -1759,6 +1848,7 @@ export function VisionMapTree({
                           <div className="map-node map-node--step" role="none" key={step.id}>
                             <div className={`map-row${step.archived ? ' map-row--archived' : ''}${dragRowClass(stepKey)}`} {...rowShellProps(stepRow, stepDrag)}>
                               {chevron(stepRow)}
+                              {selectBox(stepKey, step.title, step.archived)}
                               <div className="map-main">
                                 <div className="map-line">
                                   <span className="map-code">{step.code}</span>
@@ -1766,12 +1856,14 @@ export function VisionMapTree({
                                   {step.complex && <Chip variant="outlined" size="small" label={tr('Complex')} />}
                                   <PriorityBadge priority={step.priority} />
                                 </div>
+                                {archivedReasonLine(step.archived, step.archiveReason)}
                               </div>
                               {statusCell(stepRow, step.status, step.archived)}
                               {rail(Number(step.progressPercent))}
                               <RowActionsMenu
                                 onEdit={() => openStepEdit(step)}
-                                onArchive={() => void archiveStepNode(step)}
+                                askArchiveReason
+                                onArchive={(reason) => void archiveStepNode(step, reason)}
                                 onRestore={() => void restoreStepNode(step)}
                                 onDeletePermanently={() => void deleteStepNode(step)}
                                 archived={step.archived}
@@ -1804,6 +1896,7 @@ export function VisionMapTree({
                                         {...rowShellProps(taskRow, taskDrag)}
                                       >
                                         <span className="map-chevron map-chevron--spacer" />
+                                        {selectBox(taskKey, task.title, task.archived)}
                                         <div className="map-main">
                                           <div className="map-line">
                                             <span className="map-code">{task.code}</span>
@@ -1812,6 +1905,7 @@ export function VisionMapTree({
                                           </div>
                                           <p className="map-meta">{task.owner} · Due <RelativeDate date={task.dueDate} completed={task.status === 'COMPLETED'} /></p>
                                           {task.blockerReason && <p className="map-blocker">{task.blockerReason}</p>}
+                                          {archivedReasonLine(task.archived, task.archiveReason)}
                                           {isRepeatedlyBlocked(task) && (
                                             <p className="map-blocker">
                                               {tr('Blocked {count} times. Break it down, or add an obstacle on this task.', { count: task.blockedCount ?? 0 })}
@@ -1822,7 +1916,8 @@ export function VisionMapTree({
                                         {rail(Number(task.progressPercent))}
                                         <RowActionsMenu
                                           onEdit={() => openTaskEdit(task)}
-                                          onArchive={() => void archiveTaskNode(task)}
+                                          askArchiveReason
+                                          onArchive={(reason) => void archiveTaskNode(task, reason)}
                                           onRestore={() => void restoreTaskNode(task)}
                                           onDeletePermanently={() => void deleteTaskNode(task)}
                                           archived={task.archived}

@@ -115,7 +115,7 @@ describe('StepsPage (CLAUDE.md page 6)', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Archive' }));
     expect(await screen.findByText(/also archives 4 task\(s\)/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(stepApi.archiveStep).toHaveBeenCalledWith('token', 13);
+    expect(stepApi.archiveStep).toHaveBeenCalledWith('token', 13, false, undefined);
   });
 
   it('opens a step’s tasks, or a new task under it', async () => {

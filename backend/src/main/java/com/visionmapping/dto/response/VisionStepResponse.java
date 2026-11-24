@@ -35,6 +35,8 @@ public record VisionStepResponse(
         Long coversStepId,
         String coversStepCode,
         Long coversObstacleId,
-        Long createdPartnerId
+        Long createdPartnerId,
+        // V29 AR-FR-06: why it was archived, or null.
+        String archiveReason
 ) {
 }

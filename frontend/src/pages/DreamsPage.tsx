@@ -396,7 +396,8 @@ export function DreamsPage() {
     return (
       <RowActionsMenu
         onEdit={() => startEdit(dream)}
-        onArchive={() => void crud.archive(dream.id)}
+        askArchiveReason
+        onArchive={(reason) => void crud.archive(dream.id, reason)}
         onRestore={() => void crud.restore(dream.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(dream.id)}
         archived={dream.archived}
@@ -825,8 +826,9 @@ export function DreamsPage() {
                   selectedIds={selectedIds}
                   items={crud.items}
                   entityLabel={tr('dream(s)')}
-                  onArchive={async (ids) => {
-                    await crud.archiveMany(ids);
+                  askReason
+                  onArchive={async (ids, reason) => {
+                    await crud.archiveMany(ids, reason);
                     setSelectedIds(new Set());
                   }}
                   onRestore={async (ids) => {

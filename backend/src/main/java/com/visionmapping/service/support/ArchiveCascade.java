@@ -12,6 +12,7 @@ import com.visionmapping.repository.IdealPartnerProfileRepository;
 import com.visionmapping.repository.TaskItemRepository;
 import com.visionmapping.repository.VisionStepRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -42,22 +43,35 @@ public class ArchiveCascade {
     }
 
     public void archiveGoalsUnder(Long dreamId) {
+        archiveGoalsUnder(dreamId, null);
+    }
+
+    /** V29 D-29-3: the reason goes to every descendant newly archived; an already archived one keeps its own. */
+    public void archiveGoalsUnder(Long dreamId, @Nullable String reason) {
         for (Goal goal : goalRepository.findByDream_IdAndUser_Id(dreamId, lookup.userId())) {
-            goal.archive();
-            archiveStepsUnder(goal.getId());
+            goal.archive(reason);
+            archiveStepsUnder(goal.getId(), reason);
         }
     }
 
     public void archiveStepsUnder(Long goalId) {
+        archiveStepsUnder(goalId, null);
+    }
+
+    public void archiveStepsUnder(Long goalId, @Nullable String reason) {
         for (VisionStep step : visionStepRepository.findByGoal_IdAndUser_Id(goalId, lookup.userId())) {
-            step.archive();
-            archiveTasksUnder(step.getId());
+            step.archive(reason);
+            archiveTasksUnder(step.getId(), reason);
         }
     }
 
     public void archiveTasksUnder(Long stepId) {
+        archiveTasksUnder(stepId, null);
+    }
+
+    public void archiveTasksUnder(Long stepId, @Nullable String reason) {
         for (TaskItem task : taskItemRepository.findByStep_IdAndUser_Id(stepId, lookup.userId())) {
-            task.archive();
+            task.archive(reason);
         }
         // BR-13: the step's ideal partner profile is archived with it.
         setProfileArchived(stepId, true);
