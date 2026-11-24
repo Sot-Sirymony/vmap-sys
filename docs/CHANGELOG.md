@@ -19,7 +19,7 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ## 28.0.0 — Blocker analysis in the Vision Map plan assistant (built; awaiting deploy, UAT and the Khmer review)
 
-BRD [`VMS_BRD_V28.0.0.md`](VMS_BRD_V28.0.0.md) (28.0.0, draft; Q-28-1 to Q-28-5 await the product owner). Built at the
+BRD [`VMS_BRD_V28.0.0.md`](VMS_BRD_V28.0.0.md) (28.0.1, draft; Q-28-1 to Q-28-6 await the product owner). Built at the
 product owner's request before the BRD was written; the BRD records the built behaviour.
 
 **Backend.** No migration. `BlockerAnalysisService` and `POST /api/ai/plan/dreams/{id}/blocker-analysis` find a
@@ -28,15 +28,23 @@ then work out days stuck (from the V94 status history), times blocked, later ste
 missing (open obstacle, then gap kind) and whether a helper is linked, and rank them by impact (at most 15). With AI
 (consent, limits, session limit) the top 8 get a root cause, a first move and a helper role, plus a shared pattern;
 answers for keys outside the list are dropped. New AI feature `BLOCKER_ANALYSIS` in the plan features (rating,
-metrics). Tests: `BlockerAnalysisFlowTests` (4).
+metrics). **Define blocking (28.0.1):** `POST /api/blocks` (`BlockMarkingService`, no AI) marks an open task or step
+Blocked with its reason through the normal rules (status history, blocked count, roll-up), gives a step without a gap
+kind the chosen type, and records an open obstacle on the item, reusing one already open (BR-28-9). The analysis
+response gains `candidates`, possibly blocked work: overdue 3+ days with no change for 7+ days, in progress 21+ days
+under 50%, step resources that say something is missing, steps that keep slipping, plus up to 5 AI items (only open
+items of the dream are kept); at most 10, never marked automatically. Tests: `BlockerAnalysisFlowTests` (9).
 
 **Frontend.** "Analyse blockers" in the Vision Map plan assistant (works without AI) and the `BlockerAnalysisResult`
 panel: summary chips, pattern, ranked cards with facts, missing type and who can help, AI suggestions, and actions
-(break down, record or open obstacle, find a helper, edit). Khmer drafts in `km.ts` and `km-review-v28.csv`. Tests:
-`BlockerAnalysisResult.test.tsx` (4) and one more `AiPlanAssistant` test; the API contract snapshot gains the endpoint.
+(break down, record or open obstacle, find a helper, edit). **Define blocking:** a task picker ("Whole step" or a task)
+and **Mark as blocked** in the assistant, the `MarkBlockedDialog` (what is missing, why, severity, who can help), and a
+**Possibly blocked** section with Mark as blocked (pre-filled) and Not blocked (this view only); after marking, the map
+reloads and the analysis re-runs. Khmer drafts in `km.ts` and `km-review-v28.csv`. Tests:
+`BlockerAnalysisResult.test.tsx` (6) and two more `AiPlanAssistant` tests; the API contract snapshot gains both endpoints.
 
 **Pending.** `UAT_V28.md`, the Khmer review, the user guide section, and the product owner's answers to Q-28-1 to
-Q-28-5.
+Q-28-6.
 
 ---
 

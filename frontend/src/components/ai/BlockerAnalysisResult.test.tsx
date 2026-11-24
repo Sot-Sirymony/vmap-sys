@@ -2,12 +2,14 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
-import type { BlockerAnalysis, BlockerItem, TaskItem } from '../../types/vision';
+import { markBlocked } from '../../api/blockApi';
+import type { BlockerAnalysis, BlockerCandidate, BlockerItem, TaskItem } from '../../types/vision';
 import { BlockerAnalysisResult } from './BlockerAnalysisResult';
 
 vi.mock('../../api/aiApi', () => ({ getAiStatus: vi.fn().mockResolvedValue({ available: false }) }));
 vi.mock('../../api/aiPlanApi', () => ({ suggestSmallerTasks: vi.fn() }));
 vi.mock('../../api/taskApi', () => ({ splitTask: vi.fn() }));
+vi.mock('../../api/blockApi', () => ({ markBlocked: vi.fn() }));
 
 const base: BlockerItem = {
   itemType: 'TASK', itemId: 70, code: 'T-070', title: 'Ask for the dataset', kind: 'BLOCKED', goalId: 9, goalTitle: 'Finish the study',
@@ -17,15 +19,22 @@ const base: BlockerItem = {
 };
 
 function analysis(overrides: Partial<BlockerAnalysis> = {}): BlockerAnalysis {
-  return { blockers: [base], blockedCount: 1, waitingCount: 0, gapCount: 0, heldUpSteps: 2, aiChecked: false, ...overrides };
+  return { blockers: [base], blockedCount: 1, waitingCount: 0, gapCount: 0, heldUpSteps: 2, aiChecked: false, candidates: [], ...overrides };
 }
 
-function show(value: BlockerAnalysis, tasks: TaskItem[] = []) {
+const overdueTask: BlockerCandidate = {
+  itemType: 'TASK', itemId: 81, code: 'T-081', title: 'Send the survey', goalId: 9, goalTitle: 'Finish the study', stepId: 31,
+  stepTitle: 'Get the data', signal: 'OVERDUE_NO_CHANGE', daysOverdue: 9, daysSinceChange: 12, reschedules: 0, fromAi: false,
+};
+
+function show(value: BlockerAnalysis, tasks: TaskItem[] = [], onMarked = vi.fn()) {
   render(
     <MemoryRouter>
-      <BlockerAnalysisResult analysis={value} dreamId={5} tasks={tasks} token="token" onDataChange={vi.fn().mockResolvedValue(undefined)} />
+      <BlockerAnalysisResult analysis={value} dreamId={5} tasks={tasks} token="token" onDataChange={vi.fn().mockResolvedValue(undefined)}
+        onMarked={onMarked} />
     </MemoryRouter>,
   );
+  return onMarked;
 }
 
 describe('BlockerAnalysisResult', () => {
@@ -74,5 +83,34 @@ describe('BlockerAnalysisResult', () => {
     show(analysis(), [task]);
     await userEvent.click(screen.getByRole('button', { name: 'Break into smaller tasks' }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+  it('lists possibly blocked work with its evidence, and Not blocked hides it for this view', async () => {
+    show(analysis({ blockers: [], blockedCount: 0, heldUpSteps: 0, candidates: [overdueTask] }));
+    expect(screen.getByText('Nothing is marked as blocked yet, but some work looks stuck.')).toBeInTheDocument();
+    const card = screen.getByLabelText('Possibly blocked: Send the survey');
+    expect(within(card).getByText('Overdue, no change')).toBeInTheDocument();
+    expect(within(card).getByText('Overdue 9 day(s)')).toBeInTheDocument();
+    expect(within(card).getByText('No change for 12 day(s)')).toBeInTheDocument();
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Not blocked' }));
+    expect(screen.queryByLabelText('Possibly blocked: Send the survey')).not.toBeInTheDocument();
+  });
+
+  it('marks a possibly blocked item with the AI suggestion pre-filled, then reports back', async () => {
+    vi.mocked(markBlocked).mockResolvedValue({ itemType: 'TASK', itemId: 81, obstacleId: 3, obstacleCreated: true });
+    const onMarked = show(analysis({ candidates: [{ ...overdueTask, signal: 'AI', fromAi: true, suggestedType: 'DECISION',
+      suggestedReason: 'Waiting on the director.' }] }));
+    const card = screen.getByLabelText('Possibly blocked: Send the survey');
+    expect(within(card).getByText('Waiting on the director.')).toBeInTheDocument();
+
+    await userEvent.click(within(card).getByRole('button', { name: 'Mark as blocked' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByDisplayValue('Waiting on the director.')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Who can help/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark as blocked' }));
+
+    expect(markBlocked).toHaveBeenCalledWith('token', { itemType: 'TASK', itemId: 81, obstacleType: 'DECISION',
+      reason: 'Waiting on the director.', severity: 'MEDIUM' });
+    await vi.waitFor(() => expect(onMarked).toHaveBeenCalled());
   });
 });

@@ -572,11 +572,20 @@ public final class AiDrafts {
             @JsonPropertyDescription("The kind of person or resource that could help, as a role, never a name") String helper) {
     }
 
+    /** V28 BA-FR-15: an open item Claude reads as blocked although it is not marked. */
+    public record HiddenBlockerDraft(
+            @JsonPropertyDescription("The key shown in brackets for that open item, such as TASK-12 or STEP-5") String itemKey,
+            @JsonPropertyDescription("What is likely missing: KNOWLEDGE, SKILL, TIME, MONEY, MOTIVATION, PARTNER, SYSTEM, DECISION or OTHER") String obstacleType,
+            @JsonPropertyDescription("Why it may be blocked, in one short sentence the participant could save as the blocker reason") String reason) {
+    }
+
     public record BlockerReview(
             @JsonPropertyDescription("What several of these blockers have in common, in one or two sentences; empty when nothing is shared") String pattern,
-            List<BlockerDraft> blockers) {
+            List<BlockerDraft> blockers,
+            @JsonPropertyDescription("Open items that look blocked although they are not marked, including the possibly blocked ones listed") List<HiddenBlockerDraft> possiblyBlocked) {
         public BlockerReview {
             blockers = Copies.list(blockers);
+            possiblyBlocked = Copies.list(possiblyBlocked);
         }
     }
 }

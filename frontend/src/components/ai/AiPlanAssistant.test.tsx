@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../../api/aiApi';
 import { getStepResourceIdeas } from '../../api/aiDailyApi';
 import { addPlan, analyseBlockers, checkPlan, ratePlanAnswer, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
-import type { AiStatus, Dream, Goal, VisionStep } from '../../types/vision';
+import { markBlocked } from '../../api/blockApi';
+import type { AiStatus, Dream, Goal, TaskItem, VisionStep } from '../../types/vision';
 import { AiPlanAssistant } from './AiPlanAssistant';
 
 vi.mock('../../api/aiApi', () => ({ getAiStatus: vi.fn() }));
@@ -14,6 +15,7 @@ vi.mock('../../api/aiPlanApi', () => ({
   ratePlanAnswer: vi.fn(), analyseBlockers: vi.fn(), suggestSmallerTasks: vi.fn(),
 }));
 vi.mock('../../api/aiDailyApi', () => ({ getResourceIdeas: vi.fn(), getStepResourceIdeas: vi.fn() }));
+vi.mock('../../api/blockApi', () => ({ markBlocked: vi.fn() }));
 
 const ready: AiStatus = { available: true, reason: 'OK', consentGiven: true, dailyLimit: 10, messagesLeftToday: 10 };
 const dream = { id: 5, title: 'Own a home', scheduleMode: 'BOTTOM_UP' } as Dream;
@@ -174,7 +176,7 @@ describe('AiPlanAssistant (AI-FR-07 to AI-FR-10)', () => {
   it('analyses blockers without AI and ranks what holds the dream back', async () => {
     vi.mocked(getAiStatus).mockResolvedValue({ ...ready, available: false, reason: 'NO_CONSENT' });
     vi.mocked(analyseBlockers).mockResolvedValue({
-      blockedCount: 1, waitingCount: 0, gapCount: 0, heldUpSteps: 1, aiChecked: false, requestId: null,
+      blockedCount: 1, waitingCount: 0, gapCount: 0, heldUpSteps: 1, aiChecked: false, requestId: null, candidates: [],
       blockers: [{ itemType: 'TASK', itemId: 70, title: 'Ask for the dataset', kind: 'BLOCKED', goalId: 9, goalTitle: 'Save a deposit',
         stepId: 31, stepTitle: 'Visit three banks', reason: 'No reply', overdue: false, timesBlocked: 1, heldUpSteps: 1,
         goalAtRisk: false, obstacleTypeGuessed: false, hasHelper: false, score: 20 }],
@@ -191,5 +193,35 @@ describe('AiPlanAssistant (AI-FR-07 to AI-FR-10)', () => {
     expect(screen.getByText('Holds up 1 later step(s)')).toBeInTheDocument();
     // No AI request, so nothing to rate.
     expect(screen.queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
+  });
+  it('marks a task of the chosen step as blocked, without AI', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue({ ...ready, available: false, reason: 'NO_CONSENT' });
+    vi.mocked(markBlocked).mockResolvedValue({ itemType: 'TASK', itemId: 70, obstacleId: 4, obstacleCreated: true });
+    const onDataChange = vi.fn().mockResolvedValue(undefined);
+    const tasks = [{ id: 70, stepId: 31, title: 'Ask the bank for a quote', status: 'IN_PROGRESS', archived: false } as TaskItem];
+    render(
+      <MemoryRouter>
+        <AiPlanAssistant dream={dream} goals={[goal]} steps={[step]} tasks={tasks} token="token" onDataChange={onDataChange} />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Goal to plan' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Save a deposit' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Step to plan' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Visit three banks' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'What to mark as blocked' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Ask the bank for a quote' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mark as blocked' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('combobox', { name: /What is missing/ }));
+    await userEvent.click(await screen.findByRole('option', { name: 'Money' }));
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /Why is it blocked/ }), 'No deposit saved yet');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Mark as blocked' }));
+
+    expect(markBlocked).toHaveBeenCalledWith('token', { itemType: 'TASK', itemId: 70, obstacleType: 'MONEY',
+      reason: 'No deposit saved yet', severity: 'MEDIUM' });
+    expect(await screen.findByText('Marked as blocked.')).toBeInTheDocument();
+    expect(onDataChange).toHaveBeenCalled();
   });
 });

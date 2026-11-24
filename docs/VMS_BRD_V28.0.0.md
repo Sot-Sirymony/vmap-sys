@@ -4,15 +4,19 @@ Nov 24, 2026
 
 ## Document control
 
-This is draft 28.0.0. It keeps every requirement in BRD 27.0.3 and the earlier BRDs. It adds a **blocker analysis** to
+This is draft 28.0.1. It keeps every requirement in BRD 27.0.3 and the earlier BRDs. It adds a **blocker analysis** to
 the plan assistant on the Vision Map page: one action that finds everything holding a dream back, ranks it by impact,
 explains what each blocker holds up and what is missing, and points to the next action. With AI, it also suggests a
 likely root cause and a first move for each blocker.
 
+The assistant can also **define** blocks inside the plan: the user can **mark a task or step as blocked** (what is
+missing and why) from the assistant, and the analysis lists work that is **possibly blocked** but not yet marked, so
+the user can confirm or dismiss it.
+
 | Item | Value |
 | --- | --- |
 | Document | Business Requirements Document (BRD) – Blocker analysis addendum |
-| Version | 28.0.0 – Draft |
+| Version | 28.0.1 – Draft |
 | Parent documents | CLAUDE.md core hierarchy and business rules (BR-6 blocker reason, BR-9 overdue, BR-12 soft delete, BR-13 and BR-14 user scoping), BRD 9 (AI with consent, the daily limit and the monthly cap; AI-FR-09 plan check), BRD 11 (PB-FR-34 rating, PB-NFR-03 session limit), BRD 15 (AH-FR-35 partner matches), BRD 17 (D-17-1 obstacles anchored to steps and tasks; D-17-2 blockers live on steps and tasks; BL-FR-22 gap needs a helper; BL-FR-24 to BL-FR-29 break a stuck task down), BRD 27 (D-27-7 status history and blocked time) |
 | Business owner | To be confirmed |
 | Product owner | To be confirmed |
@@ -20,6 +24,7 @@ likely root cause and a first move for each blocker.
 
 | Version | Change | Author |
 | --- | --- | --- |
+| 28.0.1 | Scope added by the product owner (24 Nov 2026): the assistant must also **define** blocking, both options. Option 1, mark a task or step as blocked from the assistant (D-28-9, BA-FR-11 to BA-FR-13). Option 2, list work that is possibly blocked but not marked, from rules and AI, each with Mark as blocked or Not blocked (D-28-10, D-28-11, BA-FR-14 to BA-FR-17). D-28-5 now covers the analysis only. New open question Q-28-6 | BA |
 | 28.0.0 | First draft, from the product owner's request of 24 Nov 2026 ("under page vision map please help improve on plan assistant to help analysis blocking"). Written after the feature was built at the product owner's request, so it records the built behaviour; open questions Q-28-1 to Q-28-5 ask the product owner to confirm the choices made | BA |
 
 ---
@@ -47,6 +52,18 @@ helper to ask for each blocker, plus what the blockers have in common.
 
 Nothing is saved by the analysis itself.
 
+The analysis alone only **explains** blocks the user has already recorded. V28 therefore also lets the assistant
+**define** them:
+
+- **Mark as blocked** (option 1): from the assistant, the user picks a step (and optionally one of its tasks), says
+  what is missing (knowledge, skill, time, money, decision, partner, motivation, system, other) and why. VMS saves the
+  Blocked status through the normal rules and records an obstacle on that item, so the block shows everywhere blocks
+  already show: the map, the Tasks board, the Obstacles page and the analysis.
+- **Possibly blocked** (option 2): the analysis also lists work that looks stuck but is not marked: overdue with no
+  recent change, in progress for weeks with little progress, a step whose resources say something is missing, or a
+  step that keeps slipping. With AI, Claude adds hidden blockers it reads in the plan. Each one can be confirmed with
+  **Mark as blocked** (pre-filled) or dismissed with **Not blocked**. Nothing is marked without the user's approval.
+
 ---
 
 ## Decisions recorded by this BRD
@@ -57,9 +74,12 @@ Nothing is saved by the analysis itself.
 | D-28-2 | A **blocker** is one of three kinds: a task or step with status **Blocked**; a task or step with status **Waiting**; or a step with a **gap that needs a helper** (the BL-FR-22 rule, reused unchanged). Overdue work that is not Blocked or Waiting is not a blocker here; "Check my plan" already lists it |
 | D-28-3 | The analysis has a **rule half and an AI half**, like the plan check (AI-FR-09). The rule half always runs and needs no AI or consent. The AI half runs only under the usual V9 rules (consent, daily limit, monthly cap) and the plan session limit (PB-NFR-03); when it cannot run, the rule half is shown with a note |
 | D-28-4 | Blockers are **ranked by an impact score** (§3.2), biggest first. The score is shown only as the order, never as a number |
-| D-28-5 | The analysis **never saves or changes anything**. Each action opens an existing page or dialog that has its own checks: the break-down dialog (BL-FR-24), the obstacle form pre-filled with the task and reason (BL-FR-28), the partner form pre-filled with the goal and support type, or the item's edit form on the map |
+| D-28-5 | The analysis itself **never saves or changes anything**. Each action opens an existing page or dialog that has its own checks: the break-down dialog (BL-FR-24), the obstacle form pre-filled with the task and reason (BL-FR-28), the partner form pre-filled with the goal and support type, or the item's edit form on the map |
 | D-28-6 | The "who can help" suggestion uses the **existing obstacle-type to partner-type mapping** (Knowledge → Mentor or expert, Skill → Technical expert or trainer, Time → Delegate or assistant, Money → Financial partner or sponsor, Motivation → Accountability partner, Decision → Advisor). AI may name a role; it never names a person (AI-NFR-04) |
 | D-28-7 | What is missing (the obstacle type) comes first from an **open obstacle** on the task, then on its step, then from the step's **gap kind**. Only when none exists may AI suggest a type, and it is labelled **"AI guess"** |
+| D-28-9 | **Mark as blocked** (option 1) is an explicit user action, available in the assistant for any open step or task of the dream, and from every possibly-blocked card. It needs **what is missing** (an obstacle type) and **a reason** (required, BR-6) and takes a severity (default Medium). In one transaction, VMS: sets a task to **Blocked** with the reason as its blocker reason, or a step to **Blocked**; gives a step that has no gap kind the chosen type as its gap kind; and records an **open obstacle** on that task or step (D-17-1) with the reason as its title, unless an open obstacle is already on it, which is then reused. All normal rules apply (status history, blocked count, progress roll-up) |
+| D-28-10 | **Possibly blocked** (option 2) are open tasks and steps that are not Blocked, Waiting, Paused or Completed but match a rule signal (§3.3), or that AI reads as blocked. They are shown as suggestions only; nothing is marked until the user confirms with Mark as blocked |
+| D-28-11 | **Not blocked** hides a possibly-blocked item for the rest of the current view; it is not stored, so the item may appear again the next time the user runs the analysis (Q-28-6) |
 | D-28-8 | Only the participant's own records are read (BR-13, BR-14). Coaches and admins do not see the analysis; it is computed on request and not stored |
 
 ---
@@ -86,6 +106,8 @@ The plan assistant card on the Vision Map (`/vision-map`, `/dreams/:id`) gains a
 
 ### 2.2 What it shows
 
+(Possibly blocked and Mark as blocked are described in §2.3 and §2.4.)
+
 1. **Summary chips**: number blocked, number waiting, number of steps that need a helper, and number of later steps
    held up.
 2. **What these blockers have in common** (AI only, when several share a cause).
@@ -100,6 +122,23 @@ The plan assistant card on the Vision Map (`/vision-map`, `/dreams/:id`) gains a
      **Find a helper** (only when no helper is linked), **Edit**.
 4. When nothing is stuck: "Nothing is blocked or waiting in this dream. Keep going."
 5. A thumbs up or down rating when the AI half ran (PB-FR-34).
+6. **Possibly blocked** (§2.3), after the blocker cards.
+
+### 2.3 Possibly blocked
+
+A section titled **Possibly blocked**, at most 10 cards, each showing the item (goal › step › task), why it may be
+blocked (the signal and its evidence, for example "Overdue 9 days, no change for 12 days"), and, when AI ran, a
+suggested missing type and reason labelled as an AI suggestion. Actions: **Mark as blocked** (opens §2.4 pre-filled)
+and **Not blocked** (D-28-11). When there is nothing to suggest, the section is not shown.
+
+### 2.4 Mark as blocked
+
+- **From the assistant:** once a goal and step are chosen in the plan assistant, a task picker ("Whole step" or one
+  of the step's open tasks) and a **Mark as blocked** button appear.
+- **From a possibly-blocked card:** the same dialog, pre-filled with the suggested type and reason.
+- **The dialog:** what is missing (required), why it is blocked (required, at most 1,000 characters), severity
+  (default Medium), and the "who can help" role for the chosen type (D-28-6). Saving shows "Marked as blocked" and
+  re-runs the analysis, so the item moves from Possibly blocked into the ranked blockers.
 
 ---
 
@@ -108,7 +147,8 @@ The plan assistant card on the Vision Map (`/vision-map`, `/dreams/:id`) gains a
 ### 3.1 Data
 
 No new tables and no migration. The analysis reads existing data: goals, steps, tasks, obstacles, partners and the
-task status history (V94). One repository query is added: whether a partner is linked to a task.
+task status history (V94). One repository query is added: whether a partner is linked to a task. Mark as blocked
+writes only existing fields: task status and blocker reason, step status and gap kind, and a new obstacle row.
 
 ### 3.2 Calculations
 
@@ -123,6 +163,20 @@ task status history (V94). One repository query is added: whether a partner is l
 | Helper in place | An open obstacle on the item or its step, or a partner linked to the task or its step |
 | Impact score | Kind (Blocked 6, Waiting 3, gap 2) + 2 × priority (Critical 4, High 3, Medium 2, Low 1) + 2 × later steps held up (at most 5) + 4 if the goal date is at risk + 3 if overdue + 1 per 5 days stuck (at most 6) + 1 per repeat block (at most 3) + 2 if no help is in place. Ties: lower id first (Q-28-3) |
 
+### 3.3 Possibly-blocked signals
+
+| Signal | Rule (open task or step, not Blocked, Waiting, Paused or Completed) |
+| --- | --- |
+| Overdue, no change | A task at least 3 days past its due date that has not been changed for at least 7 days |
+| Stalled | A task In progress for at least 21 days (from its start time) with progress under 50% |
+| Something missing | A step whose resources text says something is still missing or needed (for example "need", "missing", "don't have", "waiting for", "no budget"; the Khmer words for need and lack) |
+| Keeps slipping | A step overdue again after being moved at least once (the AI-FR-11 rule) |
+| AI | With AI, up to 5 more items Claude reads as blocked, with a reason and a missing type; only ids of the dream's open items are kept |
+
+An item matching several signals appears once, with the strongest signal (keeps slipping, then overdue no change,
+then stalled, then something missing). Steps that are already a blocker (for example a gap that needs a helper) are
+not repeated here.
+
 ---
 
 ## 4. Business rules
@@ -134,7 +188,10 @@ task status history (V94). One repository query is added: whether a partner is l
 | BR-28-3 | At most 15 blockers are listed; the summary counts cover the whole dream |
 | BR-28-4 | At most the top 8 blockers are sent to AI (Q-28-4). The request contains the dream description the plan builders already use and the blocker lines; never partner names or contact details |
 | BR-28-5 | AI answers are matched to blockers by their key (TASK-id or STEP-id). Any answer for a key not in the list is dropped. An AI obstacle type is used only when the rules found none, and only when it is a valid type |
-| BR-28-6 | Nothing is saved. Every action goes through the existing page or dialog and its rules (BR-6, BL-FR-24 to BL-FR-29, D-17-1) |
+| BR-28-6 | The analysis saves nothing. Every action goes through the existing page or dialog and its rules (BR-6, BL-FR-24 to BL-FR-29, D-17-1) |
+| BR-28-8 | Mark as blocked needs an open (not archived, not Completed) task or step of the signed-in user, an obstacle type and a reason; otherwise it answers 400 (bad request) or 404 (not the user's). It saves everything or nothing |
+| BR-28-9 | Mark as blocked records at most one open obstacle per item: when an open or in-progress obstacle is already on the task or step, it is reused, not duplicated |
+| BR-28-10 | Possibly-blocked items are suggestions; the analysis never changes their status (D-28-10). At most 10 are listed |
 | BR-28-7 | AI text is limited in length (root cause and first move 300 characters, helper 200, pattern 400) |
 
 ---
@@ -142,7 +199,9 @@ task status history (V94). One repository query is added: whether a partner is l
 ## 5. Pages and components
 
 - **Vision Map plan assistant** (`AiPlanAssistant`): the Analyse blockers button and the result panel.
-- **Blocker analysis panel** (`BlockerAnalysisResult`): summary chips, pattern, blocker cards and actions. Reuses the
+- **Blocker analysis panel** (`BlockerAnalysisResult`): summary chips, pattern, blocker cards, possibly-blocked cards
+  and actions.
+- **Mark as blocked dialog** (`MarkBlockedDialog`): missing type, reason, severity and the who-can-help role. Reuses the
   break-down dialog (`BreakDownDialog`), the obstacle form's `create=obstacle&taskId&stepId&title` link, the partner
   form's `create=partner&relatedGoalId&supportType` link, and the map's `?edit=task-id` / `?edit=step-id` link.
 - All new text has Khmer drafts (`km-review-v28.csv`).
@@ -153,6 +212,8 @@ task status history (V94). One repository query is added: whether a partner is l
 
 | Where | Text |
 | --- | --- |
+| Possibly blocked heading | "These look stuck but are not marked. Mark the real blocks so you can get help for them." |
+| Mark as blocked dialog | "What is missing?" · "Why is it blocked?" |
 | Above the cards | "Biggest impact first. Clear the top one to free the most work." |
 | Blocked step with no reason | "No reason written yet. Say what is missing so you can find the right help." |
 | AI off | "Showing the built-in analysis only. Turn on AI for root causes and first moves." |
@@ -174,6 +235,13 @@ task status history (V94). One repository query is added: whether a partner is l
 | BA-FR-08 | AI obstacle type only when the rules found none, labelled "AI guess" | Should | Built |
 | BA-FR-09 | Rate the AI answer (PB-FR-34); the new feature appears in plan metrics | Should | Built |
 | BA-FR-10 | Empty state when nothing is stuck | Must | Built |
+| BA-FR-11 | Mark as blocked from the assistant for a chosen step or one of its tasks (D-28-9, §2.4) | Must | Built |
+| BA-FR-12 | Mark as blocked saves Blocked with the reason, the step gap kind when empty, and an open obstacle (reused if one exists), in one transaction (BR-28-8, BR-28-9) | Must | Built |
+| BA-FR-13 | After marking, the map data reloads and the analysis re-runs | Should | Built |
+| BA-FR-14 | Possibly blocked: rule signals (§3.3), at most 10, never marked automatically | Must | Built |
+| BA-FR-15 | Possibly blocked: AI adds up to 5 hidden blockers and suggests a missing type and reason for the rule signals, under D-28-3 | Must | Built |
+| BA-FR-16 | Each possibly-blocked card offers Mark as blocked (pre-filled) and Not blocked (D-28-11) | Must | Built |
+| BA-FR-17 | The analysis runs AI whenever the dream has blockers, possibly-blocked items or other open work to check, even if nothing is marked blocked yet; only a dream with no open work skips AI | Should | Built |
 
 ## Non-functional requirements
 
@@ -183,7 +251,7 @@ task status history (V94). One repository query is added: whether a partner is l
 | BA-NFR-02 | The rule half answers in under 1 s on the server for a dream with 50 steps and 500 tasks (one status-history query per step) |
 | BA-NFR-03 | WCAG 2.2 AA in every interface style, mode and language; each card has an accessible name ("Blocker 1: title") |
 | BA-NFR-04 | Khmer drafts for all new text in `km-review-v28.csv`; no clipping at 360px |
-| BA-NFR-05 | Backend and frontend tests cover ranking without AI, the empty dream, the AI merge (unknown keys dropped), ownership, the card facts and links, and the break-down action |
+| BA-NFR-05 | Backend and frontend tests cover ranking without AI, the empty dream, the AI merge (unknown keys dropped), ownership, the card facts and links, the break-down action, marking a task and a step as blocked (with obstacle reuse and the reason rule), and the possibly-blocked signals and actions |
 
 ## Data and API changes
 
@@ -193,6 +261,12 @@ task status history (V94). One repository query is added: whether a partner is l
   Each `BlockerItem` carries `itemType`, `itemId`, `code`, `title`, `kind`, `goalId`, `goalTitle`, `stepId`,
   `stepTitle`, `reason`, `priority`, `dueDate`, `overdue`, `daysStuck`, `timesBlocked`, `heldUpSteps`, `goalAtRisk`,
   `obstacleType`, `obstacleTypeGuessed`, `obstacleId`, `hasHelper`, `score`, `rootCause`, `firstMove`, `helper`.
+- `BlockerAnalysis` also carries `candidates[]` (possibly blocked): `itemType`, `itemId`, `code`, `title`, `goalId`,
+  `goalTitle`, `stepId`, `stepTitle`, `signal` (OVERDUE_NO_CHANGE, STALLED, SOMETHING_MISSING, KEEPS_SLIPPING, AI),
+  `daysOverdue`, `daysSinceChange`, `daysInProgress`, `progressPercent`, `reschedules`, `resources`, `suggestedType`,
+  `suggestedReason`, `fromAi`.
+- New endpoint `POST /api/blocks` (Mark as blocked; no AI) with `{ itemType: TASK|STEP, itemId, obstacleType, reason,
+  severity }`, returning `{ itemType, itemId, obstacleId, obstacleCreated }`.
 - New AI feature name `BLOCKER_ANALYSIS`, added to the plan features (rating, metrics, plan model choice).
 - `PartnerRepository.existsByUser_IdAndRelatedTask_IdAndArchivedFalse`.
 
@@ -202,6 +276,7 @@ task status history (V94). One repository query is added: whether a partner is l
 | --- | --- | --- |
 | 1 | Backend: `BlockerAnalysisService`, endpoint, response and AI draft records, feature registration; `BlockerAnalysisFlowTests` | Built 24 Nov 2026 |
 | 2 | Frontend: types, `analyseBlockers` API, `BlockerAnalysisResult` panel, assistant button, tasks passed from the page; Khmer drafts; tests and contract snapshot | Built 24 Nov 2026 |
+| 2b | Define blocking (28.0.1): `POST /api/blocks`, possibly-blocked signals and AI candidates, `MarkBlockedDialog`, the assistant's task picker and Mark as blocked, possibly-blocked cards; tests | Built 24 Nov 2026 |
 | 3 | `UAT_V28.md`, Khmer review of `km-review-v28.csv`, user guide section, CHANGELOG | CHANGELOG and Khmer drafts done; UAT, review and user guide pending |
 
 ## Acceptance criteria
@@ -217,6 +292,11 @@ task status history (V94). One repository query is added: whether a partner is l
 | BAC-07 | Another user's dream answers 404 |
 | BAC-08 | Nothing in the plan changes until the user saves through one of the linked pages or dialogs |
 | BAC-09 | Frontend and backend builds and tests pass |
+| BAC-10 | From the assistant, a user marks a task as blocked with "Missing: Money" and a reason; the task shows Blocked with that reason on the map and the Tasks board, an open Money obstacle is on the task, and the task appears in the ranked blockers |
+| BAC-11 | Marking a step as blocked sets it to Blocked, gives it a gap kind if it had none, and records an obstacle; marking it again reuses the open obstacle |
+| BAC-12 | Mark as blocked with no reason is refused |
+| BAC-13 | A task 9 days overdue that has not changed for 10 days, and not marked Blocked, appears under Possibly blocked; Mark as blocked moves it to the ranked blockers; Not blocked hides it from the current view |
+| BAC-14 | With AI on, Possibly blocked may show AI items; an AI item for a record outside the dream is never shown |
 
 ## Open questions
 
@@ -227,6 +307,7 @@ task status history (V94). One repository query is added: whether a partner is l
 | Q-28-3 | Are the impact score weights (§3.2) right? | Use them for UAT; the product owner may re-weight after seeing real plans. The score is never shown, so changing it does not confuse users |
 | Q-28-4 | Send only the top 8 blockers to AI? | Yes, to keep the request small and within the monthly cap; the rule half still lists up to 15 |
 | Q-28-5 | Should the same analysis appear on the Dashboard or Today page, or for a coach? | Not in V28. If wanted, a later BRD can reuse the endpoint; a coach view would need the D-6 read rule |
+| Q-28-6 | Should **Not blocked** be remembered, so a dismissed item does not come back on the next run? | Not in 28.0.1 (D-28-11): dismissals are not stored. If users find repeats annoying in UAT, store a dismissal per item for 30 days |
 
 ## Sign-off
 

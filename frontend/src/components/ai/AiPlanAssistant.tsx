@@ -26,6 +26,7 @@ import { Loading } from '../common/Loading';
 import { safeHttpUrl } from '../../utils/safeUrl';
 import { SuggestionRating, wasEdited } from './SuggestionRating';
 import { BlockerAnalysisResult } from './BlockerAnalysisResult';
+import { MarkBlockedDialog, type BlockTarget } from './MarkBlockedDialog';
 
 type Props = {
   dream: Dream;
@@ -72,6 +73,9 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [goalId, setGoalId] = useState('');
   const [stepId, setStepId] = useState('');
+  // V28 BA-FR-11: '' marks the whole step; a task id marks that task.
+  const [blockTaskId, setBlockTaskId] = useState('');
+  const [marking, setMarking] = useState<BlockTarget | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -83,6 +87,29 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
   const goalSteps = steps
     .filter((step) => goalId !== '' && step.goalId === Number(goalId) && !step.archived)
     .sort((first, second) => (first.sequenceNumber ?? 0) - (second.sequenceNumber ?? 0));
+
+  const stepTasks = tasks.filter((task) => stepId !== '' && task.stepId === Number(stepId) && !task.archived
+    && task.status !== 'COMPLETED');
+
+  function startMarking() {
+    const step = goalSteps.find((item) => item.id === Number(stepId));
+    const task = stepTasks.find((item) => item.id === Number(blockTaskId));
+    if (task) {
+      setMarking({ itemType: 'TASK', itemId: task.id, title: task.title, reason: task.blockerReason ?? null });
+    } else if (step) {
+      setMarking({ itemType: 'STEP', itemId: step.id, title: step.title, obstacleType: step.gapKind ?? null });
+    }
+  }
+
+  // BA-FR-13: after marking, reload the map and, when the analysis is open, run it again.
+  async function afterMarked() {
+    setMarking(null);
+    await onDataChange();
+    if (result?.kind === 'blockers') {
+      await askBlockers();
+    }
+    setNotice(tr('Marked as blocked.'));
+  }
 
   useEffect(() => {
     getAiStatus(token).then(setStatus).catch(() => setStatus(null));
@@ -301,7 +328,10 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
                 size="small"
                 displayEmpty
                 value={stepId}
-                onChange={(event) => setStepId(event.target.value)}
+                onChange={(event) => {
+                  setStepId(event.target.value);
+                  setBlockTaskId('');
+                }}
                 sx={{ minWidth: 220, maxWidth: '100%' }}
                 SelectDisplayProps={{ 'aria-label': tr('Step to plan') }}
               >
@@ -315,6 +345,25 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
                 {tr('Resource ideas')}
               </Button>
             </Box>
+          )}
+          {stepId !== '' && (
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Select
+                size="small"
+                displayEmpty
+                value={blockTaskId}
+                onChange={(event) => setBlockTaskId(event.target.value)}
+                sx={{ minWidth: 220, maxWidth: '100%' }}
+                SelectDisplayProps={{ 'aria-label': tr('What to mark as blocked') }}
+              >
+                <MenuItem value="">{tr('Whole step')}</MenuItem>
+                {stepTasks.map((task) => <MenuItem key={task.id} value={String(task.id)}>{task.title}</MenuItem>)}
+              </Select>
+              <Button variant="secondary" disabled={busy} onClick={startMarking}>{tr('Mark as blocked')}</Button>
+            </Box>
+          )}
+          {marking && (
+            <MarkBlockedDialog token={token} target={marking} onClose={() => setMarking(null)} onSaved={() => void afterMarked()} />
           )}
           {busy && (
             <Box>
@@ -342,7 +391,8 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
           )}
           {result?.kind === 'check' && <CheckResult check={result.check} />}
           {result?.kind === 'blockers' && (
-            <BlockerAnalysisResult analysis={result.analysis} dreamId={dream.id} tasks={tasks} token={token} onDataChange={onDataChange} />
+            <BlockerAnalysisResult analysis={result.analysis} dreamId={dream.id} tasks={tasks} token={token} onDataChange={onDataChange}
+              onMarked={() => void afterMarked()} />
           )}
           {result && result.kind !== 'resources' && (
             <SuggestionRating

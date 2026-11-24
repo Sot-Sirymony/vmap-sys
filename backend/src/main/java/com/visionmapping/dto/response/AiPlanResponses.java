@@ -280,11 +280,25 @@ public final class AiPlanResponses {
                               int score, String rootCause, String firstMove, String helper) {
     }
 
+    /**
+     * V28 (D-28-10, BA-FR-14, BA-FR-15): open work that looks stuck but is not
+     * marked. signal is OVERDUE_NO_CHANGE, STALLED, SOMETHING_MISSING,
+     * KEEPS_SLIPPING or AI. The evidence fields that apply are filled; the
+     * suggested type and reason come from AI. A suggestion only: nothing is marked.
+     */
+    public record BlockerCandidate(String itemType, Long itemId, String code, String title, Long goalId, String goalTitle,
+                                   Long stepId, String stepTitle, String signal, Integer daysOverdue, Integer daysSinceChange,
+                                   Integer daysInProgress, BigDecimal progressPercent, int reschedules, String resources,
+                                   String suggestedType, String suggestedReason, boolean fromAi) {
+    }
+
     /** Counts are for the whole dream; blockers are ranked, biggest impact first. pattern is AI only. */
     public record BlockerAnalysis(List<BlockerItem> blockers, int blockedCount, int waitingCount, int gapCount,
-                                  int heldUpSteps, String pattern, boolean aiChecked, Long requestId) {
+                                  int heldUpSteps, String pattern, boolean aiChecked, Long requestId,
+                                  List<BlockerCandidate> candidates) {
         public BlockerAnalysis {
             blockers = Copies.list(blockers);
+            candidates = Copies.list(candidates);
         }
     }
 }

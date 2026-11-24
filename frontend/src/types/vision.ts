@@ -1492,7 +1492,43 @@ export type BlockerItem = {
   helper?: string | null;
 };
 
+/** V28 D-28-10: open work that looks stuck but is not marked. A suggestion only. */
+export type BlockerSignal = 'OVERDUE_NO_CHANGE' | 'STALLED' | 'SOMETHING_MISSING' | 'KEEPS_SLIPPING' | 'AI';
+
+export type BlockerCandidate = {
+  itemType: 'TASK' | 'STEP';
+  itemId: number;
+  code?: string | null;
+  title: string;
+  goalId: number;
+  goalTitle: string;
+  stepId: number;
+  stepTitle: string;
+  signal: BlockerSignal;
+  daysOverdue?: number | null;
+  daysSinceChange?: number | null;
+  daysInProgress?: number | null;
+  progressPercent?: number | null;
+  reschedules: number;
+  resources?: string | null;
+  suggestedType?: ObstacleType | null;
+  suggestedReason?: string | null;
+  fromAi: boolean;
+};
+
+/** V28 BA-FR-11, BA-FR-12: Mark as blocked. */
+export type MarkBlockedRequest = {
+  itemType: 'TASK' | 'STEP';
+  itemId: number;
+  obstacleType: ObstacleType;
+  reason: string;
+  severity?: Severity;
+};
+
+export type MarkBlockedResult = { itemType: 'TASK' | 'STEP'; itemId: number; obstacleId: number; obstacleCreated: boolean };
+
 export type BlockerAnalysis = {
+  candidates: BlockerCandidate[];
   blockers: BlockerItem[];
   blockedCount: number;
   waitingCount: number;

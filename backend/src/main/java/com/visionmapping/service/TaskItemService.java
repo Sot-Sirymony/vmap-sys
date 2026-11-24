@@ -145,6 +145,21 @@ public class TaskItemService {
         return mapper.toResponse(entity);
     }
 
+    /** V28 BA-FR-12: Blocked with a blocker reason, with the status history, progress and log of any status change. */
+    public TaskItemResponse blockTask(Long id, String reason) {
+        TaskItem entity = lookup.task(id);
+        if (entity.isArchived() || entity.getStatus() == WorkStatus.COMPLETED) {
+            throw new BusinessRuleException("Only an open task can be marked as blocked.");
+        }
+        BigDecimal progressBefore = entity.getProgressPercent();
+        WorkStatus statusBefore = entity.getStatus();
+        entity.markBlocked(reason, clock);
+        statusHistory.record(entity, statusBefore);
+        progress.recalculateStep(entity.getStep());
+        logChange(entity, progressBefore, null);
+        return mapper.toResponse(entity);
+    }
+
     /**
      * V17 BL-FR-25: breaks a task into 2 to 5 smaller tasks under the same
      * step, placed right after it in the step's order and on the Tasks page.

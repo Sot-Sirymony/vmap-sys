@@ -200,6 +200,12 @@ public class TaskItem extends BaseAuditableEntity {
         stampStart(clock);
     }
 
+    /** V28 BA-FR-12: marks the task Blocked with what blocks it (Rule 6), through the same status rules. */
+    public void markBlocked(String reason, Clock clock) {
+        blockerReason = Objects.requireNonNull(reason, "reason").strip();
+        changeStatus(WorkStatus.BLOCKED, clock);
+    }
+
     /** Applies the same rules to a task made with the builder, before its first save. */
     public void checkNewTask(Clock clock) {
         requireBlockerReason(status, blockerReason);

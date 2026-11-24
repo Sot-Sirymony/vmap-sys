@@ -104,6 +104,7 @@ exports[`API contract (BRD 12 COV-FR-25) > sends the expected method, path and b
   "authApi.refreshSession(refreshToken) -> POST /auth/refresh {"refreshToken":"refreshToken-value"}",
   "authApi.register(request) -> POST /auth/register {"sample":"value"}",
   "authApi.resetPassword(request) -> POST /auth/reset-password {"sample":"value"}",
+  "blockApi.markBlocked(token, request) -> POST /blocks [auth] {"sample":"value"}",
   "chainAssessmentApi.getChainAssessments(token) -> GET /chain-assessments [auth]",
   "chainAssessmentApi.saveChainAssessment(token, request) -> PUT /chain-assessments [auth] {"sample":"value"}",
   "clientErrorApi.listClientErrors(token, pageKey) -> GET /client-errors?page=text [auth]",
