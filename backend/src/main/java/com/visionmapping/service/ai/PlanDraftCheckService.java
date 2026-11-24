@@ -63,6 +63,7 @@ public class PlanDraftCheckService {
     private static final Map<String, String> AI_RULES = Map.of("VAGUE_STEP", "R-02", "UNREALISTIC_TIMING", "R-04", "GAP", "R-06");
 
     private final EntityLookup lookup;
+    private final OwnerRoleCheck owners;
     private final AiAccessService accessService;
     private final PlanSessionGuard sessionGuard;
     private final AiStructuredRequests requests;
@@ -237,13 +238,13 @@ public class PlanDraftCheckService {
         AiDrafts.FixDraft draft = answer.value();
         boolean gap = "GAP".equals(request.kind());
         if (gap) {
-            accuracy.recordOwners(user.getId(), "PLAN_FIX", 1, AiOwnerRule.stripped(draft.newStepOwner()) ? 1 : 0);
+            accuracy.recordOwners(user.getId(), "PLAN_FIX", 1, owners.stripped(draft.newStepOwner()) ? 1 : 0);
         }
         return new DraftFix(gap ? theGoal.key() : request.itemKey(), request.kind(),
                 "VAGUE_STEP".equals(request.kind()) ? limit(draft.title(), 220) : null,
                 "UNREALISTIC_TIMING".equals(request.kind()) ? AiPlanService.futureDate(draft.targetDate(), today, goalDate[0]) : null,
                 gap ? limit(draft.newStepTitle(), 220) : null,
-                gap ? AiOwnerRule.check(draft.newStepOwner()) : null,
+                gap ? owners.check(draft.newStepOwner()) : null,
                 gap ? AiPlanService.futureDate(draft.newStepTargetDate(), today, goalDate[0]) : null,
                 limit(draft.note(), 300), answer.usage().getId());
     }

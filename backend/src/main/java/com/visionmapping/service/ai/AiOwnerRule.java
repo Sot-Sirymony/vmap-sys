@@ -1,5 +1,8 @@
 package com.visionmapping.service.ai;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -43,6 +46,16 @@ final class AiOwnerRule {
     /** The owner to keep: "Me" when blank, the trimmed role, or null when it is not "Me" or a role. */
     @Nullable
     static String check(@Nullable String owner) {
+        return check(owner, List.of());
+    }
+
+    /**
+     * V31 v2 (DC-FR-66): the same, also accepting the roles an admin added,
+     * each matched as whole words anywhere in the owner ("Translator" accepts
+     * "Khmer translator"). A title such as "Dr." is still refused.
+     */
+    @Nullable
+    static String check(@Nullable String owner, Collection<String> extraRoles) {
         if (owner == null || owner.isBlank()) {
             return ME;
         }
@@ -53,12 +66,27 @@ final class AiOwnerRule {
         if (TITLE.matcher(trimmed).find()) {
             return null;
         }
-        for (String word : WORD_SPLIT.split(trimmed.toLowerCase(Locale.ROOT))) {
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        for (String word : WORD_SPLIT.split(lower)) {
             if (ROLE_WORDS.contains(word)) {
                 return trimmed.length() <= MAX ? trimmed : trimmed.substring(0, MAX);
             }
         }
+        for (String role : extraRoles) {
+            if (Pattern.compile("(^|[^\\p{L}])" + Pattern.quote(role) + "($|[^\\p{L}])").matcher(lower).find()) {
+                return trimmed.length() <= MAX ? trimmed : trimmed.substring(0, MAX);
+            }
+        }
         return null;
+    }
+
+    /** V31 v2 (DC-FR-66): the admin's role list, one per line or comma-separated, in lower case. */
+    static List<String> parseRoles(@Nullable String setting) {
+        if (setting == null || setting.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(setting.split("[,\\n]")).map(role -> role.trim().toLowerCase(Locale.ROOT))
+                .filter(role -> !role.isEmpty()).distinct().toList();
     }
 
     /** True when check would remove this owner. */

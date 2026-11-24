@@ -85,4 +85,8 @@ public class AiSettings extends BaseAuditableEntity {
     /** V15 (AH-FR-57): page keys where the page assistant and helpers are off for everyone, comma-separated. */
     @Column(name = "pages_off", nullable = false, length = 200)
     private String pagesOff = "";
+
+    // V31 v2 (DC-FR-66): extra owner roles the R-07 owner check accepts; one per line or comma-separated.
+    @Column(name = "owner_roles", length = 2000)
+    private String ownerRoles;
 }

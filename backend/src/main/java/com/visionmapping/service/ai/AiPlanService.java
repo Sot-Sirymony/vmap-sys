@@ -103,6 +103,7 @@ public class AiPlanService {
             + "reason, say in one short sentence how it moves the goal toward them." + NO_GUESSING;
 
     private final EntityLookup lookup;
+    private final OwnerRoleCheck owners;
     private final AiAccessService accessService;
     private final VisionAreaRepository visionAreaRepository;
     private final DreamRepository dreamRepository;
@@ -318,7 +319,7 @@ public class AiPlanService {
                 date = null; // PB-FR-15: not due before the step it waits for.
             }
             // V31 R-07 (DC-FR-61): an owner that is not Me or a role is removed; the participant picks one.
-            String owner = AiOwnerRule.check(draft.owner());
+            String owner = owners.check(draft.owner());
             stripped += owner == null ? 1 : 0;
             steps.add(new StepSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
                     owner, date,
@@ -439,7 +440,7 @@ public class AiPlanService {
                 continue;
             }
             // V31 R-07 (DC-FR-61).
-            String owner = AiOwnerRule.check(draft.owner());
+            String owner = owners.check(draft.owner());
             stripped += owner == null ? 1 : 0;
             tasks.add(new TaskSuggestion(limit(draft.title(), 220), owner,
                     futureDate(draft.dueDate(), today, latest), priority(draft.priority()), hours(draft.estimatedHours()),

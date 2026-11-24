@@ -229,4 +229,10 @@ describe('CoachParticipantPage (V9 FR-17; BR-14, D-6)', () => {
     expect(screen.getByText('កំណត់ហេតុ')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ផ្ញើមតិ' })).toBeInTheDocument();
   });
+
+  it('shows which plans were built with the Dream Coach, and nothing else about it (V31 DC-FR-67)', async () => {
+    vi.mocked(cohortApi.getCoachParticipant).mockResolvedValue(detail({ guidePlans: [{ dreamId: 1, finishedAt: '2026-11-20T09:00:00Z' }] }));
+    open();
+    expect(await screen.findByText('Planned with the Dream Coach on Nov 20, 2026')).toBeInTheDocument();
+  });
 });

@@ -81,6 +81,9 @@ public class AiSettingsService {
         if (request.dailyMessageLimit() != null) {
             settings.setDailyMessageLimit(request.dailyMessageLimit());
         }
+        if (request.ownerRoles() != null) {
+            settings.setOwnerRoles(request.ownerRoles().isBlank() ? null : request.ownerRoles().trim());
+        }
         if (request.coachingGuidelines() != null) {
             settings.setCoachingGuidelines(request.coachingGuidelines().isBlank() ? null : request.coachingGuidelines().trim());
         }
@@ -189,7 +192,7 @@ public class AiSettingsService {
                 settings.getDailyMessageLimit(), settings.getHelpLines(),
                 usageLogRepository.totalCostSince(monthStart()), usageLogRepository.countByCreatedAtGreaterThanEqual(monthStart()),
                 settings.isAiReminders(), settings.getCoachingGuidelines(), settings.getPlanModel(),
-                PageSwitches.split(settings.getPagesOff()));
+                PageSwitches.split(settings.getPagesOff()), settings.getOwnerRoles());
     }
 
     private Instant monthStart() {

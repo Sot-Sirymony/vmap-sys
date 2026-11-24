@@ -14,4 +14,7 @@ public interface PlanBuilderFinishedPlanRepository extends JpaRepository<PlanBui
             from PlanBuilderFinishedPlan plan where plan.finishedAt >= :from
             """)
     List<Object[]> totalsSince(Instant from);
+
+    /** V31 v2 (DC-FR-67): one participant's finished plans, newest first, for their coach. */
+    List<PlanBuilderFinishedPlan> findByUserIdOrderByFinishedAtDesc(Long userId);
 }

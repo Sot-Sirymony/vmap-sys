@@ -163,3 +163,6 @@
 "V31 v1 step 3: schedule, review rhythm, plan tree, due reviews. Drafts for the Khmer reviewer.","Reviews due","ការពិនិត្យដែលដល់ពេល","",""
 "V31 v1 step 3: schedule, review rhythm, plan tree, due reviews. Drafts for the Khmer reviewer.","{type} review of ""{dream}""","ការពិនិត្យ{type} នៃ ""{dream}""","",""
 "V31 v1 step 3: schedule, review rhythm, plan tree, due reviews. Drafts for the Khmer reviewer.","Start this review","ចាប់ផ្តើមការពិនិត្យនេះ","",""
+"V31 v2 step 1: owner roles and coach indicator. Drafts for the Khmer reviewer.","Extra owner roles (optional)","តួនាទីអ្នកទទួលខុសត្រូវបន្ថែម (ជាជម្រើស)","",""
+"V31 v2 step 1: owner roles and coach indicator. Drafts for the Khmer reviewer.","Roles the AI may name as the owner of a step or task, one per line or separated by commas, for example Translator. Names of people are always removed.","តួនាទីដែល AI អាចដាក់ជាអ្នកទទួលខុសត្រូវលើជំហាន ឬកិច្ចការ មួយក្នុងមួយបន្ទាត់ ឬបំបែកដោយសញ្ញាក្បៀស ឧទាហរណ៍ អ្នកបកប្រែ។ ឈ្មោះមនុស្សតែងតែត្រូវបានដកចេញ។","",""
+"V31 v2 step 1: owner roles and coach indicator. Drafts for the Khmer reviewer.","Planned with the Dream Coach on {date}","បានរៀបផែនការជាមួយគ្រូបង្វឹកក្តីស្រមៃ នៅ {date}","",""

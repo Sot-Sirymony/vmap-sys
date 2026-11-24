@@ -2,6 +2,7 @@ package com.visionmapping.service.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /** V31 R-07 (DC-FR-61): AI owners are Me or a role, never a person's name. */
@@ -36,5 +37,15 @@ class AiOwnerRuleTests {
     void longRolesAreCut() {
         String owner = "Mentor " + "x".repeat(200);
         assertThat(AiOwnerRule.check(owner)).hasSize(160);
+    }
+
+    @Test
+    void adminRolesAreParsedAndMatchedAsWholeWords() {
+        List<String> roles = AiOwnerRule.parseRoles(" Translator, Program officer\n\nTranslator ");
+        assertThat(roles).containsExactly("translator", "program officer");
+        assertThat(AiOwnerRule.parseRoles(null)).isEmpty();
+        assertThat(AiOwnerRule.check("Khmer translator", roles)).isEqualTo("Khmer translator");
+        assertThat(AiOwnerRule.check("Translators", roles)).isNull();
+        assertThat(AiOwnerRule.check("Dr. Translator", roles)).isNull();
     }
 }

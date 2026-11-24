@@ -56,6 +56,7 @@ public class CoachService {
     static final int PITCH_MODULE = 11;
     private static final TypeReference<List<Map<String, String>>> ROWS = new TypeReference<>() { };
 
+    private final com.visionmapping.repository.PlanBuilderFinishedPlanRepository finishedPlans;
     private final EntityLookup lookup;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
@@ -102,7 +103,19 @@ public class CoachService {
                 moduleCompletionRepository.findByUser_IdAndModuleNumber(id, PITCH_MODULE)
                         .filter(completion -> completion.getRowsJson() != null)
                         .map(this::pitch)
-                        .orElse(null));
+                        .orElse(null),
+                guidePlans(id));
+    }
+
+    /** V31 v2 (DC-FR-67): the latest guided plan per dream, for dreams still in the plan. Never the draft or the chat. */
+    private List<CoachParticipantDetailResponse.GuidePlan> guidePlans(Long participantId) {
+        java.util.Map<Long, CoachParticipantDetailResponse.GuidePlan> latest = new java.util.LinkedHashMap<>();
+        for (var plan : finishedPlans.findByUserIdOrderByFinishedAtDesc(participantId)) {
+            if (plan.getDreamId() != null) {
+                latest.putIfAbsent(plan.getDreamId(), new CoachParticipantDetailResponse.GuidePlan(plan.getDreamId(), plan.getFinishedAt()));
+            }
+        }
+        return List.copyOf(latest.values());
     }
 
     @Transactional

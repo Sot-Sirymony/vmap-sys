@@ -76,7 +76,7 @@ export function AiSettingsPage() {
           <PlanMetricsCard token={token} />
           <PlanAccuracyCard token={token} />
           <PageMetricsCard token={token} />
-          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
+          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}-${settings.ownerRoles ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
     </PageSection>
@@ -196,6 +196,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [helpLines, setHelpLines] = useState(settings.helpLines);
   const [aiReminders, setAiReminders] = useState(settings.aiReminders);
   const [guidelines, setGuidelines] = useState(settings.coachingGuidelines ?? '');
+  const [ownerRoles, setOwnerRoles] = useState(settings.ownerRoles ?? '');
   const [pagesOff, setPagesOff] = useState<AssistantPage[]>(settings.pagesOff ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -215,6 +216,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         helpLines: helpLines.trim(),
         aiReminders,
         coachingGuidelines: guidelines,
+        ownerRoles,
         planModel,
         pagesOff,
       }));
@@ -298,6 +300,17 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
             value={guidelines}
             onChange={(event) => setGuidelines(event.target.value)}
             slotProps={{ htmlInput: { maxLength: 4000 } }}
+          />
+          {/* V31 v2 (DC-FR-66): roles the AI may name as an owner, beyond the built-in list. */}
+          <TextField
+            multiline
+            minRows={2}
+            size="small"
+            label={tr('Extra owner roles (optional)')}
+            helperText={tr('Roles the AI may name as the owner of a step or task, one per line or separated by commas, for example Translator. Names of people are always removed.')}
+            value={ownerRoles}
+            onChange={(event) => setOwnerRoles(event.target.value)}
+            slotProps={{ htmlInput: { maxLength: 2000 } }}
           />
           <TextField
             multiline

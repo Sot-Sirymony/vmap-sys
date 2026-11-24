@@ -34,7 +34,9 @@ public record AiSettingsResponse(
         // V11 (PB-FR-39): null when plan building uses the main model.
         String planModel,
         // V15 (AH-FR-57): pages where the page assistant and helpers are off for everyone.
-        List<String> pagesOff) {
+        List<String> pagesOff,
+        // V31 v2 (DC-FR-66).
+        String ownerRoles) {
 
     public AiSettingsResponse {
         models = Copies.list(models);

@@ -17,6 +17,16 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 31.0.0 — Dream Coach: v2 step 1, owner roles, coach indicator, language retry (built; awaiting deploy, UAT and the Khmer review)
+
+**Backend.** Migration **V98** adds `ai_settings.owner_roles`; `PUT /api/admin/ai-settings` takes `ownerRoles` (left out
+keeps it, blank removes it). The owner check (`OwnerRoleCheck`) accepts these roles as whole words; names and titles
+are still removed. `GET /api/coach/participants/{id}` adds `guidePlans` (dream id, finished at). Plan-building AI
+answers in the wrong language are retried once with a firmer instruction.
+
+**Frontend.** AI settings: "Extra owner roles". Coach participant page: "Planned with the Dream Coach on …" beside each
+dream planned with the guide. 3 more Khmer drafts.
+
 ## 31.0.0 — Dream Coach: v1 step 3, schedule, review rhythm and plan tree (built; awaiting deploy, UAT and the Khmer review)
 
 **Backend.** Migration **V97** `dream_review_rhythms` (one per dream: daily, weekly day, monthly day 1–28, quarterly;

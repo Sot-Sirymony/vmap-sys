@@ -105,6 +105,14 @@ function PlanCard({ detail }: { detail: CoachParticipantDetail }) {
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{dream.title}</Typography>
                 <StatusBadge status={dream.status} />
+                {/* V31 v2 (DC-FR-67): only whether and when; never the draft, the chat or the check. */}
+                {(() => {
+                  const guided = detail.guidePlans?.find((plan) => plan.dreamId === dream.id);
+                  return guided ? (
+                    <Chip size="small" variant="outlined"
+                      label={tr('Planned with the Dream Coach on {date}', { date: formatDate(new Date(guided.finishedAt), { year: true }) })} />
+                  ) : null;
+                })()}
               </Box>
               {detail.goals.filter((goal) => goal.dreamId === dream.id).map((goal) => (
                 <Box key={goal.id} sx={{ pl: 2, mt: 1 }}>

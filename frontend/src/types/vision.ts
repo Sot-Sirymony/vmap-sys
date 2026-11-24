@@ -756,6 +756,8 @@ export type CoachParticipantDetail = {
   attitudeCheckIns?: AttitudeCheckIn[] | null;
   comments: CoachComment[];
   pitch?: PitchReview | null;
+  // V31 v2 (DC-FR-67): dreams whose plan was built with the Dream Coach, and when.
+  guidePlans?: { dreamId: number; finishedAt: string }[];
 };
 
 // V9 (v0.1 FR-11): a participant's saved pitch (module 11) and the coach's rating.
@@ -1105,6 +1107,8 @@ export type AiSettings = {
   planModel?: string | null;
   // V15 (AH-FR-57): pages where the page assistant and helpers are off for everyone.
   pagesOff?: AssistantPage[];
+  // V31 v2 (DC-FR-66): extra owner roles the AI owner check accepts, one per line or comma-separated.
+  ownerRoles?: string | null;
 };
 
 // V9 Phase 3: the Dream Coach.

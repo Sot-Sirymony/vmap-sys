@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAiSettings, saveAiApiKey } from '../api/aiSettingsApi';
+import { getAiSettings, saveAiApiKey, updateAiSettings } from '../api/aiSettingsApi';
 import type { AiSettings } from '../types/vision';
 import { AiSettingsPage } from './AiSettingsPage';
 
@@ -56,5 +56,17 @@ describe('AiSettingsPage (AI-FR-24)', () => {
     expect(await screen.findByText('sk-ant-…wxyz')).toBeInTheDocument();
     expect(field).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Replace key' })).toBeInTheDocument();
+  });
+
+  it('saves extra owner roles with the other settings (V31 DC-FR-66)', async () => {
+    vi.mocked(getAiSettings).mockResolvedValue({ ...base, ownerRoles: 'Translator' });
+    vi.mocked(updateAiSettings).mockResolvedValue({ ...base, ownerRoles: 'Translator\nEnumerator' });
+    render(<AiSettingsPage />);
+
+    const roles = await screen.findByRole('textbox', { name: 'Extra owner roles (optional)' });
+    expect(roles).toHaveValue('Translator');
+    await userEvent.type(roles, '{enter}Enumerator');
+    await userEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(updateAiSettings).toHaveBeenCalledWith('token', expect.objectContaining({ ownerRoles: 'Translator\nEnumerator' }));
   });
 });

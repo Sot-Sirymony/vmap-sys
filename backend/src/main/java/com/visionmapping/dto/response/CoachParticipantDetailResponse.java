@@ -18,8 +18,16 @@ public record CoachParticipantDetailResponse(
         List<AttitudeCheckInResponse> attitudeCheckIns,
         List<CoachCommentResponse> comments,
         // V9 (v0.1 FR-11): null until the participant saves a pitch.
-        PitchReviewResponse pitch) {
+        PitchReviewResponse pitch,
+        // V31 v2 (DC-FR-67): dreams whose plan was built with the Dream Coach, and when; nothing else about the session.
+        List<GuidePlan> guidePlans) {
+
+    /** A dream whose plan was saved from Build my plan, with the latest time. */
+    public record GuidePlan(Long dreamId, java.time.Instant finishedAt) {
+    }
+
     public CoachParticipantDetailResponse {
+        guidePlans = Copies.list(guidePlans);
         dreams = Copies.list(dreams);
         goals = Copies.list(goals);
         steps = Copies.list(steps);

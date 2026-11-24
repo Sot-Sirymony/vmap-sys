@@ -24,7 +24,9 @@ public record AiSettingsRequest(
         // V11 (PB-FR-39): the model for plan building. Left out keeps it; blank uses the main model.
         @Size(max = 100) String planModel,
         // V15 (AH-FR-57): pages where the page assistant and helpers are off. Left out keeps the current list.
-        @Size(max = 7) List<@Pattern(regexp = PageAssistantRequest.PAGES) String> pagesOff) {
+        @Size(max = 7) List<@Pattern(regexp = PageAssistantRequest.PAGES) String> pagesOff,
+        // V31 v2 (DC-FR-66): extra owner roles, one per line or comma-separated. Left out keeps them; blank removes them.
+        @Size(max = 2000) String ownerRoles) {
 
     public AiSettingsRequest {
         pagesOff = com.visionmapping.util.Copies.list(pagesOff);

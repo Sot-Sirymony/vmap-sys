@@ -16,6 +16,8 @@ export type AiSettingsInput = {
   planModel?: string;
   // V15 (AH-FR-57): pages where the page assistant and helpers are off for everyone.
   pagesOff?: AssistantPage[];
+  // V31 v2 (DC-FR-66): blank removes the extra owner roles.
+  ownerRoles?: string;
 };
 
 export function getAiSettings(token: string) {

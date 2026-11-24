@@ -24,6 +24,7 @@ public class AiStructuredRequests {
     private final AiSettingsService aiSettingsService;
     private final AiUsageLogRepository usageLogRepository;
     private final ClaudeClient claudeClient;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     public <T> T ask(AppUser user, String apiKey, String feature, String language, String records, String task, Class<T> type) {
         return askTracked(user, apiKey, feature, language, records, task, type).value();
@@ -39,8 +40,14 @@ public class AiStructuredRequests {
         String guidelines = CoachingGuidelines.system(language, firstName(user.getFullName()), aiSettingsService.current().getCoachingGuidelines());
         // V31 v1 step 3 (BRD 31 section 4): plan building follows the Dream Coach's method and accuracy rules.
         boolean planBuilding = AiPlanFeedbackService.PLAN_FEATURES.contains(feature) && !PlanAssistantService.FEATURE.equals(feature);
-        return askWith(planBuilding ? CoachingGuidelines.withDreamCoachRules(guidelines) : guidelines, user, apiKey, feature, records,
-                task, type);
+        String system = planBuilding ? CoachingGuidelines.withDreamCoachRules(guidelines) : guidelines;
+        Tracked<T> answer = askWith(system, user, apiKey, feature, records, task, type);
+        // V31 v2 (EC-16): a plan answer in the wrong language is asked for once more, with a firmer instruction.
+        if (planBuilding && AnswerLanguage.wrong(objectMapper, answer.value(), language)) {
+            Tracked<T> retry = askWith(system, user, apiKey, feature, records, task + AnswerLanguage.retryInstruction(language), type);
+            return AnswerLanguage.wrong(objectMapper, retry.value(), language) ? answer : retry;
+        }
+        return answer;
     }
 
     /** An answer and the usage-log row it was recorded in. */

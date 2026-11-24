@@ -4188,4 +4188,8 @@ export const km: Record<string, string> = {
   'Reviews due': 'ការពិនិត្យដែលដល់ពេល',
   '{type} review of "{dream}"': 'ការពិនិត្យ{type} នៃ "{dream}"',
   'Start this review': 'ចាប់ផ្តើមការពិនិត្យនេះ',
+  // V31 v2 step 1: owner roles and coach indicator (drafts for the Khmer reviewer, docs/km-review-v31.csv)
+  'Extra owner roles (optional)': 'តួនាទីអ្នកទទួលខុសត្រូវបន្ថែម (ជាជម្រើស)',
+  'Roles the AI may name as the owner of a step or task, one per line or separated by commas, for example Translator. Names of people are always removed.': 'តួនាទីដែល AI អាចដាក់ជាអ្នកទទួលខុសត្រូវលើជំហាន ឬកិច្ចការ មួយក្នុងមួយបន្ទាត់ ឬបំបែកដោយសញ្ញាក្បៀស ឧទាហរណ៍ អ្នកបកប្រែ។ ឈ្មោះមនុស្សតែងតែត្រូវបានដកចេញ។',
+  'Planned with the Dream Coach on {date}': 'បានរៀបផែនការជាមួយគ្រូបង្វឹកក្តីស្រមៃ នៅ {date}',
 };
