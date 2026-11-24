@@ -343,7 +343,7 @@ export function SpeedStage({ review, readOnly, actions }: StageProps) {
       <Box component="form" sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}
         onSubmit={(event) => { event.preventDefault(); if (target) actions.setTarget(Number(target)); }}>
         <TextField size="small" type="number" label={tr('Target days from start to done')} value={target} disabled={readOnly}
-          onChange={(event) => setTarget(event.target.value)} slotProps={{ htmlInput: { min: 0.1, step: 0.5 } }} />
+          onChange={(event) => setTarget(event.target.value)} slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }} />
         {!readOnly && <Button type="submit" variant="secondary" disabled={!target}>{tr('Set target')}</Button>}
       </Box>
       <Box>
