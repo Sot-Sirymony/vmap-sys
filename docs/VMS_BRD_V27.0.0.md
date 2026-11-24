@@ -4,7 +4,7 @@ Nov 24, 2026
 
 ## Document control
 
-This is draft 27.0.1. It keeps every requirement in BRD 26.0.2 and the earlier BRDs. It adds a **Streamline review**:
+This is draft 27.0.2. It keeps every requirement in BRD 26.0.2 and the earlier BRDs. It adds a **Streamline review**:
 a guided, ordered review that trims an existing goal or step before the user speeds it up or automates it. The order
 of the five stages follows the five-step method Elon Musk has described in public (Starbase tours, interviews, and
 Walter Isaacson's 2023 biography). The wording, questions, screens and rules in this document are original to VMS.
@@ -12,7 +12,7 @@ Walter Isaacson's 2023 biography). The wording, questions, screens and rules in 
 | Item | Value |
 | --- | --- |
 | Document | Business Requirements Document (BRD) – Streamline review addendum |
-| Version | 27.0.1 – Draft |
+| Version | 27.0.2 – Draft |
 | Parent documents | CLAUDE.md core hierarchy and business rules (BR-1 to BR-14), BRD 17 (D-17-1 obstacles anchored to steps and tasks; D-17-2 dreams and goals describe outcomes only), FR-16 (reviews), BRD 9 (D-6 coach read access; AI with consent and the monthly cap), BRD 23 (D-23-3 admins never see plan data), BRD 25 (dashboard zones), BRD 26 (interface styles) |
 | Business owner | To be confirmed |
 | Product owner | To be confirmed |
@@ -20,6 +20,7 @@ Walter Isaacson's 2023 biography). The wording, questions, screens and rules in 
 
 | Version | Change | Author |
 | --- | --- | --- |
+| 27.0.2 | Q-27-1, Q-27-3, Q-27-6 and Q-27-7 answered by the product owner (24 Nov 2026), all as proposed: goals and steps only; delete archives immediately with undo and Restore; AI suggestions last, after an AI budget check; brought-back items as a count. All open questions are now answered | BA |
 | 27.0.1 | Q-27-2, Q-27-4 and Q-27-5 answered by the product owner (24 Nov 2026), all as proposed: hard lock on stage order with bulk marking in stage 1; simple repeating tasks in scope; no Musk name in the app (credit kept in the BRD and the user guide) | BA |
 | 27.0.0 | First draft, from the product owner's question of 24 Nov 2026 ("does VMS have Musk's five steps?"). The fit analysis comes from the code at commit `eb23ebb` | BA |
 
@@ -55,14 +56,14 @@ brought back, which the review counts as "added back".
 | ID | Decision |
 | --- | --- |
 | D-27-1 | One new guided flow, the **Streamline review**, rather than five separate features. The order is the point of the method, so the flow enforces it (D-27-3) |
-| D-27-2 | A review is anchored to a **goal** (it covers the goal's steps and their tasks) or to a **single step** (its tasks). Not to a dream or vision area: dreams and goals describe outcomes (D-17-2), and the method works on the work that serves them. A dream-level question already exists in the monthly review |
+| D-27-2 | A review is anchored (Q-27-1 answered) to a **goal** (it covers the goal's steps and their tasks) or to a **single step** (its tasks). Not to a dream or vision area: dreams and goals describe outcomes (D-17-2), and the method works on the work that serves them. A dream-level question already exists in the monthly review |
 | D-27-3 | Stages unlock in order (**hard lock**, Q-27-2 answered). A stage can be marked **Not needed** only with a written reason, which is kept. Stage 4 (Speed up) and stage 5 (Automate) stay locked until stages 1–3 are done or marked Not needed. Stage 1 supports **bulk marking**, so a large goal can be questioned without answering 40 items one by one |
-| D-27-4 | "Delete" archives the step or task (BR-12). Restoring it, during the review or within 90 days after, is recorded as **added back** |
-| D-27-5 | The "add back at least 10%" idea is a **hint, not a rule**. When a completed review deleted items but added none back, the summary says: "You brought nothing back. You may be able to cut more next time." No percentage is ever required |
+| D-27-4 | "Delete" archives the step or task (BR-12). Restoring it, during the review or within 90 days after, is recorded as **added back**. Deletion takes effect **immediately** (Q-27-3 answered): each delete shows an undo message, and stage 2 lists deleted items with a **Restore** button |
+| D-27-5 | The "add back at least 10%" idea is a **hint, not a rule**. When a completed review deleted items but added none back, the summary says: "You brought nothing back. You may be able to cut more next time." No percentage is ever required Brought-back items are shown as a **count** ("1 of 3 brought back"), never a percentage (Q-27-7 answered) |
 | D-27-6 | Every step and task in scope gets a **requirement owner**: the named person or source that asked for it (yourself, a partner, a mentor, a coach, an organisation, or "Not sure"). "Not sure" is allowed, but is flagged as the first thing to question |
 | D-27-7 | Cycle time is measured from a task's first move to **In progress** (new `startedAt`) to **Completed** (`completedAt`, which exists). Waiting and Blocked time come from a new **status history**. Tasks completed before V27 have no start time and are left out of cycle-time figures, not guessed |
 | D-27-8 | Automation means three things VMS can do or record: a **repeating task** (VMS creates the next one; in scope for V27 in a simple form, Q-27-4 answered), a **reminder** (the existing email reminders), or **delegate or automate outside VMS** (recorded, optionally linked to a partner, reusing the Strengths and Gaps option "Delegate or automate"). VMS does not run external automations |
-| D-27-9 | AI help is optional and follows the V9 rules (consent, monthly cap). AI may **suggest** questions, deletions, simplifications and automation candidates. It never changes, archives or creates anything without the user's approval |
+| D-27-9 | AI help is optional and follows the V9 rules (consent, monthly cap). AI may **suggest** questions, deletions, simplifications and automation candidates. It never changes, archives or creates anything without the user's approval AI suggestions are built **last** (phase 6, Q-27-6 answered); before that phase, check the monthly AI budget usage and drop the item if it is close to the cap. The review works fully without AI |
 | D-27-10 | Coaches see a participant's Streamline reviews read-only, under the existing V9 rule (D-6). Admins and user managers never see them (D-23-3) |
 | D-27-11 | The interface does not use Elon Musk's name (Q-27-5 answered). In-app help says the order "follows a five-step method popularised in engineering and manufacturing". Credit is kept in this BRD and in the user guide's background note: "This order follows a five-step method popularised by Elon Musk for engineering and manufacturing." |
 
@@ -255,7 +256,7 @@ at least 4 times in 60 days (an automation candidate). At most one suggestion ca
 | SR-FR-01 | Start a Streamline review on a goal or a step; one open review per anchor | Must |
 | SR-FR-02 | Five ordered stages with Done / Not needed (reason); later stages locked until earlier ones are done | Must |
 | SR-FR-03 | Stage 1: requirement owner, source, why needed and verdict per item, with bulk marking of several items (or all tasks under a step) at once | Must |
-| SR-FR-04 | Stage 2: delete (archive), keep (reason), merge, applied immediately and reversible | Must |
+| SR-FR-04 | Stage 2: delete (archive), keep (reason), merge, applied immediately, with an undo message after each delete and a Restore button for every deleted item | Must |
 | SR-FR-05 | Stage 3: merge, edit scope, change owner, lower estimate, mark simple; live before/after counts | Must |
 | SR-FR-06 | `started_at` on tasks and a task status history, written on every status change path | Must |
 | SR-FR-07 | Stage 4: baseline cycle time, waiting and blocked time, levers, target | Must |
@@ -265,7 +266,7 @@ at least 4 times in 60 days (an automation candidate). At most one suggestion ca
 | SR-FR-11 | Streamline list page and the goal and step summary chip | Must |
 | SR-FR-12 | Suggestion cards (§6.2) and the monthly review question | Should |
 | SR-FR-13 | Dashboard Streamline card | Should |
-| SR-FR-14 | AI suggestions for each stage, with approval per suggestion (V9 consent and cap) | Could |
+| SR-FR-14 | AI suggestions for each stage, with approval per suggestion (V9 consent and cap); phase 6, subject to the AI budget check | Could |
 | SR-FR-15 | Coach read-only view | Should |
 | SR-FR-16 | Excel export sheet and cycle-time columns | Should |
 
@@ -300,7 +301,7 @@ at least 4 times in 60 days (an automation candidate). At most one suggestion ca
 | 3 | Streamline API: start, items, stages, delete/restore/merge, summary; tests for every BR-27 rule | New API |
 | 4 | Review page, list page, goal and step entry points, summary chip | Feature live |
 | 5 | Stage 4 metrics and levers; stage 5 candidates; repeating tasks and the daily job | Speed and automate live |
-| 6 | Suggestion cards, monthly review question, dashboard card, coach view, Excel sheet; AI suggestions (if Q-27-6 is yes) | Wider integration |
+| 6 | Suggestion cards, monthly review question, dashboard card, coach view, Excel sheet; AI suggestions (after the AI budget check, Q-27-6) | Wider integration |
 | 7 | `UAT_V27.md`, `km-review-v27.csv`, user guide section (with the D-27-11 credit note), e2e of a full review, CHANGELOG | None |
 
 Phase 2 should ship early: cycle time needs weeks of history before stage 4 shows anything useful.
@@ -324,13 +325,13 @@ Phase 2 should ship early: cycle time needs weeks of history before stage 4 show
 
 | ID | Question | Proposed answer |
 | --- | --- | --- |
-| Q-27-1 | Anchor to goals and steps only, or also to dreams? | Goals and steps only (D-27-2). Dreams keep the monthly "revise up, pause or remove" question |
+| Q-27-1 | Anchor to goals and steps only, or also to dreams? | Goals and steps only (D-27-2). Dreams keep the monthly "revise up, pause or remove" question **Answered 24 Nov 2026: goals and steps only** |
 | Q-27-2 | Hard lock on stage order, or a soft warning? | Hard lock with "Not needed (reason)" as the escape. The order is the point of the method. **Answered 24 Nov 2026: hard lock, plus bulk marking in stage 1** |
-| Q-27-3 | Should "delete" take effect immediately, or only when the review is completed? | Immediately (archive), so the plan the user sees matches their decisions; undo is one click |
+| Q-27-3 | Should "delete" take effect immediately, or only when the review is completed? | Immediately (archive), so the plan the user sees matches their decisions; undo is one click **Answered 24 Nov 2026: immediately, with Restore and an undo message after each delete** |
 | Q-27-4 | Are repeating tasks in scope for V27, or only recorded as a decision? | In scope (Should): without them, "automate" in VMS would only be a note. **Answered 24 Nov 2026: in scope, simple form (daily / weekly / monthly)** |
 | Q-27-5 | Name Elon Musk in the help text? | No name in the interface; the help text says "a five-step method popularised in engineering and manufacturing". The BRD keeps the attribution. **Answered 24 Nov 2026: no name in the app; credit in the BRD and the user guide** |
-| Q-27-6 | Include AI suggestions (Could) in V27? | Yes, behind the existing AI consent and cap, in phase 6; drop if the AI budget is tight |
-| Q-27-7 | Show the add-back ratio as a percentage? | No, as a count, with the D-27-5 hint only when nothing came back |
+| Q-27-6 | Include AI suggestions (Could) in V27? | Yes, behind the existing AI consent and cap, in phase 6; drop if the AI budget is tight **Answered 24 Nov 2026: yes, in phase 6, after checking current AI budget usage; dropped if it is close to the cap** |
+| Q-27-7 | Show the add-back ratio as a percentage? | No, as a count, with the D-27-5 hint only when nothing came back **Answered 24 Nov 2026: a count, never a percentage** |
 
 ## Sign-off
 
