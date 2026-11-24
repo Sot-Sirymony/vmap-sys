@@ -32,11 +32,19 @@ public class AiAdminController {
 
     private final AiAdminService service;
     private final AiPlanFeedbackService planFeedback;
+    private final com.visionmapping.service.ai.PlanAccuracyService planAccuracy;
 
     /** V11 (PB-FR-36): plan builder acceptance, edits, ratings and cost per feature. */
     @GetMapping("/plan-metrics")
     public PlanMetrics planMetrics(@RequestParam(defaultValue = "30") int days) {
         return planFeedback.metrics(days);
+    }
+
+    /** V31 (DC-FR-65): how often Build my plan drafts pass the BRD 31 rules. */
+    @GetMapping("/plan-accuracy")
+    public com.visionmapping.dto.response.AiPlanResponses.PlanAccuracyMetrics planAccuracy(
+            @RequestParam(defaultValue = "30") int days) {
+        return planAccuracy.metrics(days);
     }
 
     @GetMapping("/resources")

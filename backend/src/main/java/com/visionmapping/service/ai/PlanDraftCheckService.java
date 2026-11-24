@@ -15,7 +15,6 @@ import com.visionmapping.dto.response.AiPlanResponses.PlanCapacity;
 import com.visionmapping.dto.response.AiPlanResponses.WeekLoad;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.Dream;
-import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.entity.enums.WorkStatus;
@@ -60,6 +59,8 @@ public class PlanDraftCheckService {
     static final int MAX_AI_ISSUES = 8;
     static final int CAPACITY_WEEKS = 26;
     private static final Set<String> AI_KINDS = Set.of("VAGUE_STEP", "UNREALISTIC_TIMING", "GAP");
+    /** V31: the BRD 31 rule each AI issue belongs to. AI issues are advice (INFO); only the rules decide a save. */
+    private static final Map<String, String> AI_RULES = Map.of("VAGUE_STEP", "R-02", "UNREALISTIC_TIMING", "R-04", "GAP", "R-06");
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
@@ -70,21 +71,28 @@ public class PlanDraftCheckService {
     private final VisionStepRepository stepRepository;
     private final TaskItemRepository taskRepository;
     private final AppUserRepository userRepository;
+    private final PlanRuleService ruleService;
+    private final PlanAccuracyService accuracy;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
-    /** PB-FR-28: rule issues always; AI issues when AI is available. */
-    public DraftCheck check(Long dreamId, String language) {
+    /**
+     * PB-FR-28: rule issues always; AI issues when AI is available. V31 DC-FR-04:
+     * with rulesOnly, the rules R-01 to R-08 alone, so the live list costs no AI.
+     */
+    public DraftCheck check(Long dreamId, String language, boolean rulesOnly) {
         AppUser user = lookup.currentUser();
         PlanDraftContent content = drafts.stored(dreamId);
         LocalDate today = LocalDate.now(clock);
         Rules rules = transactions.execute(status -> rules(user, dreamId, content, today));
+        // V31 DC-FR-64: counts for the accuracy metrics; never text.
+        accuracy.recordCheck(user.getId(), dreamId, drafts.sessionKey(dreamId).orElse(null), rules.report());
         Map<String, String> titles = rules.titles();
         Map<String, String> types = rules.types();
         List<DraftIssue> issues = new ArrayList<>(rules.issues());
         String records = rules.records();
 
-        Optional<String> apiKey = accessService.availableKey(user);
+        Optional<String> apiKey = rulesOnly ? Optional.empty() : accessService.availableKey(user);
         // PB-NFR-03: past the session's limit the rule checks still run.
         if (apiKey.isEmpty() || titles.isEmpty() || !sessionGuard.tryUse(user.getId(), dreamId)) {
             return new DraftCheck(issues, false, null);
@@ -109,20 +117,22 @@ public class PlanDraftCheckService {
                 continue;
             }
             issues.add(new DraftIssue(kind, types.get(key), key, null, titles.get(key), limit(draft.problem(), 300),
-                    limit(draft.fix(), 300), "FIX_WITH_AI", null, true));
+                    limit(draft.fix(), 300), "FIX_WITH_AI", null, true, AI_RULES.get(kind), PlanRuleService.INFO));
             added++;
         }
         return new DraftCheck(issues, true, answer.usage().getId());
     }
 
-    /** The draft described for Claude, its titles and types by key, and the rule issues. */
-    record Rules(String records, Map<String, String> titles, Map<String, String> types, List<DraftIssue> issues) {
+    /** The draft described for Claude, its titles and types by key, and the V31 rule report. */
+    record Rules(String records, Map<String, String> titles, Map<String, String> types, PlanRuleService.Report report) {
         public Rules {
             titles = Copies.map(titles);
             types = Copies.map(types);
-            issues = Copies.list(issues);
         }
-    
+
+        List<DraftIssue> issues() {
+            return report.issues();
+        }
     }
 
     /**
@@ -138,56 +148,37 @@ public class PlanDraftCheckService {
     private Rules rules(AppUser user, Long dreamId, PlanDraftContent content, LocalDate today) {
         Map<String, String> titles = new HashMap<>();
         Map<String, String> types = new HashMap<>();
-        List<DraftIssue> issues = new ArrayList<>();
         Dream dream = lookup.dream(dreamId);
+        // V31 D-31-3: the rules live in one service, shared with Save my plan.
+        PlanRuleService.Report report = ruleService.evaluate(user, dream, content, today);
         StringBuilder out = new StringBuilder(planService.describeDream(user, dream));
         out.append("\nThe draft being built, with keys in brackets:\n");
         for (DraftGoal goal : goals(content)) {
-            LocalDate goalDate = goal.targetDate();
-            int savedSteps = 0;
-            if (goal.existingId() != null) {
-                Goal saved = lookup.goal(goal.existingId());
-                goalDate = saved.getTargetDate();
-                savedSteps = stepRepository.findByGoal_IdAndUser_IdAndArchivedFalse(saved.getId(), user.getId()).size();
-            }
-            String goalTitle = goal.title();
-            titles.put(goal.key(), goalTitle);
+            LocalDate goalDate = goal.existingId() != null ? lookup.goal(goal.existingId()).getTargetDate() : goal.targetDate();
+            titles.put(goal.key(), goal.title());
             types.put(goal.key(), "GOAL");
-            out.append("Goal [").append(clip(goal.key())).append("] ").append(clip(goalTitle))
+            out.append("Goal [").append(clip(goal.key())).append("] ").append(clip(goal.title()))
                     .append(goal.existingId() != null ? " (already in the plan)" : " (new)")
                     .append(goalDate == null ? "" : ", target " + goalDate).append('\n');
-            List<DraftStep> steps = Optional.ofNullable(goal.steps()).orElse(List.of());
-            if (savedSteps == 0 && steps.stream().noneMatch(step -> step.existingId() == null)) {
-                issues.add(issue("NO_STEPS", "GOAL", goal.key(), null, goalTitle, "This goal has no steps yet.",
-                        "Add the first step.", "GO_TO_STEPS", null));
-            }
-            Map<String, DraftStep> byKey = steps.stream().filter(step -> step.key() != null)
-                    .collect(Collectors.toMap(DraftStep::key, step -> step, (first, second) -> first));
-            for (DraftStep step : steps) {
+            for (DraftStep step : Optional.ofNullable(goal.steps()).orElse(List.of())) {
                 titles.put(step.key(), step.title());
                 types.put(step.key(), "STEP");
-                LocalDate stepDate = step.targetDate();
-                if (step.existingId() != null) {
-                    VisionStep saved = lookup.step(step.existingId());
-                    stepDate = saved.getTargetDate();
-                } else {
+                if (step.existingId() == null) {
                     out.append("  Step [").append(clip(step.key())).append("] ").append(clip(step.title()))
                             .append(" | owner: ").append(blank(step.owner()) ? "none" : clip(step.owner()))
-                            .append(" | due: ").append(stepDate == null ? "none" : stepDate)
+                            .append(" | due: ").append(step.targetDate() == null ? "none" : step.targetDate())
                             .append(step.estimatedHours() == null ? "" : " | " + step.estimatedHours() + " h")
                             .append(step.complex() ? " | complex" : "")
                             .append(step.startsAfterKey() == null ? "" : " | after [" + clip(step.startsAfterKey()) + "]").append('\n');
-                    stepIssues(issues, goal, goalDate, step, byKey.get(step.startsAfterKey()), today);
                 }
                 for (DraftTask task : Optional.ofNullable(step.tasks()).orElse(List.of())) {
                     out.append("    Task: ").append(clip(task.title())).append(" | due: ")
                             .append(task.dueDate() == null ? "none" : task.dueDate())
                             .append(task.estimatedHours() == null ? "" : " | " + task.estimatedHours() + " h").append('\n');
-                    taskIssues(issues, step, stepDate, task, today);
                 }
             }
         }
-        return new Rules(out.toString(), titles, types, issues);
+        return new Rules(out.toString(), titles, types, report);
     }
 
     /** PB-FR-29: Claude's proposed change for one AI issue; the participant applies it to the draft, or not. */
@@ -245,11 +236,14 @@ public class PlanDraftCheckService {
                 task, AiDrafts.FixDraft.class);
         AiDrafts.FixDraft draft = answer.value();
         boolean gap = "GAP".equals(request.kind());
+        if (gap) {
+            accuracy.recordOwners(user.getId(), "PLAN_FIX", 1, AiOwnerRule.stripped(draft.newStepOwner()) ? 1 : 0);
+        }
         return new DraftFix(gap ? theGoal.key() : request.itemKey(), request.kind(),
                 "VAGUE_STEP".equals(request.kind()) ? limit(draft.title(), 220) : null,
                 "UNREALISTIC_TIMING".equals(request.kind()) ? AiPlanService.futureDate(draft.targetDate(), today, goalDate[0]) : null,
                 gap ? limit(draft.newStepTitle(), 220) : null,
-                gap ? (blank(draft.newStepOwner()) ? "Me" : limit(draft.newStepOwner(), 160)) : null,
+                gap ? AiOwnerRule.check(draft.newStepOwner()) : null,
                 gap ? AiPlanService.futureDate(draft.newStepTargetDate(), today, goalDate[0]) : null,
                 limit(draft.note(), 300), answer.usage().getId());
     }
@@ -293,70 +287,6 @@ public class PlanDraftCheckService {
             return;
         }
         weeks.merge(date.with(DayOfWeek.MONDAY), hours, BigDecimal::add);
-    }
-
-    private static void stepIssues(List<DraftIssue> issues, DraftGoal goal, LocalDate goalDate, DraftStep step, DraftStep waitsFor,
-                                   LocalDate today) {
-        String title = step.title();
-        if (blank(step.owner())) {
-            issues.add(issue("MISSING_OWNER", "STEP", step.key(), goal.key(), title, "This step has no owner.",
-                    "Make it yours for now.", "SET_OWNER_ME", null));
-        }
-        if (step.targetDate() == null) {
-            issues.add(issue("MISSING_DATE", "STEP", step.key(), goal.key(), title, "This step has no date.",
-                    goalDate == null ? "Pick a realistic due date." : "Use the goal's date for now, or pick an earlier one.",
-                    goalDate == null ? null : "SET_DATE", goalDate == null ? null : goalDate.toString()));
-        } else {
-            if (step.targetDate().isBefore(today)) {
-                issues.add(issue("PAST_DATE", "STEP", step.key(), goal.key(), title, "This step is dated in the past.",
-                        "Pick a date from today on.", null, null));
-            }
-            if (goalDate != null && step.targetDate().isAfter(goalDate)) {
-                issues.add(issue("AFTER_GOAL_DATE", "STEP", step.key(), goal.key(), title, "This step is due after its goal.",
-                        "Bring it forward to the goal's date.", "SET_DATE", goalDate.toString()));
-            }
-            if (waitsFor != null && waitsFor.targetDate() != null && step.targetDate().isBefore(waitsFor.targetDate())) {
-                issues.add(issue("BEFORE_WAITED_STEP", "STEP", step.key(), goal.key(), title,
-                        "This step is due before the step it waits for.", "Move it to that step's date.", "SET_DATE",
-                        waitsFor.targetDate().toString()));
-            }
-        }
-        if (blank(step.resources())) {
-            issues.add(issue("MISSING_RESOURCE", "STEP", step.key(), goal.key(), title, "This step does not say what it needs.",
-                    "Write the resources and people it needs: money, tools, skills or a helper.", null, null));
-        }
-        if (step.complex() && Optional.ofNullable(step.tasks()).map(List::isEmpty).orElse(true)) {
-            issues.add(issue("COMPLEX_NO_TASKS", "STEP", step.key(), goal.key(), title, "This complex step has no tasks yet.",
-                    "Break it into tasks.", "GO_TO_TASKS", null));
-        }
-    }
-
-    private static void taskIssues(List<DraftIssue> issues, DraftStep step, LocalDate stepDate, DraftTask task, LocalDate today) {
-        String title = task.title();
-        if (blank(task.owner())) {
-            issues.add(issue("MISSING_OWNER", "TASK", task.key(), step.key(), title, "This task has no owner.",
-                    "Make it yours for now.", "SET_OWNER_ME", null));
-        }
-        if (task.dueDate() == null) {
-            issues.add(issue("MISSING_DATE", "TASK", task.key(), step.key(), title, "This task has no date.",
-                    stepDate == null ? "Pick a realistic due date." : "Use the step's date for now, or pick an earlier one.",
-                    stepDate == null ? null : "SET_DATE", stepDate == null ? null : stepDate.toString()));
-        } else {
-            if (task.dueDate().isBefore(today)) {
-                issues.add(issue("PAST_DATE", "TASK", task.key(), step.key(), title, "This task is dated in the past.",
-                        "Pick a date from today on.", null, null));
-            }
-            if (stepDate != null && task.dueDate().isAfter(stepDate)) {
-                issues.add(issue("TASK_AFTER_STEP", "TASK", task.key(), step.key(), title, "This task is due after its step.",
-                        "Bring it forward to the step's date.", "SET_DATE", stepDate.toString()));
-            }
-        }
-    }
-
-    private static DraftIssue issue(String kind, String itemType, String itemKey, String parentKey, String title, String problem,
-                                    String fix, String fixAction, String fixValue) {
-        return new DraftIssue(kind, itemType, itemKey, parentKey, blank(title) ? null : title.trim(), problem, fix, fixAction,
-                fixValue, false);
     }
 
     private static List<DraftGoal> goals(PlanDraftContent content) {

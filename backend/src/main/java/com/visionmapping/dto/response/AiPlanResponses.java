@@ -118,8 +118,12 @@ public final class AiPlanResponses {
      * or FIX_WITH_AI for the kinds only Claude finds; null when there is no
      * clear fix.
      */
+    /**
+     * V31: rule is the BRD 31 rule (R-01 to R-08) and level MUST, SHOULD or INFO.
+     * A MUST issue blocks Save my plan; a SHOULD issue needs "I understand"; INFO is advice.
+     */
     public record DraftIssue(String kind, String itemType, String itemKey, String parentKey, String itemTitle, String problem,
-                             String fix, String fixAction, String fixValue, boolean fromAi) {
+                             String fix, String fixAction, String fixValue, boolean fromAi, String rule, String level) {
     }
 
     public record DraftCheck(List<DraftIssue> issues, boolean aiChecked, Long requestId) {
@@ -223,6 +227,26 @@ public final class AiPlanResponses {
         }
     
     }
+    /**
+     * V31 (section 7, DC-FR-65): one rule's first-check pass rate (DCM-02), its
+     * results at save, and how often its SHOULD fails were accepted.
+     */
+    public record RuleAccuracy(String rule, long firstRuns, Double firstPassRate, long saves, long acceptedShould) {
+    }
+
+    /**
+     * V31 accuracy metrics for admins. Rates are 0 to 1, null when there is
+     * nothing to measure. DCM-04 and DCM-05 are guaranteed by the save gate
+     * (DC-FR-56), so they show in savedValidRate (DCM-03).
+     */
+    public record PlanAccuracyMetrics(int days, long checkedSessions, Double firstCheckPassRate, List<RuleAccuracy> rules,
+                                      long savedPlans, Double savedValidRate, long aiItemsChecked, Double aiDateConflictRate,
+                                      long aiOwners, Double inventedOwnerRate) {
+        public PlanAccuracyMetrics {
+            rules = Copies.list(rules);
+        }
+    }
+
     // V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50).
 
     /**

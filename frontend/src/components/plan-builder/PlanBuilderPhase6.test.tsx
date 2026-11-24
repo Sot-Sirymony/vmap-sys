@@ -89,7 +89,7 @@ describe('Build my plan, phase 6', () => {
     const saveDraft = vi.fn().mockResolvedValue(undefined);
     vi.mocked(checkPlanDraft).mockResolvedValue({ aiChecked: true, requestId: 4, issues: [
       { kind: 'MISSING_OWNER', itemType: 'STEP', itemKey: 's1', itemTitle: 'Do finance stuff', problem: 'This step has no owner.',
-        fix: 'Make it yours for now.', fixAction: 'SET_OWNER_ME', fromAi: false },
+        fix: 'Make it yours for now.', fixAction: 'SET_OWNER_ME', fromAi: false, rule: 'R-03', level: 'MUST' },
       { kind: 'VAGUE_STEP', itemType: 'STEP', itemKey: 's1', itemTitle: 'Do finance stuff', problem: 'Too vague to act on',
         fixAction: 'FIX_WITH_AI', fromAi: true },
     ] });
@@ -97,12 +97,15 @@ describe('Build my plan, phase 6', () => {
     render(<Harness initial={draftWith([step({ key: 's1', title: 'Do finance stuff', owner: '', targetDate: '2027-02-01' })])}
       saveDraft={saveDraft} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Check my draft' }));
+    // V31: the rules run by themselves (without AI) and show in the plan check list.
+    await userEvent.click(await screen.findByRole('button', { name: 'Make it mine' }, { timeout: 3000 }));
     expect(saveDraft).toHaveBeenCalled();
-    expect(checkPlanDraft).toHaveBeenCalledWith('t', 5, 'en');
-    await userEvent.click(await screen.findByRole('button', { name: 'Make it mine' }));
+    expect(checkPlanDraft).toHaveBeenCalledWith('t', 5, 'en', true);
     expect(draft().goals[0].steps[0].owner).toBe('Me');
-    expect(screen.queryByText('This step has no owner.')).not.toBeInTheDocument();
+
+    // Check my draft adds the AI review; rule issues are not repeated there.
+    await userEvent.click(screen.getByRole('button', { name: 'Check my draft' }));
+    expect(checkPlanDraft).toHaveBeenCalledWith('t', 5, 'en');
 
     await userEvent.click(screen.getByRole('button', { name: 'Fix with AI' }));
     expect(fixPlanDraft).toHaveBeenCalledWith('t', 5, 'en', { itemKey: 's1', kind: 'VAGUE_STEP', problem: 'Too vague to act on' });

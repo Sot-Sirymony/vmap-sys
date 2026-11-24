@@ -4,11 +4,13 @@ import com.visionmapping.entity.enums.ObstacleType;
 import com.visionmapping.entity.enums.PartnerSupportType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.Severity;
+import com.visionmapping.entity.enums.WorkStatus;
 import com.visionmapping.util.Copies;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -86,7 +88,9 @@ public record PlanDraftContent(
             Long requestId,
             boolean edited,
             boolean locked,
-            @Size(max = 25) List<@NotNull @Valid DraftStep> steps) {
+            @Size(max = 25) List<@NotNull @Valid DraftStep> steps,
+            // V31 R-07 (DC-FR-26): an AI-suggested goal counts only once the participant approves it.
+            boolean approved) {
         public DraftGoal {
             steps = Copies.list(steps);
         }
@@ -109,7 +113,9 @@ public record PlanDraftContent(
             @Size(max = 15) List<@NotNull @Valid DraftTask> tasks,
             // V11 Phase 4 (PB-FR-12): effort, and the key of the step in this goal it starts after.
             @DecimalMin("0.00") @DecimalMax("999.99") BigDecimal estimatedHours,
-            @Size(max = 40) String startsAfterKey) {
+            @Size(max = 40) String startsAfterKey,
+            // V31 R-06 (DC-FR-31, BL-FR-18): the kind of gap the resources text describes.
+            @Pattern(regexp = VisionStepRequest.GAP_KIND_PATTERN) String gapKind) {
         public DraftStep {
             tasks = Copies.list(tasks);
         }
@@ -126,6 +132,14 @@ public record PlanDraftContent(
             // V11 Phase 4 (PB-FR-14, PB-FR-35): the AI answer a task came from, and whether it was changed.
             Long requestId,
             boolean edited,
-            boolean locked) {
+            boolean locked,
+            // V31 R-03, R-05 (DC-FR-37, DC-FR-38): the task's status (empty means Not started) and, when Blocked, why.
+            WorkStatus status,
+            @Size(max = 2000) String blockerReason) {
+
+        /** Empty means Not started, the status a new task is saved with. */
+        public WorkStatus statusOrDefault() {
+            return status == null ? WorkStatus.NOT_STARTED : status;
+        }
     }
 }

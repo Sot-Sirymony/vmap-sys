@@ -33,7 +33,8 @@ export function newKey(prefix: string) {
 }
 
 export function emptyGoal(): DraftGoal {
-  return { key: newKey('g'), title: '', priority: 'MEDIUM', moonshot: false, edited: false, steps: [] };
+  // V31 R-07: a goal the participant writes is theirs, so it is approved.
+  return { key: newKey('g'), title: '', priority: 'MEDIUM', moonshot: false, edited: false, steps: [], approved: true };
 }
 
 export function emptyStep(): DraftStep {
@@ -41,7 +42,7 @@ export function emptyStep(): DraftStep {
 }
 
 export function emptyTask(): DraftTask {
-  return { key: newKey('t'), title: '', owner: 'Me', priority: 'MEDIUM' };
+  return { key: newKey('t'), title: '', owner: 'Me', priority: 'MEDIUM', status: 'NOT_STARTED' };
 }
 
 export function goalFromSuggestion(suggestion: GoalSuggestion, requestId?: number | null): DraftGoal {
@@ -56,6 +57,8 @@ export function goalFromSuggestion(suggestion: GoalSuggestion, requestId?: numbe
     requestId: requestId ?? null,
     edited: false,
     steps: [],
+    // V31 R-07: the participant reads and approves each suggested goal.
+    approved: false,
   };
 }
 
@@ -64,7 +67,8 @@ export function stepFromSuggestion(suggestion: StepSuggestion, requestId?: numbe
     key: newKey('s'),
     title: suggestion.title,
     description: suggestion.description ?? null,
-    owner: suggestion.owner || 'Me',
+    // V31 R-07: the server leaves the owner empty when Claude named a person; the participant picks one.
+    owner: suggestion.owner ?? '',
     targetDate: suggestion.targetDate ?? null,
     priority: suggestion.priority ?? 'MEDIUM',
     complex: suggestion.complex ?? false,
@@ -89,12 +93,14 @@ export function taskFromSuggestion(suggestion: TaskSuggestion, requestId?: numbe
   return {
     key: newKey('t'),
     title: suggestion.title,
-    owner: suggestion.owner || 'Me',
+    // V31 R-07: empty when Claude named a person.
+    owner: suggestion.owner ?? '',
     dueDate: suggestion.dueDate ?? null,
     priority: suggestion.priority,
     estimatedHours: suggestion.estimatedHours ?? null,
     requestId: requestId ?? null,
     edited: false,
+    status: 'NOT_STARTED',
   };
 }
 
@@ -353,11 +359,20 @@ function locate(content: PlanDraftContent, key: string) {
 
 /** PB-FR-29: the one-click fix of a rule issue, applied to the draft (nothing is saved). */
 export function applyIssueFix(content: PlanDraftContent, issue: DraftIssue): PlanDraftContent {
+  // V31: fixes on a new goal (approve it, or move its date) and a task's priority.
+  const goal = content.goals.find((item) => item.key === issue.itemKey && item.existingId == null);
+  if (goal) {
+    if (issue.fixAction === 'APPROVE') {
+      return updateGoal(content, goal.key, { approved: true });
+    }
+    return issue.fixAction === 'SET_DATE' && issue.fixValue ? updateGoal(content, goal.key, { targetDate: issue.fixValue }) : content;
+  }
   const found = locate(content, issue.itemKey);
   if (!found) {
     return content;
   }
   const patch = issue.fixAction === 'SET_OWNER_ME' ? { owner: 'Me' }
+    : issue.fixAction === 'SET_PRIORITY' && found.task ? { priority: (issue.fixValue ?? 'MEDIUM') as Priority }
     : issue.fixAction === 'SET_DATE' && issue.fixValue ? (found.task ? { dueDate: issue.fixValue } : { targetDate: issue.fixValue })
       : null;
   if (!patch) {
@@ -851,7 +866,7 @@ function mapStep(content: PlanDraftContent, goalKey: string, stepKey: string, ch
 
 /** PB-FR-35: changing a field of an AI suggestion marks it edited. */
 function markEdited<T extends { requestId?: number | null; edited?: boolean }>(item: T, patch: Partial<T>): T {
-  // Locking keeps an item as it is; it is not an edit.
-  const changesContent = Object.keys(patch).some((field) => field !== 'locked');
+  // Locking keeps an item as it is, and approving it (V31 R-07) confirms it as it is; neither is an edit.
+  const changesContent = Object.keys(patch).some((field) => field !== 'locked' && field !== 'approved');
   return { ...item, ...patch, edited: item.requestId && changesContent ? true : item.edited };
 }

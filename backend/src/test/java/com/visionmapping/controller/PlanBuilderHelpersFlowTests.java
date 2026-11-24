@@ -149,14 +149,14 @@ class PlanBuilderHelpersFlowTests {
         Map<String, Object> step = new HashMap<>(Map.of("key", "s1", "title", "Compare loans", "owner", "Me",
                 "targetDate", TODAY.plusWeeks(2).toString(), "priority", "HIGH", "complex", false, "tasks", List.of()));
         Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save a deposit", "priority", "HIGH",
-                "targetDate", TODAY.plusMonths(3).toString(), "steps", List.of(step)));
+                "targetDate", TODAY.plusMonths(3).toString(), "steps", List.of(step), "successCriteria", "Deposit saved"));
         Map<String, Object> onGoal = Map.of("key", "r1", "title", "Prices may rise", "obstacleType", "MONEY",
                 "severity", "HIGH", "linkKey", "g1");
         send(put("/api/ai/plan/drafts/" + dreamId), user, Map.of("stage", "REVIEW",
                 "content", Map.of("goals", List.of(goal), "risks", List.of(onGoal)))).andExpect(status().isOk());
         mockMvc.perform(post("/api/ai/plan/drafts/" + dreamId + "/add").header("Authorization", "Bearer " + user))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Choose the step this risk holds up: Prices may rise"));
+                .andExpect(jsonPath("$.message").value("Fix this before saving: \"Prices may rise\": This risk is not on a step."));
         // Nothing was saved.
         assertThat(jdbcTemplate.queryForObject("select count(*) from goals where dream_id = ?", Integer.class, dreamId)).isZero();
 
@@ -191,7 +191,8 @@ class PlanBuilderHelpersFlowTests {
 
         Map<String, Object> step = new HashMap<>(Map.of("key", "s1", "title", "Compare loans", "owner", "Me",
                 "targetDate", TODAY.plusWeeks(2).toString(), "priority", "HIGH", "complex", false, "tasks", List.of()));
-        Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save a deposit", "priority", "HIGH", "steps", List.of(step)));
+        Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save a deposit", "priority", "HIGH", "steps", List.of(step),
+                "successCriteria", "Deposit saved", "targetDate", TODAY.plusMonths(3).toString()));
         Map<String, Object> newHelper = new HashMap<>(Map.of("key", "h3", "role", "Property lawyer", "supportType", "EXPERT",
                 "linkKey", "s1", "requestId", planAnswer(user), "edited", false));
         Map<String, Object> content = Map.of("goals", List.of(goal), "helpers", List.of(
@@ -239,7 +240,10 @@ class PlanBuilderHelpersFlowTests {
         long dreamId = dream(user);
         String other = consented(email("foreign-partner-other"));
         long theirs = partner(other, "Not yours", "Adviser", "ADVISOR", "ACTIVE");
-        Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save", "priority", "HIGH", "steps", List.of()));
+        Map<String, Object> firstStep = Map.of("key", "s1", "title", "Open an account", "owner", "Me",
+                "targetDate", TODAY.plusWeeks(2).toString(), "priority", "HIGH", "complex", false, "tasks", List.of());
+        Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save", "priority", "HIGH", "steps", List.of(firstStep),
+                "successCriteria", "Saved", "targetDate", TODAY.plusMonths(3).toString()));
         send(put("/api/ai/plan/drafts/" + dreamId), user, Map.of("stage", "REVIEW", "content", Map.of("goals", List.of(goal),
                 "helpers", List.of(Map.of("key", "h1", "role", "Adviser", "partnerId", theirs, "linkKey", "g1")))))
                 .andExpect(status().isOk());

@@ -39,8 +39,9 @@ type Props = {
 };
 
 type GoalRow = GoalSuggestion & { picked: boolean; original: GoalSuggestion };
-type StepRow = StepSuggestion & { picked: boolean; original: StepSuggestion };
-type TaskRow = TaskSuggestion & { picked: boolean; original: TaskSuggestion };
+// V31 R-07: the owner is empty when Claude named a person, so the participant picks one before adding.
+type StepRow = StepSuggestion & { owner: string; picked: boolean; original: StepSuggestion };
+type TaskRow = TaskSuggestion & { owner: string; picked: boolean; original: TaskSuggestion };
 type Result =
   | { kind: 'goals'; rows: GoalRow[]; question?: string | null; requestId?: number | null }
   | { kind: 'steps'; goalId: number; rows: StepRow[]; question?: string | null; requestId?: number | null }
@@ -147,7 +148,7 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
     return {
       kind: 'steps',
       goalId: id,
-      rows: answer.steps.map((step) => ({ ...step, picked: true, original: step })),
+      rows: answer.steps.map((step) => ({ ...step, owner: step.owner ?? '', picked: true, original: step })),
       question: answer.clarifyingQuestion,
       requestId: answer.requestId,
     };
@@ -168,7 +169,7 @@ export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onData
     return {
       kind: 'tasks',
       stepId: id,
-      rows: answer.tasks.map((task) => ({ ...task, picked: true, original: task })),
+      rows: answer.tasks.map((task) => ({ ...task, owner: task.owner ?? '', picked: true, original: task })),
       question: answer.clarifyingQuestion,
       requestId: answer.requestId,
     };

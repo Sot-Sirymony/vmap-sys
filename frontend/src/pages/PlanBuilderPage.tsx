@@ -33,7 +33,7 @@ import { HelpWithSectionButton, PlanAssistantProvider } from '../components/ai/p
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import { tr } from '../i18n/translate';
-import type { Dream, Goal, PlanAddResult, PlanCapacity, PlanDraftContent, PlanStage, TaskItem, VisionStep } from '../types/vision';
+import type { Dream, Goal, PlanAddResult, PlanCapacity, PlanDraftContent, PlanRule, PlanStage, TaskItem, VisionStep } from '../types/vision';
 import { PageSection } from './PageSection';
 
 const SAVE_DELAY_MS = 800;
@@ -171,7 +171,7 @@ export function PlanBuilderPage() {
     stageTop.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   }
 
-  async function addPlan() {
+  async function addPlan(acceptedShould: PlanRule[] = []) {
     if (!token) {
       return;
     }
@@ -181,7 +181,7 @@ export function PlanBuilderPage() {
       // The server adds what it has saved, so save the latest edits first.
       await savePlanDraft(token, id, latest.current.stage, latest.current.content);
       dirty.current = false;
-      const result = await addPlanDraft(token, id);
+      const result = await addPlanDraft(token, id, acceptedShould);
       // New partners are created in the order of the draft's helpers that link no partner.
       const fresh = (latest.current.content.helpers ?? []).filter((helper) => helper.partnerId == null);
       setNewContacts((result.partnerIds ?? []).map((partnerId, index) => ({
@@ -363,7 +363,7 @@ export function PlanBuilderPage() {
               <HelpersStage dream={dream} content={content} onChange={change} token={token ?? ''} language={language} aiReady={aiReady} />
             )}
             {stage === 'REVIEW' && (
-              <ReviewStage content={content} onChange={change} existingSteps={steps} busy={busy} onGoTo={goTo} onAdd={() => void addPlan()}
+              <ReviewStage content={content} onChange={change} existingSteps={steps} busy={busy} onGoTo={goTo} onAdd={(accepted) => void addPlan(accepted)}
                 dreamId={dream.id} token={token ?? ''} language={language} aiReady={aiReady}
                 saveDraft={async () => {
                   if (token) {

@@ -1,5 +1,7 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -97,7 +99,8 @@ export function GoalsStage({ dream, content, onChange, token, language, aiReady 
             arrange={arrangeFor(content, { goalKey: goal.key }, onChange)}>
             <TextField size="small" label={tr('Goal')} value={goal.title} required
               onChange={(event) => onChange((current) => updateGoal(current, goal.key, { title: event.target.value }))} />
-            <TextField size="small" label={tr('Success criteria')} value={goal.successCriteria ?? ''} multiline
+            <TextField size="small" label={tr('Success criteria')} value={goal.successCriteria ?? ''} multiline required
+              helperText={tr("How you'll know this goal is done.")}
               onChange={(event) => onChange((current) => updateGoal(current, goal.key, { successCriteria: event.target.value }))} />
             <Box sx={twoColumns}>
               <DateField label="Target date" value={goal.targetDate}
@@ -105,6 +108,13 @@ export function GoalsStage({ dream, content, onChange, token, language, aiReady 
               <PrioritySelect value={goal.priority}
                 onChange={(value) => onChange((current) => updateGoal(current, goal.key, { priority: value }))} />
             </Box>
+            {fromAi && (
+              // V31 R-07 (DC-FR-26): a suggested goal counts only once the participant has read and approved it.
+              <FormControlLabel
+                control={<Checkbox checked={goal.approved === true}
+                  onChange={(event) => onChange((current) => updateGoal(current, goal.key, { approved: event.target.checked }))} />}
+                label={tr('I have read this goal and it is right for me')} />
+            )}
             {ai.busy === goal.key && <Loading />}
           </ItemCard>
         );

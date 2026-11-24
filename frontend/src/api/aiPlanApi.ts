@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import type {
   AssistantApplied, AssistantChange, BlockerAnalysis, AssistantProposals, AssistantSection, AssistantSurface, SectionCheck,
-  ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics,
+  ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics, PlanAccuracyMetrics, PlanRule,
   PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskItemRequest, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
 
@@ -83,6 +83,11 @@ export function getPlanMetrics(token: string, days = 30) {
   return apiClient<PlanMetrics>(`/admin/ai/plan-metrics?days=${days}`, { token });
 }
 
+/** V31 (DC-FR-65): how often drafts pass the BRD 31 rules, for admins. */
+export function getPlanAccuracy(token: string, days = 30) {
+  return apiClient<PlanAccuracyMetrics>(`/admin/ai/plan-accuracy?days=${days}`, { token });
+}
+
 // V11 Phase 2: the Build my plan draft for one dream.
 
 /** PB-FR-30: null when there is no unfinished draft (the server answers 204). */
@@ -100,9 +105,15 @@ export function discardPlanDraft(token: string, dreamId: number) {
   return apiClient<void>(`/ai/plan/drafts/${dreamId}`, { method: 'DELETE', token });
 }
 
-/** PB-FR-31: every new item in the draft, saved together or not at all. The draft is then removed. */
-export function addPlanDraft(token: string, dreamId: number) {
-  return apiClient<PlanAddResult>(`/ai/plan/drafts/${dreamId}/add`, { method: 'POST', token });
+/**
+ * PB-FR-31: every new item in the draft, saved together or not at all. The draft is then removed.
+ * V31 (DC-FR-56): the server re-runs the rules and refuses any MUST fail; acceptedShould names the
+ * rules whose SHOULD fails the participant accepted with "I understand".
+ */
+export function addPlanDraft(token: string, dreamId: number, acceptedShould: PlanRule[] = []) {
+  return apiClient<PlanAddResult>(`/ai/plan/drafts/${dreamId}/add`, {
+    method: 'POST', token, body: JSON.stringify({ acceptedShould }),
+  });
 }
 
 /** Steps for a goal that exists only in the draft. */
@@ -181,8 +192,10 @@ export function suggestHelpersAndRisks(token: string, dreamId: number, language:
 // V11 Phase 6: the draft check, its fixes and weekly capacity.
 
 /** PB-FR-28: checks the saved draft; rule checks work without AI. Save the draft first. */
-export function checkPlanDraft(token: string, dreamId: number, language: string) {
-  return apiClient<DraftCheck>(`/ai/plan/dreams/${dreamId}/draft-check?language=${language}`, { method: 'POST', token });
+export function checkPlanDraft(token: string, dreamId: number, language: string, rulesOnly = false) {
+  // V31 DC-FR-04: rulesOnly runs the BRD 31 rules alone, never AI, for the live pass/fail list.
+  return apiClient<DraftCheck>(`/ai/plan/dreams/${dreamId}/draft-check?language=${language}${rulesOnly ? '&rulesOnly=true' : ''}`,
+    { method: 'POST', token });
 }
 
 /** PB-FR-29: a proposed change for one AI issue; nothing is saved. */

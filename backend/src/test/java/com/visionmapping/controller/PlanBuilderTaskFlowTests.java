@@ -202,7 +202,7 @@ class PlanBuilderTaskFlowTests {
         second.put("estimatedHours", 3);
         second.put("complex", true);
         Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save a deposit", "priority", "HIGH",
-                "steps", List.of(first, second)));
+                "steps", List.of(first, second), "successCriteria", "Deposit saved", "targetDate", TODAY.plusMonths(3).toString()));
         send(put("/api/ai/plan/drafts/" + dreamId), user, Map.of("stage", "REVIEW", "content", Map.of("goals", List.of(goal))))
                 .andExpect(status().isOk());
         JsonNode added = read(mockMvc.perform(post("/api/ai/plan/drafts/" + dreamId + "/add").header("Authorization", "Bearer " + user))

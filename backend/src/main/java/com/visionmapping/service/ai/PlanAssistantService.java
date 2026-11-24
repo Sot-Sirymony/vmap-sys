@@ -223,7 +223,8 @@ public class PlanAssistantService {
                 String value = switch (field) {
                     case "DATE" -> Optional.ofNullable(AiPlanService.futureDate(draft.value(), today, item.latest()))
                             .map(LocalDate::toString).orElse(null);
-                    case "OWNER" -> blank(draft.value()) ? "Me" : limit(draft.value(), 160);
+                    // V31 R-07 (DC-FR-61): an owner that is not Me or a role drops the change.
+                    case "OWNER" -> AiOwnerRule.check(draft.value());
                     case "TITLE" -> limit(draft.value(), 220);
                     default -> limit(draft.value(), 3000);
                 };
@@ -237,7 +238,8 @@ public class PlanAssistantService {
                 }
                 yield new AssistantChange(kind, "ADD_STEP".equals(kind) ? "STEP" : "TASK", null, null, null, null,
                         parent.ref(), parent.type(), parent.title(), limit(draft.title(), 220),
-                        blank(draft.owner()) ? "Me" : limit(draft.owner(), 160),
+                        // V31 R-07: an owner that is not Me or a role becomes Me; the card is edited before saving.
+                        Optional.ofNullable(AiOwnerRule.check(draft.owner())).orElse(AiOwnerRule.ME),
                         AiPlanService.futureDate(draft.date(), today, parent.date()), null, null, null, reason);
             }
             case "ADD_RISK" -> {

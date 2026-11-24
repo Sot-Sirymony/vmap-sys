@@ -25,6 +25,7 @@ import type { AiSettings, AssistantPage } from '../types/vision';
 import { ApprovedResourcesCard } from '../components/ai/ApprovedResourcesCard';
 import { PageMetricsCard } from '../components/ai/PageMetricsCard';
 import { PageSwitchesField } from '../components/ai/page-assistant/PageSwitchesField';
+import { PlanAccuracyCard } from '../components/ai/PlanAccuracyCard';
 import { PlanMetricsCard } from '../components/ai/PlanMetricsCard';
 import { PageSection } from './PageSection';
 import { can } from '../utils/permissions';
@@ -73,6 +74,7 @@ export function AiSettingsPage() {
           <ApiKeyCard settings={settings} token={token} onChanged={setSettings} />
           <ApprovedResourcesCard token={token} />
           <PlanMetricsCard token={token} />
+          <PlanAccuracyCard token={token} />
           <PageMetricsCard token={token} />
           <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>

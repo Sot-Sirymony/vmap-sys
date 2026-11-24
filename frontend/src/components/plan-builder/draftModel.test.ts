@@ -123,8 +123,9 @@ describe('Build my plan draft (V11 Phase 2)', () => {
     const messages = readiness(content, []).map(({ item }) => item.message);
     expect(messages).toContain('Step "{step}" is due before the step it waits for.');
 
-    const task = taskFromSuggestion({ title: 'Call A', owner: '', priority: 'LOW', dueDate: '2027-01-01' }, 9);
-    expect(task).toMatchObject({ owner: 'Me', requestId: 9, edited: false });
+    // V31 R-07: the server removes an invented owner (null); the participant picks one, so it stays empty.
+    const task = taskFromSuggestion({ title: 'Call A', owner: null, priority: 'LOW', dueDate: '2027-01-01' }, 9);
+    expect(task).toMatchObject({ owner: '', requestId: 9, edited: false, status: 'NOT_STARTED' });
     content = addTask(content, content.goals[0].key, second.key, task);
     content = updateTask(content, content.goals[0].key, second.key, task.key, { locked: true });
     expect(content.goals[0].steps[1].tasks[0]).toMatchObject({ locked: true, edited: false });

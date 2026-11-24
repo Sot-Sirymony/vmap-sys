@@ -1,12 +1,14 @@
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { suggestDraftStepTasks, suggestTasks } from '../../api/aiPlanApi';
 import { tr } from '../../i18n/translate';
+import { workStatusLabels } from '../../utils/enumLabels';
 import type {
-  DraftGoal, DraftStep, DraftTask, Dream, PlanAsk, PlanDraftContent, RefineAction, TaskItem, VisionStep,
+  DraftGoal, DraftStep, DraftTask, Dream, PlanAsk, PlanDraftContent, RefineAction, TaskItem, VisionStep, WorkStatus,
 } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
@@ -148,7 +150,19 @@ export function TasksStage({ dream, content, onChange, existingSteps, existingTa
                     <TextField size="small" type="number" label={tr('Estimated hours')} value={task.estimatedHours ?? ''}
                       slotProps={{ htmlInput: { min: 0, max: 999, step: 0.5 } }}
                       onChange={(event) => update(task, { estimatedHours: event.target.value === '' ? null : Number(event.target.value) })} />
+                    {/* V31 R-03, R-05 (DC-FR-37, DC-FR-38): every task has a status; a Blocked one says why. */}
+                    <TextField select size="small" label={tr('Status')} value={task.status ?? 'NOT_STARTED'}
+                      onChange={(event) => update(task, { status: event.target.value as WorkStatus })}>
+                      {(Object.keys(workStatusLabels) as WorkStatus[]).map((status) => (
+                        <MenuItem key={status} value={status}>{workStatusLabels[status]}</MenuItem>
+                      ))}
+                    </TextField>
                   </Box>
+                  {task.status === 'BLOCKED' && (
+                    <TextField size="small" label={tr('What is in the way?')} value={task.blockerReason ?? ''} required multiline
+                      error={!(task.blockerReason ?? '').trim()} helperText={tr('A blocked task needs a reason.')}
+                      onChange={(event) => update(task, { blockerReason: event.target.value })} />
+                  )}
                   {ai.busy === task.key && <Loading />}
                 </ItemCard>
               );

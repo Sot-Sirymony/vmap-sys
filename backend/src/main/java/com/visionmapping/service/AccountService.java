@@ -63,7 +63,9 @@ public class AccountService {
      * counts against the month's budget, so a deleted account only loses its
      * link to these rows.
      */
-    static final List<String> USER_TABLES_ANONYMISED = List.of("ai_usage_logs", "plan_builder_finished_plans");
+    static final List<String> USER_TABLES_ANONYMISED = List.of("ai_usage_logs", "plan_builder_finished_plans",
+            // V31 (DC-FR-64): rule check counts, no text.
+            "plan_check_events", "ai_owner_strips");
 
     /** Children before parents. A test fails if a table with a user_id is missing here. */
     static final List<String> USER_TABLES_IN_DELETE_ORDER = List.of(

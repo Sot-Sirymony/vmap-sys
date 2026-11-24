@@ -148,7 +148,7 @@ class PlanBuilderDraftFlowTests {
 
         mockMvc.perform(post("/api/ai/plan/drafts/" + dreamId + "/add").header("Authorization", "Bearer " + user))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Step \"No owner yet\" needs an owner."));
+                .andExpect(jsonPath("$.message").value("Fix this before saving: \"No owner yet\": This step has no owner."));
         assertThat(jdbcTemplate.queryForObject("select count(*) from goals where dream_id = ?", Integer.class, dreamId)).isZero();
         mockMvc.perform(get("/api/ai/plan/drafts/" + dreamId).header("Authorization", "Bearer " + user)).andExpect(status().isOk());
 
@@ -185,12 +185,12 @@ class PlanBuilderDraftFlowTests {
         long requestId = read(mockMvc.perform(post("/api/ai/plan/dreams/" + dreamId + "/goal-suggestions")
                 .header("Authorization", "Bearer " + user))).get("requestId").asLong();
 
-        Map<String, Object> kept = newGoal("Goal one", List.of());
+        Map<String, Object> kept = newGoal("Goal one", List.of(oneStep()));
         kept.put("requestId", requestId);
-        Map<String, Object> changed = newGoal("Goal one, changed", List.of());
+        Map<String, Object> changed = newGoal("Goal one, changed", List.of(oneStep()));
         changed.put("requestId", requestId);
         changed.put("edited", true);
-        send(put("/api/ai/plan/drafts/" + dreamId), user, draft("REVIEW", List.of(kept, changed, newGoal("My own", List.of()))))
+        send(put("/api/ai/plan/drafts/" + dreamId), user, draft("REVIEW", List.of(kept, changed, newGoal("My own", List.of(oneStep())))))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/ai/plan/drafts/" + dreamId + "/add").header("Authorization", "Bearer " + user))
                 .andExpect(status().isCreated());
@@ -253,6 +253,9 @@ class PlanBuilderDraftFlowTests {
         Map<String, Object> goal = new HashMap<>(Map.of("key", "k" + System.nanoTime(), "title", title, "priority", "HIGH",
                 "targetDate", TODAY.plusMonths(4).toString(), "steps", steps));
         goal.put("edited", false);
+        // V31 R-02, R-07: a measure of done, and approved (only checked for AI goals).
+        goal.put("successCriteria", "Done when " + title.toLowerCase());
+        goal.put("approved", true);
         return goal;
     }
 
@@ -260,6 +263,10 @@ class PlanBuilderDraftFlowTests {
                                                List<Map<String, Object>> tasks) {
         return new HashMap<>(Map.of("key", "s" + System.nanoTime(), "title", title, "owner", owner,
                 "targetDate", date.toString(), "priority", "MEDIUM", "complex", complex, "tasks", tasks));
+    }
+
+    private static Map<String, Object> oneStep() {
+        return newStep("First step", "Me", TODAY.plusWeeks(1), false, List.of());
     }
 
     private static Map<String, Object> newTask(String title, String owner, LocalDate date) {

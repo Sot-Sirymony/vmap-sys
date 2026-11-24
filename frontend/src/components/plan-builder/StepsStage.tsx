@@ -8,7 +8,10 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { suggestDraftGoalSteps, suggestSteps } from '../../api/aiPlanApi';
 import { tr } from '../../i18n/translate';
-import type { DraftGoal, DraftStep, Dream, PlanAsk, PlanDraftContent, RefineAction, VisionStep } from '../../types/vision';
+import type { DraftGoal, DraftStep, Dream, ObstacleType, PlanAsk, PlanDraftContent, RefineAction, VisionStep } from '../../types/vision';
+import { obstacleTypeLabels } from '../../utils/enumLabels';
+import { GAP_KINDS } from '../../utils/gapStep';
+import { suggestPartnerFor } from '../../utils/partnerSuggestion';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import { SuggestionRating } from '../ai/SuggestionRating';
@@ -146,6 +149,7 @@ export function StepsStage({ dream, content, onChange, existingSteps, token, lan
                   </Box>
                   <TextField size="small" label={tr('Resources and people')} value={step.resources ?? ''} multiline
                     onChange={(event) => update(step, { resources: event.target.value })} />
+                  {(step.resources ?? '').trim() && <GapKindField step={step} onChange={(gapKind) => update(step, { gapKind })} />}
                   {ai.busy === step.key && <Loading />}
                 </ItemCard>
               );
@@ -171,5 +175,21 @@ export function StepsStage({ dream, content, onChange, existingSteps, token, lan
         );
       })}
     </Stack>
+  );
+}
+
+/**
+ * V31 R-06 (DC-FR-31, D-31-8): what kind of gap the step's resources describe.
+ * The helper type comes from the same fixed map as the server, never from AI.
+ */
+function GapKindField({ step, onChange }: { step: DraftStep; onChange: (gapKind: ObstacleType | null) => void }) {
+  const helper = step.gapKind ? suggestPartnerFor(step.gapKind) : null;
+  return (
+    <TextField select size="small" label={tr('Kind of gap')} value={step.gapKind ?? ''}
+      helperText={helper ? tr('Who usually helps: {helper}', { helper: helper.label }) : tr('Choose one so the right kind of helper can be suggested.')}
+      onChange={(event) => onChange((event.target.value || null) as ObstacleType | null)}>
+      <MenuItem value="">{tr('Not set')}</MenuItem>
+      {GAP_KINDS.map((kind) => <MenuItem key={kind} value={kind}>{obstacleTypeLabels[kind]}</MenuItem>)}
+    </TextField>
   );
 }

@@ -133,8 +133,10 @@ public class AiPlanController {
     /** V11 (PB-FR-28): the plan check on the saved Build my plan draft; rule checks work without AI. */
     @PostMapping("/dreams/{dreamId}/draft-check")
     public DraftCheck draftCheck(@PathVariable Long dreamId,
-                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return draftCheck.check(dreamId, language);
+                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
+                                 // V31 DC-FR-04: the live pass/fail list re-runs the rules alone, never AI (DC-NFR-03).
+                                 @RequestParam(defaultValue = "false") boolean rulesOnly) {
+        return draftCheck.check(dreamId, language, rulesOnly);
     }
 
     /** V11 (PB-FR-29): a proposed change for one AI issue in the draft; nothing is saved. */
@@ -219,8 +221,11 @@ public class AiPlanController {
     /** V11 (PB-FR-31): every new item in the draft, saved all together or not at all; the draft is then removed. */
     @PostMapping("/drafts/{dreamId}/add")
     @ResponseStatus(HttpStatus.CREATED)
-    public PlanAddResult addDraft(@PathVariable Long dreamId) {
-        return drafts.add(dreamId);
+    public PlanAddResult addDraft(@PathVariable Long dreamId,
+                                  @Valid @RequestBody(required = false) com.visionmapping.dto.request.PlanSaveRequest request) {
+        // V31 DC-FR-56: the server re-runs the rules and refuses any MUST fail.
+        return drafts.add(dreamId, request == null || request.acceptedShould() == null ? java.util.Set.of()
+                : java.util.Set.copyOf(request.acceptedShould()));
     }
 
     /** V11 (PB-FR-34): thumbs up or down on one plan builder answer. */

@@ -119,8 +119,10 @@ class PlanSessionFlowTests {
         JsonNode before = metrics();
         String user = consented(email("session-finished"));
         long dreamId = dream(user);
+        Map<String, Object> step = Map.of("key", "s1", "title", "Open a savings account", "owner", "Me",
+                "targetDate", TODAY.plusWeeks(2).toString(), "priority", "HIGH", "complex", false, "tasks", List.of());
         Map<String, Object> goal = new HashMap<>(Map.of("key", "g1", "title", "Save a deposit", "priority", "HIGH",
-                "targetDate", TODAY.plusMonths(3).toString(), "steps", List.of()));
+                "targetDate", TODAY.plusMonths(3).toString(), "steps", List.of(step), "successCriteria", "Deposit saved"));
         send(put("/api/ai/plan/drafts/" + dreamId), user, Map.of("stage", "REVIEW", "content", Map.of("goals", List.of(goal))))
                 .andExpect(status().isOk());
         goalSuggestions(user, dreamId).andExpect(status().isOk());

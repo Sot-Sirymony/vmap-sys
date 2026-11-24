@@ -74,24 +74,33 @@ public class AiPlanService {
     static final int MAX_AI_ISSUES = 8;
     private static final Set<String> AI_ISSUE_KINDS = Set.of("VAGUE_STEP", "UNREALISTIC_TIMING", "GAP");
 
+    /**
+     * V31 R-07 (D-31-6): no guessing. Claude uses only what the participant
+     * gave; the server also removes owners that are not Me or a role.
+     */
+    static final String NO_GUESSING = " Use only facts the participant gave or that follow plainly from them: never invent "
+            + "figures, amounts, deadlines, organisations, tools or people. Write every owner in English as Me or a role "
+            + "(such as Mentor or Accountant), even when answering in another language.";
+
     /** Goals are built from what the participant wrote about the dream, not from its title alone. */
     static final String GOAL_GROUNDING = "Before suggesting, read the dream's vision area, description, why it matters and "
             + "success definition. Every goal must move the dream toward its success definition, and together the goals "
             + "must fully meet it; let why it matters guide what to put first. In each goal's reason, say in one short "
             + "sentence which part of the success definition it covers. When the dream has no success definition or "
-            + "description, work from its title and why it matters.";
+            + "description, work from its title and why it matters. Each goal's success criteria says how the participant "
+            + "will know it is done." + NO_GUESSING;
 
     /** Tasks are built from what the step is for and what it already has, so finishing them finishes the step. */
     static final String TASK_GROUNDING = "Before suggesting, read the step's description, its resources and people, and "
             + "the goal's success criteria. Together the tasks must finish the step so it moves the goal toward its "
             + "success criteria. Use the resources and people the step lists: add a task to get or arrange anything it "
             + "still needs, and for a listed person, a task to contact them, named by role. In each task's reason, say "
-            + "in one short sentence how it moves the step toward its outcome.";
+            + "in one short sentence how it moves the step toward its outcome." + NO_GUESSING;
 
     /** Steps are built from the goal's success criteria, so finishing them finishes the goal. */
     static final String STEP_GROUNDING = "Before suggesting, read the goal's description and success criteria, and the "
             + "dream's success definition. Together the steps must meet the goal's success criteria. In each step's "
-            + "reason, say in one short sentence how it moves the goal toward them.";
+            + "reason, say in one short sentence how it moves the goal toward them." + NO_GUESSING;
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
@@ -105,6 +114,7 @@ public class AiPlanService {
     private final Clock clock;
     private final AiPlanFeedbackService feedback;
     private final PlanSessionGuard sessionGuard;
+    private final PlanAccuracyService accuracy;
     /** V17 BL-FR-25, BL-FR-29: a task breaks into 2 to 5 smaller ones. */
     static final int MAX_SMALLER_TASKS = 5;
     private final com.visionmapping.repository.PartnerRepository partnerRepository;
@@ -295,6 +305,7 @@ public class AiPlanService {
         // so positions are renumbered, and only an earlier kept step counts.
         Map<Integer, Integer> kept = new HashMap<>();
         List<AiDrafts.StepDraft> given = Optional.ofNullable(drafts.steps()).orElse(List.of());
+        int stripped = 0;
         for (int index = 0; index < given.size(); index++) {
             AiDrafts.StepDraft draft = given.get(index);
             if (blank(draft.title()) || steps.size() >= max) {
@@ -306,12 +317,16 @@ public class AiPlanService {
             if (date != null && earlierDate != null && date.isBefore(earlierDate)) {
                 date = null; // PB-FR-15: not due before the step it waits for.
             }
+            // V31 R-07 (DC-FR-61): an owner that is not Me or a role is removed; the participant picks one.
+            String owner = AiOwnerRule.check(draft.owner());
+            stripped += owner == null ? 1 : 0;
             steps.add(new StepSuggestion(limit(draft.title(), 220), limit(draft.description(), 3000),
-                    blank(draft.owner()) ? "Me" : limit(draft.owner(), 160), date,
+                    owner, date,
                     limit(draft.resources(), 1000), limit(draft.people(), 500), limit(draft.reason(), 300),
                     priority(draft.priority()), draft.complex(), hours(draft.estimatedHours()), after));
             kept.put(index + 1, steps.size());
         }
+        accuracy.recordOwners(user.getId(), "PLAN_BUILDER", steps.size(), stripped);
         return new StepSuggestions(steps, steps.isEmpty() && !forced(ask) ? limit(drafts.clarifyingQuestion(), 500) : null,
                 feedback.suggested(answer.usage(), steps.size()));
     }
@@ -418,14 +433,19 @@ public class AiPlanService {
                 plan + WorkStyleContext.line(user), prompt, AiDrafts.TaskDrafts.class);
         AiDrafts.TaskDrafts drafts = answer.value();
         List<TaskSuggestion> tasks = new ArrayList<>();
+        int stripped = 0;
         for (AiDrafts.TaskDraft draft : Optional.ofNullable(drafts.tasks()).orElse(List.of())) {
             if (blank(draft.title()) || tasks.size() >= max) {
                 continue;
             }
-            tasks.add(new TaskSuggestion(limit(draft.title(), 220), blank(draft.owner()) ? "Me" : limit(draft.owner(), 160),
+            // V31 R-07 (DC-FR-61).
+            String owner = AiOwnerRule.check(draft.owner());
+            stripped += owner == null ? 1 : 0;
+            tasks.add(new TaskSuggestion(limit(draft.title(), 220), owner,
                     futureDate(draft.dueDate(), today, latest), priority(draft.priority()), hours(draft.estimatedHours()),
                     limit(draft.reason(), 300)));
         }
+        accuracy.recordOwners(user.getId(), "TASK_BUILDER", tasks.size(), stripped);
         return new TaskSuggestions(tasks, tasks.isEmpty() && !forced(ask) ? limit(drafts.clarifyingQuestion(), 500) : null,
                 feedback.suggested(answer.usage(), tasks.size()));
     }

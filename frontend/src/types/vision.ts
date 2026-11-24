@@ -1431,7 +1431,8 @@ export type GoalSuggestions = { goals: GoalSuggestion[]; clarifyingQuestion?: st
 export type StepSuggestion = {
   title: string;
   description?: string | null;
-  owner: string;
+  // V31 R-07: null when Claude named a person; the participant picks the owner.
+  owner?: string | null;
   targetDate?: string | null;
   resources?: string | null;
   people?: string | null;
@@ -1446,7 +1447,7 @@ export type StepSuggestion = {
 // V11 Phase 4 (PB-FR-14): the task builder.
 export type TaskSuggestion = {
   title: string;
-  owner: string;
+  owner?: string | null;
   dueDate?: string | null;
   priority: Priority;
   estimatedHours?: number | null;
@@ -1559,11 +1560,17 @@ export type PlanAddResult = {
 };
 
 // V11 Phase 6 (PB-FR-16, PB-FR-28, PB-FR-29): the draft check, its fixes and weekly capacity.
-export type DraftFixAction = 'SET_OWNER_ME' | 'SET_DATE' | 'GO_TO_STEPS' | 'GO_TO_TASKS' | 'FIX_WITH_AI';
+export type DraftFixAction = 'SET_OWNER_ME' | 'SET_DATE' | 'GO_TO_STEPS' | 'GO_TO_TASKS' | 'FIX_WITH_AI'
+  // V31: one-click fixes and links for the BRD 31 rules.
+  | 'SET_PRIORITY' | 'APPROVE' | 'GO_TO_CLARIFY' | 'GO_TO_GOALS' | 'GO_TO_HELPERS';
+
+/** V31: the BRD 31 rules. A MUST fail blocks Save my plan, a SHOULD fail needs "I understand", INFO is advice. */
+export type PlanRule = 'R-01' | 'R-02' | 'R-03' | 'R-04' | 'R-05' | 'R-06' | 'R-07' | 'R-08';
+export type RuleLevel = 'MUST' | 'SHOULD' | 'INFO';
 
 export type DraftIssue = {
   kind: string;
-  itemType: 'GOAL' | 'STEP' | 'TASK';
+  itemType?: 'GOAL' | 'STEP' | 'TASK' | 'DREAM' | 'RISK' | null;
   itemKey: string;
   parentKey?: string | null;
   itemTitle?: string | null;
@@ -1572,6 +1579,8 @@ export type DraftIssue = {
   fixAction?: DraftFixAction | null;
   fixValue?: string | null;
   fromAi: boolean;
+  rule?: PlanRule | null;
+  level?: RuleLevel | null;
 };
 
 export type DraftCheck = { issues: DraftIssue[]; aiChecked: boolean; requestId?: number | null };
@@ -1661,6 +1670,9 @@ export type DraftTask = {
   requestId?: number | null;
   edited?: boolean;
   locked?: boolean;
+  // V31 R-03, R-05: empty means Not started; a Blocked task needs a reason.
+  status?: WorkStatus | null;
+  blockerReason?: string | null;
 };
 
 export type DraftStep = {
@@ -1680,6 +1692,8 @@ export type DraftStep = {
   // V11 Phase 4 (PB-FR-12): effort, and the key of the earlier step in this goal it starts after.
   estimatedHours?: number | null;
   startsAfterKey?: string | null;
+  // V31 R-06 (BL-FR-18): the kind of gap the resources text describes.
+  gapKind?: ObstacleType | null;
 };
 
 export type DraftGoal = {
@@ -1695,6 +1709,8 @@ export type DraftGoal = {
   edited: boolean;
   locked?: boolean;
   steps: DraftStep[];
+  // V31 R-07: an AI-suggested goal counts only once approved.
+  approved?: boolean;
 };
 
 // V11 Phase 3 (PB-FR-08, PB-FR-09): clarifying answers given in this session; sent with later suggestions.
@@ -2340,4 +2356,20 @@ export type StepUpStatus = {
   enabled: boolean;
   delivery: 'EMAIL' | 'LOG' | 'NONE';
   active: boolean;
+};
+
+// V31 (DC-FR-65): how often Build my plan drafts pass the BRD 31 rules. Rates are 0 to 1, null when nothing was measured.
+export type RuleAccuracy = { rule: PlanRule; firstRuns: number; firstPassRate?: number | null; saves: number; acceptedShould: number };
+
+export type PlanAccuracyMetrics = {
+  days: number;
+  checkedSessions: number;
+  firstCheckPassRate?: number | null;
+  rules: RuleAccuracy[];
+  savedPlans: number;
+  savedValidRate?: number | null;
+  aiItemsChecked: number;
+  aiDateConflictRate?: number | null;
+  aiOwners: number;
+  inventedOwnerRate?: number | null;
 };

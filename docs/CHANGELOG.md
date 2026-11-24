@@ -17,6 +17,38 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 31.0.0 — Dream Coach accuracy check, MVP (built; awaiting deploy, UAT and the Khmer review)
+
+BRD [`VMS_BRD_V31.0.0.md`](VMS_BRD_V31.0.0.md) (31.0.0, draft). The MVP phase only: the accuracy check on the existing
+Build my plan guide. Phases v1 (the ten-stage Dream Coach) and v2 are not built. Migration **V96**.
+
+**Backend.** `PlanRuleService` holds the rules R-01 to R-08 in one place (D-31-3); the draft check and Save my plan both
+use it. Every issue now carries `rule` and `level` (MUST, SHOULD or INFO). New checks: goal not in its dream, step not
+under its goal, missing goal measure or date, goal after its dream, more than 5 new goals, task priority, Blocked task
+without a reason, risk not on a step, gap without a kind, Knowledge/Skill/Money gap without a helper, AI goal not
+approved, AI steps and tasks kept unchanged, and the dream's own fields (SHOULD, since the dream was saved before).
+`POST /api/ai/plan/drafts/{dreamId}/add` re-runs the rules and refuses any MUST fail (DC-FR-56); an optional
+`acceptedShould` body is counted. `draft-check?rulesOnly=true` runs the rules without Claude. AI step, task and
+plan-fix owners pass `AiOwnerRule`: blank stays Me, a role is kept, a name or title such as "Dr." is removed (R-07);
+prompts add a no-guessing line and ask for owners in English. Draft fields: goal `approved`, step `gapKind`, task
+`status` and `blockerReason`, all saved. `plan_check_events` and `ai_owner_strips` hold counts only (anonymised on
+account deletion); `GET /api/admin/ai/plan-accuracy` reports DCM-01, 02, 03, 06 and 07.
+
+**Frontend.** Check and add shows the rules as a pass/fail list that re-runs a second after each change, without AI.
+MUST lines block **Save my plan** (renamed from Add plan); each rule with SHOULD lines needs "I understand". Check my
+draft now shows only what the AI review found. Goals: an approve tick on AI goals, success criteria marked required.
+Steps: Kind of gap with the helper type from the fixed map. Tasks: status, and a required reason when Blocked. An
+owner the server removed stays empty. AI settings: a Plan accuracy card. 88 Khmer drafts in
+[`km-review-v31.csv`](km-review-v31.csv).
+
+**Clarified during build** (recorded in the BRD): SHOULD fails are counted, not enforced on the server; "I
+understand" is one tick per rule, not per line; INFO is a third level for advice (missing resources, AI review);
+GAP_NO_KIND is SHOULD, since AI steps often list resources; R-08 is met by the server re-running the rules at save,
+plus the browser waiting for a check of the latest draft; DCM-04 and DCM-05 are guaranteed by the save gate; DCM-08 waits
+for v1; the inner-blocker part of R-05 waits for stage 3 in v1.
+
+---
+
 ## 30.0.0 — A stronger AI assistant for Streamline (built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V30.0.0.md`](VMS_BRD_V30.0.0.md) (30.0.0, draft; the seven improvements chosen by the product owner on

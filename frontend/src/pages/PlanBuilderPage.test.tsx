@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../api/aiApi';
-import { addPlanDraft, getPlanDraft, savePlanDraft, suggestGoals, undoPlan } from '../api/aiPlanApi';
+import { addPlanDraft, checkPlanDraft, getPlanDraft, savePlanDraft, suggestGoals, undoPlan } from '../api/aiPlanApi';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
@@ -50,6 +50,8 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
     vi.mocked(getPlanDraft).mockResolvedValue(null);
     vi.mocked(addPlanDraft).mockResolvedValue({ goalIds: [11], stepIds: [21], taskIds: [] });
     vi.mocked(undoPlan).mockResolvedValue(undefined);
+    // V31: the server's rules find nothing to fix.
+    vi.mocked(checkPlanDraft).mockResolvedValue({ issues: [], aiChecked: false });
     renderPage();
 
     expect(await screen.findByText('Target date', { selector: 'span' })).toBeInTheDocument();
@@ -69,9 +71,15 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: /Check and add/ }));
     expect(screen.getByText('Ready to add 1 goal(s), 1 step(s) and 0 task(s).')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    // V31 DC-FR-04: Save my plan waits for the rules to run on the latest draft, without AI.
+    const saveButton = screen.getByRole('button', { name: 'Save my plan' });
+    expect(saveButton).toBeDisabled();
+    await vi.waitFor(() => expect(saveButton).toBeEnabled(), { timeout: 3000 });
+    expect(checkPlanDraft).toHaveBeenCalledWith('token', 5, 'en', true);
+    expect(screen.getByText(/R-04 · Dates fit together/)).toBeInTheDocument();
+    await userEvent.click(saveButton);
 
-    expect(addPlanDraft).toHaveBeenCalledWith('token', 5);
+    expect(addPlanDraft).toHaveBeenCalledWith('token', 5, []);
     // The latest edits are saved before adding.
     expect(vi.mocked(savePlanDraft).mock.lastCall?.[3].goals[0].steps[0].targetDate).toBe('2027-01-15');
     const notice = await screen.findByText(/Your plan is added: 1 goal\(s\), 1 step\(s\) and 0 task\(s\)/);
@@ -107,8 +115,12 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
     expect(screen.getByRole('button', { name: 'Helpful' })).toBeInTheDocument();
   });
 
-  it('blocks adding while something new is missing an owner or date', async () => {
+  it('blocks saving while a rule has a MUST fail (V31 DC-FR-56)', async () => {
     vi.mocked(getAiStatus).mockResolvedValue(ready);
+    vi.mocked(checkPlanDraft).mockResolvedValue({ aiChecked: false, issues: [
+      { kind: 'MISSING_OWNER', itemType: 'STEP', itemKey: 's1', itemTitle: 'Visit banks', problem: 'This step has no owner.',
+        fixAction: 'GO_TO_STEPS', fromAi: false, rule: 'R-03', level: 'MUST' },
+    ] });
     vi.mocked(getPlanDraft).mockResolvedValue({
       dreamId: 5, stage: 'REVIEW', updatedAt: '', expiresAt: '',
       content: { goals: [{ key: 'g1', title: 'Save', priority: 'HIGH', moonshot: false, edited: false, steps: [
@@ -117,8 +129,9 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
     });
     renderPage();
 
-    expect(await screen.findByText(/Step "Visit banks" needs an owner./)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add plan' })).toBeDisabled();
+    expect(await screen.findByText('Visit banks: This step has no owner.', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('1 to fix')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save my plan' })).toBeDisabled();
     await userEvent.click(screen.getAllByRole('button', { name: 'Go to Steps' })[0]);
     expect(screen.getByRole('textbox', { name: 'Owner' })).toBeInTheDocument();
   });

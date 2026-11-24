@@ -47,6 +47,11 @@ const SERVER_PATTERNS: [RegExp, string, string[]][] = [
   [/^(\d+) items overdue\.$/, '{count} items overdue.', ['count']],
   [/^Attitude averaged ([\d.]+) this week, down from ([\d.]+)\.$/, 'Attitude averaged {now} this week, down from {before}.', ['now', 'before']],
   [/^Attitude averaged ([\d.]+) of 5 this week\.$/, 'Attitude averaged {score} of 5 this week.', ['score']],
+  // V31 (BRD 31): plan check rules from PlanRuleService.
+  [/^This draft has (\d+) new goals\. Five or fewer keeps the dream focused\.$/,
+    'This draft has {count} new goals. Five or fewer keeps the dream focused.', ['count']],
+  [/^(\d+) suggested step\(s\) or task\(s\) are kept exactly as the AI wrote them\.$/,
+    '{count} suggested step(s) or task(s) are kept exactly as the AI wrote them.', ['count']],
 ];
 
 // FR-20: interface text an admin changed, for the current language. Cached on

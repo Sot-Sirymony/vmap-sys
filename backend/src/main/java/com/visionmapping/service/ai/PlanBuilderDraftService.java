@@ -90,6 +90,8 @@ public class PlanBuilderDraftService {
     static final String NEW_STEP_FOR_RISK = "newstep:";
     private final com.visionmapping.repository.PlanBuilderFinishedPlanRepository finishedPlans;
     private final com.visionmapping.repository.AiUsageLogRepository usageLogRepository;
+    private final PlanRuleService ruleService;
+    private final PlanAccuracyService accuracy;
 
     @Transactional(readOnly = true)
     public Optional<PlanDraftResponse> get(Long dreamId) {
@@ -107,6 +109,12 @@ public class PlanBuilderDraftService {
                 .filter(draft -> draft.getExpiresAt().isAfter(clock.instant()))
                 .map(draft -> read(draft.getContent()))
                 .orElseThrow(() -> new ResourceNotFoundException("There is no plan draft for this dream."));
+    }
+
+    /** V31 DC-FR-64: the draft session's key, so its check runs and its save can be counted together. */
+    @Transactional(readOnly = true)
+    public Optional<String> sessionKey(Long dreamId) {
+        return repository.findByUser_IdAndDream_Id(lookup.userId(), dreamId).map(PlanBuilderDraft::getSessionKey);
     }
 
     @Transactional
@@ -135,9 +143,19 @@ public class PlanBuilderDraftService {
      * same services (and so the same ownership checks) as the normal create
      * endpoints, after the same field rules. If anything fails, nothing is
      * saved and the draft stays. On success the draft is removed.
+     *
+     * V31 (DC-FR-56, D-31-3): the rules R-01 to R-08 run again here, on the
+     * server, and any MUST fail stops the save. accepted names the rules whose
+     * SHOULD fails the participant accepted with "I understand"; they are
+     * counted, not required (D-31-4: Should fails warn).
      */
     @Transactional
     public PlanAddResult add(Long dreamId) {
+        return add(dreamId, Set.of());
+    }
+
+    @Transactional
+    public PlanAddResult add(Long dreamId, Set<String> accepted) {
         Dream dream = openDream(dreamId);
         PlanBuilderDraft draft = repository.findByUser_IdAndDream_Id(lookup.userId(), dream.getId())
                 .filter(found -> found.getExpiresAt().isAfter(clock.instant()))
@@ -147,7 +165,8 @@ public class PlanBuilderDraftService {
         if (countNew(content) == 0) {
             throw new BusinessRuleException("Your draft has nothing new to add yet.");
         }
-        requireRiskSteps(content);
+        PlanRuleService.Report report = ruleService.evaluate(lookup.currentUser(), dream, content, java.time.LocalDate.now(clock));
+        requireNoMustFails(report);
 
         List<Long> goalIds = new ArrayList<>();
         List<Long> stepIds = new ArrayList<>();
@@ -194,7 +213,7 @@ public class PlanBuilderDraftService {
                     VisionStepRequest request = new VisionStepRequest(goalId, trim(draftStep.title()), trim(draftStep.description()),
                             trim(draftStep.owner()), sequence, draftStep.complex(), priority(draftStep.priority()),
                             draftStep.targetDate(), WorkStatus.NOT_STARTED, trim(draftStep.resources()),
-                            draftStep.estimatedHours(), after);
+                            draftStep.estimatedHours(), after, blankToNull(draftStep.gapKind()));
                     check(request, "Step", draftStep.title());
                     stepId = stepService.createStep(request).id();
                     stepIds.add(stepId);
@@ -205,9 +224,12 @@ public class PlanBuilderDraftService {
                     stepByKey.put(draftStep.key(), new Long[] {goalId, stepId});
                 }
                 for (DraftTask draftTask : Optional.ofNullable(draftStep.tasks()).orElse(List.of())) {
+                    // V31 DC-FR-37, DC-FR-38: the status chosen in the draft, and the reason when it is Blocked.
+                    WorkStatus taskStatus = draftTask.statusOrDefault();
                     TaskItemRequest request = new TaskItemRequest(stepId, trim(draftTask.title()), null, trim(draftTask.owner()),
-                            priority(draftTask.priority()), null, null, draftTask.dueDate(), WorkStatus.NOT_STARTED,
-                            BigDecimal.ZERO, draftTask.estimatedHours(), null, null, null, null);
+                            priority(draftTask.priority()), null, null, draftTask.dueDate(), taskStatus,
+                            taskStatus == WorkStatus.COMPLETED ? BigDecimal.valueOf(100) : BigDecimal.ZERO,
+                            draftTask.estimatedHours(), null, trim(draftTask.blockerReason()), null, null);
                     check(request, "Task", draftTask.title());
                     taskIds.add(taskService.createTask(request).id());
                     count(outcomes, draftTask.requestId(), draftTask.edited());
@@ -259,6 +281,7 @@ public class PlanBuilderDraftService {
             count(outcomes, risk.requestId(), risk.edited());
         }
         feedback.recordDraftOutcomes(outcomes);
+        accuracy.recordSave(lookup.userId(), dream.getId(), draft.getSessionKey(), report, accepted);
         recordFinishedPlan(draft);
         repository.delete(draft);
         return new PlanAddResult(goalIds, stepIds, taskIds, partnerIds, obstacleIds, linkedPartnerIds);
@@ -292,32 +315,19 @@ public class PlanBuilderDraftService {
     }
 
     /**
-     * V17 BL-FR-37: before anything is saved, every risk must name a step of
-     * the draft, or "a new step for this risk" under one of its goals. Saying
-     * which risk, so the participant can fix it on the Helpers stage.
+     * V31 DC-FR-56: nothing is saved while any rule has a MUST fail. The
+     * message names the first one and how many more there are; the guide's
+     * check shows them all.
      */
-    private static void requireRiskSteps(PlanDraftContent content) {
-        java.util.Set<String> stepKeys = new java.util.HashSet<>();
-        java.util.Set<String> goalKeys = new java.util.HashSet<>();
-        for (DraftGoal goal : Optional.ofNullable(content.goals()).orElse(List.of())) {
-            if (goal.key() != null) {
-                goalKeys.add(goal.key());
-            }
-            for (DraftStep step : Optional.ofNullable(goal.steps()).orElse(List.of())) {
-                if (step.key() != null) {
-                    stepKeys.add(step.key());
-                }
-            }
+    private static void requireNoMustFails(PlanRuleService.Report report) {
+        long count = report.mustFails();
+        var first = report.firstMust();
+        if (count == 0 || first == null) {
+            return;
         }
-        for (DraftRisk risk : Optional.ofNullable(content.risks()).orElse(List.of())) {
-            String key = risk.linkKey();
-            boolean onStep = key != null && stepKeys.contains(key);
-            boolean onNewStep = key != null && key.startsWith(NEW_STEP_FOR_RISK)
-                    && goalKeys.contains(key.substring(NEW_STEP_FOR_RISK.length()));
-            if (!onStep && !onNewStep) {
-                throw new BusinessRuleException("Choose the step this risk holds up: " + trim(risk.title()));
-            }
-        }
+        String item = first.itemTitle() == null ? "" : "\"" + first.itemTitle() + "\": ";
+        String more = count > 1 ? " (and " + (count - 1) + " more)" : "";
+        throw new BusinessRuleException("Fix this before saving: " + item + first.problem() + more);
     }
 
     /**
@@ -438,5 +448,10 @@ public class PlanBuilderDraftService {
 
     private static String trim(String value) {
         return value == null ? null : value.trim();
+    }
+
+    @Nullable
+    private static String blankToNull(@Nullable String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
