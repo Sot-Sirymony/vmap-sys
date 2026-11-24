@@ -81,7 +81,7 @@ public class BlockerAnalysisService {
     static final List<String> SIGNAL_ORDER = List.of("KEEPS_SLIPPING", "OVERDUE_NO_CHANGE", "STALLED", "SOMETHING_MISSING", "AI");
     /** §3.3: resources that say something is still missing or needed, in English or Khmer. */
     static final java.util.regex.Pattern MISSING_WORDS = java.util.regex.Pattern.compile(
-            "(?i)\\b(need|needs|needed|missing|lack|lacking|don't have|do not have|waiting for|no budget|no money|not yet)\\b|ត្រូវការ|ខ្វះ");
+            "(?iu)\\b(need|needs|needed|missing|lack|lacking|don't have|do not have|waiting for|no budget|no money|not yet)\\b|ត្រូវការ|ខ្វះ");
 
     private final EntityLookup lookup;
     private final AiAccessService accessService;
