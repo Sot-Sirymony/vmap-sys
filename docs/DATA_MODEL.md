@@ -412,6 +412,37 @@ built-in roles.
 `app_users` gains `created_by_id`, `role_changed_by_id` and `blocked_by_id` (each → `app_users`, set to null if that
 admin's account is deleted), `role_changed_at`, `blocked_at`, and `last_sign_in_at` (set whenever a session opens).
 
+
+## V27 Streamline review (migration V94)
+
+**TaskItem** adds `startedAt` (the first move to In progress; never cleared, empty for tasks that
+started before V27) and `repeatRuleId` (the repeat rule it was made from). Cycle time is
+`completedAt − startedAt` in days.
+
+**TaskStatusChange** (`task_status_changes`): `user`, `task`, `fromStatus` (empty for a new task),
+`toStatus`, `changedAt`. One row per status change, from every path that changes a task's status.
+
+**TaskRepeatRule** (`task_repeat_rules`): `user`, `step`, `sourceTask`, `lastTask`, `title`,
+`cadence` (`DAILY`, `WEEKLY`, `MONTHLY`), `nextDue`, `active`. A unique index on
+`task_items(repeat_rule_id, due_date)` means one rule can never make two tasks for one date.
+Archiving the step stops the rule.
+
+**StreamlineReview** (`streamline_reviews`): `code` (`SR-001`), `user`, exactly one of `goal` and
+`step`, `status` (`OPEN`, `COMPLETED`, `ABANDONED`; one open review per goal or step),
+`currentStage` (1–5), `stageNState` (`PENDING`, `DONE`, `NOT_NEEDED`) and `stageNReason` for each
+stage, `baselineSteps`/`Tasks`/`Hours` (at start), `resultSteps`/`Tasks`/`Hours` (at completion),
+`baselineCycleDays` (when stage 3 finishes), `targetCycleDays`, `startedAt`, `completedAt`.
+
+**StreamlineItem** (`streamline_items`, deleted with its review): exactly one of `step` and `task`;
+stage 1 `requirementOwner`, `requirementSource` (`SELF`, `PARTNER`, `MENTOR`, `COACH`,
+`ORGANISATION`, `NOT_SURE`), `partner`, `whyNeeded`, `verdict` (`NEEDED`, `NOT_SURE`,
+`NOT_NEEDED`); stage 2 `decision` (`KEEP`, `DELETE`, `MERGE`), `mergeInto`, `keepReason`; stage 3
+`simplified`, `simplifyNote`; stage 4 `speedLevers`; stage 5 `automation` (`REPEAT`, `REMIND`,
+`DELEGATE`, `MANUAL`), `delegatePartner`; and `archivedWithParent`, `archivedAt`, `restoredAt`.
+"Delete" archives (Rule 12); a restore within 90 days counts as brought back.
+
+All four tables with a `user_id` are removed with the account.
+
 ## Business Rules
 
 - A Dream must belong to a Vision Area.

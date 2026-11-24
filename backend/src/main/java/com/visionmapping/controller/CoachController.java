@@ -31,6 +31,7 @@ public class CoachController {
 
     private final CoachService service;
     private final ReportCoachShareService reportShares;
+    private final com.visionmapping.service.StreamlineReviewService streamlineReviews;
 
     /** V19 RM-FR-50: the final reports this participant shared with the coach. */
     @GetMapping("/{id}/reports")
@@ -42,6 +43,18 @@ public class CoachController {
     @GetMapping("/{id}/reports/{reportId}")
     public SharedReportResponse sharedReport(@PathVariable Long id, @PathVariable Long reportId) {
         return reportShares.view(id, reportId);
+    }
+
+    /** V27 D-27-10: the participant's Streamline reviews, read-only. */
+    @GetMapping("/{id}/streamline-reviews")
+    public List<com.visionmapping.dto.response.StreamlineResponses.ListItem> streamlineReviews(@PathVariable Long id) {
+        return streamlineReviews.listFor(service.requireVisibleParticipant(id).getId());
+    }
+
+    /** V27 D-27-10: one of the participant's Streamline reviews, read-only. */
+    @GetMapping("/{id}/streamline-reviews/{reviewId}")
+    public com.visionmapping.dto.response.StreamlineResponses.Review streamlineReview(@PathVariable Long id, @PathVariable Long reviewId) {
+        return streamlineReviews.viewFor(service.requireVisibleParticipant(id).getId(), reviewId);
     }
 
     @GetMapping

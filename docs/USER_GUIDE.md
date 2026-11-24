@@ -216,6 +216,54 @@ Admins turn the page assistant and helpers off per page on **AI settings**, or f
 is off still shows the program's own help. The admin **AI settings** page also shows **Page assistant quality**: requests,
 cost, ratings, and how many suggestions were applied, edited or dismissed, per feature.
 
+
+## Streamline a goal or step (V27)
+
+Plans tend to grow: goals gain steps, steps gain tasks. A **Streamline review**
+helps you trim a goal (its steps and tasks) or a single step (its tasks) before
+you try to go faster. Open it from **Streamline** in the menu of any goal or
+step (on the Goals and Steps pages or in the Vision Map), or from a suggestion
+card on the Streamline page or the Dashboard. After a review, the goal or step
+shows a chip such as "Streamlined 12 Nov: −5 steps"; click it to see the review.
+
+The review has five stages, and they open in order. If a stage doesn't apply,
+choose **Not needed…** and say why in a sentence.
+
+1. **Question.** For each step and task, say who asked for it, why it is needed,
+   and whether it is really needed. To answer many at once, tick them (or
+   **Select its tasks** on a step) and use **Apply to selected**. If you're not
+   sure who asked for something, that is the first thing to question.
+2. **Delete.** Cut whatever you can. **Delete** archives the item straight away
+   (a step takes its tasks with it) and shows **Undo**. **Merge into** moves one
+   item into another of the same kind. Everything you cut is listed with a
+   **Restore** button.
+3. **Simplify.** Shrink the scope, lower the estimate, give work one owner, or
+   mark a complex step simple. The before-and-now numbers update as you go.
+4. **Speed up.** See how many days tasks take from start to done, and how long
+   they sat Waiting or Blocked. Pick ways to speed up each item and set a target.
+5. **Automate.** Let the app create a routine task again daily, weekly or
+   monthly (the next one appears once the current one is due), use your email
+   reminders, or note that someone else will do it. Repeating tasks are listed
+   on the Streamline page, where you can change how often they come back, or
+   stop and restart them; tasks already made stay.
+
+**AI suggestions** can help at each stage. They only suggest: nothing changes
+until you choose **Apply**. They need your AI consent and stop for the day or
+month when the AI limits are reached; the review works fully without them.
+
+When you finish, the **summary** shows what you cut, what you brought back (as
+a count), how much simpler the plan is, and how fast tasks now finish. If you
+cut things but brought nothing back, it suggests you may be able to cut more next
+time. Items cut in a review can be restored for 90 days and still count as
+brought back. Your coach can read your reviews but not change them.
+
+Days from start to done are measured from the first time a task moves to
+In progress, so tasks you finished before this release don't have a figure.
+
+*Background: this order follows a five-step method popularised by Elon Musk for
+engineering and manufacturing — question the requirement, delete, simplify,
+speed up, and only then automate.*
+
 ## Add Partners
 
 Open `Partners` to create mentors, experts, advisors, colleagues, or resources. Partners can be linked to a Vision Area, Dream, Goal, Step, or Task.

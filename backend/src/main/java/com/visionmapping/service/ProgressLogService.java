@@ -33,6 +33,7 @@ public class ProgressLogService {
     private final VisionMappingMapper mapper;
     private final ProgressLogRepository progressLogRepository;
     private final Clock clock;
+    private final com.visionmapping.service.support.TaskStatusHistory statusHistory;
 
     @Cacheable(CacheConfig.PROGRESS_LOG_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -51,7 +52,9 @@ public class ProgressLogService {
                 .note(request.note())
                 .loggedAt(Instant.now(clock))
                 .build();
+        com.visionmapping.entity.enums.WorkStatus statusBefore = task.getStatus();
         task.recordProgress(entity.getProgressPercentAfter(), clock);
+        statusHistory.record(task, statusBefore);
         progress.recalculateStep(task.getStep());
         return mapper.toResponse(progressLogRepository.save(entity));
     }

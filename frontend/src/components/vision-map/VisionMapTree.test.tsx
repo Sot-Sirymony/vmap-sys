@@ -30,6 +30,23 @@ function renderTree(onDataChange = vi.fn().mockResolvedValue(undefined)) {
 describe('VisionMapTree', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('offers Streamline on a goal and on a step (BRD 27 SR-FR-11)', async () => {
+    const goal = { id: 3, code: 'G-003', dreamId: 5, title: 'Save a deposit', status: 'IN_PROGRESS', priority: 'HIGH', archived: false,
+      progressPercent: 0 } as unknown as import('../../types/vision').Goal;
+    const step = { id: 8, code: 'S-008', goalId: 3, title: 'Compare loans', status: 'NOT_STARTED', priority: 'HIGH', archived: false,
+      sequenceNumber: 1, complex: false, progressPercent: 0 } as unknown as import('../../types/vision').VisionStep;
+    render(
+      <MemoryRouter>
+        <VisionMapTree dream={dream} visionAreaName="Home" goals={[goal]} steps={[step]} tasks={[]} token="token" onDataChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Goal actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Streamline' })).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: 'Step actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Streamline' })).toBeInTheDocument();
+  });
+
   it('is a tree that can take focus from code without adding a tab stop', () => {
     renderTree();
     expect(screen.getByRole('tree', { name: 'Vision map for Own a home' })).toHaveAttribute('tabindex', '-1');

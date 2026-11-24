@@ -38,6 +38,7 @@ const FEATURE_LABELS: Record<string, string> = {
   WORK_STYLE_EXPLAIN: 'What my result means',
   WORK_STYLE_TIPS: 'Put my style to work',
   WORK_STYLE_PARTNER: 'Working with a partner',
+  STREAMLINE_SUGGEST: 'Streamline review suggestions',
 };
 
 const percent = (value?: number | null) => (value === null || value === undefined ? '–' : `${Math.round(value * 100)}%`);

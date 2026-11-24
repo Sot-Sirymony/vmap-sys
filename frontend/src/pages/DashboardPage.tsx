@@ -32,6 +32,7 @@ import { RankedProgressList, type RankedProgressItem } from '../components/dashb
 import { StackedStatusBar, WORK_STATUS_ORDER } from '../components/dashboard/StackedStatusBar';
 import { cardSurface, tabular } from '../components/dashboard/surface';
 import { surface } from '../design/surface';
+import { StreamlineCard } from '../components/dashboard/StreamlineCard';
 import { ZoneHeader } from '../components/dashboard/ZoneHeader';
 import { ReportReminderNotice } from '../components/report/ReportReminderNotice';
 import { useAuth } from '../context/AuthContext';
@@ -274,6 +275,7 @@ export function DashboardPage() {
               <EnergyBudgetCard budget={summary?.energyBudget} />
               <GratitudeCard token={token} gratitude={summary?.gratitude} onChanged={() => reloadSummary(false)} />
               <ProgressMetricsCard token={token} />
+              <StreamlineCard token={token} streamline={summary?.streamline} />
               <ReminderSettingsCard token={token} />
             </>
           }

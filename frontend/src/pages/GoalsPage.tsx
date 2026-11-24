@@ -33,6 +33,8 @@ import { QuickAddRow } from '../components/common/QuickAddRow';
 import { RelativeDate } from '../components/common/RelativeDate';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { StreamlineChip } from '../components/streamline/StreamlineChip';
+import { useLatestStreamline } from '../hooks/useLatestStreamline';
 import { GoalSynergyDialog } from '../components/common/GoalSynergyDialog';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
@@ -69,6 +71,7 @@ const statusOptions: { value: WorkStatus; label: string }[] = [
 
 export function GoalsPage() {
   const { token } = useAuth();
+  const latestStreamline = useLatestStreamline(token);
   const navigate = useNavigate();
   const [autoOpenCreate, setAutoOpenCreate] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -437,6 +440,8 @@ export function GoalsPage() {
         extraActions={[
           { label: tr('View steps'), onClick: () => navigate(`/steps?goalId=${goal.id}`) },
           { label: tr('Add step'), onClick: () => navigate(`/steps?create=step&parent=${goal.id}`) },
+          // V27 SR-FR-11: trim this goal's steps and tasks.
+          ...(!goal.archived ? [{ label: tr('Streamline'), onClick: () => navigate(`/streamline/new?goalId=${goal.id}`) }] : []),
           { label: tr('Synergy links'), onClick: () => setSynergyGoal(goal) },
         ]}
         label={tr('Goal actions')}
@@ -475,6 +480,8 @@ export function GoalsPage() {
               </Tooltip>
             )}
             {goal.title}
+            {/* V27: the latest Streamline review of this goal. */}
+            <StreamlineChip review={latestStreamline.byGoal.get(goal.id)} />
           </Box>
           <Breadcrumbs crumbs={goalCrumbs(goal)} />
         </>

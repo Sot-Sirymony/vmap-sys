@@ -217,6 +217,16 @@ class AccessControlSweepTests {
         ownerIds.put("step-up", postAndId("/api/account/step-up", ownerToken, Map.of("action", "EXPORT_DATA"), "challengeId"));
         ownerIds.put("goals/synergy-links", postAndId("/api/goals/" + goalId + "/synergy-links", ownerToken,
                 Map.of("relatedGoalId", secondGoalId)));
+        // V27: a Streamline review of the goal, one of its items, and a repeating task.
+        MockHttpServletResponse review = mockMvc.perform(post("/api/streamline-reviews")
+                        .header("Authorization", "Bearer " + ownerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("goalId", goalId))))
+                .andReturn().getResponse();
+        assertThat(review.getStatus()).as("create streamline review: " + review.getContentAsString()).isEqualTo(201);
+        com.fasterxml.jackson.databind.JsonNode reviewJson = objectMapper.readTree(review.getContentAsString());
+        ownerIds.put("streamline-reviews", reviewJson.get("id").asLong());
+        ownerIds.put("streamline-items", reviewJson.get("items").get(0).get("id").asLong());
+        ownerIds.put("task-repeat-rules", postAndId("/api/task-repeat-rules", ownerToken, Map.of("taskId", taskId, "cadence", "WEEKLY")));
 
         // No plain-user API creates these, so they are written directly.
         AiConversation conversation = aiConversationRepository.save(
@@ -534,6 +544,10 @@ class AccessControlSweepTests {
             if (name.equals("date")) {
                 return DATE;
             }
+            // V27: a Streamline stage number, not a record.
+            if (name.equals("stage")) {
+                return "1";
+            }
             Long id = idFor(pattern, name);
             return id == null ? null : String.valueOf(id);
         });
@@ -549,6 +563,7 @@ class AccessControlSweepTests {
             case "linkId" -> ownerIds.get("goals/synergy-links");
             case "shareId" -> ownerIds.get("report-shares");
             case "challengeId" -> ownerIds.get("step-up");
+            case "itemId" -> ownerIds.get("streamline-items");
             case "id" -> ownerIds.get(pattern.substring("/api/".length(), pattern.indexOf("/{id}")));
             default -> null;
         };
@@ -638,6 +653,22 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/rating")) {
             return json(Map.of("rating", 1));
+        }
+        // V27: Streamline review actions on another user's review.
+        if (pattern.endsWith("/merge")) {
+            return json(Map.of("targetItemId", ownerIds.get("streamline-items")));
+        }
+        if (pattern.endsWith("/not-needed")) {
+            return json(Map.of("reason", "Someone else's reason"));
+        }
+        if (pattern.endsWith("/repeat")) {
+            return json(Map.of("cadence", "WEEKLY"));
+        }
+        if (pattern.endsWith("/target")) {
+            return json(Map.of("targetCycleDays", 3));
+        }
+        if (pattern.endsWith("/items/bulk")) {
+            return json(Map.of("itemIds", List.of(ownerIds.get("streamline-items")), "verdict", "NOT_NEEDED"));
         }
         if (route.method() == HttpMethod.PUT && pattern.endsWith("/{id}")) {
             String resource = pattern.substring("/api/".length(), pattern.indexOf("/{id}"));

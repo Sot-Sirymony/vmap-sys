@@ -301,6 +301,11 @@ export type TaskItem = {
   archived: boolean;
   // V17 BL-FR-28: times this task has entered Blocked.
   blockedCount?: number;
+  // V27 D-27-7: the first move to In progress, and the days from then to completion.
+  startedAt?: string | null;
+  cycleTimeDays?: number | null;
+  // V27 SR-FR-09: the repeat rule this task was made from.
+  repeatRuleId?: number | null;
 };
 
 export type TaskItemRequest = {
@@ -1034,6 +1039,8 @@ export type DashboardSummary = {
   attention: DashboardAttention;
   energyBudget: DashboardEnergyBudget;
   gratitude: DashboardGratitude;
+  // V27 SR-FR-13: the Streamline card.
+  streamline?: import('./streamline').StreamlineDashboard | null;
 };
 
 /** FR-59.2: a rolling 7-day count plus the 2-3 most recent entries. */

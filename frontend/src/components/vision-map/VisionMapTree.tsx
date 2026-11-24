@@ -15,6 +15,7 @@ import Checkbox from '@mui/material/Checkbox';
 import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
 import MenuItem from '@mui/material/MenuItem';
+import { useNavigate } from 'react-router';
 import Select from '@mui/material/Select';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -140,6 +141,7 @@ export function VisionMapTree({
   priorityFilter = '', statusFilter = '', editRequest = null, addRequest = null,
 }: VisionMapTreeProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { settings: themeSettings, resolvedMode } = useThemeSettings();
   const { showToast } = useToast();
   const energyNudge = useEnergyOvercommitNudge();
@@ -1736,6 +1738,8 @@ export function VisionMapTree({
                       onDeletePermanently={() => void deleteGoalNode(goal)}
                       archived={goal.archived}
                       confirmArchive={() => goalArchiveImpactMessage(goal)}
+                      // V27 SR-FR-11: trim this goal's steps and tasks.
+                      extraActions={goal.archived ? [] : [{ label: tr('Streamline'), onClick: () => navigate(`/streamline/new?goalId=${goal.id}`) }]}
                       label={tr('Goal actions')}
                     />
                   </div>
@@ -1772,9 +1776,13 @@ export function VisionMapTree({
                                 onDeletePermanently={() => void deleteStepNode(step)}
                                 archived={step.archived}
                                 confirmArchive={() => stepArchiveImpactMessage(step)}
-                                extraActions={!step.archived && step.resources?.trim()
-                                  ? [{ label: tr('Turn this gap into a step'), onClick: () => setGapSourceStep(step) }]
-                                  : []}
+                                extraActions={step.archived ? [] : [
+                                  // V27 SR-FR-11: trim this step's tasks.
+                                  { label: tr('Streamline'), onClick: () => navigate(`/streamline/new?stepId=${step.id}`) },
+                                  ...(step.resources?.trim()
+                                    ? [{ label: tr('Turn this gap into a step'), onClick: () => setGapSourceStep(step) }]
+                                    : []),
+                                ]}
                                 label={tr('Step actions')}
                               />
                             </div>

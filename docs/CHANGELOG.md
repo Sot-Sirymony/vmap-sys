@@ -17,6 +17,46 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 27.0.0 — Streamline review: question, delete, simplify, speed up, automate (all phases built; awaiting deploy, UAT and the Khmer review)
+
+BRD [`VMS_BRD_V27.0.0.md`](VMS_BRD_V27.0.0.md) (27.0.3, all open questions answered). Built as working frontend and
+backend at the product owner's request, not as a phase 1 prototype.
+
+**Backend.** Migration `V94__streamline_review.sql`: `streamline_reviews`, `streamline_items`, `task_status_changes`,
+`task_repeat_rules`, and `task_items.started_at` / `repeat_rule_id` (unique with `due_date`, so a rule never makes two
+tasks for one date). Every task status path (create, edit, the status PATCH and board, split, progress logs) writes
+the status history and stamps the first move to In progress. `StreamlineReviewService` runs the five stages in order
+(D-27-3, hard lock with "Not needed (reason)"), bulk stage 1 answers (Q-27-2), delete that archives at once with
+restore counted as "brought back" (D-27-4, Q-27-3; a step's tasks follow it), merge, the BR-27-8 confirmation, simplify,
+targets, repeat rules (Q-27-4: daily, weekly, monthly; an hourly job, safe to run twice; archiving the step stops it),
+the summary as counts (Q-27-7) and suggestion candidates (§6.2). `StreamlineAiService` (SR-FR-14, required per Q-27-6)
+suggests per stage under the usual consent, daily limit and monthly cap, sends no names of people, and checks every
+suggestion against the review. Coaches read reviews read-only (D-27-10). The dashboard response gains `streamline`;
+the Excel export gains a Streamline sheet and Started / Cycle Days columns on Tasks. Account deletion removes the new
+tables. Tests: `StreamlineReviewFlowTests` (10), `CycleTimeCalculatorTest`, `StreamlineAiServiceTest`; the access
+sweep now covers every Streamline endpoint.
+
+**Frontend.** `/streamline` (reviews and suggestion cards, dismissible for 30 days), `/streamline/new` (started from
+the new Streamline action on goals and steps), `/streamline/:id` (the stepper, five stage panels, AI suggestions
+with Apply, Undo after each delete, the summary), the coach's read-only view, a Streamline item in the sidebar, the
+dashboard Streamline card, and the monthly review question. Khmer drafts in [`km-review-v27.csv`](km-review-v27.csv).
+The Goals and Steps pages show a summary chip for the latest completed review ("Streamlined 12 Nov: −5 steps"); the
+Vision Map's goal and step menus offer Streamline too; the Streamline page lists repeating tasks with how often, next
+due, and Stop / Restart.
+Tests: `StreamlineReviewPage.test.tsx` (9), `streamlineParts.test.tsx` (5), a Vision Map menu test, and
+`e2e/streamline.e2e.ts` (a full review in a real browser, then axe on the Streamline pages in all three interface
+styles, light and dark, English and Khmer, and Khmer at 360px with no sideways scrolling). Backend:
+`StreamlineReviewFlowTests` (12) includes task merging and SR-NFR-03 (a review of 50 steps and 500 tasks loads in
+under 1.5 s).
+
+**Not built, or built differently from the BRD:**
+- §6.2 "a step whose median cycle time doubled" is not a suggestion yet: it needs weeks of the new status history.
+- Stage 5 candidates come from repeated task titles; habits are not linked.
+- "Remind me" records the choice and points to the existing email reminders; there are no per-task reminders.
+- Suggestion cards are dismissed per browser, not per account.
+
+---
+
 ## 26.0.0 — Interface styles: Modern, Classic, Liquid Glass (all 7 phases built; awaiting deploy, UAT, snapshot approval and the Khmer review)
 
 BRD [`VMS_BRD_V26.0.0.md`](VMS_BRD_V26.0.0.md). One style token layer replaces the four ways styles were applied

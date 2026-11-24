@@ -165,6 +165,9 @@ public class VisionMappingMapper {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .blockedCount(entity.getBlockedCount())
+                .startedAt(entity.getStartedAt())
+                .cycleTimeDays(entity.cycleTimeDays())
+                .repeatRuleId(entity.getRepeatRuleId())
                 .build();
     }
 

@@ -1,44 +1,6 @@
 import type { AuthUser } from '../../types/auth';
 import { can, type Permission } from '../../utils/permissions';
-import {
-  BookOpen,
-  Bot,
-  Bug,
-  CalendarCheck,
-  ChartGantt,
-  FileBarChart,
-  CheckSquare,
-  ClipboardList,
-  Compass,
-  FileSpreadsheet,
-  Fingerprint,
-  Footprints,
-  Gauge,
-  GraduationCap,
-  Handshake,
-  KeyRound,
-  LayoutDashboard,
-  Lightbulb,
-  ListChecks,
-  LockKeyhole,
-  MoonStar,
-  Network,
-  Palette,
-  Scale,
-  Send,
-  ShieldAlert,
-  Sparkles,
-  Target,
-  TrafficCone,
-  UserCog,
-  UserRoundCog,
-  ShieldUser,
-  Users,
-  UsersRound,
-  type LucideIcon,
-  FolderClock,
-  ShieldCheck,
-} from 'lucide-react';
+import { BookOpen, Bot, Bug, CalendarCheck, ChartGantt, FileBarChart, CheckSquare, ClipboardList, Compass, FileSpreadsheet, Fingerprint, Footprints, Gauge, GraduationCap, Handshake, KeyRound, LayoutDashboard, Lightbulb, ListChecks, LockKeyhole, MoonStar, Network, Palette, Scale, Send, ShieldAlert, Sparkles, Target, TrafficCone, UserCog, UserRoundCog, ShieldUser, Users, UsersRound, type LucideIcon, FolderClock, ShieldCheck, Scissors } from 'lucide-react';
 import { tr } from '../../i18n/translate';
 
 export type NavItem = {
@@ -113,6 +75,8 @@ export const navGroups: NavGroup[] = [
       { to: '/steps', label: tr('Steps'), icon: Footprints },
       { to: '/tasks', label: tr('Tasks'), icon: CheckSquare },
       { to: '/obstacles', label: tr('Obstacles'), icon: TrafficCone },
+      // V27 (BRD 27): trim a goal or step before speeding it up or automating it.
+      { to: '/streamline', label: tr('Streamline'), icon: Scissors },
       { to: '/journal', label: tr('Journal'), icon: BookOpen },
     ],
   },

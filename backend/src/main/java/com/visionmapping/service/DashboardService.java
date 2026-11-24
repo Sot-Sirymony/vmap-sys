@@ -85,6 +85,13 @@ public class DashboardService {
     private final ProgressLogRepository progressLogRepository;
     private final GratitudeEntryRepository gratitudeEntryRepository;
     private final Clock clock;
+    private StreamlineDashboard streamlineDashboard;
+
+    /** V27: optional so unit tests can build this class by hand; Spring always sets it. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setStreamlineDashboard(StreamlineDashboard streamlineDashboard) {
+        this.streamlineDashboard = streamlineDashboard;
+    }
 
 
     public DashboardSummaryResponse buildDashboardSummary() {
@@ -146,6 +153,7 @@ public class DashboardService {
                 .attention(DashboardAttention.build(data, mapper, clock.instant()))
                 .energyBudget(buildEnergyBudget(data.tasks(), today))
                 .gratitude(buildGratitude(today))
+                .streamline(streamlineDashboard == null ? null : streamlineDashboard.build(lookup.userId(), data.tasks()))
                 .build();
     }
 

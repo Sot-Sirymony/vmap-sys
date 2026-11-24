@@ -104,6 +104,11 @@ public class AccountService {
             "habits",
             "fear_entries",
             "gratitude_entries",
+            // V27: Streamline reviews (their items go with them, ON DELETE CASCADE), repeat rules and status
+            // history, which reference tasks and steps, so before them.
+            "streamline_reviews",
+            "task_repeat_rules",
+            "task_status_changes",
             "progress_logs",
             "communication_messages",
             "obstacles",

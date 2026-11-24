@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { FormEvent, useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import { listDreams } from '../api/dreamApi';
@@ -52,6 +53,8 @@ const REVIEW_GUIDES: Record<ReviewType, string[]> = {
     'Which dreams still matter?',
     'Which dreams should be revised up, paused, or removed?',
     'What new dreams, partners, or resources are missing?',
+    // V27 (BRD 27 §2.1): the monthly pointer to a Streamline review.
+    'Which goal or step should you streamline this month?',
   ],
   QUARTERLY: [
     'Are these still the right vision areas?',
@@ -436,6 +439,9 @@ export function ReviewsPage() {
             <li key={question}><span aria-hidden="true">-</span> {question}</li>
           ))}
         </ul>
+        {reviewType === 'MONTHLY' && (
+          <Link to="/streamline">{tr('Start a Streamline review')}</Link>
+        )}
       </div>
       {checklistApplies && (
         <div className="field-full diligence-checklist">

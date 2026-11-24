@@ -29,6 +29,8 @@ import { PriorityBadge } from '../components/common/PriorityBadge';
 import { QuickAddRow } from '../components/common/QuickAddRow';
 import { ProgressBar } from '../components/common/ProgressBar';
 import { RowActionsMenu } from '../components/common/RowActionsMenu';
+import { StreamlineChip } from '../components/streamline/StreamlineChip';
+import { useLatestStreamline } from '../hooks/useLatestStreamline';
 import { SearchBar } from '../components/common/SearchBar';
 import { ShowArchivedToggle } from '../components/common/ShowArchivedToggle';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -55,6 +57,7 @@ import { tr } from '../i18n/translate';
 
 export function StepsPage() {
   const { token, user } = useAuth();
+  const latestStreamline = useLatestStreamline(token);
   const navigate = useNavigate();
   const crud = useCrudEntity<VisionStep, VisionStepRequest>({
     token,
@@ -436,6 +439,8 @@ export function StepsPage() {
         extraActions={[
           { label: tr('View tasks'), onClick: () => navigate(`/tasks?stepId=${step.id}`) },
           { label: tr('Add task'), onClick: () => navigate(`/tasks?create=task&parent=${step.id}`) },
+          // V27 SR-FR-11: trim this step's tasks.
+          ...(!step.archived ? [{ label: tr('Streamline'), onClick: () => navigate(`/streamline/new?stepId=${step.id}`) }] : []),
           ...(!step.archived && step.resources?.trim()
             ? [{ label: tr('Turn this gap into a step'), onClick: () => setGapSourceStep(step) }]
             : []),
@@ -473,6 +478,8 @@ export function StepsPage() {
       render: (step) => (
         <>
           {step.title}
+          {/* V27: the latest Streamline review of this step. */}
+          <StreamlineChip review={latestStreamline.byStep.get(step.id)} />
           <Breadcrumbs crumbs={stepCrumbs(step)} />
           {step.coversStepCode && (
             <p className="field-hint">{tr('Created to cover a gap in {code}', { code: step.coversStepCode })}</p>

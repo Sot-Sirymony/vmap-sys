@@ -34,6 +34,11 @@ public record TaskItemResponse(
         Instant createdAt,
         Instant updatedAt,
         // V17 BL-FR-28: times this task has entered Blocked.
-        int blockedCount
+        int blockedCount,
+        // V27 D-27-7: first move to In progress, and completedAt minus that in days (null until both exist).
+        Instant startedAt,
+        BigDecimal cycleTimeDays,
+        // V27 SR-FR-09: the repeat rule this task was made from.
+        Long repeatRuleId
 ) {
 }

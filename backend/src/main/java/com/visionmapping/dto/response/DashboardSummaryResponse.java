@@ -47,7 +47,9 @@ public record DashboardSummaryResponse(
         long moonshotDreams,
         Attention attention,
         EnergyBudget energyBudget,
-        Gratitude gratitude
+        Gratitude gratitude,
+        // V27 SR-FR-13: the Streamline card; null where the dashboard is built without it.
+        Streamline streamline
 ) {
 
     public DashboardSummaryResponse {
@@ -64,6 +66,18 @@ public record DashboardSummaryResponse(
         nextUpTasks = Copies.list(nextUpTasks);
     }
 
+
+    /** V27 SR-FR-13: open reviews, items cut and brought back this quarter, and cycle time. */
+    public record Streamline(long openReviews, long cutThisQuarter, long addedBackThisQuarter, BigDecimal medianCycleDays,
+                             List<CyclePoint> cycleTrend) {
+        public Streamline {
+            cycleTrend = Copies.list(cycleTrend);
+        }
+    }
+
+    /** One week of the cycle-time trend: the median of tasks completed that week (null with fewer than 3). */
+    public record CyclePoint(LocalDate weekEnd, BigDecimal medianDays, int tasks) {
+    }
 
     /** Weekly sample of the running average task progress. */
     public record TrendPoint(LocalDate weekEnd, BigDecimal progress) {

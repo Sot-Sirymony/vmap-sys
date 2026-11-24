@@ -1291,6 +1291,55 @@ With a method off, sign-in answers 403 with "Password sign-in is turned off. Sig
 password is turned off. Sign up with Google." or "Google sign-in is turned off. Sign in with your password.", and a
 refused Google sign-in returns to the app with `reason=google-off`. Admins are never refused.
 
+
+## Streamline review (V27)
+
+A guided review that trims a goal or a step in five stages, in order: question,
+delete, simplify, speed up, automate (BRD 27). Every endpoint is scoped to the
+signed-in user; another user's review answers **404**.
+
+| Method | Path | Body | Notes |
+|---|---|---|---|
+| POST | `/api/streamline-reviews` | `{ goalId }` or `{ stepId }` | Starts a review; **400** if one is already open for it, or it has nothing open |
+| GET | `/api/streamline-reviews` | | Your reviews, newest first, with steps and tasks before and after |
+| GET | `/api/streamline-reviews/candidates` | | Goals and steps worth streamlining (at most 5) |
+| GET | `/api/streamline-reviews/{id}` | | The review, its items, stages and summary |
+| GET | `/api/streamline-reviews/{id}/summary` | | The summary only |
+| PUT | `/api/streamline-reviews/{id}/items/{itemId}` | `{ requirementOwner, requirementSource, partnerId, whyNeeded, verdict, keep, keepReason, speedLevers, automation, delegatePartnerId }` | Each group of fields opens with its stage (1, 2, 4, 5); null leaves a field as it is |
+| PUT | `/api/streamline-reviews/{id}/items/bulk` | `{ itemIds, requirementOwner, requirementSource, whyNeeded, verdict }` | Stage 1 answers for several items at once |
+| POST | `/api/streamline-reviews/{id}/items/{itemId}/delete` | `{ confirmEmpty }` | Archives at once (a step takes its tasks with it). **400** if it would leave the goal or step with nothing open, unless `confirmEmpty` |
+| POST | `/api/streamline-reviews/{id}/items/{itemId}/restore` | | Undo; counts as "brought back" |
+| POST | `/api/streamline-reviews/{id}/items/{itemId}/merge` | `{ targetItemId, confirmEmpty }` | Same kind only; a step's open tasks move to the target |
+| PUT | `/api/streamline-reviews/{id}/items/{itemId}/simplify` | `{ title, description, owner, estimatedHours, markSimple, note }` | Stage 3 |
+| PUT | `/api/streamline-reviews/{id}/target` | `{ targetCycleDays }` | Stage 4 |
+| POST | `/api/streamline-reviews/{id}/items/{itemId}/repeat` | `{ cadence }` | Stage 5; tasks only |
+| POST | `/api/streamline-reviews/{id}/stages/{n}/complete` | | Current stage only. Stage 1 needs every item answered; stage 2 needs every unclear item decided |
+| POST | `/api/streamline-reviews/{id}/stages/{n}/not-needed` | `{ reason }` | Reason of at least 10 characters, kept |
+| POST | `/api/streamline-reviews/{id}/abandon` | | Decisions already applied stay |
+| POST | `/api/streamline-reviews/{id}/stages/{n}/suggestions?language=en` | | AI suggestions for an open stage. Subject to AI consent, the daily limit (**429**) and the monthly cap (**503**); changes nothing |
+| GET | `/api/coach/participants/{id}/streamline-reviews` and `/{reviewId}` | | A coach's read-only view |
+
+Values: `requirementSource` SELF, PARTNER, MENTOR, COACH, ORGANISATION, NOT_SURE ·
+`verdict` NEEDED, NOT_SURE, NOT_NEEDED · `decision` KEEP, DELETE, MERGE ·
+`speedLevers` REMOVE_WAIT, UNBLOCK_FIRST, PARALLEL, BATCH, SHORTEN_LOOP, CLOSER_DATE ·
+`automation` REPEAT, REMIND, DELEGATE, MANUAL · `cadence` DAILY, WEEKLY, MONTHLY.
+
+### Repeating tasks and task history (V27)
+
+| Method | Path | Body | Notes |
+|---|---|---|---|
+| GET | `/api/task-repeat-rules` | | Your rules |
+| POST | `/api/task-repeat-rules` | `{ taskId, cadence, firstDue }` | One active rule per task; a second call changes the cadence |
+| PUT | `/api/task-repeat-rules/{id}` | `{ cadence, active }` | |
+| DELETE | `/api/task-repeat-rules/{id}` | | Stops the rule; tasks it made stay |
+| GET | `/api/tasks/{id}/history` | | Status changes, oldest first |
+
+An hourly job creates a rule's next task once the current one is due, never in
+the past and never twice for one date. Task responses gain `startedAt` (the first
+move to In progress), `cycleTimeDays` (completed minus started, in days) and
+`repeatRuleId`. `GET /api/dashboard` gains `streamline` (open reviews, items cut
+and brought back this quarter, median cycle time and an eight-week trend).
+
 ## Excel
 
 ### Export

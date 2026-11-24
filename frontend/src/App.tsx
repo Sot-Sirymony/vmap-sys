@@ -46,6 +46,9 @@ const WorkStylePage = lazy(() => import('./pages/WorkStylePage').then((m) => ({ 
 const ObstaclesPage = lazy(() => import('./pages/ObstaclesPage').then((m) => ({ default: m.ObstaclesPage })));
 const CommunicationBuilderPage = lazy(() => import('./pages/CommunicationBuilderPage').then((m) => ({ default: m.CommunicationBuilderPage })));
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage').then((m) => ({ default: m.ReviewsPage })));
+const StreamlineListPage = lazy(() => import('./pages/StreamlineListPage').then((m) => ({ default: m.StreamlineListPage })));
+const StreamlineStartPage = lazy(() => import('./pages/StreamlineListPage').then((m) => ({ default: m.StreamlineStartPage })));
+const StreamlineReviewPage = lazy(() => import('./pages/StreamlineReviewPage').then((m) => ({ default: m.StreamlineReviewPage })));
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })));
 const IssueReportsPage = lazy(() => import('./pages/IssueReportsPage').then((m) => ({ default: m.IssueReportsPage })));
 const ImportExportPage = lazy(() => import('./pages/ImportExportPage').then((m) => ({ default: m.ImportExportPage })));
@@ -119,6 +122,10 @@ export function App() {
             <Route path="/obstacles" element={<ObstaclesPage />} />
             <Route path="/communication" element={<CommunicationBuilderPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
+            {/* V27: the Streamline review (BRD 27). */}
+            <Route path="/streamline" element={<StreamlineListPage />} />
+            <Route path="/streamline/new" element={<StreamlineStartPage />} />
+            <Route path="/streamline/:id" element={<StreamlineReviewPage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/issue-reports" element={<IssueReportsPage />} />
             <Route path="/import-export" element={<ImportExportPage />} />
@@ -141,6 +148,7 @@ export function App() {
             <Route path="/coach/participants/:userId" element={<CoachParticipantPage />} />
             {/* V19 RM-FR-50 */}
             <Route path="/coach/participants/:userId/reports/:reportId" element={<CoachSharedReportPage />} />
+            <Route path="/coach/participants/:userId/streamline/:reviewId" element={<StreamlineReviewPage coach />} />
             <Route path="/settings/account" element={<AccountSettingsPage />} />
             <Route path="/settings/security" element={<SecuritySettingsPage />} />
           </Route>

@@ -138,6 +138,7 @@ public class ExcelService {
     private final GoalService goalService;
     private final DreamService dreamService;
     private final VisionAreaService visionAreaService;
+    private final com.visionmapping.service.StreamlineReviewService streamlineReviewService;
     private final Validator validator;
 
     @SecurityAudit(value = SecurityEventType.EXCEL_EXPORTED)
@@ -183,9 +184,10 @@ public class ExcelService {
                             .map(item -> List.of(item.id(), item.code(), item.goalId(), item.title(), item.sequenceNumber(), item.complex(), item.priority(), value(item.targetDate()), item.status(), item.progressPercent(), value(item.owner())))
                             .toList(), headerStyle);
 
-            writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action", "Energy"),
+            // V27 SR-FR-16: "Started" and "Cycle Days" are added last, so older workbooks keep their column positions. Import ignores them.
+            writeRows(workbook, TASKS, List.of("ID", CODE, "Step ID", TITLE, "Owner", PRIORITY, "Start Date", "Due Date", STATUS, "Progress", "Blocker", "Next Action", "Energy", "Started", "Cycle Days"),
                     tasks.stream()
-                            .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction()), value(item.energyDemand())))
+                            .map(item -> List.of(item.id(), item.code(), item.stepId(), item.title(), item.owner(), item.priority(), value(item.startDate()), item.dueDate(), item.status(), item.progressPercent(), value(item.blockerReason()), value(item.nextAction()), value(item.energyDemand()), value(item.startedAt()), value(item.cycleTimeDays())))
                             .toList(), headerStyle);
 
             // V16 (TL-FR-49): the same plan as weeks, for reading and printing in Excel. Not imported.
@@ -219,12 +221,18 @@ public class ExcelService {
                             .map(item -> List.of(item.id(), item.relatedTaskId(), item.progressPercentBefore(), item.progressPercentAfter(), value(item.note()), item.loggedAt()))
                             .toList(), headerStyle);
 
+            // V27 SR-FR-16: the Streamline reviews, one row per step or task. Not imported.
+            writeRows(workbook, "Streamline", List.of("Review", "Goal or Step", "Review Status", CODE, TITLE, "Asked For By", "Verdict",
+                            "Decision", "Simplified", "Speed-up", "Automation", "Cut At", "Brought Back At"),
+                    streamlineReviewService.exportRows(), headerStyle);
+
             writeRows(workbook, "Instructions", List.of("Topic", "Instruction"), List.of(
                     List.of("Import", "Use this workbook as a clean template. Keep required sheet names and header rows."),
                     List.of("Export", "Export creates a new workbook and does not overwrite the original workbook."),
                     List.of(STATUS, "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
                     List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL."),
                     List.of(OBSTACLES, "Put each blocker on a step (Step ID) or a task (Task ID). Its goal and dream are worked out from that. A row with only a Dream ID or Goal ID is imported as \"Not placed\" so you can choose its step in the app. \"Placed on\" is filled by the export and ignored by import."),
+                    List.of("Streamline", "A read-only record of your Streamline reviews: what you questioned, cut, simplified, sped up and automated. Import ignores this sheet."),
                     List.of(TimelineSheet.NAME, "A read-only picture of the plan by week. Shaded weeks follow the Start and End dates; the current week is marked. Import ignores this sheet.")
             ), headerStyle);
 

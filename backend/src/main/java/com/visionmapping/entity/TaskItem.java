@@ -118,6 +118,19 @@ public class TaskItem extends BaseAuditableEntity {
     @Setter(AccessLevel.NONE)
     private Instant completedAt;
 
+    /**
+     * V27 D-27-7: the first time the task moved to In progress. Never cleared, so
+     * cycle time (completedAt − startedAt) survives a move back. Empty for tasks
+     * that started before V27.
+     */
+    @Column(name = "started_at")
+    @Setter(AccessLevel.NONE)
+    private Instant startedAt;
+
+    /** V27 SR-FR-09: the repeat rule this task was made from, if any. */
+    @Column(name = "repeat_rule_id")
+    private Long repeatRuleId;
+
     // Display order among this step's tasks, for the Vision Map tree's
     // drag-and-drop reorder. 0-based; null on legacy rows until the first
     // reorder (or a fresh create) sets it — callers fall back to id order.
@@ -175,6 +188,7 @@ public class TaskItem extends BaseAuditableEntity {
         nextAction = details.nextAction();
         energyDemand = details.energyDemand();
         applyCompletionRule(clock);
+        stampStart(clock);
     }
 
     /** A status-only change, such as a move on the Tasks board. */
@@ -183,6 +197,7 @@ public class TaskItem extends BaseAuditableEntity {
         countBlock(newStatus);
         status = newStatus;
         applyCompletionRule(clock);
+        stampStart(clock);
     }
 
     /** Applies the same rules to a task made with the builder, before its first save. */
@@ -190,6 +205,7 @@ public class TaskItem extends BaseAuditableEntity {
         requireBlockerReason(status, blockerReason);
         blockedCount = status == WorkStatus.BLOCKED ? 1 : 0;
         applyCompletionRule(clock);
+        stampStart(clock);
     }
 
     /**
@@ -202,6 +218,23 @@ public class TaskItem extends BaseAuditableEntity {
             status = WorkStatus.COMPLETED;
             completedAt = Instant.now(clock);
         }
+    }
+
+    /** V27 D-27-7: the first move to In progress starts the cycle-time clock. */
+    private void stampStart(Clock clock) {
+        if (status == WorkStatus.IN_PROGRESS && startedAt == null) {
+            startedAt = Instant.now(Objects.requireNonNull(clock, "clock"));
+        }
+    }
+
+    /** Cycle time in days to one decimal place, or null until the task has both a start and a completion time. */
+    @Nullable
+    public BigDecimal cycleTimeDays() {
+        if (startedAt == null || completedAt == null || completedAt.isBefore(startedAt)) {
+            return null;
+        }
+        double days = java.time.Duration.between(startedAt, completedAt).toMinutes() / (60.0 * 24.0);
+        return BigDecimal.valueOf(days).setScale(1, RoundingMode.HALF_UP);
     }
 
     /** Rule 12: hidden, never deleted. */

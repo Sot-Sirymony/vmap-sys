@@ -95,7 +95,9 @@ public class PageAssistantService {
     public static final Set<String> FEATURES = Set.of(
             CHAT_FEATURE, FEATURE, "MODULE_NEXT", "MODULE_HELP", "ASSESSMENT_EXPLAIN", "ASSESSMENT_PRACTICE", "OBSTACLE_HELP",
             "MESSAGE_FIELD_HELP", "MESSAGE_CHECK", "MESSAGE_ADAPT", "MESSAGE_OBJECTIONS", "MESSAGE_BODY", "MEETING_PREP",
-            "THANK_YOU_DRAFT", "FOLLOW_UP_DRAFT", "REPLY_HELP", "WORK_STYLE_EXPLAIN", "WORK_STYLE_TIPS", "WORK_STYLE_PARTNER");
+            "THANK_YOU_DRAFT", "FOLLOW_UP_DRAFT", "REPLY_HELP", "WORK_STYLE_EXPLAIN", "WORK_STYLE_TIPS", "WORK_STYLE_PARTNER",
+            // V27 SR-FR-14: Streamline review suggestions, rated and counted the same way.
+            StreamlineAiService.FEATURE);
     /** Conversation tag prefix, so page conversations never mix with plan assistant ones (AH-FR-11). */
     public static final String SECTION_PREFIX = "PAGE:";
     static final int MAX_CHANGES = 5;

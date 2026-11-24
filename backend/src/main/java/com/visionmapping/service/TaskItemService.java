@@ -26,6 +26,7 @@ import com.visionmapping.service.support.EntityLookup;
 import com.visionmapping.service.support.ObstacleAnchorSync;
 import com.visionmapping.service.support.PermanentDeleteCascade;
 import com.visionmapping.service.support.ProgressCalculator;
+import com.visionmapping.service.support.TaskStatusHistory;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -62,6 +63,7 @@ public class TaskItemService {
     private final ProgressLogRepository progressLogRepository;
     private final Clock clock;
     private final ObstacleAnchorSync obstacleAnchorSync;
+    private final TaskStatusHistory statusHistory;
 
     @Cacheable(CacheConfig.TASK_LIST_CACHE)
     @Transactional(readOnly = true)
@@ -97,6 +99,7 @@ public class TaskItemService {
                 .build();
         entity.checkNewTask(clock);
         TaskItem saved = taskItemRepository.save(entity);
+        statusHistory.record(saved, null);
         progress.recalculateStep(step);
         return mapper.toResponse(saved);
     }
@@ -116,6 +119,7 @@ public class TaskItemService {
                 request.owner(), request.priority(), request.letterRank(), request.startDate(), request.dueDate(),
                 request.status(), progress.normalizeProgress(request.progressPercent()), request.estimatedHours(),
                 request.actualHours(), request.blockerReason(), request.nextAction(), request.energyDemand()), clock);
+        statusHistory.record(entity, statusBefore);
         progress.recalculateStep(oldStep);
         progress.recalculateStep(entity.getStep());
         if (!oldStep.getId().equals(entity.getStep().getId())) {
@@ -135,6 +139,7 @@ public class TaskItemService {
         BigDecimal progressBefore = entity.getProgressPercent();
         WorkStatus statusBefore = entity.getStatus();
         entity.changeStatus(status, clock);
+        statusHistory.record(entity, statusBefore);
         progress.recalculateStep(entity.getStep());
         logChange(entity, progressBefore, changeNoteFor(statusBefore, entity, changeNote));
         return mapper.toResponse(entity);
@@ -177,7 +182,9 @@ public class TaskItemService {
                     .listOrder(listPosition == null ? null : listPosition + 1 + index)
                     .build();
             task.checkNewTask(clock);
-            created.add(taskItemRepository.save(task));
+            TaskItem saved = taskItemRepository.save(task);
+            statusHistory.record(saved, null);
+            created.add(saved);
         }
         if (request.originalOutcome() == TaskSplitOutcome.REPLACE) {
             String note = "Split into " + created.get(0).getCode() + " to " + created.get(count - 1).getCode();
