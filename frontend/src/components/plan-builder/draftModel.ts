@@ -39,7 +39,8 @@ export function planEnd(content: PlanDraftContent, dreamDate?: string | null): s
       step.tasks.forEach((task) => dates.push(task.dueDate ?? null));
     }
   }
-  return dates.filter((date): date is string => !!date).sort().at(-1) ?? null;
+  // ISO dates sort as text; an explicit compare keeps the order the same everywhere (Sonar S2871).
+  return dates.filter((date): date is string => !!date).sort((left, right) => left.localeCompare(right)).at(-1) ?? null;
 }
 
 /**
