@@ -9,10 +9,10 @@ import Step from '@mui/material/Step';
 import StepButton from '@mui/material/StepButton';
 import Stepper from '@mui/material/Stepper';
 import Typography from '@mui/material/Typography';
-import { Link as RouterLink, useParams } from 'react-router';
+import { Link as RouterLink, useLocation, useNavigate, useParams } from 'react-router';
 import { getAiStatus } from '../api/aiApi';
 import { addPlanDraft, discardPlanDraft, getPlanCapacity, getPlanDraft, savePlanDraft, undoPlan } from '../api/aiPlanApi';
-import { listDreams } from '../api/dreamApi';
+import { archiveDream, listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
@@ -49,6 +49,10 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
  */
 export function PlanBuilderPage() {
   const { dreamId } = useParams();
+  // V31 v1: the Dream Coach start page saved this dream and sent the participant here.
+  const fromCoach = (useLocation().state as { fromCoach?: boolean } | null)?.fromCoach === true;
+  const navigate = useNavigate();
+  const [coachDreamOnUndo, setCoachDreamOnUndo] = useState(false);
   const id = Number(dreamId);
   const { token } = useAuth();
   const { language } = useI18n();
@@ -109,8 +113,13 @@ export function PlanBuilderPage() {
         if (cancelled || !plan) {
           return;
         }
-        setContent(syncWithPlan(draft?.content ?? { goals: [] }, id, plan.goalData));
-        setStage(draft?.stage ?? 'CLARIFY');
+        const startContent = syncWithPlan(draft?.content ?? { goals: [] }, id, plan.goalData);
+        if (fromCoach && !startContent.coachCreated) {
+          dirty.current = true;
+        }
+        setContent(fromCoach ? { ...startContent, coachCreated: true } : startContent);
+        // V31 v1: the coach has already clarified the dream, so a new plan starts at the goals.
+        setStage(draft?.stage ?? (fromCoach ? 'GOALS' : 'CLARIFY'));
         setResumed(draft !== null);
         setSession(draft ? { used: draft.aiRequestsUsed ?? 0, limit: draft.aiRequestLimit ?? 15 } : null);
         setError(plan.found ? '' : tr('Dream not found.'));
@@ -129,7 +138,7 @@ export function PlanBuilderPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, id, loadPlan]);
+  }, [token, id, loadPlan, fromCoach]);
 
   const save = useCallback(async () => {
     if (!token) {
@@ -182,6 +191,7 @@ export function PlanBuilderPage() {
       await savePlanDraft(token, id, latest.current.stage, latest.current.content);
       dirty.current = false;
       const result = await addPlanDraft(token, id, acceptedShould);
+      setCoachDreamOnUndo(latest.current.content.coachCreated === true);
       // New partners are created in the order of the draft's helpers that link no partner.
       const fresh = (latest.current.content.helpers ?? []).filter((helper) => helper.partnerId == null);
       setNewContacts((result.partnerIds ?? []).map((partnerId, index) => ({
@@ -212,6 +222,12 @@ export function PlanBuilderPage() {
     setActionError('');
     try {
       await undoPlan(token, added);
+      // V31 v1: a dream the Dream Coach saved goes with the plan it was made for.
+      if (coachDreamOnUndo) {
+        await archiveDream(token, id, tr('Undone in the Dream Coach'));
+        navigate('/dreams');
+        return;
+      }
       setAdded(null);
       setNewContacts([]);
       setNotice(tr('Undone. What was just added is archived.'));

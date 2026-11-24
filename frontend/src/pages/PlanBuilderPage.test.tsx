@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../api/aiApi';
 import { addPlanDraft, checkPlanDraft, getPlanDraft, savePlanDraft, suggestGoals, undoPlan } from '../api/aiPlanApi';
-import { listDreams } from '../api/dreamApi';
+import { archiveDream, listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
 import { listTasks } from '../api/taskApi';
@@ -19,7 +19,7 @@ vi.mock('../api/aiPlanApi', () => ({
   getPlanCapacity: vi.fn().mockResolvedValue({ hoursPerWeek: null, planned: [] }), savePlanCapacity: vi.fn(),
   checkPlanDraft: vi.fn(), fixPlanDraft: vi.fn(),
 }));
-vi.mock('../api/dreamApi', () => ({ listDreams: vi.fn() }));
+vi.mock('../api/dreamApi', () => ({ listDreams: vi.fn(), archiveDream: vi.fn() }));
 vi.mock('../api/goalApi', () => ({ listGoals: vi.fn() }));
 vi.mock('../api/stepApi', () => ({ listSteps: vi.fn() }));
 vi.mock('../api/taskApi', () => ({ listTasks: vi.fn() }));
@@ -27,10 +27,13 @@ vi.mock('../api/taskApi', () => ({ listTasks: vi.fn() }));
 const dream = { id: 5, title: 'Own a home', whyImportant: 'Family', successDefinition: 'Keys', archived: false } as Dream;
 const ready: AiStatus = { available: true, reason: 'OK', consentGiven: true, dailyLimit: 10, messagesLeftToday: 10 };
 
-function renderPage() {
+function renderPage(fromCoach = false) {
   return render(
-    <MemoryRouter initialEntries={['/dreams/5/build']}>
-      <Routes><Route path="/dreams/:dreamId/build" element={<PlanBuilderPage />} /></Routes>
+    <MemoryRouter initialEntries={[{ pathname: '/dreams/5/build', state: fromCoach ? { fromCoach: true } : null }]}>
+      <Routes>
+        <Route path="/dreams/:dreamId/build" element={<PlanBuilderPage />} />
+        <Route path="/dreams" element={<p>Dreams list</p>} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -135,4 +138,36 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
     await userEvent.click(screen.getAllByRole('button', { name: 'Go to Steps' })[0]);
     expect(screen.getByRole('textbox', { name: 'Owner' })).toBeInTheDocument();
   });
+
+  it('opens at the goals after the Dream Coach, and Undo also archives the dream it saved (V31 v1)', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue({ ...ready, available: false, reason: 'NO_CONSENT' });
+    vi.mocked(getPlanDraft).mockResolvedValue(null);
+    vi.mocked(checkPlanDraft).mockResolvedValue({ issues: [], aiChecked: false });
+    vi.mocked(addPlanDraft).mockResolvedValue({ goalIds: [11], stepIds: [21], taskIds: [] });
+    vi.mocked(undoPlan).mockResolvedValue(undefined);
+    vi.mocked(archiveDream).mockResolvedValue(undefined as never);
+    renderPage(true);
+
+    // The coach has already clarified the dream, so the guide starts at the goals.
+    expect(await screen.findByRole('button', { name: 'Add a goal' })).toBeInTheDocument();
+    await vi.waitFor(() => expect(savePlanDraft).toHaveBeenCalled(), { timeout: 2000 });
+    expect(vi.mocked(savePlanDraft).mock.lastCall?.[3].coachCreated).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add a goal' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Goal' }), 'Save a deposit');
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add a step' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Step' }), 'Visit three banks');
+    await userEvent.type(screen.getByLabelText('Target date'), '2027-01-15');
+    await userEvent.click(screen.getByRole('tab', { name: /Check and add/ }));
+    const save = screen.getByRole('button', { name: 'Save my plan' });
+    await vi.waitFor(() => expect(save).toBeEnabled(), { timeout: 3000 });
+    await userEvent.click(save);
+
+    const notice = await screen.findByText(/Your plan is added/);
+    await userEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole('button', { name: 'Undo' }));
+    expect(undoPlan).toHaveBeenCalled();
+    expect(archiveDream).toHaveBeenCalledWith('token', 5, 'Undone in the Dream Coach');
+    expect(await screen.findByText('Dreams list')).toBeInTheDocument();
+  }, 30_000);
 });

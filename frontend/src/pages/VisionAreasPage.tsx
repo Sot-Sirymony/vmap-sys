@@ -240,6 +240,8 @@ export function VisionAreasPage() {
         extraActions={[
           { label: tr('View dreams'), onClick: () => navigate(`/dreams?visionAreaId=${area.id}`) },
           { label: tr('Add dream'), onClick: () => navigate(`/dreams?create=dream&parent=${area.id}`) },
+          // V31 v1 (DC-FR-02): the Dream Coach with this area already chosen.
+          { label: tr('Plan a dream in this area'), onClick: () => navigate(`/plan/new?areaId=${area.id}`) },
         ]}
         label={tr('Vision area actions')}
       />

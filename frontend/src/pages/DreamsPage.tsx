@@ -679,9 +679,13 @@ export function DreamsPage() {
       title={tr('Dreams')}
       subtitle={tr('Capture meaningful outcomes and prepare them for goals.')}
       actions={
-        <Button type="button" onClick={openCreateFlow} disabled={visionAreas.length === 0}>
-          {tr('Create dream')}
-        </Button>
+        <>
+          {/* V31 v1 (DC-FR-02): the guided path from a dream in your own words to a plan. */}
+          <Button type="button" variant="secondary" onClick={() => navigate('/plan/new')}>{tr('Plan a new dream with the Dream Coach')}</Button>
+          <Button type="button" onClick={openCreateFlow} disabled={visionAreas.length === 0}>
+            {tr('Create dream')}
+          </Button>
+        </>
       }
     >
       <CrudModalForm

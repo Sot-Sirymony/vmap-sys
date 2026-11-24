@@ -1721,6 +1721,25 @@ export type PlanDraftContent = {
   clarifications?: PlanClarification[];
   helpers?: DraftHelper[];
   risks?: DraftRisk[];
+  // V31 v1: the Dream Coach saved this dream at stage 2, so Undo after Save my plan archives it too.
+  coachCreated?: boolean;
+};
+
+// V31 v1 step 1 (DC-FR-12 to DC-FR-17): AI help for the area and dream stages, before the dream exists.
+export type VisionStatementDraft = { statement?: string | null; requestId?: number | null };
+
+export type DreamIntakeAnswer = { question: string; answer: string; field?: ClarifyField | null };
+
+export type DreamIntake = {
+  question?: string | null;
+  field?: ClarifyField | null;
+  done: boolean;
+  title?: string | null;
+  description?: string | null;
+  whyImportant?: string | null;
+  successDefinition?: string | null;
+  targetDate?: string | null;
+  requestId?: number | null;
 };
 
 export type RefineAction = 'FEWER' | 'MORE' | 'SMALLER' | 'BOLDER' | 'EARLIER' | 'LATER' | 'ANOTHER';

@@ -33,7 +33,9 @@ public record PlanDraftContent(
         @Size(max = 6) List<@NotNull @Valid PlanClarification> clarifications,
         // V11 Phase 5 (PB-FR-23 to PB-FR-25): helpers to link or add as partners, and risks to add as obstacles.
         @Size(max = 10) List<@NotNull @Valid DraftHelper> helpers,
-        @Size(max = 10) List<@NotNull @Valid DraftRisk> risks) {
+        @Size(max = 10) List<@NotNull @Valid DraftRisk> risks,
+        // V31 v1 (D-31-2 as amended): the Dream Coach saved this dream at stage 2, so Undo after Save my plan archives it too.
+        boolean coachCreated) {
 
     public PlanDraftContent {
         goals = Copies.list(goals);

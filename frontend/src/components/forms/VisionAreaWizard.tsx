@@ -18,7 +18,7 @@ import { tr } from '../../i18n/translate';
 // FR-58.1: this product's own already-established category vocabulary
 // (CLAUDE.md's own Vision Area examples), reused here as starter
 // suggestions rather than inventing a second, book-derived list.
-const STARTER_AREA_SUGGESTIONS = [
+export const STARTER_AREA_SUGGESTIONS = [
   'Career', 'Health', 'Family', 'Finance', 'Education', 'Business', 'Spiritual', 'Relationship', 'Research', 'Leadership',
 ];
 

@@ -31,6 +31,7 @@ const UndatedStepsPage = lazy(() => import('./pages/UndatedStepsPage').then((m) 
 const VisionAreasPage = lazy(() => import('./pages/VisionAreasPage').then((m) => ({ default: m.VisionAreasPage })));
 const DreamsPage = lazy(() => import('./pages/DreamsPage').then((m) => ({ default: m.DreamsPage })));
 const PlanBuilderPage = lazy(() => import('./pages/PlanBuilderPage').then((m) => ({ default: m.PlanBuilderPage })));
+const DreamCoachStartPage = lazy(() => import('./pages/DreamCoachStartPage').then((m) => ({ default: m.DreamCoachStartPage })));
 const DreamDetailPage = lazy(() => import('./pages/DreamDetailPage').then((m) => ({ default: m.DreamDetailPage })));
 const VisionTimelinePage = lazy(() => import('./pages/VisionTimelinePage').then((m) => ({ default: m.VisionTimelinePage })));
 // V18 (BRD 18.0.0): the Management Report under the Vision Map.
@@ -107,6 +108,8 @@ export function App() {
             <Route path="/dreams" element={<DreamsPage />} />
             <Route path="/dreams/:dreamId" element={<DreamDetailPage />} />
             <Route path="/dreams/:dreamId/build" element={<PlanBuilderPage />} />
+            {/* V31 v1: the Dream Coach's area and dream stages, before the dream exists. */}
+            <Route path="/plan/new" element={<DreamCoachStartPage />} />
             <Route path="/vision-map" element={<DreamDetailPage />} />
             <Route path="/vision-map/timeline" element={<VisionTimelinePage />} />
             <Route path="/vision-map/report" element={<ManagementReportPage />} />

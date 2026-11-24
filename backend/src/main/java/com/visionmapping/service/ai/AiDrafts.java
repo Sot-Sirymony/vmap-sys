@@ -173,6 +173,21 @@ public final class AiDrafts {
             @JsonPropertyDescription("One short sentence on the change") String note) {
     }
 
+    // V31 v1: the Dream Coach's first two stages, for a dream not saved yet.
+
+    public record VisionStatementText(
+            @JsonPropertyDescription("One present-tense sentence, under 200 characters, keeping the participant's meaning and words") String statement) {
+    }
+
+    public record DreamIntakeDraft(
+            @JsonPropertyDescription("True when the dream is clear enough, or no question may be asked; then question is empty") boolean done,
+            @JsonPropertyDescription("One short, kind question about the most important missing part; empty when done") String question,
+            @JsonPropertyDescription("WHY_IMPORTANT, SUCCESS_DEFINITION or TARGET_DATE when the question is about that; empty otherwise") String field,
+            @JsonPropertyDescription("When done: the dream restated in one sentence, from the participant's words and answers only") String title,
+            @JsonPropertyDescription("When done: why it matters, only if the participant said so; otherwise empty") String whyImportant,
+            @JsonPropertyDescription("When done: what success looks like, only if the participant said so; otherwise empty") String successDefinition) {
+    }
+
     // V11 Phase 3: the clarify conversation.
 
     public record ClarifyDraft(

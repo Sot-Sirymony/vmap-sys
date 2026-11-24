@@ -53,7 +53,9 @@ public class AiPlanFeedbackService {
     static final Set<String> PLAN_FEATURES = Set.of(
             "AREA_BUILDER", "DREAM_BUILDER", "STRETCH_DREAM", "GOAL_BUILDER", "STRETCH_GOAL", "PLAN_BUILDER", "PLAN_CHECK",
             "CLARIFY", "TASK_BUILDER", "HELPERS_RISKS", "DRAFT_CHECK", "PLAN_FIX", PlanAssistantService.FEATURE,
-            BlockerAnalysisService.FEATURE);
+            BlockerAnalysisService.FEATURE,
+            // V31 v1: the Dream Coach's area and dream stages.
+            DreamCoachIntakeService.AREA_FEATURE, DreamCoachIntakeService.DREAM_FEATURE);
     private static final Set<String> GOAL_FEATURES = Set.of("GOAL_BUILDER", "STRETCH_GOAL");
     private static final Set<String> STEP_FEATURES = Set.of("PLAN_BUILDER");
     private static final Set<String> TASK_FEATURES = Set.of("TASK_BUILDER");

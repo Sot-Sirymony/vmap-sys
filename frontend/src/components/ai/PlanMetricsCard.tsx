@@ -32,6 +32,9 @@ const FEATURE_LABELS: Record<string, string> = {
   PLAN_FIX: 'Fix with AI',
   PLAN_ASSISTANT: 'Plan assistant',
   PLAN_ASSISTANT_CHAT: 'Plan assistant chat',
+  // V31 v1: the Dream Coach's area and dream stages.
+  COACH_AREA: 'Dream Coach: vision statement',
+  COACH_DREAM: 'Dream Coach: dream',
 };
 
 const percent = (value?: number | null) => (value === null || value === undefined ? '–' : `${Math.round(value * 100)}%`);

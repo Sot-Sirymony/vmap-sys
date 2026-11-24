@@ -1,6 +1,11 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.AiPlanAddRequest;
+import com.visionmapping.dto.request.DreamIntakeRequest;
+import com.visionmapping.dto.request.VisionStatementRequest;
+import com.visionmapping.dto.response.AiPlanResponses.DreamIntake;
+import com.visionmapping.dto.response.AiPlanResponses.VisionStatementDraft;
+import com.visionmapping.service.ai.DreamCoachIntakeService;
 import com.visionmapping.dto.request.DraftGoalStepsRequest;
 import com.visionmapping.dto.request.DraftFixRequest;
 import com.visionmapping.dto.request.DraftStepTasksRequest;
@@ -73,6 +78,7 @@ public class AiPlanController {
     private final AiHelpersService helpers;
     private final PlanDraftCheckService draftCheck;
     private final BlockerAnalysisService blockers;
+    private final DreamCoachIntakeService intake;
 
     @PostMapping("/vision-area-suggestions")
     public VisionAreaSuggestions visionAreas(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
@@ -158,6 +164,20 @@ public class AiPlanController {
     }
 
     /** V11 (PB-FR-08): the next clarifying question about the dream, one at a time, at most three. */
+    /** V31 v1 (DC-FR-12): a vision statement worded from the participant's sentence; nothing is saved. */
+    @PostMapping("/vision-statement")
+    public VisionStatementDraft visionStatement(@Valid @RequestBody VisionStatementRequest request,
+                                                @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return intake.visionStatement(request, language);
+    }
+
+    /** V31 v1 (DC-FR-15, DC-FR-16): the next question about a dream not saved yet, or its restatement. */
+    @PostMapping("/dream-intake")
+    public DreamIntake dreamIntake(@Valid @RequestBody DreamIntakeRequest request,
+                                   @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return intake.dreamIntake(request, language);
+    }
+
     @PostMapping("/dreams/{dreamId}/clarify")
     public ClarifyQuestion clarify(@PathVariable Long dreamId, @Valid @RequestBody PlanClarifyRequest request,
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {

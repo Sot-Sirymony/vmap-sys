@@ -247,6 +247,19 @@ public final class AiPlanResponses {
         }
     }
 
+    /** V31 v1 (DC-FR-12): a vision statement worded from the participant's own sentence. */
+    public record VisionStatementDraft(String statement, Long requestId) {
+    }
+
+    /**
+     * V31 v1 (DC-FR-15, DC-FR-16): the coach's next question about a new dream,
+     * or, when done, a restatement built from the participant's words. The
+     * target date is the participant's own answer, never Claude's (R-07).
+     */
+    public record DreamIntake(String question, String field, boolean done, String title, String description, String whyImportant,
+                              String successDefinition, java.time.LocalDate targetDate, Long requestId) {
+    }
+
     // V11 Phase 7: the plan assistant (PB-FR-41 to PB-FR-50).
 
     /**

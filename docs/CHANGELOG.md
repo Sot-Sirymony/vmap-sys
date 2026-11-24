@@ -17,6 +17,22 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 31.0.0 — Dream Coach: v1 step 1, start without a saved dream (built; awaiting deploy, UAT and the Khmer review)
+
+**Backend.** `POST /api/ai/plan/vision-statement` (`COACH_AREA`) words a vision statement from the participant's own
+sentence; `POST /api/ai/plan/dream-intake` (`COACH_DREAM`) asks up to three questions about a dream that is not saved
+yet, then restates it from the participant's words. The target date is only the participant's own date answer. Both
+save nothing and need AI consent. The draft gains `coachCreated`. No migration.
+
+**Frontend.** New page `/plan/new`, the Dream Coach: stage 1 picks or creates the vision area (starter areas when there
+are none) and confirms its vision statement, with "Word it for me"; stage 2 takes the dream in the participant's own
+words, asks the coach's questions in place, and shows the restatement to edit. "This is right" saves the area if
+needed and the dream as an Idea, then opens Build my plan at the goals. Everything works without AI. Entry points:
+"Plan a new dream with the Dream Coach" on the Dreams page and "Plan a dream in this area" on each vision area. Undo
+after Save my plan also archives the dream the coach saved. 28 more Khmer drafts in `km-review-v31.csv`.
+
+D-31-2 amended by the product owner on 25 Nov 2026: the dream is saved when the participant confirms it at stage 2.
+
 ## 31.0.0 — Dream Coach accuracy check, MVP (built; awaiting deploy, UAT and the Khmer review)
 
 BRD [`VMS_BRD_V31.0.0.md`](VMS_BRD_V31.0.0.md) (31.0.0, draft). The MVP phase only: the accuracy check on the existing

@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 import type {
   AssistantApplied, AssistantChange, BlockerAnalysis, AssistantProposals, AssistantSection, AssistantSurface, SectionCheck,
-  ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics, PlanAccuracyMetrics, PlanRule,
+  ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics, PlanAccuracyMetrics, PlanRule, DreamIntake, DreamIntakeAnswer, VisionStatementDraft,
   PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskItemRequest, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
 
@@ -246,4 +246,19 @@ export function applyAssistantChange(token: string, dreamId: number, change: Ass
     token,
     body: JSON.stringify({ ...change, requestId: requestId ?? null, edited }),
   });
+}
+
+// V31 v1 step 1: the Dream Coach's area and dream stages. Nothing is saved by these calls.
+
+/** DC-FR-12: a vision statement worded from the participant's own sentence. */
+export function suggestVisionStatement(token: string, language: string, body: { areaName: string; sentence: string }) {
+  return apiClient<VisionStatementDraft>(`/ai/plan/vision-statement?language=${language}`, {
+    method: 'POST', token, body: JSON.stringify(body),
+  });
+}
+
+/** DC-FR-15, DC-FR-16: the next question about a dream not saved yet, or its restatement. */
+export function dreamIntake(token: string, language: string,
+  body: { areaName?: string; words: string; answers: DreamIntakeAnswer[]; suggestAnyway?: boolean }) {
+  return apiClient<DreamIntake>(`/ai/plan/dream-intake?language=${language}`, { method: 'POST', token, body: JSON.stringify(body) });
 }
