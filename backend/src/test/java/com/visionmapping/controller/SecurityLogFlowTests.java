@@ -134,10 +134,14 @@ class SecurityLogFlowTests {
         mockMvc.perform(get("/api/shared-plans/" + link)).andExpect(status().isOk());
         mockMvc.perform(get("/api/shared-plans/not-a-real-link")).andExpect(status().isNotFound());
 
+        // Filtered by target_type as well as target_id: plan, report and coach
+        // report shares each number their own links, so a report share with the
+        // same id (made by another test in this shared database) would otherwise
+        // be counted too, depending on test order.
         assertThat(jdbc.queryForObject("select count(*) from security_events where event_type = 'SHARE_LINK_OPENED' "
-                + "and outcome = 'SUCCESS' and target_id = ?", Long.class, share.get("id").asLong())).isEqualTo(1);
+                + "and outcome = 'SUCCESS' and target_type = 'plan_share' and target_id = ?", Long.class, share.get("id").asLong())).isEqualTo(1);
         assertThat(jdbc.queryForObject("select count(*) from security_events where event_type = 'SHARE_LINK_CREATED' "
-                + "and target_id = ?", Long.class, share.get("id").asLong())).isEqualTo(1);
+                + "and target_type = 'plan_share' and target_id = ?", Long.class, share.get("id").asLong())).isEqualTo(1);
         assertThat(jdbc.queryForObject("select count(*) from security_events where event_type = 'SHARE_LINK_OPENED' "
                 + "and outcome = 'DENIED'", Long.class)).isPositive();
     }
