@@ -265,6 +265,91 @@ class BlockerAnalysisFlowTests {
     }
 
     @Test
+    void aiReadsMarkedStepsAndRuleCandidatesTogether() throws Exception {
+        aiOnFor();
+        String user = register(email("ai-both"));
+        send(put("/api/ai/consent"), user, Map.of("consent", true)).andExpect(status().isOk());
+        long dreamId = dream(user);
+        long goalId = goal(user, dreamId);
+        long blockedStep = step(user, goalId, "Choose the method", 1);
+        step(user, goalId, "Analyse the data", 2);
+        send(post("/api/blocks"), user, Map.of("itemType", "STEP", "itemId", blockedStep, "obstacleType", "KNOWLEDGE",
+                "reason", "I do not know which method fits")).andExpect(status().isOk());
+        long dataStep = step(user, goalId, "Collect the data", 3);
+        long overdue = task(user, dataStep, Map.of("title", "Send the survey"));
+        java.sql.Timestamp tenDaysAgo = java.sql.Timestamp.from(java.time.Instant.now().minus(java.time.Duration.ofDays(10)));
+        jdbcTemplate.update("update task_items set due_date = ?, updated_at = ? where id = ?",
+                java.sql.Date.valueOf(TODAY.minusDays(9)), tenDaysAgo, overdue);
+        org.mockito.ArgumentCaptor<String> records = org.mockito.ArgumentCaptor.forClass(String.class);
+        when(claudeClient.structured(anyString(), anyString(), records.capture(), anyString(), eq(AiDrafts.BlockerReview.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new AiDrafts.BlockerReview("", List.of(
+                        new AiDrafts.BlockerDraft("STEP-" + blockedStep, "KNOWLEDGE", "The method was never chosen.",
+                                "Ask a statistician for 30 minutes.", "Statistician")), List.of(
+                        new AiDrafts.HiddenBlockerDraft("TASK-" + overdue, "PARTNER", "No list of people to survey yet."))),
+                        "claude-opus-5-5", 10, 10, false));
+
+        JsonNode result = analyse(user, dreamId);
+
+        JsonNode step = result.get("blockers").get(0);
+        assertThat(step.get("itemType").asText()).isEqualTo("STEP");
+        assertThat(step.get("kind").asText()).isEqualTo("BLOCKED");
+        assertThat(step.get("reason").asText()).isEqualTo("I do not know which method fits");
+        assertThat(step.get("obstacleType").asText()).isEqualTo("KNOWLEDGE");
+        assertThat(step.get("obstacleTypeGuessed").asBoolean()).isFalse();
+        assertThat(step.get("heldUpSteps").asInt()).isEqualTo(2);
+        assertThat(step.get("firstMove").asText()).isEqualTo("Ask a statistician for 30 minutes.");
+        JsonNode candidate = result.get("candidates").get(0);
+        assertThat(candidate.get("itemId").asLong()).isEqualTo(overdue);
+        assertThat(candidate.get("signal").asText()).isEqualTo("OVERDUE_NO_CHANGE");
+        assertThat(candidate.get("fromAi").asBoolean()).isTrue();
+        assertThat(candidate.get("suggestedType").asText()).isEqualTo("PARTNER");
+        // Claude saw the marked step and the rule candidate, with their facts.
+        assertThat(records.getValue()).contains("[STEP-" + blockedStep + "] BLOCKED step").contains("missing: KNOWLEDGE")
+                .contains("holds up 2 later step(s)").contains("[TASK-" + overdue + "] OVERDUE_NO_CHANGE task")
+                .contains("overdue 9 days").contains("no change for 10 days");
+    }
+
+    @Test
+    void aStepThatKeepsSlippingIsPossiblyBlocked() throws Exception {
+        String user = register(email("slipping"));
+        long dreamId = dream(user);
+        long stepId = step(user, goal(user, dreamId), "Book the venue", 1);
+        jdbcTemplate.update("update vision_steps set overdue_reschedules = 2, target_date = ? where id = ?",
+                java.sql.Date.valueOf(TODAY.minusDays(4)), stepId);
+
+        JsonNode candidate = analyse(user, dreamId).get("candidates").get(0);
+        assertThat(candidate.get("itemType").asText()).isEqualTo("STEP");
+        assertThat(candidate.get("signal").asText()).isEqualTo("KEEPS_SLIPPING");
+        assertThat(candidate.get("reschedules").asInt()).isEqualTo(2);
+        assertThat(candidate.get("daysOverdue").asInt()).isEqualTo(4);
+    }
+
+    @Test
+    void whenTheAiCallFailsTheRuleHalfStillAnswers() throws Exception {
+        aiOnFor();
+        String user = register(email("ai-fails"));
+        send(put("/api/ai/consent"), user, Map.of("consent", true)).andExpect(status().isOk());
+        long dreamId = dream(user);
+        long stepId = step(user, goal(user, dreamId), "Get the data", 1);
+        long blocked = task(user, stepId, Map.of("title", "Ask for the dataset", "status", "BLOCKED", "blockerReason", "No reply"));
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(AiDrafts.BlockerReview.class)))
+                .thenThrow(new com.visionmapping.exception.AiUnavailableException());
+
+        JsonNode result = analyse(user, dreamId);
+        assertThat(result.get("aiChecked").asBoolean()).isFalse();
+        assertThat(result.get("blockers").get(0).get("itemId").asLong()).isEqualTo(blocked);
+    }
+
+    @Test
+    void aCompletedStepCannotBeMarkedBlocked() throws Exception {
+        String user = register(email("mark-done-step"));
+        long stepId = step(user, goal(user, dream(user)), "Done already", 1);
+        jdbcTemplate.update("update vision_steps set status = 'COMPLETED' where id = ?", stepId);
+        send(post("/api/blocks"), user, Map.of("itemType", "STEP", "itemId", stepId, "obstacleType", "TIME", "reason", "Too busy"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void anotherUsersDreamIsNotFound() throws Exception {
         String owner = register(email("blockers-owner"));
         long dreamId = dream(owner);
