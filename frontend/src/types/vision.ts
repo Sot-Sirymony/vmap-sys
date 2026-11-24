@@ -1461,6 +1461,48 @@ export type PlanIssue = {
 
 export type PlanCheck = { issues: PlanIssue[]; aiChecked: boolean; requestId?: number | null };
 
+/** Vision Map plan assistant: one thing holding the dream back. Rule fields always; rootCause, firstMove, helper only from AI. */
+export type BlockerKind = 'BLOCKED' | 'WAITING' | 'GAP';
+
+export type BlockerItem = {
+  itemType: 'TASK' | 'STEP';
+  itemId: number;
+  code?: string | null;
+  title: string;
+  kind: BlockerKind;
+  goalId: number;
+  goalTitle: string;
+  stepId: number;
+  stepTitle: string;
+  reason?: string | null;
+  priority?: Priority | null;
+  dueDate?: string | null;
+  overdue: boolean;
+  daysStuck?: number | null;
+  timesBlocked: number;
+  heldUpSteps: number;
+  goalAtRisk: boolean;
+  obstacleType?: ObstacleType | null;
+  obstacleTypeGuessed: boolean;
+  obstacleId?: number | null;
+  hasHelper: boolean;
+  score: number;
+  rootCause?: string | null;
+  firstMove?: string | null;
+  helper?: string | null;
+};
+
+export type BlockerAnalysis = {
+  blockers: BlockerItem[];
+  blockedCount: number;
+  waitingCount: number;
+  gapCount: number;
+  heldUpSteps: number;
+  pattern?: string | null;
+  aiChecked: boolean;
+  requestId?: number | null;
+};
+
 // V11 Phase 1 (PB-FR-31, PB-FR-32, PB-FR-36).
 export type PlanAddResult = {
   goalIds: number[];

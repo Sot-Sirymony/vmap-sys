@@ -1,16 +1,17 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAiStatus } from '../../api/aiApi';
 import { getStepResourceIdeas } from '../../api/aiDailyApi';
-import { addPlan, checkPlan, ratePlanAnswer, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
+import { addPlan, analyseBlockers, checkPlan, ratePlanAnswer, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
 import type { AiStatus, Dream, Goal, VisionStep } from '../../types/vision';
 import { AiPlanAssistant } from './AiPlanAssistant';
 
 vi.mock('../../api/aiApi', () => ({ getAiStatus: vi.fn() }));
 vi.mock('../../api/aiPlanApi', () => ({
   suggestGoals: vi.fn(), suggestSteps: vi.fn(), suggestTasks: vi.fn(), checkPlan: vi.fn(), addPlan: vi.fn(), undoPlan: vi.fn(),
-  ratePlanAnswer: vi.fn(),
+  ratePlanAnswer: vi.fn(), analyseBlockers: vi.fn(), suggestSmallerTasks: vi.fn(),
 }));
 vi.mock('../../api/aiDailyApi', () => ({ getResourceIdeas: vi.fn(), getStepResourceIdeas: vi.fn() }));
 
@@ -169,5 +170,26 @@ describe('AiPlanAssistant (AI-FR-07 to AI-FR-10)', () => {
     expect(getStepResourceIdeas).toHaveBeenCalledWith('token', 31, 'en');
     expect(await screen.findByText('A mortgage adviser')).toBeInTheDocument();
     expect(screen.getByText('Explains which loan fits')).toBeInTheDocument();
+  });
+  it('analyses blockers without AI and ranks what holds the dream back', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue({ ...ready, available: false, reason: 'NO_CONSENT' });
+    vi.mocked(analyseBlockers).mockResolvedValue({
+      blockedCount: 1, waitingCount: 0, gapCount: 0, heldUpSteps: 1, aiChecked: false, requestId: null,
+      blockers: [{ itemType: 'TASK', itemId: 70, title: 'Ask for the dataset', kind: 'BLOCKED', goalId: 9, goalTitle: 'Save a deposit',
+        stepId: 31, stepTitle: 'Visit three banks', reason: 'No reply', overdue: false, timesBlocked: 1, heldUpSteps: 1,
+        goalAtRisk: false, obstacleTypeGuessed: false, hasHelper: false, score: 20 }],
+    });
+    render(
+      <MemoryRouter>
+        <AiPlanAssistant dream={dream} goals={[goal]} steps={[step]} token="token" onDataChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Analyse blockers' }));
+    expect(analyseBlockers).toHaveBeenCalledWith('token', 5, 'en');
+    expect(await screen.findByLabelText('Blocker 1: Ask for the dataset')).toBeInTheDocument();
+    expect(screen.getByText('Holds up 1 later step(s)')).toBeInTheDocument();
+    // No AI request, so nothing to rate.
+    expect(screen.queryByRole('button', { name: 'Helpful' })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import { apiClient } from './apiClient';
 import type {
-  AssistantApplied, AssistantChange, AssistantProposals, AssistantSection, AssistantSurface, SectionCheck,
+  AssistantApplied, AssistantChange, BlockerAnalysis, AssistantProposals, AssistantSection, AssistantSurface, SectionCheck,
   ClarifyField, ClarifyQuestion, Dream, DreamSuggestions, GoalRequest, PlanAsk, PlanClarification, GoalSuggestions, PlanAddResult, PlanCheck, PlanDraft, PlanDraftContent, PlanMetrics,
   PlanStage, SlippingStep, StepRescue, DraftCheck, DraftFix, HelpersAndRisks, PlanCapacity, StepSuggestions, TaskItemRequest, TaskSuggestions, VisionAreaSuggestions, VisionStepRequest,
 } from '../types/vision';
@@ -36,6 +36,11 @@ export function suggestSteps(token: string, goalId: number, language: string, as
 
 export function checkPlan(token: string, dreamId: number, language: string) {
   return apiClient<PlanCheck>(`/ai/plan/dreams/${dreamId}/check?language=${language}`, { method: 'POST', token });
+}
+
+/** Vision Map: what holds the dream back, ranked. The rule half works without AI; nothing is saved. */
+export function analyseBlockers(token: string, dreamId: number, language: string) {
+  return apiClient<BlockerAnalysis>(`/ai/plan/dreams/${dreamId}/blocker-analysis?language=${language}`, { method: 'POST', token });
 }
 
 export function listSlippingSteps(token: string) {

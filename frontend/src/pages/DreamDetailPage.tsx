@@ -267,7 +267,7 @@ export function DreamDetailPage() {
       )}
       {!selectedDream.archived && token && (
         <Box sx={{ mb: 2 }}>
-          <AiPlanAssistant key={selectedDream.id} dream={selectedDream} goals={goals} steps={steps} token={token} onDataChange={load} />
+          <AiPlanAssistant key={selectedDream.id} dream={selectedDream} goals={goals} steps={steps} tasks={tasks} token={token} onDataChange={load} />
         </Box>
       )}
     </>

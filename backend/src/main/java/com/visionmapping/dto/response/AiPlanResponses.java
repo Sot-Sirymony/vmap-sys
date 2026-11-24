@@ -3,6 +3,7 @@ package com.visionmapping.dto.response;
 import com.visionmapping.entity.enums.DreamType;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.util.Copies;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -262,5 +263,28 @@ public final class AiPlanResponses {
 
     /** PB-FR-46: what a saved change card became on the Plan page. */
     public record AssistantApplied(String itemType, Long id) {
+    }
+
+    /**
+     * Vision Map plan assistant: one thing holding the dream back, from the
+     * built-in rules (kind, days stuck, what it holds up, what is missing) and,
+     * when AI ran, a root cause, a first move and the kind of helper to ask.
+     * itemType is TASK or STEP; kind is BLOCKED, WAITING or GAP (a step missing
+     * knowledge, a skill or money with no helper yet).
+     */
+    public record BlockerItem(String itemType, Long itemId, String code, String title, String kind,
+                              Long goalId, String goalTitle, Long stepId, String stepTitle,
+                              String reason, Priority priority, LocalDate dueDate, boolean overdue,
+                              BigDecimal daysStuck, int timesBlocked, int heldUpSteps, boolean goalAtRisk,
+                              String obstacleType, boolean obstacleTypeGuessed, Long obstacleId, boolean hasHelper,
+                              int score, String rootCause, String firstMove, String helper) {
+    }
+
+    /** Counts are for the whole dream; blockers are ranked, biggest impact first. pattern is AI only. */
+    public record BlockerAnalysis(List<BlockerItem> blockers, int blockedCount, int waitingCount, int gapCount,
+                                  int heldUpSteps, String pattern, boolean aiChecked, Long requestId) {
+        public BlockerAnalysis {
+            blockers = Copies.list(blockers);
+        }
     }
 }

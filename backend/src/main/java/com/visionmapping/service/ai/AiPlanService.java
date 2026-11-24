@@ -760,7 +760,7 @@ public class AiPlanService {
      * V17 BL-FR-22: a step missing knowledge, a skill or money, with no linked
      * partner, no "find help" step made for it and no open obstacle on it.
      */
-    private Optional<PlanIssue> gapNeedsHelp(VisionStep step, List<VisionStep> goalSteps) {
+    Optional<PlanIssue> gapNeedsHelp(VisionStep step, List<VisionStep> goalSteps) {
         ObstacleType kind = step.getGapKind();
         // A "find help" step is itself the answer to a gap, so it is not flagged.
         boolean isFindHelpStep = step.getCoversStep() != null || step.getCoversObstacle() != null;

@@ -562,4 +562,21 @@ public final class AiDrafts {
             @JsonPropertyDescription("Decisions and support needed from others, one point per line starting with \"- \"") String decisionsNeeded,
             @JsonPropertyDescription("The focus for the next period, one point per line starting with \"- \"") String nextFocus) {
     }
+
+    /** Vision Map blocker analysis: Claude's reading of one blocker, by the key shown in brackets. */
+    public record BlockerDraft(
+            @JsonPropertyDescription("The key shown in brackets for that blocker, such as TASK-12 or STEP-5") String itemKey,
+            @JsonPropertyDescription("What is missing: KNOWLEDGE, SKILL, TIME, MONEY, MOTIVATION, PARTNER, SYSTEM, DECISION or OTHER") String obstacleType,
+            @JsonPropertyDescription("The likely root cause in one short, kind sentence, without blame") String rootCause,
+            @JsonPropertyDescription("One concrete first move that could start within a day") String firstMove,
+            @JsonPropertyDescription("The kind of person or resource that could help, as a role, never a name") String helper) {
+    }
+
+    public record BlockerReview(
+            @JsonPropertyDescription("What several of these blockers have in common, in one or two sentences; empty when nothing is shared") String pattern,
+            List<BlockerDraft> blockers) {
+        public BlockerReview {
+            blockers = Copies.list(blockers);
+        }
+    }
 }

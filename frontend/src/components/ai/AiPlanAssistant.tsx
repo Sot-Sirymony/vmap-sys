@@ -14,21 +14,25 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { getAiStatus } from '../../api/aiApi';
 import { getResourceIdeas, getStepResourceIdeas } from '../../api/aiDailyApi';
-import { addPlan, checkPlan, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
+import { addPlan, analyseBlockers, checkPlan, suggestGoals, suggestSteps, suggestTasks, undoPlan } from '../../api/aiPlanApi';
 import { useI18n } from '../../i18n/I18nContext';
 import { tr } from '../../i18n/translate';
 import type {
-  AiStatus, Dream, Goal, GoalSuggestion, PlanAddResult, PlanCheck, ResourceIdea, StepSuggestion, TaskSuggestion, VisionStep,
+  AiStatus, BlockerAnalysis, Dream, Goal, GoalSuggestion, PlanAddResult, PlanCheck, ResourceIdea, StepSuggestion, TaskItem, TaskSuggestion,
+  VisionStep,
 } from '../../types/vision';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import { safeHttpUrl } from '../../utils/safeUrl';
 import { SuggestionRating, wasEdited } from './SuggestionRating';
+import { BlockerAnalysisResult } from './BlockerAnalysisResult';
 
 type Props = {
   dream: Dream;
   goals: Goal[];
   steps: VisionStep[];
+  /** Lets a blocked task be broken down from the blocker analysis. */
+  tasks?: TaskItem[];
   token: string;
   onDataChange: () => Promise<void>;
 };
@@ -41,6 +45,7 @@ type Result =
   | { kind: 'steps'; goalId: number; rows: StepRow[]; question?: string | null; requestId?: number | null }
   | { kind: 'tasks'; stepId: number; rows: TaskRow[]; question?: string | null; requestId?: number | null }
   | { kind: 'check'; check: PlanCheck }
+  | { kind: 'blockers'; analysis: BlockerAnalysis }
   | { kind: 'resources'; ideas: ResourceIdea[] };
 
 const ISSUE_LABELS: Record<string, string> = {
@@ -62,7 +67,7 @@ const ISSUE_LABELS: Record<string, string> = {
  * be edited and are only saved when the participant adds them (AI-FR-04). The
  * plan check works without AI too, using its built-in rules.
  */
-export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Props) {
+export function AiPlanAssistant({ dream, goals, steps, tasks = [], token, onDataChange }: Props) {
   const { language } = useI18n();
   const [status, setStatus] = useState<AiStatus | null>(null);
   const [goalId, setGoalId] = useState('');
@@ -122,6 +127,9 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
   });
 
   const askCheck = () => run(async () => ({ kind: 'check', check: await checkPlan(token, dream.id, language) }));
+
+  // What holds the dream back, ranked. The built-in half works without AI.
+  const askBlockers = () => run(async () => ({ kind: 'blockers', analysis: await analyseBlockers(token, dream.id, language) }));
 
   // AI-FR-13: ideas only, each to check before use until admins keep an approved list.
   const askResources = () => run(async () => ({ kind: 'resources', ideas: (await getResourceIdeas(token, Number(goalId), language)).resources }));
@@ -261,6 +269,7 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
             <Button disabled={busy || !aiReady} onClick={() => void askGoals(false)}>{tr('Suggest goals')}</Button>
             <Button variant="secondary" disabled={busy || !aiReady} onClick={() => void askGoals(true)}>{tr('Suggest a stretch goal')}</Button>
             <Button variant="secondary" disabled={busy} onClick={() => void askCheck()}>{tr('Check my plan')}</Button>
+            <Button variant="secondary" disabled={busy} onClick={() => void askBlockers()}>{tr('Analyse blockers')}</Button>
           </Box>
           {dreamGoals.length > 0 && (
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -332,11 +341,14 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
             <TaskRows result={result} busy={busy} onChange={setResult} onAdd={(rows) => void addTasks(result.stepId, rows, result.requestId)} />
           )}
           {result?.kind === 'check' && <CheckResult check={result.check} />}
+          {result?.kind === 'blockers' && (
+            <BlockerAnalysisResult analysis={result.analysis} dreamId={dream.id} tasks={tasks} token={token} onDataChange={onDataChange} />
+          )}
           {result && result.kind !== 'resources' && (
             <SuggestionRating
-              key={result.kind === 'check' ? result.check.requestId : result.requestId}
+              key={ratedRequestId(result) ?? undefined}
               token={token}
-              requestId={result.kind === 'check' ? result.check.requestId : result.requestId}
+              requestId={ratedRequestId(result)}
             />
           )}
           {result?.kind === 'resources' && <ResourceList ideas={result.ideas} />}
@@ -344,6 +356,13 @@ export function AiPlanAssistant({ dream, goals, steps, token, onDataChange }: Pr
       </CardContent>
     </Card>
   );
+}
+
+/** The AI request a thumbs up or down applies to, when the answer came from AI. */
+function ratedRequestId(result: Exclude<Result, { kind: 'resources' }>) {
+  if (result.kind === 'check') return result.check.requestId;
+  if (result.kind === 'blockers') return result.analysis.requestId;
+  return result.requestId;
 }
 
 function Question({ question }: { question?: string | null }) {

@@ -38,6 +38,8 @@ import com.visionmapping.dto.response.AiPlanResponses.StepSuggestions;
 import com.visionmapping.dto.response.AiPlanResponses.VisionAreaSuggestions;
 import com.visionmapping.service.ai.AiPlanFeedbackService;
 import com.visionmapping.service.ai.AiPlanService;
+import com.visionmapping.service.ai.BlockerAnalysisService;
+import com.visionmapping.dto.response.AiPlanResponses.BlockerAnalysis;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import java.util.List;
@@ -70,6 +72,7 @@ public class AiPlanController {
     private final DreamService dreamService;
     private final AiHelpersService helpers;
     private final PlanDraftCheckService draftCheck;
+    private final BlockerAnalysisService blockers;
 
     @PostMapping("/vision-area-suggestions")
     public VisionAreaSuggestions visionAreas(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
@@ -169,6 +172,13 @@ public class AiPlanController {
     public PlanCheck check(@PathVariable Long dreamId,
                            @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
         return service.checkPlan(dreamId, language);
+    }
+
+    /** Vision Map: what is holding the dream back, ranked; the rule half works without AI. Nothing is saved. */
+    @PostMapping("/dreams/{dreamId}/blocker-analysis")
+    public BlockerAnalysis blockerAnalysis(@PathVariable Long dreamId,
+                                           @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return blockers.analyse(dreamId, language);
     }
 
     @GetMapping("/slipping-steps")

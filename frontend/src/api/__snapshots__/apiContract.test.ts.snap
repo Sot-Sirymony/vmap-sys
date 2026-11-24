@@ -61,6 +61,7 @@ exports[`API contract (BRD 12 COV-FR-25) > sends the expected method, path and b
   "aiPageApi.recordPageOutcome(token, requestId, added, edited) -> POST /ai/pages/assistant/requests/11/outcome [auth] {"added":"text","edited":"text"}",
   "aiPlanApi.addPlan(token, body) -> POST /ai/plan/add [auth] {"sample":"value"}",
   "aiPlanApi.addPlanDraft(token, dreamId) -> POST /ai/plan/drafts/11/add [auth]",
+  "aiPlanApi.analyseBlockers(token, dreamId, language) -> POST /ai/plan/dreams/11/blocker-analysis?language=km [auth]",
   "aiPlanApi.applyAssistantChange(token, dreamId, change, requestId, edited) -> POST /ai/plan/dreams/11/assistant/apply [auth] {"0":"t","1":"e","2":"x","3":"t","requestId":13,"edited":"text"}",
   "aiPlanApi.checkAssistantSection(token, dreamId, topic) -> POST /ai/plan/dreams/11/assistant/section-check [auth] "text"",
   "aiPlanApi.checkPlan(token, dreamId, language) -> POST /ai/plan/dreams/11/check?language=km [auth]",

@@ -62,6 +62,9 @@ public interface PartnerRepository extends JpaRepository<Partner, Long>, CodedRe
     /** V17 BL-FR-22: whether a partner is linked to this step. */
     boolean existsByUser_IdAndRelatedStep_IdAndArchivedFalse(Long userId, Long stepId);
 
+    /** Vision Map blocker analysis: whether a partner is linked to this task. */
+    boolean existsByUser_IdAndRelatedTask_IdAndArchivedFalse(Long userId, Long taskId);
+
     /**
      * One query for the partner list: free-text search plus the dropdown filters.
      * Every filter is optional — null means "don't filter on this" — so the page
