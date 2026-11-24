@@ -1723,14 +1723,10 @@ export const km: Record<string, string> = {
   'Open the obstacle': 'បើកឧបសគ្គ',
   'Record as an obstacle': 'កត់ត្រាជាឧបសគ្គ',
   'Find a helper': 'ស្វែងរកអ្នកជួយ',
-  // V29: archive reason and select mode
-  'Why are you archiving this? (optional)': 'ហេតុអ្វីបានជាអ្នកទុកក្នុងបណ្ណសារ? (មិនចាំបាច់)',
-  'Saved with the archived item. Restoring clears it.': 'រក្សាទុកជាមួយធាតុក្នុងបណ្ណសារ។ ការស្តារវិញនឹងលុបវាចោល។',
+  // V29: archiving several items on the Vision Map
   'Archived: {reason}': 'ក្នុងបណ្ណសារ៖ {reason}',
   'Select {title}': 'ជ្រើសរើស {title}',
   'Archived {done} of {total}. The rest could not be archived.': 'បានទុកក្នុងបណ្ណសារ {done} ក្នុងចំណោម {total}។ ធាតុដែលនៅសល់មិនអាចទុកក្នុងបណ្ណសារបានទេ។',
-  'Done selecting': 'ជ្រើសរើសរួចរាល់',
-  'Select': 'ជ្រើសរើស',
   'Clear': 'សម្អាត',
   'Archive {count} item(s)? Everything under them is archived too. Everything can be restored later with "Show archived".': 'ទុកធាតុ {count} ក្នុងបណ្ណសារ? អ្វីៗទាំងអស់នៅក្រោមវាក៏ត្រូវទុកក្នុងបណ្ណសារដែរ។ អ្វីៗទាំងអស់អាចស្តារវិញនៅពេលក្រោយដោយប្រើ "បង្ហាញបណ្ណសារ"។',
   'Nothing is marked as blocked yet, but some work looks stuck.': 'មិនទាន់មានអ្វីត្រូវបានសម្គាល់ថាជាប់គាំងនៅឡើយទេ ប៉ុន្តែការងារខ្លះហាក់ដូចជាជាប់គាំង។',

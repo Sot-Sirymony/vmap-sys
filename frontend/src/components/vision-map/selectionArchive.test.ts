@@ -22,4 +22,8 @@ describe('topLevelSelection (V29 D-29-5)', () => {
   it('skips a task whose goal is selected even when its step is not', () => {
     expect(topLevelSelection(['g10', 't30'], steps, tasks)).toEqual([{ kind: 'goal', id: 10 }]);
   });
+
+  it('archives only the dream when its row is ticked', () => {
+    expect(topLevelSelection(['t30', 'd1', 'g11'], steps, tasks)).toEqual([{ kind: 'dream', id: 1 }]);
+  });
 });

@@ -615,8 +615,7 @@ export function TasksBoardPage() {
       render: (task) => (
         <RowActionsMenu
           onEdit={() => startEdit(task)}
-          askArchiveReason
-          onArchive={(reason) => void crud.archive(task.id, reason)}
+          onArchive={() => void crud.archive(task.id)}
           onRestore={() => void crud.restore(task.id)}
           onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
           archived={task.archived}
@@ -987,9 +986,8 @@ export function TasksBoardPage() {
                       selectedIds={selectedIds}
                       items={crud.items}
                       entityLabel={tr('task(s)')}
-                      askReason
-                  onArchive={async (ids, reason) => {
-                        await crud.archiveMany(ids, reason);
+                      onArchive={async (ids) => {
+                        await crud.archiveMany(ids);
                         setSelectedIds(new Set());
                       }}
                       onRestore={async (ids) => {
@@ -1038,8 +1036,7 @@ export function TasksBoardPage() {
           cardActions={(task) => (
             <RowActionsMenu
               onEdit={() => startEdit(task)}
-              askArchiveReason
-          onArchive={(reason) => void crud.archive(task.id, reason)}
+              onArchive={() => void crud.archive(task.id)}
               onRestore={() => void crud.restore(task.id)}
               onDeletePermanently={() => void crud.permanentlyDelete(task.id)}
               archived={task.archived}

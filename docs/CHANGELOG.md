@@ -17,26 +17,23 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
-## 29.0.0 — Archive reason and archiving several items on the Vision Map (built; awaiting deploy, UAT and the Khmer review)
+## 29.0.0 — Archive one or several items at once from the Vision Map tree (built; awaiting deploy, UAT and the Khmer review)
 
-BRD [`VMS_BRD_V29.0.0.md`](VMS_BRD_V29.0.0.md) (29.0.0, draft; the product owner chose an optional reason, a select
-mode on the Vision Map, and the reason on the list pages too; Q-29-1 to Q-29-4 remain open).
+BRD [`VMS_BRD_V29.0.0.md`](VMS_BRD_V29.0.0.md) (29.0.1, draft). 29.0.0 first added an archive reason text box; the
+product owner clarified the same day that tick boxes on the tree were wanted, not a reason (D-29-9), so 29.0.1 removes
+the text box and makes the tick boxes always visible.
 
-**Backend.** Migration `V95__archive_reason.sql`: `archive_reason VARCHAR(1000)` on `dreams`, `goals`, `vision_steps`
-and `task_items`. New `POST /api/{dreams,goals,steps,tasks}/{id}/archive` with an optional `{ reason }` (steps also
-`removePartner`); the old `DELETE` is unchanged. The reason is trimmed, blank is stored as none, and over 1,000
-characters answers 400. `archive(reason)` keeps the first reason when an item is archived again; the cascade copies the
-reason only to descendants it newly archives (D-29-3); restore clears it on the item and the parents it brings back
-(D-29-4). Plan item responses gain `archiveReason`. Tests: `ArchiveReasonFlowTests` (6).
+**Backend** (from 29.0.0, kept for compatibility). Migration `V95__archive_reason.sql`: `archive_reason VARCHAR(1000)`
+on `dreams`, `goals`, `vision_steps` and `task_items`. `POST /api/{dreams,goals,steps,tasks}/{id}/archive` takes an
+optional `{ reason }` (steps also `removePartner`); the old `DELETE` is unchanged. The cascade copies a reason only to
+items it newly archives; restore clears it. Responses carry `archiveReason`. Tests: `ArchiveReasonFlowTests` (6).
 
-**Frontend.** `ArchiveConfirmDialog` adds "Why are you archiving this? (optional)" to the archive confirmation on the
-Vision Map tree (dream, goal, step, task), the Vision Map timeline, the row menus on the Dreams, Goals, Steps and Tasks
-pages, and their "Archive selected" (one reason for all; on Steps it carries into the "archive the partner too?"
-question). The tree gains **Select** mode: tick boxes on goal, step and task rows, "{n} selected", "Archive selected
-(n)" with one reason, and Clear; rows under another selected row are skipped (`topLevelSelection`), and a partial
-failure reports how many were archived. Archived rows show "Archived: {reason}". Khmer drafts in `km.ts` and
-`km-review-v29.csv`. Tests: `ArchiveConfirmDialog`, `selectionArchive`, two more `BulkArchiveAction` tests and four
-more `VisionMapTree` flow tests; the API contract snapshot records the archive endpoints with a reason.
+**Frontend** (29.0.1). The Vision Map tree shows a tick box on every row that is not archived: the dream, goals, steps
+and tasks. Ticking one shows "{n} selected", **Archive selected (n)** and **Clear**; one plain confirmation archives
+them all. Rows under a ticked row are skipped and archived by the cascade, and a ticked dream covers everything
+(`topLevelSelection`). A partial failure reports how many were archived. Archived rows with a saved reason show
+"Archived: {reason}". Archive confirmations elsewhere (row menus, timeline, list pages) are back to the plain dialog.
+Khmer drafts in `km.ts` and `km-review-v29.csv`. Tests: `selectionArchive` and five `VisionMapTree` flow tests.
 
 **Pending.** `UAT_V29.md`, the Khmer review, the user guide section.
 

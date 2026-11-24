@@ -43,21 +43,4 @@ describe('BulkArchiveAction', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete permanently' }));
     expect(onDeletePermanently).toHaveBeenCalledWith([2, 3]);
   });
-  it('asks for one optional reason for every item archived (V29 AR-FR-03)', async () => {
-    const onArchive = vi.fn().mockResolvedValue(undefined);
-    render(<BulkArchiveAction selectedIds={new Set([1, 4])} items={[...items, { id: 4, archived: false }]} entityLabel="task(s)"
-      onArchive={onArchive} askReason />);
-    await userEvent.click(screen.getByRole('button', { name: 'Archive selected (2)' }));
-    await userEvent.type(await screen.findByRole('textbox', { name: 'Why are you archiving this? (optional)' }), 'Finished another way');
-    await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(onArchive).toHaveBeenCalledWith([1, 4], 'Finished another way');
-  });
-
-  it('keeps the plain confirmation without askReason', async () => {
-    const { onArchive } = renderAction([1]);
-    await userEvent.click(screen.getByRole('button', { name: 'Archive selected (1)' }));
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Archive' }));
-    expect(onArchive).toHaveBeenCalledWith([1]);
-  });
 });

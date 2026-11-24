@@ -65,7 +65,7 @@ export function StepsPage() {
     list: listSteps,
     create: createStep,
     update: updateStep,
-    archive: (token, id, reason) => archiveStep(token, id, false, reason),
+    archive: archiveStep,
     permanentlyDelete: permanentlyDeleteStep,
     restore: restoreStep,
   });
@@ -89,7 +89,7 @@ export function StepsPage() {
   // V17 BL-FR-19: the step whose gap is being turned into a "find help" step.
   const [gapSourceStep, setGapSourceStep] = useState<VisionStep | null>(null);
   // V17 BL-FR-21: a "find help" step being archived, which created a partner.
-  const [archiveAsk, setArchiveAsk] = useState<{ step: VisionStep; reason: string } | null>(null);
+  const [archiveAsk, setArchiveAsk] = useState<VisionStep | null>(null);
   // In the URL, not component state: the dashboard links straight into a
   // filtered view, and a filtered list stays shareable and bookmarkable.
   const [filterVisionAreaId] = useUrlFilter('visionAreaId');
@@ -277,13 +277,13 @@ export function StepsPage() {
 
   // V17 BL-FR-21: archiving a "find help" step that created a partner asks
   // whether that partner goes too.
-  async function archiveStepAnswer(step: VisionStep, removePartner: boolean, reason = '') {
+  async function archiveStepAnswer(step: VisionStep, removePartner: boolean) {
     if (!token) {
       return;
     }
     setArchiveAsk(null);
     try {
-      await archiveStep(token, step.id, removePartner, reason);
+      await archiveStep(token, step.id, removePartner);
       await crud.reload();
     } catch (archiveError) {
       crud.setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive step.'));
@@ -431,9 +431,7 @@ export function StepsPage() {
     return (
       <RowActionsMenu
         onEdit={() => startEdit(step)}
-        askArchiveReason
-        // V29: the reason carries into the "archive the partner too?" question (BR-29-6).
-        onArchive={(reason) => (step.createdPartnerId ? setArchiveAsk({ step, reason: reason ?? '' }) : void crud.archive(step.id, reason))}
+        onArchive={() => (step.createdPartnerId ? setArchiveAsk(step) : void crud.archive(step.id))}
         onRestore={() => void crud.restore(step.id)}
         onDeletePermanently={() => void crud.permanentlyDelete(step.id)}
         archived={step.archived}
@@ -763,9 +761,8 @@ export function StepsPage() {
                   selectedIds={selectedIds}
                   items={crud.items}
                   entityLabel={tr('step(s)')}
-                  askReason
-                  onArchive={async (ids, reason) => {
-                    await crud.archiveMany(ids, reason);
+                  onArchive={async (ids) => {
+                    await crud.archiveMany(ids);
                     setSelectedIds(new Set());
                   }}
                   onRestore={async (ids) => {
@@ -797,12 +794,12 @@ export function StepsPage() {
         />
       )}
       {archiveAsk && (
-        <Modal title={tr('Archive "{title}"?', { title: archiveAsk.step.title })} onClose={() => setArchiveAsk(null)}>
+        <Modal title={tr('Archive "{title}"?', { title: archiveAsk.title })} onClose={() => setArchiveAsk(null)}>
           <div className="stack-list">
             <p>{tr('This step created a partner to contact. Archive that partner too?')}</p>
             <div className="row-actions">
-              <Button type="button" onClick={() => void archiveStepAnswer(archiveAsk.step, true, archiveAsk.reason)}>{tr('Archive step and partner')}</Button>
-              <Button type="button" variant="secondary" onClick={() => void archiveStepAnswer(archiveAsk.step, false, archiveAsk.reason)}>{tr('Archive the step only')}</Button>
+              <Button type="button" onClick={() => void archiveStepAnswer(archiveAsk, true)}>{tr('Archive step and partner')}</Button>
+              <Button type="button" variant="secondary" onClick={() => void archiveStepAnswer(archiveAsk, false)}>{tr('Archive the step only')}</Button>
             </div>
           </div>
         </Modal>

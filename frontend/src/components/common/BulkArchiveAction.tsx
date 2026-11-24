@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Button } from './Button';
-import { ArchiveConfirmDialog } from './ArchiveConfirmDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { tr } from '../../i18n/translate';
 
@@ -10,10 +9,7 @@ type BulkArchiveActionProps = {
   items: { id: number; archived: boolean }[];
   /** Plural entity name for the confirmation text, e.g. "goals". */
   entityLabel: string;
-  /** With askReason, the second argument is the reason ('' when left empty). */
-  onArchive: (ids: number[], reason?: string) => Promise<void>;
-  /** V29 AR-FR-03: ask for one optional reason for every item archived. */
-  askReason?: boolean;
+  onArchive: (ids: number[]) => Promise<void>;
   onRestore?: (ids: number[]) => Promise<void>;
   onDeletePermanently?: (ids: number[]) => Promise<void>;
 };
@@ -26,7 +22,7 @@ type PendingAction = 'archive' | 'restore' | 'delete';
  * "Show archived") can be restored or permanently deleted. Each button acts
  * only on the part of the selection it applies to, so a mixed selection is safe.
  */
-export function BulkArchiveAction({ selectedIds, items, entityLabel, onArchive, askReason = false, onRestore, onDeletePermanently }: BulkArchiveActionProps) {
+export function BulkArchiveAction({ selectedIds, items, entityLabel, onArchive, onRestore, onDeletePermanently }: BulkArchiveActionProps) {
   const [confirming, setConfirming] = useState<PendingAction | null>(null);
   const [running, setRunning] = useState<PendingAction | null>(null);
 
@@ -34,12 +30,12 @@ export function BulkArchiveAction({ selectedIds, items, entityLabel, onArchive, 
   const activeIds = selectedRows.filter((item) => !item.archived).map((item) => item.id);
   const archivedIds = selectedRows.filter((item) => item.archived).map((item) => item.id);
 
-  async function handleConfirm(action: PendingAction, reason?: string) {
+  async function handleConfirm(action: PendingAction) {
     setConfirming(null);
     setRunning(action);
     try {
       if (action === 'archive') {
-        await (askReason ? onArchive(activeIds, reason ?? '') : onArchive(activeIds));
+        await onArchive(activeIds);
       } else if (action === 'restore') {
         await onRestore?.(archivedIds);
       } else {
@@ -88,15 +84,7 @@ export function BulkArchiveAction({ selectedIds, items, entityLabel, onArchive, 
           {running === 'delete' ? tr('Deleting...') : tr('Delete permanently ({count})', { count: archivedIds.length })}
         </Button>
       )}
-      {confirming === 'archive' && askReason && (
-        <ArchiveConfirmDialog
-          title={dialogs.archive.title}
-          message={dialogs.archive.message}
-          onConfirm={(reason) => void handleConfirm('archive', reason)}
-          onClose={() => setConfirming(null)}
-        />
-      )}
-      {confirming && !(confirming === 'archive' && askReason) && (
+      {confirming && (
         <ConfirmDialog
           {...dialogs[confirming]}
           onConfirm={() => void handleConfirm(confirming)}

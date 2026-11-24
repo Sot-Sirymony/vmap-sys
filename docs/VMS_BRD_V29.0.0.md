@@ -1,18 +1,21 @@
-# BRD – Archive reason and archiving several items on the Vision Map
+# BRD – Archiving several items at once on the Vision Map
 
 Nov 24, 2026
 
 ## Document control
 
-This is draft 29.0.0. It keeps every requirement in BRD 28.0.1 and the earlier BRDs. It adds an **archive reason**: a
-text box in every archive confirmation for dreams, goals, steps and tasks, saved with the archived item and shown when
-archived items are visible. It also adds a **select mode** on the Vision Map tree, so several goals, steps and tasks
-can be archived at once with one reason.
+This is draft 29.0.1. It keeps every requirement in BRD 28.0.1 and the earlier BRDs. It adds **tick boxes on every row
+of the Vision Map tree** (dream, goals, steps and tasks), so the user can select one or several items and archive them
+in one go.
+
+29.0.0 also asked for an archive reason in a text box. The product owner clarified on 24 Nov 2026 that a reason was
+never wanted (D-29-9): the text box is removed. The backend keeps the optional reason field and endpoint from 29.0.0,
+so nothing breaks and the few reasons saved that day still show on archived rows.
 
 | Item | Value |
 | --- | --- |
-| Document | Business Requirements Document (BRD) – Archive reason addendum |
-| Version | 29.0.0 – Draft |
+| Document | Business Requirements Document (BRD) – Vision Map multi-select archive addendum |
+| Version | 29.0.1 – Draft |
 | Parent documents | CLAUDE.md business rules (BR-12 archive instead of delete, BR-13 and BR-14 user scoping), the archive cascade and impact counts (archiving a parent archives everything under it; restoring a child brings its parents back as Paused), the list-page "Archive selected" action, BRD 16 (Vision Map tree and timeline), BRD 28 (blocker analysis) |
 | Business owner | To be confirmed |
 | Product owner | To be confirmed |
@@ -20,6 +23,7 @@ can be archived at once with one reason.
 
 | Version | Change | Author |
 | --- | --- | --- |
+| 29.0.1 | Product owner's clarification (24 Nov 2026): "I don't mean a confirmation reason; I want checkboxes on the tree so I can select and archive one or multiple items at once". Tick boxes are **always visible** (no Select button, D-29-5 revised), the **dream row** gets one too (D-29-10), and the reason text box is **removed** everywhere (D-29-9). AR-FR-01 to AR-FR-03 withdrawn; AR-FR-07 and AR-FR-08 revised; AR-FR-10 added. The archive reason API (AR-FR-04 to AR-FR-06) stays for compatibility | BA |
 | 29.0.0 | First draft, from the product owner's request of 24 Nov 2026 ("under vision mapping page while i want archive one or multiple don't has text box for text to archive"). Product owner's answers the same day: the reason is **optional**; the Vision Map gets a **select mode** for archiving several items; the reason box also appears on the **Dreams, Goals, Steps and Tasks list pages** | BA |
 
 ---
@@ -46,13 +50,15 @@ V29 adds:
 
 | ID | Decision |
 | --- | --- |
-| D-29-1 | The reason is **optional** (product owner, 24 Nov 2026). Leaving it empty archives exactly as today. Up to 1,000 characters; surrounding spaces are trimmed and an empty text is stored as no reason |
+| D-29-1 | *(Superseded in the interface by D-29-9.)* The reason is **optional** (product owner, 24 Nov 2026). Leaving it empty archives exactly as today. Up to 1,000 characters; surrounding spaces are trimmed and an empty text is stored as no reason |
 | D-29-2 | Scope: **dreams, goals, steps and tasks** (the plan hierarchy). Vision areas, partners, obstacles, messages and reviews keep today's confirmation; a later BRD may extend the reason to them (Q-29-2) |
 | D-29-3 | The reason is saved on the archived item and on every descendant **newly** archived with it by the cascade. A descendant that was already archived keeps its own earlier reason |
 | D-29-4 | **Restoring** an item clears its archive reason, and so does a parent brought back by restoring a child. A later archive asks again |
-| D-29-5 | Select mode is on the **Vision Map tree** only (not the timeline), for goals, steps and tasks of the dream shown (the dream itself is archived from its own menu). Archived rows cannot be selected. When a goal or step and something under it are both selected, only the top item is archived; the cascade archives the rest with the same reason |
+| D-29-5 | *(Revised in 29.0.1.)* Tick boxes are on the **Vision Map tree** only (not the timeline), **always visible** on every row of the dream shown that is not archived: the dream, its goals, steps and tasks. There is no Select button. Archived rows have no tick box. When a goal or step and something under it are both selected, only the top item is archived; the cascade archives the rest with the same reason |
 | D-29-6 | One reason applies to everything archived in one confirmation, in select mode and with "Archive selected" on the list pages |
 | D-29-7 | The existing archive endpoints keep working unchanged (no reason). The reason travels on a new `POST /{id}/archive` endpoint, so no client breaks |
+| D-29-9 | (29.0.1) **No archive reason text box** in any confirmation. Archiving from row menus, the timeline and the list pages works exactly as before V29. The `archive_reason` column, the `POST /{id}/archive` endpoint and `archiveReason` in responses stay (unused by the interface), and an archived row that has a reason saved still shows "Archived: {reason}" |
+| D-29-10 | (29.0.1) Ticking the **dream** archives the whole dream; every other ticked row is under it and is archived by the cascade |
 | D-29-8 | The reason is the user's own plan data: user-scoped like the item (BR-13, BR-14), visible to a coach only where the coach can already read the item (D-6), never to admins (D-23-3) |
 
 ---
@@ -69,7 +75,7 @@ V29 adds:
 
 ## 2. Behaviour
 
-### 2.1 The archive confirmation
+### 2.1 The archive confirmation (withdrawn in 29.0.1, D-29-9)
 
 Every archive confirmation for a dream, goal, step or task keeps its current message (including the impact count) and
 adds:
@@ -79,26 +85,27 @@ adds:
 
 The confirm button stays enabled whether or not a reason is written (D-29-1).
 
-### 2.2 Select mode on the Vision Map tree
+### 2.2 Tick boxes on the Vision Map tree (29.0.1)
 
-- A **Select** switch in the tree's toolbar. When on, each goal, step and task row that is not archived shows a tick
-  box, and a bar shows "{n} selected", **Archive selected (n)** and **Clear**.
-- Turning Select off, or changing the dream shown, clears the selection.
-- **Archive selected** opens one confirmation: "Archive {n} item(s)? Everything under them is archived too. Everything
-  can be restored later with "Show archived"." plus the reason box (§2.1).
-- On confirm, VMS archives the selected top items in order (goals, then steps, then tasks), skipping any item under
-  another selected item (D-29-5), then reloads the map and leaves select mode.
+- Every row of the tree that is not archived (the dream, its goals, steps and tasks) shows a tick box, named after its
+  row for screen readers ("Select Write the report").
+- As soon as one row is ticked, a bar appears above the tree: "{n} selected", **Archive selected (n)** and **Clear**.
+  Clear unticks everything and hides the bar. Changing the dream shown clears the selection.
+- **Archive selected** opens one plain confirmation: "Archive {n} item(s)? Everything under them is archived too.
+  Everything can be restored later with "Show archived"." with Archive and Cancel. There is no text box (D-29-9).
+- On confirm, VMS archives the ticked top items in order (dream, goals, steps, tasks), skipping any item under another
+  ticked item (D-29-5, D-29-10), then reloads the map and clears the selection.
 - If one archive fails, the others already archived stay archived; the bar shows how many were archived and that the
   rest failed.
 
-### 2.3 List pages
+### 2.3 List pages (withdrawn in 29.0.1, D-29-9)
 
 "Archive selected" and the row menu's Archive on the **Dreams, Goals, Steps and Tasks** pages add the same reason box
 to their confirmation. With "Archive selected", the one reason is saved on every item archived (D-29-6). On the Steps
 page, a step that created a partner still asks "Archive that partner too?" after the confirmation, and the reason
 carries through either answer.
 
-### 2.4 Showing the reason
+### 2.4 Showing the reason (kept for reasons already saved)
 
 When "Show archived" is on, an archived dream, goal, step or task on the Vision Map tree shows a line under its title:
 "Archived: {reason}". Items archived without a reason show nothing extra. Every plan item response carries
@@ -145,15 +152,16 @@ When "Show archived" is on, an archived dream, goal, step or task on the Vision 
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| AR-FR-01 | Optional archive reason box in the archive confirmation for dreams, goals, steps and tasks on the Vision Map tree | Must |
-| AR-FR-02 | The same on the Vision Map timeline | Must |
-| AR-FR-03 | The same in "Archive selected" and in the row menus on the Dreams, Goals, Steps and Tasks pages; on Steps the reason carries into the "archive the partner too?" question | Must |
+| AR-FR-01 | ~~Optional archive reason box on the Vision Map tree~~ Withdrawn in 29.0.1 (D-29-9) | – |
+| AR-FR-02 | ~~The same on the Vision Map timeline~~ Withdrawn in 29.0.1 (D-29-9) | – |
+| AR-FR-03 | ~~The same on the Dreams, Goals, Steps and Tasks pages~~ Withdrawn in 29.0.1 (D-29-9) | – |
 | AR-FR-04 | `POST /api/{dreams,goals,steps,tasks}/{id}/archive` with `{ reason }` (steps also `removePartner`); the old `DELETE` keeps working | Must |
 | AR-FR-05 | Save the reason on the item and newly archived descendants; restore clears it (D-29-3, D-29-4) | Must |
 | AR-FR-06 | `archiveReason` on the four plan item responses | Must |
-| AR-FR-07 | Select mode on the Vision Map tree with tick boxes, selection bar and Archive selected with one reason (§2.2) | Must |
+| AR-FR-07 | Always-visible tick boxes on the dream, goal, step and task rows of the Vision Map tree; the selection bar with Archive selected and Clear; a plain confirmation (§2.2) | Must |
 | AR-FR-08 | Skip selected items that sit under another selected item (D-29-5) | Must |
-| AR-FR-09 | Show "Archived: {reason}" on archived rows of the Vision Map tree | Should |
+| AR-FR-09 | Show "Archived: {reason}" on archived rows of the Vision Map tree when a reason was saved | Should |
+| AR-FR-10 | Ticking the dream archives the whole dream; other ticked rows are left to the cascade (D-29-10) | Must |
 
 ## Non-functional requirements
 
@@ -186,12 +194,12 @@ When "Show archived" is on, an archived dream, goal, step or task on the Vision 
 
 | ID | Criterion |
 | --- | --- |
-| ARC-01 | Archiving a goal on the Vision Map with the reason "Replaced by a new goal" saves the reason on the goal and on its steps and tasks that were not archived before; a task archived earlier keeps its own reason |
-| ARC-02 | Archiving with the reason box left empty works exactly as before and stores no reason |
+| ARC-01 | *(API only after 29.0.1.)* Archiving a goal through `POST /api/goals/{id}/archive` with the reason "Replaced by a new goal" saves the reason on the goal and on its steps and tasks that were not archived before; a task archived earlier keeps its own reason |
+| ARC-02 | Archiving from any row menu, the timeline or a list page shows the plain confirmation, with no text box, and works exactly as before V29 |
 | ARC-03 | Restoring the goal clears its reason; restoring a task under an archived goal clears the reasons of the task and of the parents brought back |
 | ARC-04 | With "Show archived" on, the archived goal shows "Archived: Replaced by a new goal" |
-| ARC-05 | In select mode, ticking one goal and two tasks under another goal and choosing Archive selected with one reason archives all three with that reason; ticking a step and a task under it archives the step once, and the task through the cascade |
-| ARC-06 | "Archive selected" on the Tasks page with a reason saves that reason on every selected task |
+| ARC-05 | With no Select button, ticking one goal and two tasks under another goal and choosing Archive selected archives all three; ticking a step and a task under it archives the step once, and the task through the cascade |
+| ARC-06 | Ticking the dream and a task and choosing Archive selected archives the dream once, and the task with it |
 | ARC-07 | A reason over 1,000 characters is refused; another user's item answers 404 |
 | ARC-08 | Frontend and backend builds, tests, the coverage check and the SonarQube gate pass |
 
@@ -199,9 +207,9 @@ When "Show archived" is on, an archived dream, goal, step or task on the Vision 
 
 | ID | Question | Proposed answer |
 | --- | --- | --- |
-| Q-29-1 | Should the reason appear in the Excel export (an "Archive Reason" column on Dreams, Goals, Steps and Tasks)? | Yes, in a follow-up, once the reason has been used for a while |
+| Q-29-1 | *(Moot after D-29-9 unless the reason returns.)* Should the reason appear in the Excel export (an "Archive Reason" column on Dreams, Goals, Steps and Tasks)? | Yes, in a follow-up, once the reason has been used for a while |
 | Q-29-2 | Extend the reason to vision areas, partners, obstacles, messages and reviews? | Not now (D-29-2). Revisit after UAT |
-| Q-29-3 | Offer quick reasons (Done another way, No longer needed, Replaced, Mistake) as one-tap choices beside the text box? | Not now; review the free-text reasons after UAT to see which come up most |
+| Q-29-3 | *(Moot after D-29-9.)* Offer quick reasons (Done another way, No longer needed, Replaced, Mistake) as one-tap choices beside the text box? | Not now; review the free-text reasons after UAT to see which come up most |
 | Q-29-4 | Should select mode also offer other bulk actions (change status, move) later? | Not in V29; archive only |
 
 ## Sign-off

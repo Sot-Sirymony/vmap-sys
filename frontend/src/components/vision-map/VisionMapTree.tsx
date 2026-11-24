@@ -50,7 +50,7 @@ import {
   obstacleTypeLabels, scheduleModeLabels, type DecisionChecklistKey,
 } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
-import { ArchiveConfirmDialog } from '../common/ArchiveConfirmDialog';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { topLevelSelection } from './selectionArchive';
 import { Input } from '../common/Input';
 import { CrudModalForm } from '../common/CrudModalForm';
@@ -138,16 +138,19 @@ type RowInfo = {
  * menu's Restore / Delete permanently — the same rule every list page
  * already applies to archived records.
  */
+/** Visible to screen readers only. */
+const SCREEN_READER_ONLY = {
+  position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+} as const;
+
 export function VisionMapTree({
   dream, visionAreaName, goals, steps, tasks, token, onDataChange, onDreamPermanentlyDeleted,
   priorityFilter = '', statusFilter = '', editRequest = null, addRequest = null,
 }: VisionMapTreeProps) {
-  // V29 AR-FR-07: select mode for archiving several goals, steps and tasks with one reason.
-  const [selectMode, setSelectMode] = useState(false);
+  // V29 (29.0.1) AR-FR-07: tick boxes on every row, to archive one or several items at once.
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmSelection, setConfirmSelection] = useState(false);
   useEffect(() => {
-    setSelectMode(false);
     setSelected([]);
   }, [dream.id]);
   const { user } = useAuth();
@@ -604,10 +607,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveDreamNode(reason?: string) {
+  async function archiveDreamNode() {
     setError('');
     try {
-      await archiveDream(token, dream.id, reason);
+      await archiveDream(token, dream.id);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive dream.'));
@@ -696,10 +699,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveGoalNode(goal: Goal, reason?: string) {
+  async function archiveGoalNode(goal: Goal) {
     setError('');
     try {
-      await archiveGoal(token, goal.id, reason);
+      await archiveGoal(token, goal.id);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive goal.'));
@@ -789,10 +792,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveStepNode(step: VisionStep, reason?: string) {
+  async function archiveStepNode(step: VisionStep) {
     setError('');
     try {
-      await archiveStep(token, step.id, false, reason);
+      await archiveStep(token, step.id);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive step.'));
@@ -925,10 +928,10 @@ export function VisionMapTree({
     }
   }
 
-  async function archiveTaskNode(task: TaskItem, reason?: string) {
+  async function archiveTaskNode(task: TaskItem) {
     setError('');
     try {
-      await archiveTask(token, task.id, reason);
+      await archiveTask(token, task.id);
       await onDataChange();
     } catch (archiveError) {
       setError(archiveError instanceof Error ? archiveError.message : tr('Unable to archive task.'));
@@ -1131,9 +1134,9 @@ export function VisionMapTree({
     return archived && reason ? <p className="map-meta map-archive-reason">{tr('Archived: {reason}', { reason })}</p> : null;
   }
 
-  /** V29 AR-FR-07: a tick box on goal, step and task rows in select mode; archived rows cannot be picked. */
+  /** V29 AR-FR-07: a tick box on the dream, goal, step and task rows; archived rows cannot be picked. */
   function selectBox(key: string, title: string, archived: boolean) {
-    if (!selectMode || archived) return null;
+    if (archived) return null;
     return (
       <Checkbox
         size="small"
@@ -1148,23 +1151,23 @@ export function VisionMapTree({
     );
   }
 
-  async function archiveSelection(reason: string) {
+  async function archiveSelection() {
     setConfirmSelection(false);
     setError('');
     const items = topLevelSelection(selected, steps, tasks);
     let done = 0;
     try {
       for (const item of items) {
-        if (item.kind === 'goal') await archiveGoal(token, item.id, reason);
-        else if (item.kind === 'step') await archiveStep(token, item.id, false, reason);
-        else await archiveTask(token, item.id, reason);
+        if (item.kind === 'dream') await archiveDream(token, item.id);
+        else if (item.kind === 'goal') await archiveGoal(token, item.id);
+        else if (item.kind === 'step') await archiveStep(token, item.id);
+        else await archiveTask(token, item.id);
         done += 1;
       }
     } catch {
       setError(tr('Archived {done} of {total}. The rest could not be archived.', { done, total: items.length }));
     }
     setSelected([]);
-    setSelectMode(false);
     await onDataChange();
   }
 
@@ -1698,35 +1701,26 @@ export function VisionMapTree({
         </CrudModalForm>
       )}
 
-    {!dream.archived && (
+    {/* Announces the count to screen readers; the bar below shows it on screen. */}
+    <Box component="span" role="status" aria-live="polite" sx={SCREEN_READER_ONLY}>
+      {selected.length > 0 ? tr('{count} selected', { count: selected.length }) : ''}
+    </Box>
+    {selected.length > 0 && (
       <Box className="map-select-bar" sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
-        <Button
-          type="button"
-          variant="secondary"
-          aria-pressed={selectMode}
-          onClick={() => {
-            setSelectMode((current) => !current);
-            setSelected([]);
-          }}
-        >
-          {selectMode ? tr('Done selecting') : tr('Select')}
+        <span aria-hidden="true">{tr('{count} selected', { count: selected.length })}</span>
+        <Button type="button" variant="danger" onClick={() => setConfirmSelection(true)}>
+          {tr('Archive selected ({count})', { count: selected.length })}
         </Button>
-        {selectMode && (
-          <>
-            <span role="status" aria-live="polite">{tr('{count} selected', { count: selected.length })}</span>
-            <Button type="button" variant="danger" disabled={selected.length === 0} onClick={() => setConfirmSelection(true)}>
-              {tr('Archive selected ({count})', { count: selected.length })}
-            </Button>
-            <Button type="button" variant="secondary" disabled={selected.length === 0} onClick={() => setSelected([])}>{tr('Clear')}</Button>
-          </>
-        )}
+        <Button type="button" variant="secondary" onClick={() => setSelected([])}>{tr('Clear')}</Button>
       </Box>
     )}
     {confirmSelection && (
-      <ArchiveConfirmDialog
+      <ConfirmDialog
         title={tr('Archive selected')}
         message={tr('Archive {count} item(s)? Everything under them is archived too. Everything can be restored later with "Show archived".', { count: selected.length })}
-        onConfirm={(reason) => void archiveSelection(reason)}
+        confirmLabel={tr('Archive')}
+        danger
+        onConfirm={() => void archiveSelection()}
         onClose={() => setConfirmSelection(false)}
       />
     )}
@@ -1734,6 +1728,7 @@ export function VisionMapTree({
       <div className="map-node map-node--dream" role="none">
         <div className={`map-row${dream.archived ? ' map-row--archived' : ''}`} {...rowShellProps(dreamRow)}>
           {chevron(dreamRow)}
+          {selectBox('d' + dream.id, dream.title, dream.archived)}
           {safeHttpUrl(dream.imageUrl) && (
             <Box
               component="img"
@@ -1769,8 +1764,7 @@ export function VisionMapTree({
           {rail(dreamProgress)}
           <RowActionsMenu
             onEdit={openDreamEdit}
-            askArchiveReason
-            onArchive={(reason) => void archiveDreamNode(reason)}
+            onArchive={() => void archiveDreamNode()}
             onRestore={() => void restoreDreamNode()}
             onDeletePermanently={() => void deleteDreamNode()}
             archived={dream.archived}
@@ -1821,8 +1815,7 @@ export function VisionMapTree({
                     {rail(Number(goal.progressPercent))}
                     <RowActionsMenu
                       onEdit={() => openGoalEdit(goal)}
-                      askArchiveReason
-                      onArchive={(reason) => void archiveGoalNode(goal, reason)}
+                      onArchive={() => void archiveGoalNode(goal)}
                       onRestore={() => void restoreGoalNode(goal)}
                       onDeletePermanently={() => void deleteGoalNode(goal)}
                       archived={goal.archived}
@@ -1862,8 +1855,7 @@ export function VisionMapTree({
                               {rail(Number(step.progressPercent))}
                               <RowActionsMenu
                                 onEdit={() => openStepEdit(step)}
-                                askArchiveReason
-                                onArchive={(reason) => void archiveStepNode(step, reason)}
+                                onArchive={() => void archiveStepNode(step)}
                                 onRestore={() => void restoreStepNode(step)}
                                 onDeletePermanently={() => void deleteStepNode(step)}
                                 archived={step.archived}
@@ -1916,8 +1908,7 @@ export function VisionMapTree({
                                         {rail(Number(task.progressPercent))}
                                         <RowActionsMenu
                                           onEdit={() => openTaskEdit(task)}
-                                          askArchiveReason
-                                          onArchive={(reason) => void archiveTaskNode(task, reason)}
+                                          onArchive={() => void archiveTaskNode(task)}
                                           onRestore={() => void restoreTaskNode(task)}
                                           onDeletePermanently={() => void deleteTaskNode(task)}
                                           archived={task.archived}
