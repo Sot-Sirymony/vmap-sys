@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 type ToastAction = {
@@ -29,6 +29,16 @@ let nextToastId = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  // Timers still waiting to dismiss a toast; cleared on unmount so none fires after the provider is gone.
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -37,7 +47,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback((message: string, options?: ToastOptions) => {
     const id = ++nextToastId;
     setToasts((current) => [...current, { id, message, action: options?.action }]);
-    setTimeout(() => dismiss(id), options?.duration ?? (options?.action ? 8000 : 3000));
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      dismiss(id);
+    }, options?.duration ?? (options?.action ? 8000 : 3000));
+    timers.current.add(timer);
   }, [dismiss]);
 
   return (
