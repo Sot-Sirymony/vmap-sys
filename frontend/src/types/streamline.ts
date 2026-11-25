@@ -43,6 +43,9 @@ export type StreamlineItem = {
   blockedDays: number | null;
   repeatCandidate: boolean;
   repeatRuleId: number | null;
+  /** V32 D-32-9: how often a "Remind me" item reminds; day is the weekday (1 = Monday) or the day of the month. */
+  remindCadence?: RepeatCadence | null;
+  remindDay?: number | null;
 };
 
 export type StreamlineSummary = {
@@ -111,7 +114,7 @@ export type StreamlineCandidate = {
   anchorId: number;
   code: string;
   title: string;
-  reason: 'MANY_STEPS' | 'OVERDUE' | 'MANY_TASKS' | 'REPEATED_WORK';
+  reason: 'MANY_STEPS' | 'OVERDUE' | 'MANY_TASKS' | 'REPEATED_WORK' | 'CYCLE_TIME_DOUBLED';
   detail: string;
 };
 
@@ -126,6 +129,8 @@ export type StreamlineItemUpdate = Partial<{
   speedLevers: SpeedLever[];
   automation: AutomationChoice;
   delegatePartnerId: number;
+  remindCadence: RepeatCadence;
+  remindDay: number;
 }>;
 
 export type StreamlineSimplify = Partial<{
@@ -164,7 +169,59 @@ export type StreamlinePicks = { requestId: number | null; candidates: Streamline
 /** V30 D-30-9: advice on a completed review. */
 export type StreamlineAdvice = { requestId: number | null; points: { text: string; itemCode: string | null }[] };
 
-export type StreamlineSuggestions = { requestId: number | null; stage: number; suggestions: StreamlineSuggestion[] };
+/** V32 D-32-1: savedAt is set when the cards were saved earlier, and null for a fresh answer. */
+export type StreamlineSuggestions = {
+  requestId: number | null;
+  stage: number;
+  suggestions: StreamlineSuggestion[];
+  savedAt?: string | null;
+  /** V32 D-32-7: drafted by Draft all stages before the earlier stages were finished. */
+  draftedBeforeChanges?: boolean;
+};
+
+/** V32 D-32-7: the stages drafted in one request. */
+export type StreamlineDraftAll = { requestId: number | null; stages: StreamlineSuggestions[] };
+
+/** V32 (D-32-7, D-32-8): saved drafts for the current and later stages; preview stages cannot be applied yet. */
+export type StreamlineDrafts = {
+  stages: { stage: number; preview: boolean; suggestions: StreamlineSuggestions }[];
+  canDraftAll: boolean;
+  unavailableReason: string | null;
+};
+
+/** V32 D-32-4: one action of a batch, in the shape of the single actions. */
+export type StreamlineBatchAction =
+  | { type: 'UPDATE'; itemId: number; update: StreamlineItemUpdate }
+  | { type: 'DELETE'; itemId: number }
+  | { type: 'MERGE'; itemId: number; targetItemId: number }
+  | { type: 'SIMPLIFY'; itemId: number; simplify: StreamlineSimplify }
+  | { type: 'REPEAT'; itemId: number; cadence: RepeatCadence };
+
+/** V32 D-32-4: batchId is null when nothing was applied. */
+export type StreamlineBatchResult = {
+  batchId: number | null;
+  applied: number;
+  total: number;
+  failedAtPosition: number | null;
+  error: string | null;
+  review: StreamlineReview;
+};
+
+/** V32 SF-FR-07: one batch in Recent changes. */
+export type StreamlineBatchView = {
+  id: number;
+  stage: number;
+  applied: number;
+  total: number;
+  failedAtPosition: number | null;
+  createdAt: string;
+  undoneAt: string | null;
+  canUndo: boolean;
+  changes: { code: string; action: StreamlineBatchAction['type'] }[];
+};
+
+/** V32 D-32-5, BR-32-6: skipped items were changed after the batch and left as they are. */
+export type StreamlineUndoResult = { undone: number; skipped: { code: string; reason: string }[]; review: StreamlineReview };
 
 export type StreamlineDashboard = {
   openReviews: number;
@@ -172,6 +229,8 @@ export type StreamlineDashboard = {
   addedBackThisQuarter: number;
   medianCycleDays: number | null;
   cycleTrend: { weekEnd: string; medianDays: number | null; tasks: number }[];
+  /** V32 D-32-11: this week's Streamline suggestion, or null. */
+  nudge?: StreamlineCandidate | null;
 };
 
 export type StreamlineRepeatRule = {

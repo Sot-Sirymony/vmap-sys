@@ -108,6 +108,13 @@ public class AccountService {
             "gratitude_entries",
             // V27: Streamline reviews (their items go with them, ON DELETE CASCADE), repeat rules and status
             // history, which reference tasks and steps, so before them.
+            // V32: saved suggestions reference reviews, so before them.
+            "streamline_suggestion_sets",
+            // V32 phase 2: applied batches (their entries go with them, ON DELETE CASCADE).
+            "streamline_apply_batches",
+            // V32 phase 4: nudges sent and dismissed suggestions.
+            "streamline_nudges",
+            "streamline_candidate_dismissals",
             "streamline_reviews",
             // V31 v1 step 3: review rhythms reference dreams.
             "dream_review_rhythms",

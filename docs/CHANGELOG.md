@@ -17,6 +17,69 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 32.0.0 — Streamline AI: faster, easier, more automatic (built; awaiting deploy, UAT and the Khmer review)
+
+### Phase 5: coach check and documents
+
+A coach's read-only review shows none of the V32 controls, and every V32 review endpoint answers 404 to a coach.
+`docs/UAT_V32.md`, the user guide section "Faster Streamline AI (V32)" and `docs/km-review-v32.csv` are complete.
+
+### Phase 4: reminders, the cycle-time rule, the weekly nudge, saved dismissals
+
+**Backend.** Migration **V102**. "Remind me" items keep how often they remind (`remindCadence`, `remindDay` on the
+item update; weekly on Monday by default). Due reminders appear in the daily plan (`streamlineReminders`) and in the
+reminder email. A new candidate rule, `CYCLE_TIME_DOUBLED`, flags a step whose median cycle time over the last 90 days
+is at least twice the 90 days before (3+ tasks with a start time in each window). While the weekly review is due, one
+Streamline nudge a week (the same goal or step at most once in 30 days) shows on the Dashboard (`streamline.nudge`) and
+in the reminder email. It can be switched off with `streamlineNudges` in the reminder settings.
+`POST`/`GET /api/streamline-reviews/candidate-dismissals` save dismissals for 90 days, per rule, and the candidate list
+leaves them out.
+
+**Frontend.** Stage 5 shows how often and on which day for "Remind me", with a "Reminds you every Monday" chip. The
+Today page has a Reminders card. The Dashboard's Streamline card shows "This week's suggestion". Account settings has
+the weekly Streamline suggestion switch. "Not now" is saved on the server, and old browser dismissals move there once.
+
+### Phase 3: Draft all stages
+
+**Backend.** Migration **V101** adds `streamline_suggestion_sets.drafted_at_stage`.
+`POST /api/streamline-reviews/{id}/draft-all` asks the AI once (`STREAMLINE_DRAFT_ALL`) for the current stage and
+every later stage not yet finished, checks each stage's drafts like a single stage's, and saves them as that stage's
+suggestions. It needs at least US$0.50 left in the month's AI budget. `GET …/drafts` lists the saved drafts, marking
+stages not yet reached as previews, and says whether Draft all stages can run. Fix to phase 1: the fingerprint covers
+all the review's items, so a delete no longer drops the stage's other saved cards.
+
+**Frontend.** **Draft all stages** next to Suggest again (not on stage 5), disabled with the reason when the budget
+has no room. **Drafts for later stages** shows each later stage's drafts read-only until the user reaches it. Cards
+drafted before the earlier stages were finished say so.
+
+### Phase 2: batch apply and undo
+
+**Backend.** Migration **V100** adds `streamline_apply_batches` and `streamline_apply_batch_entries`.
+`POST /api/streamline-reviews/{id}/apply-batch` applies up to 50 actions (UPDATE, DELETE, MERGE, SIMPLIFY, REPEAT)
+one after another through the normal review actions, each in its own transaction, recording what it is about to
+change. It stops at the first failure. `POST …/batches/{batchId}/undo` reverses a batch in reverse order while its
+stage is current and for 24 hours, leaving alone any item changed since. `GET …/batches` lists the stage's latest
+batches.
+
+**Frontend.** Apply selected and Apply all send one batch, then offer **Undo**. A **Recent changes** list on the stage
+shows each batch with Undo while it is possible. Several lever suggestions for one item add up instead of
+overwriting each other.
+
+### Phase 1: saved suggestions and the Streamline model
+
+**Backend.** Migration **V99** adds `streamline_suggestion_sets` and `ai_settings.streamline_model`. The last checked
+suggestions for each review and stage are saved with a fingerprint of the stage and the review's active items.
+`GET /api/streamline-reviews/{id}/stages/{stage}/suggestions` returns them (with `savedAt`) while they still fit, or
+`204`; it uses no AI. Cards already acted on, or whose item is gone, are left out one by one.
+`POST …/suggestions/dismiss` removes a dismissed card. Saved sets are deleted when the review is completed or
+abandoned, and with the account. `PUT /api/admin/ai-settings` takes `streamlineModel` (left out keeps it, blank
+clears it). When it is set, it is used for `STREAMLINE_SUGGEST` and `STREAMLINE_PICK`.
+
+**Frontend.** The suggestions panel shows saved cards at once with "Suggested on <date>". Auto-suggest asks the AI
+only when nothing saved still fits. Saved cards stay usable without AI, with the reason new ones are missing.
+Dismissing a card also removes it from the saved set. The AI settings page has **Model for Streamline suggestions**.
+Khmer drafts are in `km-review-v32.csv`.
+
 ## 31.0.0 — Dream Coach: v2 step 1, owner roles, coach indicator, language retry (built; awaiting deploy, UAT and the Khmer review)
 
 **Backend.** Migration **V98** adds `ai_settings.owner_roles`; `PUT /api/admin/ai-settings` takes `ownerRoles` (left out

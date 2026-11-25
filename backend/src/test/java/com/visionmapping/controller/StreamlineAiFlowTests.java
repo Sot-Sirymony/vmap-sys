@@ -57,12 +57,14 @@ class StreamlineAiFlowTests {
     @MockitoBean
     private ClaudeClient claudeClient;
 
+    private String admin;
+
     @BeforeEach
     void aiOn() throws Exception {
         reset(claudeClient);
-        String admin = register("streamline-ai-admin");
+        admin = register("streamline-ai-admin");
         jdbc.update("update app_users set role = 'ADMIN' where email like 'streamline-ai-admin-%' and role = 'USER'");
-        jdbc.update("update ai_settings set model = 'claude-opus-5-5', monthly_budget_usd = 20.00, daily_message_limit = 50, pages_off = ''");
+        jdbc.update("update ai_settings set model = 'claude-opus-5-5', plan_model = null, streamline_model = null, monthly_budget_usd = 20.00, daily_message_limit = 50, pages_off = ''");
         send(put("/api/admin/ai-settings/api-key"), admin, Map.of("apiKey", KEY)).andExpect(status().isOk());
         send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20))
                 .andExpect(status().isOk());
@@ -164,6 +166,183 @@ class StreamlineAiFlowTests {
         assertThat(points).hasSize(2);
         assertThat(points.get(0).get("itemCode").asText()).isEqualTo(code);
         assertThat(points.get(1).get("itemCode").isNull()).isTrue();
+    }
+
+    // ---- V32 phase 1 (BRD 32): saved suggestions and the Streamline model ----
+
+    @Test
+    void sfc01_savedSuggestionsComeBackWithoutANewRequestAndDropCardsAlreadyActedOn() throws Exception {
+        String user = consented("saved");
+        long goal = goalWithSteps(user, "Save a deposit", 1, 2);
+        long review = read(send(post("/api/streamline-reviews"), user, Map.of("goalId", goal)).andExpect(status().isCreated())).get("id").asLong();
+        String path = "/api/streamline-reviews/" + review + "/stages/1/suggestions";
+        mockMvc.perform(get(path).header("Authorization", "Bearer " + user)).andExpect(status().isNoContent());
+        JsonNode items = read(mockMvc.perform(get("/api/streamline-reviews/" + review).header("Authorization", "Bearer " + user))).get("items");
+        long first = items.get(0).get("id").asLong();
+        long second = items.get(1).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.SuggestionDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new StreamlineAiService.SuggestionDrafts(List.of(
+                        new StreamlineAiService.SuggestionDraft(items.get(0).get("code").asText(), "QUESTION", "Who asked for this?", "r",
+                                "", "", "", "", "", "", "", "", ""),
+                        new StreamlineAiService.SuggestionDraft(items.get(1).get("code").asText(), "VERDICT", "", "r", "", "NEEDED",
+                                "", "", "", "", "", "", ""))), "claude-opus-5-5", 10, 10, false));
+        JsonNode fresh = read(send(post(path), user, Map.of()).andExpect(status().isOk()));
+        assertThat(fresh.get("savedAt").isNull()).isTrue();
+
+        JsonNode saved = read(mockMvc.perform(get(path).header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+        assertThat(saved.get("suggestions")).hasSize(2);
+        assertThat(saved.get("savedAt").isNull()).isFalse();
+        assertThat(saved.get("requestId").asLong()).isEqualTo(fresh.get("requestId").asLong());
+        verify(claudeClient, org.mockito.Mockito.times(1))
+                .structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.SuggestionDrafts.class));
+
+        // Acting on a card by hand leaves it out; the other card stays.
+        send(put("/api/streamline-reviews/" + review + "/items/" + second), user, Map.of("verdict", "NEEDED")).andExpect(status().isOk());
+        JsonNode afterVerdict = read(mockMvc.perform(get(path).header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+        assertThat(afterVerdict.get("suggestions")).hasSize(1);
+        assertThat(afterVerdict.get("suggestions").get(0).get("action").asText()).isEqualTo("QUESTION");
+
+        // A dismissed card is removed from the saved set.
+        send(post(path + "/dismiss"), user, Map.of("itemId", first, "action", "QUESTION")).andExpect(status().isNoContent());
+        assertThat(read(mockMvc.perform(get(path).header("Authorization", "Bearer " + user)).andExpect(status().isOk()))
+                .get("suggestions")).isEmpty();
+    }
+
+    @Test
+    void sfc03_savedSuggestionsWorkWithoutAiAndStayWithTheirOwner() throws Exception {
+        String user = consented("saved-no-ai");
+        long goal = goalWithSteps(user, "Save a deposit", 1, 1);
+        long review = read(send(post("/api/streamline-reviews"), user, Map.of("goalId", goal)).andExpect(status().isCreated())).get("id").asLong();
+        String path = "/api/streamline-reviews/" + review + "/stages/1/suggestions";
+        String code = read(mockMvc.perform(get("/api/streamline-reviews/" + review).header("Authorization", "Bearer " + user)))
+                .get("items").get(0).get("code").asText();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.SuggestionDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new StreamlineAiService.SuggestionDrafts(List.of(
+                        new StreamlineAiService.SuggestionDraft(code, "QUESTION", "Is this needed?", "r", "", "", "", "", "", "", "", "", ""))),
+                        "claude-opus-5-5", 10, 10, false));
+        send(post(path), user, Map.of()).andExpect(status().isOk());
+
+        send(put("/api/ai/consent"), user, Map.of("consent", false)).andExpect(status().isOk());
+        assertThat(read(mockMvc.perform(get(path).header("Authorization", "Bearer " + user)).andExpect(status().isOk()))
+                .get("suggestions")).hasSize(1);
+
+        String other = consented("saved-other");
+        mockMvc.perform(get(path).header("Authorization", "Bearer " + other)).andExpect(status().isNotFound());
+        send(post(path + "/dismiss"), other, Map.of("itemId", 1, "action", "QUESTION")).andExpect(status().isNotFound());
+
+        // D-32-2: a closed review keeps no saved suggestions.
+        send(post("/api/streamline-reviews/" + review + "/abandon"), user, Map.of()).andExpect(status().isOk());
+        mockMvc.perform(get(path).header("Authorization", "Bearer " + user)).andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject("select count(*) from streamline_suggestion_sets where review_id = ?", Integer.class, review)).isZero();
+    }
+
+    @Test
+    void sfc04_theStreamlineModelIsUsedForSuggestionsAndPicksOnly() throws Exception {
+        send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20,
+                "streamlineModel", "gpt-4")).andExpect(status().isBadRequest());
+        JsonNode settings = read(send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5",
+                "monthlyBudgetUsd", 20, "streamlineModel", "claude-haiku-5-5")).andExpect(status().isOk()));
+        assertThat(settings.get("streamlineModel").asText()).isEqualTo("claude-haiku-5-5");
+
+        String user = consented("model");
+        long goal = goalWithSteps(user, "Save a deposit", 1, 1);
+        long review = read(send(post("/api/streamline-reviews"), user, Map.of("goalId", goal)).andExpect(status().isCreated())).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.SuggestionDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new StreamlineAiService.SuggestionDrafts(List.of()), "claude-haiku-5-5", 10, 10, false));
+        send(post("/api/streamline-reviews/" + review + "/stages/1/suggestions"), user, Map.of()).andExpect(status().isOk());
+        verify(claudeClient).structured(anyString(), eq("claude-haiku-5-5"), anyString(), anyString(), eq(StreamlineAiService.SuggestionDrafts.class));
+        assertThat(jdbc.queryForObject("select model from streamline_suggestion_sets where review_id = ?", String.class, review))
+                .isEqualTo("claude-haiku-5-5");
+
+        // Blank clears it.
+        assertThat(read(send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5",
+                "monthlyBudgetUsd", 20, "streamlineModel", " ")).andExpect(status().isOk())).get("streamlineModel").isNull()).isTrue();
+    }
+
+    // ---- V32 phase 3 (BRD 32): Draft all stages ----
+
+    @Test
+    void sfc08_draftAllMakesOneRequestKeepsTheStageLockAndDropsCardsAboutItemsCutEarlier() throws Exception {
+        String user = consented("draft-all");
+        long goal = goalWithSteps(user, "Save a deposit", 2, 0);
+        long review = read(send(post("/api/streamline-reviews"), user, Map.of("goalId", goal)).andExpect(status().isCreated())).get("id").asLong();
+        JsonNode items = read(mockMvc.perform(get("/api/streamline-reviews/" + review).header("Authorization", "Bearer " + user))).get("items");
+        String a = items.get(0).get("code").asText();
+        String b = items.get(1).get("code").asText();
+        long bId = items.get(1).get("id").asLong();
+        when(claudeClient.structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.StageDrafts.class)))
+                .thenReturn(new ClaudeClient.Structured<>(new StreamlineAiService.StageDrafts(List.of(
+                        new StreamlineAiService.StageDraft(1, List.of(card(a, "QUESTION"))),
+                        new StreamlineAiService.StageDraft(2, List.of(card(b, "DELETE"), card(a, "KEEP"))),
+                        new StreamlineAiService.StageDraft(3, List.of(card(b, "SIMPLIFY"), card(a, "SIMPLIFY"))),
+                        new StreamlineAiService.StageDraft(9, List.of(card(a, "QUESTION"))))), "claude-opus-5-5", 10, 10, false));
+
+        JsonNode drafted = read(send(post("/api/streamline-reviews/" + review + "/draft-all"), user, Map.of()).andExpect(status().isOk()));
+        assertThat(drafted.get("stages")).hasSize(5);
+        assertThat(drafted.get("stages").get(1).get("suggestions")).hasSize(2);
+        verify(claudeClient, org.mockito.Mockito.times(1))
+                .structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.StageDrafts.class));
+
+        JsonNode drafts = read(mockMvc.perform(get("/api/streamline-reviews/" + review + "/drafts").header("Authorization", "Bearer " + user))
+                .andExpect(status().isOk()));
+        assertThat(drafts.get("stages").get(0).get("preview").asBoolean()).isFalse();
+        assertThat(drafts.get("stages").get(1).get("preview").asBoolean()).isTrue();
+        assertThat(drafts.get("canDraftAll").asBoolean()).isTrue();
+        // The stage lock stays: a later stage's drafts are a preview, not suggestions to apply.
+        mockMvc.perform(get("/api/streamline-reviews/" + review + "/stages/2/suggestions").header("Authorization", "Bearer " + user))
+                .andExpect(status().isNoContent());
+
+        List<Long> ids = new ArrayList<>();
+        items.forEach(item -> ids.add(item.get("id").asLong()));
+        send(put("/api/streamline-reviews/" + review + "/items/bulk"), user,
+                Map.of("itemIds", ids, "requirementSource", "SELF", "requirementOwner", "Me", "verdict", "NEEDED")).andExpect(status().isOk());
+        send(post("/api/streamline-reviews/" + review + "/stages/1/complete"), user, Map.of()).andExpect(status().isOk());
+        JsonNode stage2 = read(mockMvc.perform(get("/api/streamline-reviews/" + review + "/stages/2/suggestions")
+                .header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+        assertThat(stage2.get("suggestions")).hasSize(2);
+        assertThat(stage2.get("draftedBeforeChanges").asBoolean()).isTrue();
+
+        // Deleting an item keeps the stage's other cards (the fingerprint covers all the review's items).
+        send(post("/api/streamline-reviews/" + review + "/items/" + bId + "/delete"), user, Map.of()).andExpect(status().isOk());
+        JsonNode afterDelete = read(mockMvc.perform(get("/api/streamline-reviews/" + review + "/stages/2/suggestions")
+                .header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+        assertThat(afterDelete.get("suggestions")).hasSize(1);
+        assertThat(afterDelete.get("suggestions").get(0).get("action").asText()).isEqualTo("KEEP");
+
+        // In stage 3 the card about the deleted item is gone; the other stays.
+        send(post("/api/streamline-reviews/" + review + "/stages/2/not-needed"), user, Map.of("reason", "Enough was cut already"))
+                .andExpect(status().isOk());
+        JsonNode stage3 = read(mockMvc.perform(get("/api/streamline-reviews/" + review + "/stages/3/suggestions")
+                .header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+        assertThat(stage3.get("suggestions")).hasSize(1);
+        assertThat(stage3.get("suggestions").get(0).get("code").asText()).isEqualTo(a);
+    }
+
+    @Test
+    void sfc09_draftAllNeedsRoomInTheMonthlyBudget() throws Exception {
+        String user = consented("draft-room");
+        long goal = goalWithSteps(user, "Save a deposit", 1, 1);
+        long review = read(send(post("/api/streamline-reviews"), user, Map.of("goalId", goal)).andExpect(status().isCreated())).get("id").asLong();
+        jdbc.update("update ai_settings set monthly_budget_usd = 0.30");
+        try {
+            JsonNode drafts = read(mockMvc.perform(get("/api/streamline-reviews/" + review + "/drafts")
+                    .header("Authorization", "Bearer " + user)).andExpect(status().isOk()));
+            assertThat(drafts.get("canDraftAll").asBoolean()).isFalse();
+            assertThat(drafts.get("unavailableReason").asText()).contains("does not have room");
+            send(post("/api/streamline-reviews/" + review + "/draft-all"), user, Map.of()).andExpect(status().isBadRequest());
+            verify(claudeClient, never()).structured(anyString(), anyString(), anyString(), anyString(), eq(StreamlineAiService.StageDrafts.class));
+        } finally {
+            jdbc.update("update ai_settings set monthly_budget_usd = 20.00");
+        }
+        String other = consented("draft-other");
+        send(post("/api/streamline-reviews/" + review + "/draft-all"), other, Map.of()).andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/streamline-reviews/" + review + "/drafts").header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+    }
+
+    private static StreamlineAiService.SuggestionDraft card(String code, String action) {
+        return new StreamlineAiService.SuggestionDraft(code, action, "Detail", "Reason", "", "", "", "", "", "", "",
+                "SIMPLIFY".equals(action) ? "Shorter " + code : "", "");
     }
 
     @Test

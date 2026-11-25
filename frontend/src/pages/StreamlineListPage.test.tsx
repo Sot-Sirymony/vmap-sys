@@ -35,6 +35,7 @@ describe('StreamlineListPage (SR-FR-11)', () => {
     vi.mocked(api.listStreamlineReviews).mockResolvedValue(reviews);
     vi.mocked(api.listStreamlineCandidates).mockResolvedValue(candidates);
     vi.mocked(api.listTaskRepeatRules).mockResolvedValue([]);
+    vi.mocked(api.dismissStreamlineCandidates).mockResolvedValue([]);
   });
 
   it('lists reviews with their stage or result, and suggestion cards', async () => {
@@ -66,10 +67,34 @@ describe('StreamlineListPage (SR-FR-11)', () => {
     const cards = await screen.findByRole('region', { name: 'Worth streamlining' });
     await user.click(within(cards).getAllByRole('button', { name: 'Not now' })[0]);
     expect(within(cards).queryByText(/9 open steps/)).not.toBeInTheDocument();
+    // V32 D-32-12: saved on the server with its rule, so it holds on every device.
+    expect(api.dismissStreamlineCandidates).toHaveBeenCalledWith('token', [{ anchorType: 'GOAL', anchorId: 3, rule: 'MANY_STEPS' }]);
     await user.click(within(cards).getByRole('button', { name: 'Run a Streamline review' }));
     expect(await screen.findByText(/already has an open Streamline review/)).toBeInTheDocument();
   });
 
+
+  it('moves dismissals kept in this browser to the server once, then forgets them (D-32-12)', async () => {
+    localStorage.setItem('vms-streamline-dismissed', JSON.stringify({ 'GOAL-3': Date.now() }));
+    renderPage(<StreamlineListPage />);
+
+    await waitFor(() => expect(api.dismissStreamlineCandidates).toHaveBeenCalledWith('token', [{ anchorType: 'GOAL', anchorId: 3, rule: 'MANY_STEPS' }]));
+    await waitFor(() => expect(localStorage.getItem('vms-streamline-dismissed')).toBeNull());
+    const cards = await screen.findByRole('region', { name: 'Worth streamlining' });
+    expect(within(cards).queryByText(/9 open steps/)).not.toBeInTheDocument();
+    expect(within(cards).getByText(/Compare loans/)).toBeInTheDocument();
+  });
+
+  it('shows this week\'s suggestion on the Dashboard card when there is one (D-32-11)', async () => {
+    const nudge: StreamlineCandidate = { anchorType: 'STEP', anchorId: 14, code: 'S-014', title: 'Write the report', reason: 'CYCLE_TIME_DOUBLED',
+      detail: 'Tasks now take 6.5 days, up from 3.0 days' };
+    renderPage(<StreamlineCard token="token" streamline={{ openReviews: 0, cutThisQuarter: 0, addedBackThisQuarter: 0, medianCycleDays: null,
+      cycleTrend: [], nudge }} />);
+
+    const region = await screen.findByRole('region', { name: "This week's suggestion" });
+    expect(within(region).getByText(/Taking twice as long as before — Tasks now take 6.5 days, up from 3.0 days/)).toBeInTheDocument();
+    expect(within(region).queryByText(/9 open steps/)).not.toBeInTheDocument();
+  });
   it('shows an empty state with no reviews', async () => {
     vi.mocked(api.listStreamlineReviews).mockResolvedValue([]);
     vi.mocked(api.listStreamlineCandidates).mockResolvedValue([]);

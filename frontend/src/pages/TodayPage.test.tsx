@@ -75,6 +75,17 @@ describe('TodayPage', () => {
     expect(await screen.findByText(/complex step must have at least one task/)).toBeInTheDocument();
   });
 
+  it('lists the Streamline reminders due today (D-32-9)', async () => {
+    vi.mocked(getDailyPlan).mockResolvedValue({ ...plan, streamlineReminders: [
+      { kind: 'TASK', id: 7, code: 'T-007', title: 'Send the weekly report', cadence: 'WEEKLY' },
+    ] });
+    renderPage();
+
+    const card = await screen.findByTestId('streamline-reminders');
+    expect(card).toHaveTextContent('Reminders');
+    expect(card).toHaveTextContent('Task T-007 · Send the weekly report');
+  });
+
   it('links to the steps that have no date', async () => {
     vi.mocked(getDailyPlan).mockResolvedValue({ ...plan, undatedStepCount: 2 });
     renderPage();

@@ -15,7 +15,7 @@ export function getReminderSettings(token: string) {
  * report reminder (V19 RM-FR-49), the saved one is kept as it was.
  */
 export function updateReminderSettings(token: string, enabled: boolean, timeZone: string, reminderEmail = '',
-  options?: { reportReminder: ReportReminderCadence; reportReminderDay: number | null },
+  options?: { reportReminder?: ReportReminderCadence; reportReminderDay?: number | null; streamlineNudges?: boolean },
   /** V20 SV-FR-04: a new address needs the account code and a code sent to that address. */
   stepUp?: { account?: number; confirm?: number }) {
   return apiClient<ReminderSettings>('/account/reminders', {

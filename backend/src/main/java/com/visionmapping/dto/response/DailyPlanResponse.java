@@ -14,12 +14,20 @@ public record DailyPlanResponse(
         List<HabitResponse> habits,
         boolean weeklyReviewDue,
         LocalDate lastWeeklyReviewDate,
-        long undatedStepCount
+        long undatedStepCount,
+        // V32 (D-32-9, SF-FR-12): Streamline "Remind me" items due today.
+        List<StreamlineReminder> streamlineReminders
 ) {
 
     public DailyPlanResponse {
         items = Copies.list(items);
         habits = Copies.list(habits);
+        streamlineReminders = Copies.list(streamlineReminders);
+    }
+
+    /** V32 (D-32-9): one Streamline "Remind me" item due today. */
+    public record StreamlineReminder(Kind kind, Long id, String code, String title,
+                                     com.visionmapping.entity.enums.RepeatCadence cadence) {
     }
 
 

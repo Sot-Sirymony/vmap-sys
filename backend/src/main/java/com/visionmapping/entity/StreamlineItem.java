@@ -88,6 +88,14 @@ public class StreamlineItem extends BaseAuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private AutomationChoice automation;
+
+    /** V32 (D-32-9): how often a REMIND item reminds, and on which weekday (1 to 7) or day of the month (1 to 28). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "remind_cadence", length = 10)
+    private com.visionmapping.entity.enums.RepeatCadence remindCadence;
+
+    @Column(name = "remind_day")
+    private Integer remindDay;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delegate_partner_id")
     private Partner delegatePartner;

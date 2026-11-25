@@ -221,7 +221,7 @@ export function StreamlineReviewPage({ coach = false }: { coach?: boolean }) {
           )}
         </Box>
 
-        {isCurrent && !readOnly && <StreamlineSuggestionsPanel token={token} review={review} stage={stage} actions={actions} />}
+        {isCurrent && !readOnly && <StreamlineSuggestionsPanel token={token} review={review} stage={stage} actions={actions} onReview={setReview} />}
         {actionError && <Alert severity="error" onClose={() => setActionError('')}>{actionError}</Alert>}
 
         {stage === 1 && <QuestionStage {...stageProps} />}

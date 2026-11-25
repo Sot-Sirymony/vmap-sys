@@ -49,7 +49,7 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
   }, [token]);
 
   async function save(enabled: boolean, reminderEmail: string, savedNotice: string,
-    report?: { reportReminder: ReportReminderCadence; reportReminderDay: number | null }) {
+    report?: { reportReminder?: ReportReminderCadence; reportReminderDay?: number | null; streamlineNudges?: boolean }) {
     if (!token) {
       return;
     }
@@ -176,6 +176,17 @@ export function ReminderSettingsCard({ token }: { token: string | null }) {
                   )}
                 </Box>
               </Box>
+              <FormControlLabel
+                control={(
+                  <Switch
+                    checked={reminders.streamlineNudges ?? true}
+                    disabled={busy}
+                    onChange={(event) => void save(reminders.enabled, reminders.reminderEmail ?? '', t('Streamline suggestion setting saved.'),
+                      { streamlineNudges: event.target.checked })}
+                  />
+                )}
+                label={t('A weekly Streamline suggestion in this email and on the Dashboard')}
+              />
               {!reminders.emailConfigured && (
                 <Alert severity="warning">
                   {t('This server has no mail server set up, so no reminder emails can be sent yet, even with this turned on.')}

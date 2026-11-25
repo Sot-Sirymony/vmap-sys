@@ -51,6 +51,11 @@ describe('StreamlineReviewPage (BRD 27)', () => {
   beforeEach(() => sessionStorage.clear());
   beforeEach(() => {
     vi.mocked(getAiStatus).mockResolvedValue({ available: true, reason: 'OK', consentGiven: true, dailyLimit: 20, messagesLeftToday: 20 });
+    // V32 D-32-1: no saved suggestions.
+    vi.mocked(api.getSavedStreamlineSuggestions).mockResolvedValue(null);
+    vi.mocked(api.dismissStreamlineSuggestion).mockResolvedValue(undefined);
+    vi.mocked(api.listStreamlineBatches).mockResolvedValue([]);
+    vi.mocked(api.getStreamlineDrafts).mockResolvedValue({ stages: [], canDraftAll: true, unavailableReason: null });
   });
 
   it('shows the five stages in order with the later ones locked (D-27-3)', async () => {
@@ -194,6 +199,26 @@ describe('StreamlineReviewPage (BRD 27)', () => {
     renderPage(<StreamlineReviewPage coach />, { role: 'COACH', route: '/coach/participants/7/streamline/9', path: '/coach/participants/:userId/streamline/:reviewId' });
     expect(await screen.findByText(/Coaches can read it but not change it/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Get AI advice' })).not.toBeInTheDocument();
+  });
+
+  it('shows a coach none of the V32 controls (D-32-13)', async () => {
+    const remind = review({ currentStage: 5 });
+    vi.mocked(api.getParticipantStreamlineReview).mockResolvedValue({
+      ...remind,
+      stages: [1, 2, 3, 4, 5].map((number) => ({ number, state: number < 5 ? 'DONE' as const : 'PENDING' as const, reason: null, unlocked: true })),
+      items: remind.items.map((entry) => ({ ...entry, automation: 'REMIND' as const, remindCadence: 'WEEKLY' as const, remindDay: 1 })),
+    });
+    renderPage(<StreamlineReviewPage coach />, { role: 'COACH', route: '/coach/participants/7/streamline/9', path: '/coach/participants/:userId/streamline/:reviewId' });
+
+    expect(await screen.findByText(/Coaches can read it but not change it/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Draft all stages' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'AI suggestions' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('recent-changes')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Remind me how often' })).not.toBeInTheDocument();
+    expect(api.getSavedStreamlineSuggestions).not.toHaveBeenCalled();
+    expect(api.getStreamlineDrafts).not.toHaveBeenCalled();
+    expect(api.listStreamlineBatches).not.toHaveBeenCalled();
   });
 
   it('is read-only for a coach (D-27-10)', async () => {

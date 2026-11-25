@@ -40,6 +40,10 @@ public class AiSettings extends BaseAuditableEntity {
     @Column(name = "plan_model", length = 60)
     private String planModel;
 
+    /** V32 (D-32-3): the model for Streamline suggestions and picks; null keeps the plan or main model. */
+    @Column(name = "streamline_model", length = 60)
+    private String streamlineModel;
+
     @Column(name = "monthly_budget_usd", nullable = false, precision = 8, scale = 2)
     private BigDecimal monthlyBudgetUsd;
 

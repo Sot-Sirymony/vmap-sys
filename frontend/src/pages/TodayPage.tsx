@@ -181,6 +181,21 @@ export function TodayPage() {
             </CardContent>
           </Card>
 
+          {(plan.streamlineReminders ?? []).length > 0 && (
+            <Card data-testid="streamline-reminders">
+              <CardHeader title={t('Reminders')} subheader={t('Items you asked Streamline to remind you about today')} />
+              <CardContent>
+                <Stack spacing={0.5} component="ul" sx={{ m: 0, pl: 2.5 }}>
+                  {(plan.streamlineReminders ?? []).map((reminder) => (
+                    <Typography key={`${reminder.kind}-${reminder.id}`} component="li" variant="body2">
+                      {reminder.kind === 'STEP' ? t('Step') : t('Task')} {reminder.code} · {reminder.title}
+                    </Typography>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader title={t('Priorities')} subheader={t('Steps and tasks due today or overdue, most important first')} />
             <CardContent>

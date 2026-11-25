@@ -264,6 +264,29 @@ In progress, so tasks you finished before this release don't have a figure.
 engineering and manufacturing — question the requirement, delete, simplify,
 speed up, and only then automate.*
 
+### Faster Streamline AI (V32)
+
+- **Suggestions are kept.** When you come back to a stage, the last suggestions show at once, marked "Suggested on"
+  with the date, without asking the AI again. They can still be applied when AI is off. A card disappears once you
+  act on it or choose **Dismiss**. **Suggest again** always asks for fresh ones.
+- **Apply selected / Apply all, then Undo.** Applying several cards at once can be undone in one click, until you
+  finish the stage and for up to 24 hours. **Recent changes** on the stage lists what you applied, each batch with its
+  own **Undo**. Anything you changed by hand afterwards is left as it is, and named.
+- **Draft all stages.** One request drafts this stage and every later one. You can read the later stages' drafts
+  under **Drafts for later stages**, but you apply them only when you reach each stage, as always. Cards about items
+  you cut in an earlier stage are left out. It needs at least US$0.50 left in this month's AI budget.
+- **Remind me really reminds.** In stage 5, choose how often (every day, every week on a weekday, or every month on
+  a day). On those days the item appears under **Reminders** on your Today page, and in your daily reminder email if
+  reminders are on. It stops once the item is completed or archived.
+- **"Taking twice as long as before".** The Streamline page also suggests a step whose tasks now take at least twice
+  as long, from In progress to Completed, as they did in the three months before.
+- **A weekly suggestion.** While your weekly review is due, the Dashboard and your reminder email suggest one goal or
+  step to streamline, never the same one twice in 30 days. Switch it off under Account settings → Daily reminder.
+- **Not now holds everywhere.** A suggestion you dismiss stays hidden for 90 days on all your devices.
+
+For admins: AI settings has **Model for Streamline suggestions**. A faster model such as Haiku answers sooner and
+costs less; summary advice and chat keep the other models.
+
 ## Add Partners
 
 Open `Partners` to create mentors, experts, advisors, colleagues, or resources. Partners can be linked to a Vision Area, Dream, Goal, Step, or Task.

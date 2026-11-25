@@ -36,7 +36,9 @@ public record AiSettingsResponse(
         // V15 (AH-FR-57): pages where the page assistant and helpers are off for everyone.
         List<String> pagesOff,
         // V31 v2 (DC-FR-66).
-        String ownerRoles) {
+        String ownerRoles,
+        // V32 (D-32-3): null when Streamline uses the plan building or main model.
+        String streamlineModel) {
 
     public AiSettingsResponse {
         models = Copies.list(models);

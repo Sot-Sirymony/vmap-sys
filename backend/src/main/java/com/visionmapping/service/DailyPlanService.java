@@ -46,6 +46,7 @@ public class DailyPlanService {
     private final AttitudeCheckInRepository attitudeCheckInRepository;
     private final ReviewRepository reviewRepository;
     private final HabitService habitService;
+    private final StreamlineReminders streamlineReminders;
 
     public DailyPlanResponse planFor(LocalDate date) {
         Long userId = lookup.userId();
@@ -56,7 +57,8 @@ public class DailyPlanService {
         LocalDate lastWeeklyReview = lastWeeklyReview(userId);
         return new DailyPlanResponse(date, items, attitude, habitService.listHabits(date, ArchiveFilter.ACTIVE_ONLY),
                 weeklyReviewDue(lastWeeklyReview, date), lastWeeklyReview,
-                visionStepRepository.countByUser_IdAndArchivedFalseAndTargetDateIsNull(userId));
+                visionStepRepository.countByUser_IdAndArchivedFalseAndTargetDateIsNull(userId),
+                streamlineReminders.dueFor(userId, date));
     }
 
     /** Takes the user explicitly because the reminder job runs with nobody signed in. */

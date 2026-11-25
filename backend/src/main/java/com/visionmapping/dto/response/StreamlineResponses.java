@@ -55,7 +55,10 @@ public final class StreamlineResponses {
             BigDecimal waitingDays,
             BigDecimal blockedDays,
             boolean repeatCandidate,
-            Long repeatRuleId) {
+            Long repeatRuleId,
+            // V32 (D-32-9): how often a REMIND item reminds.
+            RepeatCadence remindCadence,
+            Integer remindDay) {
         public Item {
             speedLevers = Copies.list(speedLevers);
         }
@@ -138,5 +141,36 @@ public final class StreamlineResponses {
 
     /** The status history of one task. */
     public record StatusChange(WorkStatus fromStatus, WorkStatus toStatus, Instant changedAt) {
+    }
+
+    /** V32 (D-32-12): a dismissed suggestion. */
+    public record DismissalView(String anchorType, Long anchorId, String rule, Instant dismissedAt) {
+    }
+
+    /** V32 (D-32-4): the result of a batch; failedAtPosition and error are set when an action failed. */
+    public record BatchResult(Long batchId, int applied, int total, Integer failedAtPosition, String error, Review review) {
+    }
+
+    /** V32 (SF-FR-07): one change in a batch, for the Recent changes list. */
+    public record BatchChange(String code, String action) {
+    }
+
+    /** V32 (SF-FR-07): one batch on a stage, newest first. */
+    public record BatchView(Long id, int stage, int applied, int total, Integer failedAtPosition, Instant createdAt,
+                            Instant undoneAt, boolean canUndo, List<BatchChange> changes) {
+        public BatchView {
+            changes = Copies.list(changes);
+        }
+    }
+
+    /** V32 (BR-32-6): an item undo left as it is, because it was changed after the batch. */
+    public record UndoSkipped(String code, String reason) {
+    }
+
+    /** V32 (D-32-5): the result of undoing a batch. */
+    public record UndoResult(int undone, List<UndoSkipped> skipped, Review review) {
+        public UndoResult {
+            skipped = Copies.list(skipped);
+        }
     }
 }

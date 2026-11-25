@@ -51,6 +51,8 @@ public class ReminderService {
     private final StepUpService stepUpService;
     private final AccountNotices accountNotices;
     private final ReviewRhythmService reviewRhythms;
+    private final StreamlineReminders streamlineReminders;
+    private final StreamlineNudges streamlineNudges;
 
     @Value("${app.reminders.send-hour:8}")
     private int sendHour;
@@ -114,6 +116,9 @@ public class ReminderService {
             user.setReportReminder(cadence);
             user.setReportReminderDay(cadence == ReportReminder.WEEKLY ? request.reportReminderDay() : null);
         }
+        if (request.streamlineNudges() != null) {
+            user.setStreamlineNudgesEnabled(request.streamlineNudges());
+        }
         appUserRepository.save(user);
         return toResponse(user);
     }
@@ -131,7 +136,8 @@ public class ReminderService {
 
     private ReminderSettingsResponse toResponse(AppUser user) {
         return new ReminderSettingsResponse(user.isRemindersEnabled(), user.getReminderTimeZone(), reminderMailer.isConfigured(),
-                sendHour, user.getReminderEmail(), sendsTo(user), user.getReportReminder().name(), user.getReportReminderDay());
+                sendHour, user.getReminderEmail(), sendsTo(user), user.getReportReminder().name(), user.getReportReminderDay(),
+                user.isStreamlineNudgesEnabled());
     }
 
     private static String sendsTo(AppUser user) {
@@ -171,7 +177,12 @@ public class ReminderService {
         // V31 v1 step 3 (DC-FR-50, D-31-9): reviews a dream's rhythm makes due, only for people who turned reminders on.
         List<com.visionmapping.dto.response.AiPlanResponses.DueReview> dreamReviews = daily
                 ? reviewRhythms.dueFor(user.getId(), today) : List.of();
-        if (items.isEmpty() && !reviewDue && !inactive && !reportDue && dreamReviews.isEmpty()) {
+        // V32 (D-32-9, D-32-11): Streamline "Remind me" items due today, and the week's Streamline nudge.
+        List<com.visionmapping.dto.response.DailyPlanResponse.StreamlineReminder> reminders = daily
+                ? streamlineReminders.dueFor(user.getId(), today) : List.of();
+        java.util.Optional<com.visionmapping.dto.response.StreamlineResponses.Candidate> nudge = daily
+                ? streamlineNudges.nudgeFor(user.getId(), today) : java.util.Optional.empty();
+        if (items.isEmpty() && !reviewDue && !inactive && !reportDue && dreamReviews.isEmpty() && reminders.isEmpty() && nudge.isEmpty()) {
             return null;
         }
         List<String> lines = new ArrayList<>();
@@ -186,9 +197,16 @@ public class ReminderService {
             }
             lines.add("");
         }
+        if (!reminders.isEmpty()) {
+            lines.add("You asked to be reminded about:");
+            reminders.stream().limit(MAX_LISTED_ITEMS).forEach(reminder -> lines.add("- %s %s".formatted(reminder.code(), reminder.title())));
+            lines.add("");
+        }
         if (reviewDue) {
             lines.add("Your weekly review is due.");
         }
+        nudge.ifPresent(candidate -> lines.add("Streamline suggestion: %s %s. %s. Streamline it?"
+                .formatted(candidate.code(), candidate.title(), candidate.detail())));
         dreamReviews.stream().limit(MAX_LISTED_ITEMS).forEach(review -> lines.add(
                 "A %s review of \"%s\" is due.".formatted(review.reviewType().toLowerCase(), review.dreamTitle())));
         if (inactive) {

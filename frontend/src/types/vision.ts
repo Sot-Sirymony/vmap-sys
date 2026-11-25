@@ -829,6 +829,8 @@ export type ReminderSettings = {
   reportReminder?: ReportReminderCadence;
   /** 1 = Monday to 7 = Sunday, for a weekly report reminder. */
   reportReminderDay?: number | null;
+  /** V32 D-32-11: the weekly Streamline nudge. */
+  streamlineNudges?: boolean;
 };
 
 export type ReportReminderCadence = 'NONE' | 'WEEKLY' | 'MONTHLY';
@@ -906,6 +908,8 @@ export type DailyPlan = {
   weeklyReviewDue: boolean;
   lastWeeklyReviewDate?: string | null;
   undatedStepCount: number;
+  /** V32 D-32-9: Streamline "Remind me" items due today. */
+  streamlineReminders?: { kind: 'STEP' | 'TASK'; id: number; code: string; title: string; cadence: 'DAILY' | 'WEEKLY' | 'MONTHLY' }[];
 };
 
 // FR-59.1: what kind of thing a gratitude entry is about.
@@ -1109,6 +1113,8 @@ export type AiSettings = {
   pagesOff?: AssistantPage[];
   // V31 v2 (DC-FR-66): extra owner roles the AI owner check accepts, one per line or comma-separated.
   ownerRoles?: string | null;
+  // V32 (D-32-3): null when Streamline suggestions use the plan building or main model.
+  streamlineModel?: string | null;
 };
 
 // V9 Phase 3: the Dream Coach.

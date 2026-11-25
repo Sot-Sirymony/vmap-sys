@@ -15,6 +15,10 @@ public interface StreamlineItemRepository extends JpaRepository<StreamlineItem, 
 
     Optional<StreamlineItem> findByIdAndReview_Id(Long id, Long reviewId);
 
+    /** V32 (D-32-9): this user's "Remind me" items, in every review. */
+    @Query("select i from StreamlineItem i where i.review.user.id = :userId and i.automation = com.visionmapping.entity.enums.AutomationChoice.REMIND")
+    List<StreamlineItem> findReminders(@Param("userId") Long userId);
+
     /** Items this user cut since a date, for the dashboard (cut and brought back this quarter). */
     @Query("select i from StreamlineItem i where i.review.user.id = :userId and i.archivedAt is not null and i.archivedAt >= :since")
     List<StreamlineItem> findArchivedSince(@Param("userId") Long userId, @Param("since") Instant since);

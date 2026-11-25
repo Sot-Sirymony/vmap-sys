@@ -14,5 +14,7 @@ public record ReminderSettingsResponse(
         String reminderEmail,
         String sendsTo,
         String reportReminder,
-        Integer reportReminderDay) {
+        Integer reportReminderDay,
+        // V32 (D-32-11).
+        boolean streamlineNudges) {
 }

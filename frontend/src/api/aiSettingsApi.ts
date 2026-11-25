@@ -18,6 +18,8 @@ export type AiSettingsInput = {
   pagesOff?: AssistantPage[];
   // V31 v2 (DC-FR-66): blank removes the extra owner roles.
   ownerRoles?: string;
+  // V32 (D-32-3): blank keeps the plan building or main model for Streamline.
+  streamlineModel?: string;
 };
 
 export function getAiSettings(token: string) {

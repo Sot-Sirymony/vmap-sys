@@ -87,6 +87,8 @@ public class StreamlineReviewService {
     private final ObstacleAnchorSync obstacleAnchorSync;
     private final CycleTimeCalculator cycleTime;
     private final Clock clock;
+    private final com.visionmapping.repository.StreamlineSuggestionSetRepository suggestionSets;
+    private final com.visionmapping.repository.StreamlineCandidateDismissalRepository dismissals;
     private SecurityEventService securityEvents;
 
     @Autowired(required = false)
@@ -222,7 +224,43 @@ public class StreamlineReviewService {
             }
             item.setDelegatePartner(request.delegatePartnerId() == null ? null : lookup.partner(request.delegatePartnerId()));
         }
+        if (request.automation() != null || request.remindCadence() != null || request.remindDay() != null) {
+            review.requireUnlocked(5);
+            applyRemind(item, request.remindCadence(), request.remindDay());
+        }
         return view(review);
+    }
+
+    /**
+     * V32 (D-32-9): a REMIND item keeps how often it reminds. Without a choice it
+     * reminds weekly on Monday until the user picks another day; any other
+     * automation choice clears it.
+     */
+    private static void applyRemind(StreamlineItem item, @Nullable com.visionmapping.entity.enums.RepeatCadence cadence,
+                                    @Nullable Integer day) {
+        if (item.getAutomation() != AutomationChoice.REMIND) {
+            if (cadence != null || day != null) {
+                throw new BusinessRuleException("Choose \"Remind me\" before choosing how often.");
+            }
+            item.setRemindCadence(null);
+            item.setRemindDay(null);
+            return;
+        }
+        com.visionmapping.entity.enums.RepeatCadence chosen = cadence != null ? cadence
+                : item.getRemindCadence() != null ? item.getRemindCadence() : com.visionmapping.entity.enums.RepeatCadence.WEEKLY;
+        Integer chosenDay = day != null ? day : chosen == item.getRemindCadence() ? item.getRemindDay() : null;
+        switch (chosen) {
+            case DAILY -> chosenDay = null;
+            case WEEKLY -> {
+                chosenDay = chosenDay == null ? 1 : chosenDay;
+                if (chosenDay > 7) {
+                    throw new BusinessRuleException("Choose a weekday from Monday (1) to Sunday (7).");
+                }
+            }
+            case MONTHLY -> chosenDay = chosenDay == null ? 1 : chosenDay;
+        }
+        item.setRemindCadence(chosen);
+        item.setRemindDay(chosenDay);
     }
 
     /** SR-FR-03 (Q-27-2): the same stage 1 answers for several items at once; each can still be changed afterwards. */
@@ -521,6 +559,8 @@ public class StreamlineReviewService {
             throw new BusinessRuleException("This review is already closed.");
         }
         review.setStatus(StreamlineStatus.ABANDONED);
+        // V32 D-32-2: a closed review keeps no saved suggestions.
+        suggestionSets.deleteByReviewId(review.getId());
         return view(review);
     }
 
@@ -531,6 +571,7 @@ public class StreamlineReviewService {
         if (stage == StreamlineReview.STAGES) {
             review.setStatus(StreamlineStatus.COMPLETED);
             review.setCompletedAt(Instant.now(clock));
+            suggestionSets.deleteByReviewId(review.getId());
             Counts counts = counts(all);
             review.setResultSteps(counts.steps());
             review.setResultTasks(counts.tasks());
@@ -554,7 +595,16 @@ public class StreamlineReviewService {
      */
     @Transactional(readOnly = true)
     public List<StreamlineResponses.Candidate> candidates() {
-        Long userId = lookup.userId();
+        return candidatesFor(lookup.userId());
+    }
+
+    /**
+     * The rule candidates for one user, ranked, without the ones they dismissed
+     * (V32 D-32-12). Takes the user explicitly for the weekly nudge, which the
+     * reminder job sends with nobody signed in.
+     */
+    @Transactional(readOnly = true)
+    public List<StreamlineResponses.Candidate> candidatesFor(Long userId) {
         java.time.LocalDate today = java.time.LocalDate.now(clock);
         List<VisionStep> steps = stepRepository.findByUser_IdAndArchivedFalse(userId);
         List<TaskItem> tasks = taskRepository.findByUser_IdAndArchivedFalse(userId);
@@ -586,9 +636,12 @@ public class StreamlineReviewService {
                 add(out, seen, open * 10, "STEP", step.getId(), step.getCode(), step.getTitle(), "MANY_TASKS", open + " open tasks");
             }
         }
+        List<TaskItem> allTasks = taskRepository.findByUser_Id(userId);
+        // V32 D-32-10: a step whose median cycle time doubled: the last 90 days against the 90 before.
+        addCycleTimeDoubled(out, seen, steps, allTasks, userId);
         // A task done by hand with the same title at least 4 times in 60 days: an automation candidate.
         Instant since = Instant.now(clock).minus(Duration.ofDays(60));
-        Map<String, List<TaskItem>> done = taskRepository.findByUser_Id(userId).stream()
+        Map<String, List<TaskItem>> done = allTasks.stream()
                 .filter(task -> task.getCompletedAt() != null && !task.getCompletedAt().isBefore(since) && task.getRepeatRuleId() == null)
                 .collect(Collectors.groupingBy(task -> normalise(task.getTitle())));
         for (List<TaskItem> group : done.values()) {
@@ -600,9 +653,94 @@ public class StreamlineReviewService {
                 }
             }
         }
+        Set<String> dismissed = dismissedKeys(userId);
         return out.stream()
+                .filter(ranked -> !dismissed.contains(dismissalKey(ranked.candidate().anchorType(), ranked.candidate().anchorId(),
+                        ranked.candidate().reason())))
                 .sorted(Comparator.comparingLong(Ranked::weight).reversed().thenComparing(ranked -> ranked.candidate().code()))
                 .limit(5).map(Ranked::candidate).toList();
+    }
+
+    /** V32 D-32-10, BR-32-9: only tasks with a start and a completed time count; at least 3 in each window. */
+    private void addCycleTimeDoubled(List<Ranked> out, Set<String> seen, List<VisionStep> steps, List<TaskItem> tasks, Long userId) {
+        Instant now = Instant.now(clock);
+        Instant recentFrom = now.minus(Duration.ofDays(CycleTimeCalculator.WINDOW_DAYS));
+        Instant earlierFrom = recentFrom.minus(Duration.ofDays(CycleTimeCalculator.WINDOW_DAYS));
+        Map<Long, List<TaskItem>> doneByStep = tasks.stream()
+                .filter(task -> task.cycleTimeDays() != null && !task.getCompletedAt().isBefore(earlierFrom))
+                .collect(Collectors.groupingBy(task -> task.getStep().getId()));
+        for (VisionStep step : steps) {
+            List<TaskItem> done = doneByStep.getOrDefault(step.getId(), List.of());
+            BigDecimal recent = CycleTimeCalculator.median(done.stream().filter(task -> !task.getCompletedAt().isBefore(recentFrom))
+                    .map(TaskItem::cycleTimeDays).toList());
+            BigDecimal earlier = CycleTimeCalculator.median(done.stream().filter(task -> task.getCompletedAt().isBefore(recentFrom))
+                    .map(TaskItem::cycleTimeDays).toList());
+            if (recent == null || earlier == null || earlier.signum() <= 0 || recent.compareTo(earlier.multiply(BigDecimal.valueOf(2))) < 0
+                    || reviews.existsByStep_IdAndUser_IdAndStatus(step.getId(), userId, StreamlineStatus.OPEN)) {
+                continue;
+            }
+            long weight = recent.multiply(BigDecimal.TEN).divide(earlier, 0, java.math.RoundingMode.HALF_UP).longValue() * 3;
+            add(out, seen, weight, "STEP", step.getId(), step.getCode(), step.getTitle(), CYCLE_TIME_DOUBLED,
+                    "Tasks now take " + recent + " days, up from " + earlier + " days");
+        }
+    }
+
+    static final String CYCLE_TIME_DOUBLED = "CYCLE_TIME_DOUBLED";
+    /** V32 D-32-12: the rule name kept for a dismissed AI pick. */
+    public static final String AI_PICK = "AI_PICK";
+    static final Duration DISMISSAL = Duration.ofDays(90);
+
+    private Set<String> dismissedKeys(Long userId) {
+        return dismissals.findByUser_IdAndDismissedAtAfter(userId, Instant.now(clock).minus(DISMISSAL)).stream()
+                .map(dismissal -> dismissalKey(dismissal.getAnchorType(), dismissal.getAnchorId(), dismissal.getRule()))
+                .collect(Collectors.toSet());
+    }
+
+    private static String dismissalKey(String type, Long id, String rule) {
+        return type + "-" + id + "-" + rule;
+    }
+
+    /** V32 D-32-12: goal and step keys ("GOAL-12") the user dismissed as AI picks in the last 90 days. */
+    @Transactional(readOnly = true)
+    public Set<String> dismissedPicks() {
+        return dismissals.findByUser_IdAndDismissedAtAfter(lookup.userId(), Instant.now(clock).minus(DISMISSAL)).stream()
+                .filter(dismissal -> AI_PICK.equals(dismissal.getRule()))
+                .map(dismissal -> dismissal.getAnchorType() + "-" + dismissal.getAnchorId())
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * V32 (D-32-12, SF-FR-15): saves dismissals for the user's own goals and
+     * steps (another user's answers 404). Dismissing again restarts the 90 days.
+     */
+    public List<StreamlineResponses.DismissalView> dismiss(StreamlineRequests.Dismissals request) {
+        AppUser user = lookup.currentUser();
+        Instant now = Instant.now(clock);
+        List<StreamlineResponses.DismissalView> out = new ArrayList<>();
+        for (StreamlineRequests.Dismissal entry : request.dismissals()) {
+            if ("GOAL".equals(entry.anchorType())) {
+                lookup.goal(entry.anchorId());
+            } else {
+                lookup.step(entry.anchorId());
+            }
+            com.visionmapping.entity.StreamlineCandidateDismissal saved = dismissals
+                    .findByUser_IdAndAnchorTypeAndAnchorIdAndRule(user.getId(), entry.anchorType(), entry.anchorId(), entry.rule())
+                    .orElseGet(() -> com.visionmapping.entity.StreamlineCandidateDismissal.builder().user(user)
+                            .anchorType(entry.anchorType()).anchorId(entry.anchorId()).rule(entry.rule()).build());
+            saved.setDismissedAt(now);
+            dismissals.save(saved);
+            out.add(new StreamlineResponses.DismissalView(saved.getAnchorType(), saved.getAnchorId(), saved.getRule(), now));
+        }
+        return out;
+    }
+
+    /** V32 D-32-12: the user's dismissals still in force. */
+    @Transactional(readOnly = true)
+    public List<StreamlineResponses.DismissalView> dismissals() {
+        return dismissals.findByUser_IdAndDismissedAtAfter(lookup.userId(), Instant.now(clock).minus(DISMISSAL)).stream()
+                .map(dismissal -> new StreamlineResponses.DismissalView(dismissal.getAnchorType(), dismissal.getAnchorId(),
+                        dismissal.getRule(), dismissal.getDismissedAt()))
+                .toList();
     }
 
     private record Ranked(StreamlineResponses.Candidate candidate, long weight) {
@@ -736,7 +874,8 @@ public class StreamlineReviewService {
                 item.getDelegatePartner() == null ? null : item.getDelegatePartner().getId(), item.isArchivedWithParent(),
                 item.getArchivedAt(), item.getRestoredAt(), task == null ? null : task.cycleTimeDays(),
                 delay == null ? null : delay.waitingDays(), delay == null ? null : delay.blockedDays(),
-                task != null && repeated.contains(normalise(task.getTitle())), task == null ? null : ruleBySource.get(task.getId()));
+                task != null && repeated.contains(normalise(task.getTitle())), task == null ? null : ruleBySource.get(task.getId()),
+                item.getRemindCadence(), item.getRemindDay());
     }
 
     private StreamlineResponses.Summary summary(StreamlineReview review, List<StreamlineItem> all, @Nullable BigDecimal cycleNow) {

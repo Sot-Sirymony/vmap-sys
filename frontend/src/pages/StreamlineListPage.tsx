@@ -4,7 +4,7 @@ import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { listStreamlineCandidates, listStreamlineReviews, startStreamlineReview } from '../api/streamlineApi';
+import { dismissStreamlineCandidates, listStreamlineCandidates, listStreamlineReviews, startStreamlineReview } from '../api/streamlineApi';
 import { Button } from '../components/common/Button';
 import { EmptyState } from '../components/common/EmptyState';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -18,38 +18,71 @@ import { tr } from '../i18n/translate';
 import type { StreamlineCandidate, StreamlineListItem } from '../types/streamline';
 import { PageSection } from './PageSection';
 
+// V32 D-32-12: dismissals were kept in the browser before V32; they move to the server once.
 const DISMISS_KEY = 'vms-streamline-dismissed';
-const DISMISS_DAYS = 30;
+const OLD_DISMISS_DAYS = 30;
 
-/** §6.2: a suggestion can be dismissed for 30 days, per browser. */
-function dismissedNow(): Record<string, number> {
+function oldDismissals(): Record<string, number> {
   try {
     const stored = JSON.parse(localStorage.getItem(DISMISS_KEY) ?? '{}') as Record<string, number>;
-    const cutoff = Date.now() - DISMISS_DAYS * 24 * 3600 * 1000;
+    const cutoff = Date.now() - OLD_DISMISS_DAYS * 24 * 3600 * 1000;
     return Object.fromEntries(Object.entries(stored).filter(([, at]) => at > cutoff));
   } catch {
     return {};
   }
 }
 
-function dismiss(key: string) {
+function forgetOldDismissals() {
   try {
-    localStorage.setItem(DISMISS_KEY, JSON.stringify({ ...dismissedNow(), [key]: Date.now() }));
+    localStorage.removeItem(DISMISS_KEY);
   } catch {
-    // Storage unavailable: the card just comes back next time.
+    // Storage unavailable: nothing to move.
   }
 }
 
-/** The suggestion cards (§6.2), shared by this page and the dashboard card. */
-export function StreamlineCandidates({ candidates, onStart, limit }: { candidates: StreamlineCandidate[]; onStart: (candidate: StreamlineCandidate) => void; limit?: number }) {
-  const [dismissed, setDismissed] = useState(dismissedNow);
+const keyOf = (candidate: StreamlineCandidate) => `${candidate.anchorType}-${candidate.anchorId}`;
+
+/**
+ * The suggestion cards (§6.2), shared by this page and the dashboard card.
+ * V32 D-32-12: "Not now" is saved on the server for 90 days, so it holds on
+ * every device; the server already leaves dismissed candidates out.
+ */
+export function StreamlineCandidates({ token, candidates, onStart, limit, title }: {
+  token: string | null;
+  candidates: StreamlineCandidate[];
+  onStart: (candidate: StreamlineCandidate) => void;
+  limit?: number;
+  title?: string;
+}) {
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(Object.keys(oldDismissals())));
   const reasons = CANDIDATE_REASONS();
-  const visible = candidates.filter((candidate) => !dismissed[`${candidate.anchorType}-${candidate.anchorId}`]).slice(0, limit ?? candidates.length);
+
+  // The one-time move: old browser dismissals for candidates still shown are saved with their rule, then removed.
+  useEffect(() => {
+    const old = oldDismissals();
+    if (!token || candidates.length === 0 || Object.keys(old).length === 0) return;
+    const moving = candidates.filter((candidate) => old[keyOf(candidate)])
+      .map((candidate) => ({ anchorType: candidate.anchorType, anchorId: candidate.anchorId, rule: candidate.reason }));
+    (moving.length > 0 ? dismissStreamlineCandidates(token, moving) : Promise.resolve())
+      .then(() => forgetOldDismissals())
+      .catch(() => undefined);
+  }, [token, candidates]);
+
+  function notNow(candidate: StreamlineCandidate) {
+    setHidden((current) => new Set(current).add(keyOf(candidate)));
+    if (token) {
+      void dismissStreamlineCandidates(token, [{ anchorType: candidate.anchorType, anchorId: candidate.anchorId, rule: candidate.reason }])
+        .catch(() => undefined);
+    }
+  }
+
+  const visible = candidates.filter((candidate) => !hidden.has(keyOf(candidate))).slice(0, limit ?? candidates.length);
   if (visible.length === 0) return null;
   return (
-    <Box sx={{ display: 'grid', gap: 1 }} role="region" aria-label={tr('Worth streamlining')}>
+    <Box sx={{ display: 'grid', gap: 1 }} role="region" aria-label={title ?? tr('Worth streamlining')}>
+      {title && <Typography variant="subtitle2" component="h3">{title}</Typography>}
       {visible.map((candidate) => {
-        const key = `${candidate.anchorType}-${candidate.anchorId}`;
+        const key = keyOf(candidate);
         return (
           <Box key={key} sx={{ ...surface('inset'), p: 1.25, display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'space-between', flexWrap: 'wrap' }}>
             <Box sx={{ minWidth: 0 }}>
@@ -62,7 +95,7 @@ export function StreamlineCandidates({ candidates, onStart, limit }: { candidate
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button onClick={() => onStart(candidate)}>{tr('Run a Streamline review')}</Button>
-              <Button variant="secondary" onClick={() => { dismiss(key); setDismissed(dismissedNow()); }}>{tr('Not now')}</Button>
+              <Button variant="secondary" onClick={() => notNow(candidate)}>{tr('Not now')}</Button>
             </Box>
           </Box>
         );
@@ -106,7 +139,7 @@ export function StreamlineListPage() {
       {startError && <Alert severity="warning">{startError}</Alert>}
       {/* V30 (D-30-4): AI picks first; the rule cards below still work without AI. */}
       {token && <StreamlineAiPicks token={token} onStart={(pick) => void start(pick.anchorType === 'GOAL' ? { goalId: pick.anchorId } : { stepId: pick.anchorId })} />}
-      <StreamlineCandidates candidates={candidates} onStart={(candidate) => void start(candidate.anchorType === 'GOAL' ? { goalId: candidate.anchorId } : { stepId: candidate.anchorId })} />
+      <StreamlineCandidates token={token} candidates={candidates} onStart={(candidate) => void start(candidate.anchorType === 'GOAL' ? { goalId: candidate.anchorId } : { stepId: candidate.anchorId })} />
       {error && <ErrorMessage message={error} />}
       {!reviews && !error && <Loading />}
       {reviews && reviews.length === 0 && (

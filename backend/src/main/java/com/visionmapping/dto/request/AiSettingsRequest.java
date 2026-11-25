@@ -26,7 +26,9 @@ public record AiSettingsRequest(
         // V15 (AH-FR-57): pages where the page assistant and helpers are off. Left out keeps the current list.
         @Size(max = 7) List<@Pattern(regexp = PageAssistantRequest.PAGES) String> pagesOff,
         // V31 v2 (DC-FR-66): extra owner roles, one per line or comma-separated. Left out keeps them; blank removes them.
-        @Size(max = 2000) String ownerRoles) {
+        @Size(max = 2000) String ownerRoles,
+        // V32 (D-32-3): the model for Streamline suggestions and picks. Left out keeps it; blank keeps today's rule.
+        @Size(max = 100) String streamlineModel) {
 
     public AiSettingsRequest {
         pagesOff = com.visionmapping.util.Copies.list(pagesOff);

@@ -97,6 +97,13 @@ public class AiSettingsService {
             }
             settings.setPlanModel(planModel.isEmpty() ? null : planModel);
         }
+        if (request.streamlineModel() != null) {
+            String streamlineModel = request.streamlineModel().trim();
+            if (!streamlineModel.isEmpty() && MODELS.stream().noneMatch(option -> option.id().equals(streamlineModel))) {
+                throw new BusinessRuleException("That Streamline model is not one of the choices.");
+            }
+            settings.setStreamlineModel(streamlineModel.isEmpty() ? null : streamlineModel);
+        }
         if (request.pagesOff() != null) {
             settings.setPagesOff(PageSwitches.join(request.pagesOff()));
         }
@@ -192,7 +199,8 @@ public class AiSettingsService {
                 settings.getDailyMessageLimit(), settings.getHelpLines(),
                 usageLogRepository.totalCostSince(monthStart()), usageLogRepository.countByCreatedAtGreaterThanEqual(monthStart()),
                 settings.isAiReminders(), settings.getCoachingGuidelines(), settings.getPlanModel(),
-                PageSwitches.split(settings.getPagesOff()), settings.getOwnerRoles());
+                PageSwitches.split(settings.getPagesOff()), settings.getOwnerRoles(),
+                settings.getStreamlineModel());
     }
 
     private Instant monthStart() {

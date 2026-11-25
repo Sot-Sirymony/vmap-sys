@@ -32,6 +32,7 @@ public class StreamlineDashboard {
     private final StreamlineReviewRepository reviews;
     private final StreamlineItemRepository items;
     private final CycleTimeCalculator cycleTime;
+    private final StreamlineNudges nudges;
     private final Clock clock;
 
     public DashboardSummaryResponse.Streamline build(Long userId, Collection<TaskItem> tasks) {
@@ -60,6 +61,6 @@ public class StreamlineDashboard {
             weekEnd = from.minusDays(1);
         }
         return new DashboardSummaryResponse.Streamline(reviews.countByUser_IdAndStatus(userId, StreamlineStatus.OPEN),
-                cut.size(), addedBack, cycleTime.medianCycleDays(tasks), trend);
+                cut.size(), addedBack, cycleTime.medianCycleDays(tasks), trend, nudges.nudgeFor(userId, today).orElse(null));
     }
 }

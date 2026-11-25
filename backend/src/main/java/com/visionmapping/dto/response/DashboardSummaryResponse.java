@@ -68,8 +68,9 @@ public record DashboardSummaryResponse(
 
 
     /** V27 SR-FR-13: open reviews, items cut and brought back this quarter, and cycle time. */
+    /** V32 (D-32-11): nudge is the week's Streamline suggestion, or null. */
     public record Streamline(long openReviews, long cutThisQuarter, long addedBackThisQuarter, BigDecimal medianCycleDays,
-                             List<CyclePoint> cycleTrend) {
+                             List<CyclePoint> cycleTrend, StreamlineResponses.Candidate nudge) {
         public Streamline {
             cycleTrend = Copies.list(cycleTrend);
         }

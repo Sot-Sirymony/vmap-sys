@@ -16,10 +16,12 @@ public record ReminderSettingsRequest(
         @NotBlank @Size(max = 60) String timeZone,
         @Size(max = 255) String reminderEmail,
         @Pattern(regexp = "NONE|WEEKLY|MONTHLY") String reportReminder,
-        @Min(1) @Max(7) Integer reportReminderDay) {
+        @Min(1) @Max(7) Integer reportReminderDay,
+        // V32 (D-32-11): the weekly Streamline nudge; left out keeps it.
+        Boolean streamlineNudges) {
 
     /** The settings before V19, with the report reminder left as it was. */
     public ReminderSettingsRequest(boolean enabled, String timeZone, String reminderEmail) {
-        this(enabled, timeZone, reminderEmail, null, null);
+        this(enabled, timeZone, reminderEmail, null, null, null);
     }
 }

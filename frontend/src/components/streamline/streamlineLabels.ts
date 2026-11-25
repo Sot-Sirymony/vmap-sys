@@ -80,7 +80,20 @@ export const CANDIDATE_REASONS = (): Record<string, string> => ({
   OVERDUE: tr('Many overdue tasks'),
   MANY_TASKS: tr('Many open tasks'),
   REPEATED_WORK: tr('The same task done again and again'),
+  CYCLE_TIME_DOUBLED: tr('Taking twice as long as before'),
 });
+
+/** V32 D-32-9: the weekdays a reminder can fall on, 1 = Monday. */
+export const WEEKDAY_NAMES = (): string[] =>
+  [tr('Monday'), tr('Tuesday'), tr('Wednesday'), tr('Thursday'), tr('Friday'), tr('Saturday'), tr('Sunday')];
+
+/** V32 D-32-9: "Reminds you every Monday", "… every day", "… on day 5 of each month". */
+export function remindSummary(cadence: RepeatCadence | null | undefined, day: number | null | undefined): string {
+  if (cadence === 'DAILY') return tr('Reminds you every day');
+  if (cadence === 'WEEKLY') return tr('Reminds you every {day}', { day: WEEKDAY_NAMES()[(day ?? 1) - 1] });
+  if (cadence === 'MONTHLY') return tr('Reminds you on day {day} of each month', { day: day ?? 1 });
+  return '';
+}
 
 /** Days to one decimal place, or a dash. */
 export function days(value: number | null | undefined): string {

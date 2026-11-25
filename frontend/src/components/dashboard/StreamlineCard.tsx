@@ -71,7 +71,9 @@ export function StreamlineCard({ token, streamline }: { token: string | null; st
             }} />
           ))}
         </Box>
-        <StreamlineCandidates limit={1} candidates={candidates}
+        <StreamlineCandidates token={token} limit={1}
+          candidates={streamline.nudge ? [streamline.nudge] : candidates}
+          title={streamline.nudge ? tr("This week's suggestion") : undefined}
           onStart={(candidate) => navigate(candidate.anchorType === 'GOAL' ? `/streamline/new?goalId=${candidate.anchorId}` : `/streamline/new?stepId=${candidate.anchorId}`)} />
       </Box>
     </ChartCard>

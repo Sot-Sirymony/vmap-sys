@@ -89,6 +89,11 @@ public class AppUser extends BaseAuditableEntity {
     @Column(name = "report_reminder_day")
     private Integer reportReminderDay;
 
+    /** V32 (D-32-11): the weekly Streamline nudge in the reminder email and on the Dashboard. */
+    @Column(name = "streamline_nudges_enabled", nullable = false)
+    @Builder.Default
+    private boolean streamlineNudgesEnabled = true;
+
     // V9 (D-7): the cohort this person joined with its code, if any.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cohort_id")

@@ -99,7 +99,9 @@ public class PageAssistantService {
             // V27 SR-FR-14: Streamline review suggestions, rated and counted the same way.
             StreamlineAiService.FEATURE,
             // V30: Streamline AI picks and summary advice.
-            StreamlineAiService.PICK_FEATURE, StreamlineAiService.ADVICE_FEATURE);
+            StreamlineAiService.PICK_FEATURE, StreamlineAiService.ADVICE_FEATURE,
+            // V32 phase 3: Draft all stages.
+            StreamlineAiService.DRAFT_ALL_FEATURE);
     /** Conversation tag prefix, so page conversations never mix with plan assistant ones (AH-FR-11). */
     public static final String SECTION_PREFIX = "PAGE:";
     static final int MAX_CHANGES = 5;

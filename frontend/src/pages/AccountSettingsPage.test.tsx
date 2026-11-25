@@ -67,6 +67,20 @@ describe('AccountSettingsPage', () => {
     expect(screen.queryByRole('combobox', { name: 'Weekday' })).not.toBeInTheDocument();
   });
 
+  it('switches the weekly Streamline suggestion off (D-32-11)', async () => {
+    const base = { enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: null, sendsTo: LOGIN };
+    vi.mocked(getReminderSettings).mockResolvedValue({ ...base, streamlineNudges: true });
+    vi.mocked(updateReminderSettings).mockResolvedValue({ ...base, streamlineNudges: false });
+    render(<AccountSettingsPage />);
+
+    const toggle = await screen.findByRole('switch', { name: 'A weekly Streamline suggestion in this email and on the Dashboard' });
+    expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
+    await waitFor(() => expect(updateReminderSettings).toHaveBeenCalledWith('token', true, expect.any(String), '',
+      { streamlineNudges: false }, { account: undefined, confirm: undefined }));
+    expect(await screen.findByText('Streamline suggestion setting saved.')).toBeInTheDocument();
+  });
+
   it('saves a separate reminder address, then sends a test email to it', async () => {
     vi.mocked(getReminderSettings).mockResolvedValue({ enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: null, sendsTo: LOGIN });
     const chosen = { enabled: true, timeZone: 'UTC', emailConfigured: true, sendHour: 8, reminderEmail: 'inbox@example.org', sendsTo: 'inbox@example.org' };

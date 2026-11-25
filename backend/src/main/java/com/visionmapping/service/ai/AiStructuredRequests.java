@@ -69,6 +69,10 @@ public class AiStructuredRequests {
         boolean simpleTask = (AiPlanFeedbackService.PLAN_FEATURES.contains(feature) && !PlanAssistantService.FEATURE.equals(feature))
                 || PageAssistantService.FEATURES.contains(feature);
         String model = settings.getPlanModel() != null && simpleTask ? settings.getPlanModel() : settings.getModel();
+        // V32 D-32-3: Streamline suggestions and picks may use their own model; empty keeps the rule above.
+        if (settings.getStreamlineModel() != null && StreamlineAiService.MODEL_FEATURES.contains(feature)) {
+            model = settings.getStreamlineModel();
+        }
         ClaudeClient.Structured<T> answer;
         try {
             answer = claudeClient.structured(apiKey, model, system, task, type);

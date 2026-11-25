@@ -226,6 +226,14 @@ class AccessControlSweepTests {
         com.fasterxml.jackson.databind.JsonNode reviewJson = objectMapper.readTree(review.getContentAsString());
         ownerIds.put("streamline-reviews", reviewJson.get("id").asLong());
         ownerIds.put("streamline-items", reviewJson.get("items").get(0).get("id").asLong());
+        // V32: an applied batch on that review, for its undo.
+        MockHttpServletResponse batch = mockMvc.perform(post("/api/streamline-reviews/" + ownerIds.get("streamline-reviews") + "/apply-batch")
+                        .header("Authorization", "Bearer " + ownerToken).contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("stage", 1, "actions", List.of(Map.of("type", "UPDATE",
+                                "itemId", ownerIds.get("streamline-items"), "update", Map.of("verdict", "NEEDED")))))))
+                .andReturn().getResponse();
+        assertThat(batch.getStatus()).as("apply streamline batch: " + batch.getContentAsString()).isEqualTo(200);
+        ownerIds.put("streamline-batches", objectMapper.readTree(batch.getContentAsString()).get("batchId").asLong());
         ownerIds.put("task-repeat-rules", postAndId("/api/task-repeat-rules", ownerToken, Map.of("taskId", taskId, "cadence", "WEEKLY")));
 
         // No plain-user API creates these, so they are written directly.
@@ -564,6 +572,7 @@ class AccessControlSweepTests {
             case "shareId" -> ownerIds.get("report-shares");
             case "challengeId" -> ownerIds.get("step-up");
             case "itemId" -> ownerIds.get("streamline-items");
+            case "batchId" -> ownerIds.get("streamline-batches");
             case "id" -> ownerIds.get(pattern.substring("/api/".length(), pattern.indexOf("/{id}")));
             default -> null;
         };
@@ -660,6 +669,14 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/not-needed")) {
             return json(Map.of("reason", "Someone else's reason"));
+        }
+        // V32 D-32-1: dismissing a saved suggestion card on another user's review.
+        if (pattern.endsWith("/suggestions/dismiss")) {
+            return json(Map.of("itemId", ownerIds.get("streamline-items"), "action", "QUESTION"));
+        }
+        // V32 D-32-4: applying a batch on another user's review.
+        if (pattern.endsWith("/apply-batch")) {
+            return json(Map.of("stage", 1, "actions", List.of(Map.of("type", "DELETE", "itemId", ownerIds.get("streamline-items")))));
         }
         if (pattern.endsWith("/repeat")) {
             return json(Map.of("cadence", "WEEKLY"));

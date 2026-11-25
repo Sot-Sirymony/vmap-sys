@@ -76,7 +76,7 @@ export function AiSettingsPage() {
           <PlanMetricsCard token={token} />
           <PlanAccuracyCard token={token} />
           <PageMetricsCard token={token} />
-          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}-${settings.ownerRoles ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
+          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.streamlineModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}-${settings.ownerRoles ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
     </PageSection>
@@ -191,6 +191,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [enabled, setEnabled] = useState(settings.enabled);
   const [model, setModel] = useState(settings.model);
   const [planModel, setPlanModel] = useState(settings.planModel ?? '');
+  const [streamlineModel, setStreamlineModel] = useState(settings.streamlineModel ?? '');
   const [budget, setBudget] = useState(String(settings.monthlyBudgetUsd));
   const [dailyLimit, setDailyLimit] = useState(String(settings.dailyMessageLimit));
   const [helpLines, setHelpLines] = useState(settings.helpLines);
@@ -218,6 +219,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         coachingGuidelines: guidelines,
         ownerRoles,
         planModel,
+        streamlineModel,
         pagesOff,
       }));
       setSaved(true);
@@ -252,6 +254,17 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
             </Select>
             <Typography variant="caption" color="text.secondary">
               {tr('Used for goal, step and task suggestions, helpers and risks, and plan checks. A stronger model builds better plans; a cheaper one stretches the budget.')}
+            </Typography>
+          </label>
+          <label>
+            {tr('Model for Streamline suggestions')}
+            <Select fullWidth size="small" displayEmpty value={streamlineModel} onChange={(event) => setStreamlineModel(event.target.value)}
+              SelectDisplayProps={{ 'aria-label': tr('Model for Streamline suggestions') }}>
+              <MenuItem value="">{tr('Same as plan building')}</MenuItem>
+              {settings.models.map((option) => <MenuItem key={option.id} value={option.id}>{option.label}</MenuItem>)}
+            </Select>
+            <Typography variant="caption" color="text.secondary">
+              {tr('Streamline suggestions and picks are short. A faster model such as Haiku answers sooner and costs less. Summary advice and chat keep the models above.')}
             </Typography>
           </label>
           <TextField

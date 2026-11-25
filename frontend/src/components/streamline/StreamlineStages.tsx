@@ -30,6 +30,8 @@ import {
   LEVER_LABELS,
   SOURCE_LABELS,
   VERDICT_LABELS,
+  WEEKDAY_NAMES,
+  remindSummary,
 } from './streamlineLabels';
 
 /** The actions a stage panel can take; the page turns each into an API call. */
@@ -381,6 +383,32 @@ export function SpeedStage({ review, readOnly, actions }: StageProps) {
 
 // ---------- Stage 5: automate ----------
 
+/** V32 D-32-9: how often a "Remind me" item reminds, saved as soon as it is chosen. */
+function RemindFields({ item, actions, cadences }: { item: StreamlineItem; actions: StageActions; cadences: Record<RepeatCadence, string> }) {
+  const cadence = item.remindCadence ?? 'WEEKLY';
+  const weekdays = WEEKDAY_NAMES();
+  return (
+    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }} role="group" aria-label={tr('Reminder for {code}', { code: item.code })}>
+      <TextField select size="small" label={tr('Remind me how often')} value={cadence} sx={{ minWidth: 170 }}
+        onChange={(event) => void actions.updateItem(item.id, { remindCadence: event.target.value as RepeatCadence })}>
+        {(Object.keys(cadences) as RepeatCadence[]).map((key) => <MenuItem key={key} value={key}>{cadences[key]}</MenuItem>)}
+      </TextField>
+      {cadence === 'WEEKLY' && (
+        <TextField select size="small" label={tr('On')} value={String(item.remindDay ?? 1)} sx={{ minWidth: 150 }}
+          onChange={(event) => void actions.updateItem(item.id, { remindCadence: 'WEEKLY', remindDay: Number(event.target.value) })}>
+          {weekdays.map((name, index) => <MenuItem key={name} value={String(index + 1)}>{name}</MenuItem>)}
+        </TextField>
+      )}
+      {cadence === 'MONTHLY' && (
+        <TextField select size="small" label={tr('Day of the month')} value={String(item.remindDay ?? 1)} sx={{ minWidth: 150 }}
+          onChange={(event) => void actions.updateItem(item.id, { remindCadence: 'MONTHLY', remindDay: Number(event.target.value) })}>
+          {Array.from({ length: 28 }, (_, index) => index + 1).map((day) => <MenuItem key={day} value={String(day)}>{day}</MenuItem>)}
+        </TextField>
+      )}
+    </Box>
+  );
+}
+
 export function AutomateStage({ review, readOnly, actions, partners }: StageProps) {
   const labels = AUTOMATION_LABELS();
   const cadences = CADENCE_LABELS();
@@ -388,7 +416,7 @@ export function AutomateStage({ review, readOnly, actions, partners }: StageProp
   return (
     <Box sx={{ display: 'grid', gap: 0 }}>
       <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1 }}>
-        {tr('"Remind me" uses your email reminders (Account settings). A repeating task is created by the app once the current one is due.')}
+        {tr('"Remind me" shows the item on your Today page on its days, and in your daily reminder email when reminders are on (Account settings). A repeating task is created by the app once the current one is due.')}
       </Typography>
       {items.map((item) => (
         <AutomateRow key={item.id} item={item} readOnly={readOnly} actions={actions} labels={labels} cadences={cadences} partners={partners} />
@@ -409,6 +437,9 @@ function AutomateRow({ item, readOnly, actions, labels, cadences, partners }: {
         {item.repeatCandidate && <Chip size="small" color="primary" variant="outlined" label={tr('Done before: a repeat candidate')} />}
         {item.automation && <Chip size="small" label={labels[item.automation]} />}
         {item.repeatRuleId && <Chip size="small" color="success" label={tr('Repeats')} />}
+        {item.automation === 'REMIND' && item.remindCadence && (
+          <Chip size="small" variant="outlined" label={remindSummary(item.remindCadence, item.remindDay)} data-testid={`remind-${item.code}`} />
+        )}
       </Box>
       {!readOnly && (
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -431,6 +462,7 @@ function AutomateRow({ item, readOnly, actions, labels, cadences, partners }: {
           <Button variant="secondary" onClick={() => void actions.updateItem(item.id, { automation: 'MANUAL' })}>{labels.MANUAL}</Button>
         </Box>
       )}
+      {!readOnly && item.automation === 'REMIND' && <RemindFields item={item} actions={actions} cadences={cadences} />}
     </Box>
   );
 }

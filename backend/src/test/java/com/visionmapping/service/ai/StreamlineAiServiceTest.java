@@ -101,6 +101,6 @@ class StreamlineAiServiceTest {
     private static StreamlineResponses.Item item(Long id, String kind, String code, boolean archived, String owner, RequirementSource source) {
         return new StreamlineResponses.Item(id, kind, kind.equals("STEP") ? 50L : null, kind.equals("TASK") ? 60L + id : null, 50L, code,
                 "Title " + code, WorkStatus.NOT_STARTED, archived, null, owner, source, null, null, null, null, null, null, false, null,
-                List.of(), null, null, false, null, null, null, null, null, false, null);
+                List.of(), null, null, false, null, null, null, null, null, false, null, null, null);
     }
 }
