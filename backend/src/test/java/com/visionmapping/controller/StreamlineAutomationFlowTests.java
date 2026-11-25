@@ -188,6 +188,21 @@ class StreamlineAutomationFlowTests {
     }
 
     @Test
+    void theFirstNudgeCanBeRecordedByTheReminderEmail() throws Exception {
+        Plan plan = plan(8, 0);
+        long user = userId(plan.email());
+        send(put("/api/account/reminders"), plan.token(), Map.of("enabled", true, "timeZone", "UTC")).andExpect(status().isOk());
+        clearInvocations(reminderMailer);
+
+        reminderService.remindIfDue(user, LocalDate.now(ZoneOffset.UTC).atTime(9, 0).toInstant(ZoneOffset.UTC));
+
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(reminderMailer).send(anyString(), body.capture());
+        assertThat(body.getValue()).contains("Streamline suggestion:", "8 open steps");
+        assertThat(nudges(user)).isEqualTo(1);
+    }
+
+    @Test
     void sfc13_aDismissedCandidateStaysHiddenEverywhereFor90DaysAndOnlyOwnGoalsCanBeDismissed() throws Exception {
         Plan plan = plan(8, 0);
         assertThat(candidateFor(plan, "GOAL", plan.goalId())).isNotNull();
