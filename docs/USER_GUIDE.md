@@ -115,8 +115,9 @@ Instead of the pages above, you can build the plan for one dream in a single gui
 9. Each new goal, step and task has a menu (⋮) to **Move up**, **Move down**, **Merge with the next one** or
    **Split into two** before you add the plan. Merging joins the titles and keeps the later date and higher priority;
    splitting adds an empty item right after it for you to write.
-10. One plan session can use up to 15 AI requests; the guide shows how many are used. After that it carries on with the
-   questions at each stage. Adding or discarding the draft starts a new session.
+10. One plan session can use up to 15 AI requests (an admin can change this under AI settings → "AI requests per Build my
+   plan session"); the guide shows how many are used. After that it carries on with the questions at each stage. Adding
+   or discarding the draft starts a new session.
 
 After adding dreams from **Suggest dreams**, choose **Build my plan for ...** to go straight into the guide for that dream.
 

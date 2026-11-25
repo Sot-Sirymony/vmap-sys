@@ -76,7 +76,7 @@ export function AiSettingsPage() {
           <PlanMetricsCard token={token} />
           <PlanAccuracyCard token={token} />
           <PageMetricsCard token={token} />
-          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.streamlineModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}-${settings.ownerRoles ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
+          <OptionsCard key={`${settings.model}-${settings.planModel ?? ''}-${settings.streamlineModel ?? ''}-${settings.enabled}-${settings.monthlyBudgetUsd}-${settings.dailyMessageLimit}-${settings.planSessionLimit ?? 15}-${settings.helpLines}-${settings.aiReminders}-${settings.coachingGuidelines ?? ''}-${settings.ownerRoles ?? ''}`} settings={settings} token={token} onChanged={setSettings} />
         </Stack>
       )}
     </PageSection>
@@ -194,6 +194,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
   const [streamlineModel, setStreamlineModel] = useState(settings.streamlineModel ?? '');
   const [budget, setBudget] = useState(String(settings.monthlyBudgetUsd));
   const [dailyLimit, setDailyLimit] = useState(String(settings.dailyMessageLimit));
+  const [sessionLimit, setSessionLimit] = useState(String(settings.planSessionLimit ?? 15));
   const [helpLines, setHelpLines] = useState(settings.helpLines);
   const [aiReminders, setAiReminders] = useState(settings.aiReminders);
   const [guidelines, setGuidelines] = useState(settings.coachingGuidelines ?? '');
@@ -214,6 +215,7 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
         model,
         monthlyBudgetUsd: Number(budget),
         dailyMessageLimit: Number(dailyLimit),
+        planSessionLimit: Number(sessionLimit),
         helpLines: helpLines.trim(),
         aiReminders,
         coachingGuidelines: guidelines,
@@ -294,6 +296,15 @@ function OptionsCard({ settings, token, onChanged }: CardProps) {
             value={dailyLimit}
             onChange={(event) => setDailyLimit(event.target.value)}
             slotProps={{ htmlInput: { min: 1, max: 500 } }}
+          />
+          <TextField
+            size="small"
+            type="number"
+            label={tr('AI requests per Build my plan session')}
+            helperText={tr('One draft plan for a dream. When it runs out, people keep building with the questions, or add their plan to start a new session.')}
+            value={sessionLimit}
+            onChange={(event) => setSessionLimit(event.target.value)}
+            slotProps={{ htmlInput: { min: 1, max: 100 } }}
           />
           {/* V15 (AH-FR-57): the page assistant and helpers, page by page, for everyone. */}
           <PageSwitchesField legend={tr('Page assistant and helpers are on for')} pagesOff={pagesOff} onChange={setPagesOff} />

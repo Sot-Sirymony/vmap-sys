@@ -20,6 +20,8 @@ export type AiSettingsInput = {
   ownerRoles?: string;
   // V32 (D-32-3): blank keeps the plan building or main model for Streamline.
   streamlineModel?: string;
+  // PB-NFR-03: AI requests one Build my plan session may use (1 to 100).
+  planSessionLimit?: number;
 };
 
 export function getAiSettings(token: string) {

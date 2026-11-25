@@ -38,7 +38,9 @@ public record AiSettingsResponse(
         // V31 v2 (DC-FR-66).
         String ownerRoles,
         // V32 (D-32-3): null when Streamline uses the plan building or main model.
-        String streamlineModel) {
+        String streamlineModel,
+        // PB-NFR-03: AI requests one Build my plan session may use.
+        int planSessionLimit) {
 
     public AiSettingsResponse {
         models = Copies.list(models);

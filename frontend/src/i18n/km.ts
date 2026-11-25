@@ -1668,6 +1668,8 @@ export const km: Record<string, string> = {
   // V9 Phase 5: goal and plan builders
   '{count} AI requests left today': 'នៅសល់ {count} សំណើ AI សម្រាប់ថ្ងៃនេះ',
   'AI requests per person per day': 'សំណើ AI ក្នុងម្នាក់ក្នុងមួយថ្ងៃ',
+  'AI requests per Build my plan session': 'សំណើ AI ក្នុងវគ្គ «កសាងផែនការរបស់ខ្ញុំ» មួយ',
+  'One draft plan for a dream. When it runs out, people keep building with the questions, or add their plan to start a new session.': 'សេចក្តីព្រាងផែនការមួយសម្រាប់សុបិនមួយ។ ពេលអស់ អ្នកប្រើនៅតែអាចបន្តកសាងជាមួយសំណួរ ឬបន្ថែមផែនការរបស់ពួកគេ ដើម្បីចាប់ផ្តើមវគ្គថ្មី។',
   'Chat messages, goal and step suggestions and plan reviews all count. Keeps one person from using the whole budget.': 'សារជជែក ការណែនាំគោលដៅ និងជំហាន និងការពិនិត្យផែនការ សុទ្ធតែរាប់បញ្ចូល។ ការពារកុំឱ្យមនុស្សម្នាក់ប្រើថវិកាទាំងអស់។',
   'You have used today\'s AI requests. They reset tomorrow.': 'អ្នកបានប្រើសំណើ AI សម្រាប់ថ្ងៃនេះអស់ហើយ។ វានឹងចាប់ផ្តើមឡើងវិញនៅថ្ងៃស្អែក។',
   'Resources and people': 'ធនធាន និងមនុស្ស',

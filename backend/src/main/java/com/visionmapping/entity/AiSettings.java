@@ -74,6 +74,10 @@ public class AiSettings extends BaseAuditableEntity {
     @Column(name = "daily_message_limit", nullable = false)
     private int dailyMessageLimit;
 
+    /** PB-NFR-03: AI requests one Build my plan session may use (1 to 100). */
+    @Column(name = "plan_session_limit", nullable = false)
+    private int planSessionLimit = 15;
+
     /** AI-FR-15: add an AI encouragement to reminder emails. Off by default. */
     @Column(name = "ai_reminders", nullable = false)
     private boolean aiReminders;

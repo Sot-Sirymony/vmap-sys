@@ -28,7 +28,9 @@ public record AiSettingsRequest(
         // V31 v2 (DC-FR-66): extra owner roles, one per line or comma-separated. Left out keeps them; blank removes them.
         @Size(max = 2000) String ownerRoles,
         // V32 (D-32-3): the model for Streamline suggestions and picks. Left out keeps it; blank keeps today's rule.
-        @Size(max = 100) String streamlineModel) {
+        @Size(max = 100) String streamlineModel,
+        // PB-NFR-03: AI requests one Build my plan session may use. Left out keeps it.
+        @Min(1) @Max(100) Integer planSessionLimit) {
 
     public AiSettingsRequest {
         pagesOff = com.visionmapping.util.Copies.list(pagesOff);

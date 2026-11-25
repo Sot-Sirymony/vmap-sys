@@ -69,4 +69,17 @@ describe('AiSettingsPage (AI-FR-24)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save settings' }));
     expect(updateAiSettings).toHaveBeenCalledWith('token', expect.objectContaining({ ownerRoles: 'Translator\nEnumerator' }));
   });
+
+  it('saves the AI requests per Build my plan session (PB-NFR-03)', async () => {
+    vi.mocked(getAiSettings).mockResolvedValue({ ...base, planSessionLimit: 15 });
+    vi.mocked(updateAiSettings).mockResolvedValue({ ...base, planSessionLimit: 30 });
+    render(<AiSettingsPage />);
+
+    const field = await screen.findByRole('spinbutton', { name: 'AI requests per Build my plan session' });
+    expect(field).toHaveValue(15);
+    await userEvent.clear(field);
+    await userEvent.type(field, '30');
+    await userEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(updateAiSettings).toHaveBeenCalledWith('token', expect.objectContaining({ planSessionLimit: 30 }));
+  });
 });

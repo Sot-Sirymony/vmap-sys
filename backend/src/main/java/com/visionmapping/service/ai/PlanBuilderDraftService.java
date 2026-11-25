@@ -93,6 +93,7 @@ public class PlanBuilderDraftService {
     private final PlanRuleService ruleService;
     private final PlanAccuracyService accuracy;
     private final com.visionmapping.service.ReviewRhythmService rhythms;
+    private final PlanSessionGuard sessionGuard;
 
     @Transactional(readOnly = true)
     public Optional<PlanDraftResponse> get(Long dreamId) {
@@ -428,7 +429,7 @@ public class PlanBuilderDraftService {
     private PlanDraftResponse toResponse(PlanBuilderDraft draft) {
         return new PlanDraftResponse(draft.getDream().getId(), draft.getStage(), read(draft.getContent()),
                 draft.getUpdatedAt() == null ? clock.instant() : draft.getUpdatedAt(), draft.getExpiresAt(),
-                draft.getAiRequests(), PlanSessionGuard.LIMIT);
+                draft.getAiRequests(), sessionGuard.limit());
     }
 
     private String write(PlanDraftContent content) {

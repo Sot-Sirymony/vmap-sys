@@ -1115,6 +1115,8 @@ export type AiSettings = {
   ownerRoles?: string | null;
   // V32 (D-32-3): null when Streamline suggestions use the plan building or main model.
   streamlineModel?: string | null;
+  // PB-NFR-03: AI requests one Build my plan session may use.
+  planSessionLimit?: number;
 };
 
 // V9 Phase 3: the Dream Coach.

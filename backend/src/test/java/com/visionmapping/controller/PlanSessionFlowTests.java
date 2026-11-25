@@ -64,7 +64,7 @@ class PlanSessionFlowTests {
         admin = register(email("session-admin"));
         jdbcTemplate.update("update app_users set role = 'ADMIN' where email like 'session-admin-%'");
         jdbcTemplate.update("update ai_settings set model = 'claude-opus-5-5', plan_model = null, monthly_budget_usd = 20.00, "
-                + "daily_message_limit = 200");
+                + "daily_message_limit = 200, plan_session_limit = 15");
         send(put("/api/admin/ai-settings/api-key"), admin, Map.of("apiKey", KEY)).andExpect(status().isOk());
         send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20,
                 "dailyMessageLimit", 200)).andExpect(status().isOk());
@@ -112,6 +112,31 @@ class PlanSessionFlowTests {
         long other = dream(user);
         saveDraft(user, other);
         goalSuggestions(user, other).andExpect(status().isOk());
+    }
+
+    @Test
+    void anAdminCanChangeTheSessionLimit() throws Exception {
+        send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20,
+                "planSessionLimit", 101)).andExpect(status().isBadRequest());
+        send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20,
+                "planSessionLimit", 2)).andExpect(status().isOk()).andExpect(jsonPath("$.planSessionLimit").value(2));
+        // Left out keeps the value.
+        send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.planSessionLimit").value(2));
+
+        String user = consented(email("session-setting"));
+        long dreamId = dream(user);
+        saveDraft(user, dreamId).andExpect(jsonPath("$.aiRequestLimit").value(2));
+        goalSuggestions(user, dreamId).andExpect(status().isOk());
+        goalSuggestions(user, dreamId).andExpect(status().isOk());
+        goalSuggestions(user, dreamId).andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("its 2 AI requests")));
+
+        // Raising it lets the same session carry on.
+        send(put("/api/admin/ai-settings"), admin, Map.of("enabled", true, "model", "claude-opus-5-5", "monthlyBudgetUsd", 20,
+                "planSessionLimit", 30)).andExpect(status().isOk());
+        goalSuggestions(user, dreamId).andExpect(status().isOk());
+        saveDraft(user, dreamId).andExpect(jsonPath("$.aiRequestsUsed").value(3)).andExpect(jsonPath("$.aiRequestLimit").value(30));
     }
 
     @Test

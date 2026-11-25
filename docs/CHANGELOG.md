@@ -765,6 +765,10 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Build my plan session limit is now an AI setting** (PB-NFR-03 follow-up): admins set "AI requests per Build my plan
+session" (1 to 100, default 15, migration V103) on the AI settings page instead of the fixed 15. The guide, the draft's
+counter and the "used its N AI requests" message all use the setting; raising it lets a session that ran out carry on.
+
 **Management Report Summary tab, per the Optimize Report-management prototype** (`docs/Optimize Repot-management/summary.html`):
 a Summary header with scope and generated date; six tiles with sub-lines and "View … →" links; Progress by goal and Open
 tasks by priority as bar lists with Show as table; Goal health (reasons and a health pill) beside Needs attention (with
