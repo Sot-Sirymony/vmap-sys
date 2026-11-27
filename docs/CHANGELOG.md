@@ -17,6 +17,76 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 33.0.0 — One standard for every REST controller (phases 1 to 4 of 6 built)
+
+### Phase 4: account, sign-in, admin and coaching on /api/v1
+
+**Backend.**
+- Every controller now answers on `/api/v1/...`, except `/api/health`. The old paths are forwarded.
+- "Verify it's you" codes are read once per request. Handlers are marked `@RequiresStepUp`, and services call
+  `requireFromRequest`; the 23 header parameters are gone.
+- Every admin and coach handler carries `@PreAuthorize` with the exact permission.
+- The sign-in, cohort join and admin user actions moved into services.
+- The admin user list and security log have a nested page; the failed request log is a page.
+- A path id of 0 or below is refused with 400 before any lookup, where it was a 404.
+
+**Frontend.** The Users page, the role editor and the security log read the nested page.
+
+### Phase 3: AI, Streamline, reports, sharing and files on /api/v1
+
+**Backend.**
+- The AI, Streamline, report, sharing, Excel and learning module controllers answer on `/api/v1/...`. Their old paths
+  are forwarded.
+- Three controllers that served several roots are split, with the same URLs.
+- The Dream Coach stream's error handling moved to `StreamingResponder`. An AI failure part way through is still sent
+  as an `error` event.
+- File downloads declare their type.
+- The report rate limits and choices moved to `ReportActionsService`; the Excel import limit and the shared plan limit
+  moved into their services.
+- Saved reports are paged.
+- The coach AI summaries and crisis alerts carry `@PreAuthorize`.
+
+**Frontend.** The Reports page reads every page of saved reports, so nothing changes on screen.
+
+### Phase 2: plan core, rhythm and journals on /api/v1
+
+**Backend.**
+- The 32 plan core, rhythm and journal controllers answer on `/api/v1/...`. Their old `/api/...` paths are forwarded,
+  with `Deprecation: true`.
+- Every handler answers a `ResponseEntity`: 201 with `Location` on a create, 204 when there is no body. Path ids must
+  be positive. Every endpoint is documented in OpenAPI.
+- Five controllers that served several roots are split, with the same URLs.
+- Paged with `PagedResponse`, with checked sorts and at most 200 to a page: tasks, progress logs, reviews, obstacles,
+  fear entries, gratitude entries, attitude check-ins, a task's history, partners and communication messages.
+- `has-linked-partner` answers `{ "linked": true|false }`.
+
+**Frontend.** Screens that need a whole list read every page with `fetchAllPages`, so nothing changes on screen.
+Attitude check-ins read the newest 30, as before. The `Page` type has `page` (was `number`) and `sort`.
+
+### Phase 1: foundation
+
+No path, status code or screen changes yet. Every controller still answers on `/api/...`.
+
+**Backend.**
+- `ApiPaths.V1` (`/api/v1`). `LegacyApiPathFilter` runs before Spring Security and forwards an old `/api/...`
+  path to `/api/v1/...` once a version 1 endpoint exists for it, with `Deprecation: true` and, when
+  `API_LEGACY_SUNSET` is set, `Sunset`.
+- Every error is now an RFC 9457 problem (`application/problem+json`) with `reference`, plus `code`, `triesLeft`,
+  `action` and `errors` when they apply. For version 1 it still carries `message`, `error` and `path`.
+  `ErrorResponse` is gone.
+- `PagedResponse<T>`, `Pageables.whitelist` (an unknown sort answers 400), and `max-page-size` 200.
+- `ApiResponses.created` (201 with `Location`).
+- `@EnableMethodSecurity` with `Authorities` constants.
+- `StepUpContext`, its interceptor and `@RequiresStepUp`.
+- OpenAPI: common problem answers on every operation, no token on public paths, and the `X-Step-Up` header on
+  marked endpoints.
+- `ControllerRulesTest` enforces the standard with ratchet lists. `docs/CONTROLLER_AUDIT_V33.md` lists all 416
+  endpoints.
+
+**Frontend.** Errors read `detail` first, then `message`.
+
+---
+
 ## 32.0.0 — Streamline AI: faster, easier, more automatic (built; awaiting deploy, UAT and the Khmer review)
 
 ### Phase 5: coach check and documents

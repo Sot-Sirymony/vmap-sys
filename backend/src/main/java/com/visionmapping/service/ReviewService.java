@@ -1,6 +1,7 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.findPageForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
@@ -24,6 +25,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Daily/weekly/monthly reviews, including the FR-16 diligence checklist that
@@ -45,6 +50,16 @@ public class ReviewService {
         return findAllForUser(reviewRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    /** V33 (D-33-10): the properties the review list can be sorted by. */
+    static final Set<String> REVIEW_SORTS = Set.of("reviewDate", "reviewType", "letterRank", "diligenceScorePercent", "createdAt", "updatedAt");
+
+    /** V33 (D-33-9): one page of the user's reviews. */
+    @Transactional(readOnly = true)
+    public PagedResponse<ReviewResponse> pageReviews(ArchiveFilter archiveFilter, Pageable pageable) {
+        return PagedResponse.from(findPageForUser(reviewRepository, lookup.userId(), archiveFilter,
+                Pageables.whitelist(pageable, REVIEW_SORTS)), mapper::toResponse);
     }
 
     public ReviewResponse createReview(ReviewRequest request) {

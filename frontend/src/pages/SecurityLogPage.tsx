@@ -73,11 +73,11 @@ export function SecurityLogPage() {
     setError('');
     try {
       const log = await getSecurityLog(token, filter, nextPage);
-      setEvents((current) => (append ? [...current, ...log.events] : log.events));
+      setEvents((current) => (append ? [...current, ...log.events.content] : log.events.content));
       setAlerts(log.recentAlerts);
-      setTotal(log.totalEvents);
-      setPage(log.page);
-      setHasMore(log.hasMore);
+      setTotal(log.events.totalElements);
+      setPage(log.events.page);
+      setHasMore(!log.events.last);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : tr('Could not load the security log.'));
     } finally {

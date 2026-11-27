@@ -43,8 +43,24 @@ class OpenApiDocsFlowTests {
                     .andExpect(jsonPath("$.info.title").value("Vision Mapping Management System API"))
                     .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
                     .andExpect(jsonPath("$.security[0].bearerAuth").isArray())
-                    .andExpect(jsonPath("$.paths['/api/tasks']").exists())
-                    .andExpect(jsonPath("$.paths['/api/auth/login']").exists());
+                    .andExpect(jsonPath("$.paths['/api/v1/tasks']").exists())
+                    .andExpect(jsonPath("$.paths['/api/v1/auth/login']").exists());
+        }
+
+        /** V33 D-33-16: common error answers added once, the Problem schema, and no token on public paths. */
+        @Test
+        void everyOperationListsTheCommonProblemAnswers() throws Exception {
+            mockMvc.perform(get("/v3/api-docs"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.components.schemas.Problem.properties.reference").exists())
+                    .andExpect(jsonPath("$.components.schemas.Problem.properties.errors").exists())
+                    .andExpect(jsonPath("$.paths['/api/v1/tasks'].get.responses['401'].content['application/problem+json'].schema['$ref']")
+                            .value("#/components/schemas/Problem"))
+                    .andExpect(jsonPath("$.paths['/api/v1/tasks'].get.responses['429']").exists())
+                    .andExpect(jsonPath("$.paths['/api/v1/tasks'].get.security").doesNotExist())
+                    .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.security").isEmpty())
+                    .andExpect(jsonPath("$.paths['/api/health'].get.security").isEmpty())
+                    .andExpect(jsonPath("$.paths['/api/v1/shared-plans/{token}'].get.security").isEmpty());
         }
 
         @Test

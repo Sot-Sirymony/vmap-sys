@@ -72,10 +72,6 @@ public class ReminderService {
         return toResponse(userScope.currentUser());
     }
 
-    public ReminderSettingsResponse updateSettings(ReminderSettingsRequest request) {
-        return updateSettings(request, null, null);
-    }
-
     /**
      * V20 SV-FR-04: a different reminder address needs the account check
      * (stepUp: a code to the account email, or the verified window) and, unless
@@ -83,7 +79,7 @@ public class ReminderService {
      * only ever go to an address the person controls (SV-FR-05). Other settings
      * need no code.
      */
-    public ReminderSettingsResponse updateSettings(ReminderSettingsRequest request, @Nullable String stepUp, @Nullable String confirm) {
+    public ReminderSettingsResponse updateSettings(ReminderSettingsRequest request) {
         AppUser user = userScope.currentUser();
         try {
             ZoneId.of(request.timeZone());
@@ -99,9 +95,9 @@ public class ReminderService {
         String previous = user.getReminderEmail();
         boolean addressChanges = !reminderEmail.equalsIgnoreCase(previous == null ? "" : previous);
         if (addressChanges) {
-            stepUpService.require(StepUpAction.CHANGE_REMINDER_EMAIL, stepUp);
+            stepUpService.requireFromRequest(StepUpAction.CHANGE_REMINDER_EMAIL);
             if (!reminderEmail.isEmpty()) {
-                stepUpService.requireForAddress(StepUpAction.CONFIRM_REMINDER_EMAIL, confirm, reminderEmail);
+                stepUpService.requireForAddressFromRequest(StepUpAction.CONFIRM_REMINDER_EMAIL, reminderEmail);
             }
             // SV-FR-28, SV-FR-29: the account email and the old reminder address hear about it.
             accountNotices.changed(AccountNotice.Kind.REMINDER_EMAIL_CHANGED, user, previous,

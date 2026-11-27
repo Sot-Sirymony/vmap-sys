@@ -1,6 +1,7 @@
 package com.visionmapping.security.audit;
 
 import com.visionmapping.dto.response.SecurityEventResponse;
+import com.visionmapping.dto.response.PagedResponse;
 import com.visionmapping.dto.response.SecurityLogResponse;
 import com.visionmapping.entity.SecurityEvent;
 import com.visionmapping.repository.SecurityEventRepository;
@@ -39,9 +40,7 @@ public class SecurityLogService {
         Instant end = to == null ? clock.instant().plusSeconds(60) : to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         Page<SecurityEvent> found = repository.search(type, outcome, actorId, start, end,
                 PageRequest.of(Math.max(0, page), pageSize));
-        return new SecurityLogResponse(
-                found.getContent().stream().map(SecurityLogService::toResponse).toList(),
-                found.getNumber(), found.getSize(), found.getTotalElements(), found.hasNext(), alerts.recentAlerts());
+        return new SecurityLogResponse(PagedResponse.from(found, SecurityLogService::toResponse), alerts.recentAlerts());
     }
 
     private static SecurityEventResponse toResponse(SecurityEvent event) {

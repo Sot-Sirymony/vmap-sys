@@ -26,17 +26,11 @@ import static com.visionmapping.excel.WorkbookSchema.TITLE;
 import static com.visionmapping.excel.WorkbookSchema.TYPE;
 import static com.visionmapping.excel.WorkbookSchema.VISION_AREAS;
 
-import com.visionmapping.dto.response.CommunicationMessageResponse;
 import com.visionmapping.dto.response.DashboardSummaryResponse;
 import com.visionmapping.dto.response.DreamResponse;
 import com.visionmapping.dto.response.ExcelImportSummaryResponse;
 import com.visionmapping.dto.response.GoalResponse;
-import com.visionmapping.dto.response.ObstacleResponse;
-import com.visionmapping.dto.response.PartnerResponse;
-import com.visionmapping.dto.response.ProgressLogResponse;
-import com.visionmapping.dto.response.ReviewResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
-import com.visionmapping.dto.response.VisionAreaResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.service.ProgressLogService;
 import com.visionmapping.service.CommunicationMessageService;
@@ -60,7 +54,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.ConditionalFormattingRule;
@@ -84,6 +77,15 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.visionmapping.dto.response.CommunicationMessageResponse;
+import com.visionmapping.dto.response.ObstacleResponse;
+import com.visionmapping.dto.response.PartnerResponse;
+import com.visionmapping.dto.response.ProgressLogResponse;
+import com.visionmapping.dto.response.ReviewResponse;
+import com.visionmapping.dto.response.VisionAreaResponse;
+import java.util.Map;
+import com.visionmapping.service.support.RequestRateLimiter;
+import com.visionmapping.util.UserScope;
 
 @Slf4j
 @Service
@@ -128,6 +130,8 @@ public class ExcelService {
     private String backupDirectory;
 
     private final DashboardService dashboardService;
+    private final RequestRateLimiter rateLimiter;
+    private final UserScope userScope;
     private final ProgressLogService progressLogService;
     private final ReviewService reviewService;
     private final ObstacleService obstacleService;
@@ -259,6 +263,15 @@ public class ExcelService {
      */
     @Transactional
     @SecurityAudit(value = SecurityEventType.EXCEL_IMPORTED)
+    /**
+     * V10 (SEC-06-02): each import parses a whole workbook, so it is limited per
+     * account. V33 (D-33-11) moved this check here from the controller.
+     */
+    public ExcelImportSummaryResponse importWorkbookLimited(MultipartFile file) {
+        rateLimiter.check(RequestRateLimiter.Action.EXCEL_IMPORT, "user:" + userScope.currentUser().getId());
+        return importWorkbook(file);
+    }
+
     public ExcelImportSummaryResponse importWorkbook(MultipartFile file) {
         List<String> errors = new ArrayList<>();
 

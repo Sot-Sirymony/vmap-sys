@@ -64,17 +64,17 @@ class AdminUserFlowTests {
         login(email);
 
         JsonNode byEmail = list(admin, "q", "FIND-" + tag.toUpperCase(Locale.ROOT));
-        assertThat(byEmail.get("totalElements").asLong()).isEqualTo(1);
-        JsonNode row = byEmail.get("items").get(0);
+        assertThat(byEmail.get("users").get("totalElements").asLong()).isEqualTo(1);
+        JsonNode row = byEmail.get("users").get("content").get(0);
         assertThat(row.get("email").asText()).isEqualTo(email);
         assertThat(row.get("role").asText()).isEqualTo("USER");
         assertThat(row.get("roleName").asText()).isEqualTo("Participant");
         assertThat(row.get("status").asText()).isEqualTo("ACTIVE");
         assertThat(row.get("twoFactor").asText()).isEqualTo("OFF");
         assertThat(row.get("lastSignInAt").isNull()).isFalse();
-        assertThat(list(admin, "q", "dara " + tag).get("totalElements").asLong()).isEqualTo(1);
+        assertThat(list(admin, "q", "dara " + tag).get("users").get("totalElements").asLong()).isEqualTo(1);
         // Typed text is literal: "%" does not match everything.
-        assertThat(list(admin, "q", "%").get("totalElements").asLong()).isZero();
+        assertThat(list(admin, "q", "%").get("users").get("totalElements").asLong()).isZero();
         // Counts cover every account, not just the page.
         assertThat(byEmail.get("totalAccounts").asLong()).isGreaterThan(1);
         assertThat(byEmail.get("countsByRole").get("ADMIN").asLong()).isPositive();
@@ -96,11 +96,11 @@ class AdminUserFlowTests {
         assertThat(emails(list(admin, "twoFactor", "OFF", "size", "100"))).contains(blocked).doesNotContain(coach);
 
         JsonNode byName = list(admin, "sort", "name", "size", "10");
-        assertThat(byName.get("size").asInt()).isEqualTo(10);
+        assertThat(byName.get("users").get("size").asInt()).isEqualTo(10);
         List<String> names = names(byName);
         assertThat(names).isSorted();
         // Only 10, 25, 50 or 100 per page; anything else falls back to 25.
-        assertThat(list(admin, "size", "7").get("size").asInt()).isEqualTo(25);
+        assertThat(list(admin, "size", "7").get("users").get("size").asInt()).isEqualTo(25);
         call(admin, "/api/admin/users?sort=password").andExpect(status().isBadRequest());
         call(admin, "/api/admin/users?role=ROOT").andExpect(status().isBadRequest());
     }
@@ -180,11 +180,11 @@ class AdminUserFlowTests {
     }
 
     private static List<String> emails(JsonNode page) {
-        return page.get("items").findValuesAsText("email");
+        return page.get("users").get("content").findValuesAsText("email");
     }
 
     private static List<String> names(JsonNode page) {
-        return page.get("items").findValuesAsText("fullName");
+        return page.get("users").get("content").findValuesAsText("fullName");
     }
 
     private ResultActions call(String token, String path) throws Exception {

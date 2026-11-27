@@ -28,6 +28,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * People and resources that can help, linked to any level of the hierarchy.
@@ -49,6 +53,22 @@ public class PartnerService {
     @Transactional(readOnly = true)
     public Page<PartnerResponse> listPartners(Pageable pageable, ArchiveFilter archiveFilter, String search) {
         return listPartners(pageable, archiveFilter, search, null, null, null);
+    }
+
+    /** V33 (D-33-10): the partner table's sortable columns, and dates. */
+    static final Set<String> PARTNER_SORTS = Set.of("code", "name", "role", "organization", "supportType", "status", "createdAt", "updatedAt");
+
+    /** V33 (D-33-9): one page of partners, in the shared page shape, with the sort checked first. */
+    @Transactional(readOnly = true)
+    public PagedResponse<PartnerResponse> pagePartners(
+            Pageable pageable,
+            ArchiveFilter archiveFilter,
+            @Nullable String search,
+            @Nullable PartnerSupportType supportType,
+            @Nullable PartnerStatus status,
+            @Nullable Long dreamId) {
+        return PagedResponse.from(listPartners(Pageables.whitelist(pageable, PARTNER_SORTS), archiveFilter, search, supportType, status, dreamId),
+                Function.identity());
     }
 
     @Transactional(readOnly = true)

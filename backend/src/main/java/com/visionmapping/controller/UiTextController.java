@@ -1,47 +1,33 @@
 package com.visionmapping.controller;
 
-import com.visionmapping.dto.request.UiTextOverrideRequest;
-import com.visionmapping.dto.response.UiTextOverrideResponse;
 import com.visionmapping.service.UiTextService;
-import jakarta.validation.Valid;
-import java.util.List;
+import jakarta.validation.constraints.Pattern;
 import java.util.Map;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
-/** FR-20: interface text changes. Reading is public; changing needs the ADMIN role. */
+/** FR-20: interface text changes. Reading is public; changing is in {@link UiTextAdminController}. */
 @RestController
+@RequestMapping(value = ApiPaths.V1 + "/ui-text", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Interface text", description = "Interface text changes, needed to draw any page")
 public class UiTextController {
 
     private final UiTextService service;
 
-    @GetMapping("/api/ui-text")
-    public Map<String, String> overrides(@RequestParam String language) {
-        return service.overridesFor(language);
-    }
-
-    @GetMapping("/api/admin/ui-text")
-    public List<UiTextOverrideResponse> list(@RequestParam String language) {
-        return service.list(language);
-    }
-
-    @PutMapping("/api/admin/ui-text")
-    public UiTextOverrideResponse save(@Valid @RequestBody UiTextOverrideRequest request) {
-        return service.save(request);
-    }
-
-    @DeleteMapping("/api/admin/ui-text/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reset(@PathVariable Long id) {
-        service.reset(id);
+    @Operation(summary = "Get the interface text changes for a language")
+    @GetMapping
+    public ResponseEntity<Map<String, String>> overrides(@RequestParam @Pattern(regexp = "[a-z]{2}") String language) {
+        return ResponseEntity.ok(service.overridesFor(language));
     }
 }

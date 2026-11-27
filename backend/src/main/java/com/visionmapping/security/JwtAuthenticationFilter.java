@@ -1,9 +1,9 @@
 package com.visionmapping.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.visionmapping.exception.ErrorResponse;
+import com.visionmapping.exception.ProblemWriter;
+import com.visionmapping.exception.Problems;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import java.util.Optional;
 import io.jsonwebtoken.ExpiredJwtException;
 import com.visionmapping.security.audit.SecurityOutcome;
@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final AuthSessionService authSessionService;
     private final SecurityEventService securityEvents;
-    private final ObjectMapper objectMapper;
+    private final ProblemWriter problemWriter;
     private final PermissionService permissions;
 
     @Override
@@ -100,13 +100,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void refuseUnchecked(HttpServletRequest request, HttpServletResponse response, RuntimeException cause)
             throws IOException {
-        ErrorResponse body = ErrorResponse.of(HttpStatus.SERVICE_UNAVAILABLE,
+        ProblemDetail body = Problems.of(HttpStatus.SERVICE_UNAVAILABLE,
                 "We could not check your sign-in just now. Try again in a moment.", request.getRequestURI());
         log.error("Could not check the session on {} {} [ref {}]", request.getMethod(), request.getRequestURI(),
-                body.reference(), cause);
-        response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getOutputStream(), body);
+                Problems.reference(body), cause);
+        problemWriter.write(response, body);
     }
 
     private static boolean belongsTo(AuthSession session, String email) {

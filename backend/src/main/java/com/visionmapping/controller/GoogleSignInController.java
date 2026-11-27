@@ -2,71 +2,71 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.GoogleExchangeRequest;
 import com.visionmapping.dto.request.GoogleLinkRequest;
-import com.visionmapping.dto.response.SignInAnswer;
 import com.visionmapping.dto.response.GoogleSignInStatusResponse;
-import com.visionmapping.service.oauth.GoogleAccountService;
+import com.visionmapping.dto.response.SignInAnswer;
+import com.visionmapping.service.auth.SignInRequests;
 import com.visionmapping.service.oauth.GoogleSignInService;
-import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.util.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import java.util.Map;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * V14 (BRD 14.0.0, Appendix B): Sign in with Google. Every endpoint is public,
- * because the person is not signed in yet.
+ * because the person is not signed in yet. The rate limits are in {@link SignInRequests}.
  */
 @RestController
-@RequestMapping("/api/auth/oauth/google")
+@RequestMapping(value = ApiPaths.V1 + "/auth/oauth/google", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Google sign-in", description = "Sign in with Google")
 public class GoogleSignInController {
 
     private final GoogleSignInService googleSignInService;
-    private final GoogleAccountService googleAccountService;
-    private final RequestRateLimiter rateLimiter;
+    private final SignInRequests signIn;
 
-    /** GA-FR-03. */
+    @Operation(summary = "Whether Google sign-in is set up and on")
     @GetMapping("/status")
     public ResponseEntity<GoogleSignInStatusResponse> status() {
         return ResponseEntity.ok(googleSignInService.status());
     }
 
-    /** GA-FR-05; 503 while Google sign-in is off (GA-FR-02). */
+    @Operation(summary = "Get the address that starts Google sign-in")
     @GetMapping("/authorize-url")
     public ResponseEntity<Map<String, String>> authorizeUrl(
             @RequestParam(name = "remember", defaultValue = "false") boolean remember,
-            @RequestParam(name = "from", required = false) @Nullable String from,
-            HttpServletRequest http
-    ) {
-        rateLimiter.check(RequestRateLimiter.Action.GOOGLE_SIGN_IN, ClientIp.of(http));
+            @RequestParam(name = "from", required = false) @Nullable @Size(max = 200) String from,
+            HttpServletRequest http) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(Map.of("url", googleSignInService.authorizeUrl(remember, from)));
+                .body(Map.of("url", signIn.googleAuthorizeUrl(remember, from, ClientIp.of(http))));
     }
 
-    /**
-     * GA-FR-09: Google sends the browser here. Every outcome is a redirect to
-     * the frontend, never a JSON page. No Referer leaves this answer and it is
-     * never cached (GA-SEC-10).
-     */
+    /** Google sends the browser here; it is sent on to the app with a one-time code. */
+    @Operation(summary = "Google's callback; answers with a redirect to the app")
     @GetMapping("/callback")
     public ResponseEntity<Void> callback(
             @RequestParam(name = "code", required = false) @Nullable String code,
             @RequestParam(name = "state", required = false) @Nullable String state,
             @RequestParam(name = "error", required = false) @Nullable String error,
-            HttpServletRequest http
-    ) {
+            HttpServletRequest http) {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(googleSignInService.callbackRedirect(code, state, error, ClientIp.of(http)))
                 .header("Referrer-Policy", "no-referrer")
@@ -74,19 +74,15 @@ public class GoogleSignInController {
                 .build();
     }
 
-    /** GA-FR-20: the one-time sign-in code for the normal sign-in answer; 400 when used or expired. */
-    @PostMapping("/exchange")
+    @Operation(summary = "Exchange the one-time code for a session")
+    @PostMapping(value = "/exchange", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SignInAnswer> exchange(@Valid @RequestBody GoogleExchangeRequest request, HttpServletRequest http) {
-        rateLimiter.check(RequestRateLimiter.Action.GOOGLE_SIGN_IN, ClientIp.of(http));
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(googleAccountService.exchange(request.code(), request.deviceToken()));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(signIn.googleExchange(request, ClientIp.of(http)));
     }
 
-    /** GA-FR-23: links Google to an existing account after its password; 400, or 429 when locked. */
-    @PostMapping("/link")
+    @Operation(summary = "Link Google to my password account")
+    @PostMapping(value = "/link", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SignInAnswer> link(@Valid @RequestBody GoogleLinkRequest request, HttpServletRequest http) {
-        rateLimiter.check(RequestRateLimiter.Action.GOOGLE_SIGN_IN, ClientIp.of(http));
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(googleAccountService.link(request.linkToken(), request.password(), ClientIp.of(http), request.deviceToken()));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(signIn.googleLink(request, ClientIp.of(http)));
     }
 }

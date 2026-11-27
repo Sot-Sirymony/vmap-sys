@@ -12,7 +12,6 @@ import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,80 +21,103 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import com.visionmapping.dto.response.PagedResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
-@RequestMapping("/api/obstacles")
+@RequestMapping(value = ApiPaths.V1 + "/obstacles", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Obstacles", description = "Obstacles on steps and tasks")
 public class ObstacleController {
 
     private final ObstacleService service;
     private final GapStepService gapStepService;
 
     /** V17 BL-FR-05: {@code ?placement=UNPLACED} lists the active obstacles that still need a step. */
+    @Operation(summary = "List obstacles, one page at a time; placement=UNPLACED lists those that still need a step")
     @GetMapping
-    public List<ObstacleResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived,
-                                       @RequestParam(required = false) String placement) {
-        if ("UNPLACED".equalsIgnoreCase(placement)) {
-            return service.listUnplacedObstacles();
-        }
-        return service.listObstacles(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<PagedResponse<ObstacleResponse>> list(
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @RequestParam(required = false) String placement,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(service.pageObstacles(ArchiveFilter.of(includeArchived), placement, pageable));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ObstacleResponse create(@Valid @RequestBody ObstacleRequest request) {
-        return service.createObstacle(request);
+    @Operation(summary = "Create an obstacle")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ObstacleResponse> create(@Valid @RequestBody ObstacleRequest request) {
+        ObstacleResponse created = service.createObstacle(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get an obstacle")
     @GetMapping("/{id}")
-    public ObstacleResponse get(@PathVariable Long id) {
-        return service.getObstacle(id);
+    public ResponseEntity<ObstacleResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getObstacle(id));
     }
 
+    @Operation(summary = "List obstacles related to an obstacle")
     @GetMapping("/{id}/related")
-    public List<ObstacleResponse> related(@PathVariable Long id) {
-        return service.relatedObstacles(id);
+    public ResponseEntity<List<ObstacleResponse>> related(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.relatedObstacles(id));
     }
 
-    @PutMapping("/{id}")
-    public ObstacleResponse update(@PathVariable Long id, @Valid @RequestBody ObstacleRequest request) {
-        return service.updateObstacle(id, request);
+    @Operation(summary = "Update an obstacle")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ObstacleResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody ObstacleRequest request) {
+        return ResponseEntity.ok(service.updateObstacle(id, request));
     }
 
-    @PatchMapping("/{id}/status")
-    public ObstacleResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<ObstacleStatus> request) {
-        return service.updateObstacleStatus(id, request.status());
+    @Operation(summary = "Change an obstacle's status")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ObstacleResponse> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody StatusUpdateRequest<ObstacleStatus> request) {
+        return ResponseEntity.ok(service.updateObstacleStatus(id, request.status()));
     }
 
     /** V17 BL-FR-20: turns this obstacle into a "find help" step and anchors it there. */
-    @PostMapping("/{id}/convert-to-step")
-    @ResponseStatus(HttpStatus.CREATED)
-    public GapStepResponse convertToStep(@PathVariable Long id, @Valid @RequestBody GapStepRequest request) {
-        return gapStepService.createFromObstacle(id, request);
+    @Operation(summary = "Turn an obstacle into a step")
+    @PostMapping(value = "/{id}/convert-to-step", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GapStepResponse> convertToStep(@PathVariable @Positive Long id, @Valid @RequestBody GapStepRequest request) {
+        GapStepResponse created = gapStepService.createFromObstacle(id, request);
+        return ApiResponses.createdAt("/steps", created.step().id(), created);
     }
 
+    @Operation(summary = "Release the expectation behind an obstacle")
     @PostMapping("/{id}/release-expectation")
-    public ObstacleResponse releaseExpectation(@PathVariable Long id) {
-        return service.releaseExpectation(id);
+    public ResponseEntity<ObstacleResponse> releaseExpectation(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.releaseExpectation(id));
     }
 
+    @Operation(summary = "Archive an obstacle")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveObstacle(id);
+        return ResponseEntity.noContent().build();
     }
+    @Operation(summary = "Restore an archived obstacle")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreObstacle(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete an obstacle permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteObstacle(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

@@ -1,5 +1,6 @@
 package com.visionmapping.dto.request;
 
+import org.springframework.lang.Nullable;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -10,4 +11,15 @@ public record ArchiveRequest(
         @Size(max = 1000) String reason,
         Boolean removePartner
 ) {
+
+    /** V33 (D-33-11): the reason of an optional archive body, so controllers need no null check. */
+    @Nullable
+    public static String reasonOf(@Nullable ArchiveRequest request) {
+        return request == null ? null : request.reason();
+    }
+
+    /** V33: whether an optional archive body asks to archive the step's partner too (BL-FR-21). */
+    public static boolean removesPartner(@Nullable ArchiveRequest request) {
+        return request != null && Boolean.TRUE.equals(request.removePartner());
+    }
 }

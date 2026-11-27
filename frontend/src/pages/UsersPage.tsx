@@ -100,7 +100,7 @@ export function UsersPage() {
     if (!token || !can(viewer, 'MANAGE_USERS') || roles.length === 0) return;
     const coaching = new Set(roles.filter((role) => role.permissions.includes('COACH_COHORTS')).map((role) => role.key));
     listAdminUsers(token, { status: 'ACTIVE', sort: 'name' }, 0, 100)
-      .then((list) => setCoaches(list.items.filter((item) => coaching.has(item.role))))
+      .then((list) => setCoaches(list.users.content.filter((item) => coaching.has(item.role))))
       .catch(() => setCoaches([]));
   }, [token, viewer, roles]);
 
@@ -191,10 +191,10 @@ export function UsersPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {result.items.length === 0 && (
+                  {result.users.content.length === 0 && (
                     <TableRow><TableCell colSpan={8}>{tr('No accounts match these filters.')}</TableCell></TableRow>
                   )}
-                  {result.items.map((item) => (
+                  {result.users.content.map((item) => (
                     <TableRow key={item.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelected(item.id)}>
                       <TableCell>
                         <Link component="button" type="button" underline="hover" color="inherit" sx={{ fontWeight: 500 }}
@@ -222,7 +222,7 @@ export function UsersPage() {
             </TableContainer>
             <TablePagination
               component="div"
-              count={result.totalElements}
+              count={result.users.totalElements}
               page={page}
               rowsPerPage={size}
               rowsPerPageOptions={PAGE_SIZES}

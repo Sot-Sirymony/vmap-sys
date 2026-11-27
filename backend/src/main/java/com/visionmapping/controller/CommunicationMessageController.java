@@ -8,11 +8,9 @@ import com.visionmapping.service.CommunicationMessageService;
 import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -22,62 +20,80 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import com.visionmapping.dto.response.PagedResponse;
 
 @RestController
-@RequestMapping("/api/communication-messages")
+@RequestMapping(value = ApiPaths.V1 + "/communication-messages", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Communication messages", description = "Messages to partners")
 public class CommunicationMessageController {
 
     private final CommunicationMessageService service;
 
+    @Operation(summary = "List messages, one page at a time")
     @GetMapping
-    public Page<CommunicationMessageResponse> list(
+    public ResponseEntity<PagedResponse<CommunicationMessageResponse>> list(
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestParam(defaultValue = "false") boolean includeArchived,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long partnerId,
             @RequestParam(required = false) CommunicationStatus status) {
-        return service.listCommunicationMessages(pageable, ArchiveFilter.of(includeArchived), search, partnerId, status);
+        return ResponseEntity.ok(service.pageCommunicationMessages(pageable, ArchiveFilter.of(includeArchived), search, partnerId, status));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CommunicationMessageResponse create(@Valid @RequestBody CommunicationMessageRequest request) {
-        return service.createCommunicationMessage(request);
+    @Operation(summary = "Create a message")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CommunicationMessageResponse> create(@Valid @RequestBody CommunicationMessageRequest request) {
+        CommunicationMessageResponse created = service.createCommunicationMessage(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get a message")
     @GetMapping("/{id}")
-    public CommunicationMessageResponse get(@PathVariable Long id) {
-        return service.getCommunicationMessage(id);
+    public ResponseEntity<CommunicationMessageResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getCommunicationMessage(id));
     }
 
-    @PutMapping("/{id}")
-    public CommunicationMessageResponse update(@PathVariable Long id, @Valid @RequestBody CommunicationMessageRequest request) {
-        return service.updateCommunicationMessage(id, request);
+    @Operation(summary = "Update a message")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CommunicationMessageResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody CommunicationMessageRequest request) {
+        return ResponseEntity.ok(service.updateCommunicationMessage(id, request));
     }
 
-    @PatchMapping("/{id}/status")
-    public CommunicationMessageResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<CommunicationStatus> request) {
-        return service.updateCommunicationStatus(id, request.status());
+    @Operation(summary = "Change a message's status")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<CommunicationMessageResponse> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody StatusUpdateRequest<CommunicationStatus> request) {
+        return ResponseEntity.ok(service.updateCommunicationStatus(id, request.status()));
     }
 
+    @Operation(summary = "Archive a message")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveCommunicationMessage(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Restore an archived message")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreCommunicationMessage(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete a message permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteCommunicationMessage(id);
+        return ResponseEntity.noContent().build();
     }
 }

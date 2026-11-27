@@ -1,8 +1,8 @@
-import { apiClient } from './apiClient';
+import { apiClient, fetchAllPages } from './apiClient';
 import type { GratitudeEntry, GratitudeEntryRequest } from '../types/vision';
 
 export function listGratitudeEntries(token: string, includeArchived = false) {
-  return apiClient<GratitudeEntry[]>(`/gratitude-entries?includeArchived=${includeArchived}`, { token });
+  return fetchAllPages<GratitudeEntry>(`/gratitude-entries?includeArchived=${includeArchived}`, token);
 }
 
 export function createGratitudeEntry(token: string, request: GratitudeEntryRequest) {

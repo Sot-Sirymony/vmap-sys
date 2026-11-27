@@ -54,11 +54,11 @@ class GratitudeEntryFlowTests {
 
         mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + owner))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.content.length()").value(1));
 
         mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + stranger))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
     }
 
     @Test
@@ -72,11 +72,11 @@ class GratitudeEntryFlowTests {
 
         mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
 
         mockMvc.perform(get("/api/gratitude-entries?includeArchived=true").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1));
+                .andExpect(jsonPath("$.content.length()").value(1));
     }
 
     @Test
@@ -103,9 +103,9 @@ class GratitudeEntryFlowTests {
 
         mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].category").value("OTHER"))
-                .andExpect(jsonPath("$[0].description").value("A genuinely good week"));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].category").value("OTHER"))
+                .andExpect(jsonPath("$.content[0].description").value("A genuinely good week"));
     }
 
     @Test
@@ -120,7 +120,7 @@ class GratitudeEntryFlowTests {
 
         mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
     }
 
     @Test
@@ -133,7 +133,7 @@ class GratitudeEntryFlowTests {
         mockMvc.perform(get("/api/dreams/" + dreamId + "/has-linked-partner")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string("false"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json("{\"linked\":false}", org.springframework.test.json.JsonCompareMode.STRICT));
 
         mockMvc.perform(post("/api/partners")
                         .header("Authorization", "Bearer " + token)
@@ -147,7 +147,7 @@ class GratitudeEntryFlowTests {
         mockMvc.perform(get("/api/dreams/" + dreamId + "/has-linked-partner")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string("true"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json("{\"linked\":true}", org.springframework.test.json.JsonCompareMode.STRICT));
     }
 
     @Test
@@ -164,7 +164,7 @@ class GratitudeEntryFlowTests {
         mockMvc.perform(get("/api/goals/" + goalId + "/has-linked-partner")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string("false"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json("{\"linked\":false}", org.springframework.test.json.JsonCompareMode.STRICT));
 
         mockMvc.perform(post("/api/partners")
                         .header("Authorization", "Bearer " + token)
@@ -178,7 +178,7 @@ class GratitudeEntryFlowTests {
         mockMvc.perform(get("/api/goals/" + goalId + "/has-linked-partner")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string("true"));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().json("{\"linked\":true}", org.springframework.test.json.JsonCompareMode.STRICT));
     }
 
     private Map<String, Object> dreamBody(long areaId) {

@@ -3,12 +3,12 @@ import type { Page } from '../types/vision';
 
 /** An empty page of results, for API functions that answer a page at a time. */
 export function emptyPage<T>(size = 20): Page<T> {
-  return { content: [], totalElements: 0, totalPages: 0, number: 0, size, first: true, last: true };
+  return { content: [], totalElements: 0, totalPages: 0, page: 0, size, first: true, last: true, sort: [] };
 }
 
 /** A single page holding the given items. */
 export function pageOf<T>(items: T[], size = 20): Page<T> {
-  return { content: items, totalElements: items.length, totalPages: 1, number: 0, size, first: true, last: true };
+  return { content: items, totalElements: items.length, totalPages: 1, page: 0, size, first: true, last: true, sort: [] };
 }
 
 /**

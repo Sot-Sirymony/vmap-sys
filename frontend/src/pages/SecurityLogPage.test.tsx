@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { pageOf } from '../test/apiMocks';
 import { getSecurityLog } from '../api/securityLogApi';
 import { SecurityLogPage } from './SecurityLogPage';
 
@@ -16,7 +17,7 @@ describe('SecurityLogPage (V10, SEC-09-05)', () => {
   beforeEach(() => {
     vi.mocked(getSecurityLog).mockReset();
     vi.mocked(getSecurityLog).mockResolvedValue({
-      events: [event], page: 0, size: 50, totalEvents: 1, hasMore: false,
+      events: pageOf([event], 50),
       recentAlerts: ['2026-11-06T09:01:00Z Many failed sign-ins for one account'],
     });
   });

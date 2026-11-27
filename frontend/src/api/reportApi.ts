@@ -1,4 +1,4 @@
-import { apiClient, authorizedFetch, reportSessionEnded } from './apiClient';
+import { apiClient, authorizedFetch, problemMessage, reportSessionEnded } from './apiClient';
 import type { ManagementReport, Priority, ReportHealth, ReportPeriodKind, ReportRow, ReportSection } from '../types/vision';
 
 /**
@@ -95,8 +95,8 @@ export async function fetchReportFile(path: string, token: string, format: Repor
     reportSessionEnded(response, token);
     let message = `Download failed with status ${response.status}`;
     try {
-      const body = (await response.json()) as { message?: string };
-      message = body.message ?? message;
+      const body = (await response.json()) as { detail?: string; message?: string };
+      message = problemMessage(body) ?? message;
     } catch {
       // Not JSON: keep the status message.
     }

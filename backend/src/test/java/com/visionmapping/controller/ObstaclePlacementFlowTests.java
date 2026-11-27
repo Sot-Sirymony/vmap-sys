@@ -100,7 +100,7 @@ class ObstaclePlacementFlowTests {
         long id = legacyDreamOnlyObstacle(token, plan);
 
         JsonNode unplaced = read(mockMvc.perform(get("/api/obstacles?placement=UNPLACED")
-                .header("Authorization", "Bearer " + token)).andExpect(status().isOk()));
+                .header("Authorization", "Bearer " + token)).andExpect(status().isOk())).get("content");
         assertThat(unplaced).hasSize(1);
         assertThat(unplaced.get(0).get("id").asLong()).isEqualTo(id);
         assertThat(unplaced.get(0).get("placement").asText()).isEqualTo("NONE");
@@ -115,7 +115,7 @@ class ObstaclePlacementFlowTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.relatedGoalId").value(plan.goalId()));
         JsonNode after = read(mockMvc.perform(get("/api/obstacles?placement=UNPLACED")
-                .header("Authorization", "Bearer " + token)).andExpect(status().isOk()));
+                .header("Authorization", "Bearer " + token)).andExpect(status().isOk())).get("content");
         assertThat(after).isEmpty();
     }
 
@@ -128,7 +128,7 @@ class ObstaclePlacementFlowTests {
         send(post("/api/obstacles"), stranger, obstacle(Map.of("relatedStepId", stepId)))
                 .andExpect(status().isNotFound());
         assertThat(read(mockMvc.perform(get("/api/obstacles?placement=UNPLACED")
-                .header("Authorization", "Bearer " + stranger)).andExpect(status().isOk()))).isEmpty();
+                .header("Authorization", "Bearer " + stranger)).andExpect(status().isOk())).get("content")).isEmpty();
     }
 
     @Test
@@ -165,7 +165,7 @@ class ObstaclePlacementFlowTests {
         assertThat(summary.get("warnings").get(0).asText()).startsWith("Obstacles: imported, needs a step (1)");
 
         JsonNode imported = read(mockMvc.perform(get("/api/obstacles").header("Authorization", "Bearer " + importer))
-                .andExpect(status().isOk()));
+                .andExpect(status().isOk())).get("content");
         List<String> importedPlacements = new ArrayList<>();
         imported.forEach(row -> importedPlacements.add(row.get("placement").asText()));
         assertThat(importedPlacements).containsExactlyInAnyOrder("TASK", "NONE");

@@ -1,4 +1,4 @@
-package com.visionmapping.controller;
+package com.visionmapping.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -10,18 +10,18 @@ import java.nio.charset.StandardCharsets;
  * each one at once. If the browser goes away it stops writing quietly, so the
  * reply still finishes, is saved to the history and counts against the budget.
  */
-final class ServerSentEvents {
+public final class ServerSentEvents {
 
     private final OutputStream output;
     private final ObjectMapper objectMapper;
     private boolean open = true;
 
-    ServerSentEvents(OutputStream output, ObjectMapper objectMapper) {
+    public ServerSentEvents(OutputStream output, ObjectMapper objectMapper) {
         this.output = output;
         this.objectMapper = objectMapper;
     }
 
-    void send(String event, Object data) {
+    public void send(String event, Object data) {
         if (!open) {
             return;
         }

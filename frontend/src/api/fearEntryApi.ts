@@ -1,8 +1,8 @@
-import { apiClient } from './apiClient';
+import { apiClient, fetchAllPages } from './apiClient';
 import type { FearEntry, FearEntryRequest } from '../types/vision';
 
 export function listFearEntries(token: string, includeArchived = false) {
-  return apiClient<FearEntry[]>(`/fear-entries?includeArchived=${includeArchived}`, { token });
+  return fetchAllPages<FearEntry>(`/fear-entries?includeArchived=${includeArchived}`, token);
 }
 
 export function createFearEntry(token: string, request: FearEntryRequest) {

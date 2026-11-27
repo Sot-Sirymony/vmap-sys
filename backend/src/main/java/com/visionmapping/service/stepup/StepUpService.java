@@ -288,6 +288,26 @@ public class StepUpService {
         require(action, challengeId, target);
     }
 
+    /**
+     * V33 (D-33-12): the same check with the code the page sent in the
+     * {@value #HEADER} header, as kept in {@link StepUpContext} for this request,
+     * so the controller no longer passes the header on.
+     */
+    @Transactional
+    public void requireFromRequest(StepUpAction action) {
+        requireForAddress(action, StepUpContext.current().challenge(), null);
+    }
+
+    /**
+     * V33: the same, for a code tied to an address (CONFIRM_REMINDER_EMAIL). That
+     * code is the second one on the request, so it is read from the
+     * {@value #CONFIRM_HEADER} header.
+     */
+    @Transactional
+    public void requireForAddressFromRequest(StepUpAction action, @Nullable String target) {
+        requireForAddress(action, StepUpContext.current().confirm(), target);
+    }
+
     /** SV-NFR-07: codes made more than a week ago are no longer needed. */
     @Scheduled(cron = "${app.step-up.cleanup-cron:0 40 3 * * *}")
     @Transactional

@@ -71,6 +71,11 @@ class SupportingResourceFlowTests {
             return target + (target.contains("?") ? "&" : "?") + query;
         }
 
+        /** V33 (D-33-9): where the list's items are; the journals answer a page, the rest a plain list. */
+        String items() {
+            return path.equals("/api/fear-entries") || path.equals("/api/gratitude-entries") ? "$.content" : "$";
+        }
+
         @Override
         public String toString() {
             return path;
@@ -108,7 +113,7 @@ class SupportingResourceFlowTests {
     @MethodSource("archivables")
     void goesThroughItsWholeLife(Archivable resource) throws Exception {
         long id = id(send(post(resource.at("")), owner, resource.body().apply(stepId)));
-        send(get(resource.at("")), owner).andExpect(status().isOk()).andExpect(jsonPath("$[?(@.id == " + id + ")]").exists());
+        send(get(resource.at("")), owner).andExpect(status().isOk()).andExpect(jsonPath(resource.items() + "[?(@.id == " + id + ")]").exists());
 
         Map<String, Object> changed = new java.util.HashMap<>(resource.body().apply(stepId));
         changed.put(resource.changedField(), resource.changedValue());
@@ -117,13 +122,13 @@ class SupportingResourceFlowTests {
 
         send(delete(resource.path() + "/" + id + "/permanent"), owner).andExpect(status().is4xxClientError());
         send(delete(resource.path() + "/" + id), owner).andExpect(status().is2xxSuccessful());
-        send(get(resource.at("")), owner).andExpect(jsonPath("$[?(@.id == " + id + ")]").doesNotExist());
-        send(get(resource.at("?includeArchived=true")), owner).andExpect(jsonPath("$[?(@.id == " + id + ")]").exists());
+        send(get(resource.at("")), owner).andExpect(jsonPath(resource.items() + "[?(@.id == " + id + ")]").doesNotExist());
+        send(get(resource.at("?includeArchived=true")), owner).andExpect(jsonPath(resource.items() + "[?(@.id == " + id + ")]").exists());
         send(post(resource.path() + "/" + id + "/restore"), owner).andExpect(status().is2xxSuccessful());
-        send(get(resource.at("")), owner).andExpect(jsonPath("$[?(@.id == " + id + ")]").exists());
+        send(get(resource.at("")), owner).andExpect(jsonPath(resource.items() + "[?(@.id == " + id + ")]").exists());
         send(delete(resource.path() + "/" + id), owner).andExpect(status().is2xxSuccessful());
         send(delete(resource.path() + "/" + id + "/permanent"), owner).andExpect(status().is2xxSuccessful());
-        send(get(resource.at("?includeArchived=true")), owner).andExpect(jsonPath("$[?(@.id == " + id + ")]").doesNotExist());
+        send(get(resource.at("?includeArchived=true")), owner).andExpect(jsonPath(resource.items() + "[?(@.id == " + id + ")]").doesNotExist());
     }
 
     @ParameterizedTest(name = "{0}: 400 for invalid input, 401 without a token, 404 for another user")
@@ -140,7 +145,7 @@ class SupportingResourceFlowTests {
         send(delete(resource.path() + "/" + id), stranger).andExpect(status().isNotFound());
         send(post(resource.path() + "/" + id + "/restore"), stranger).andExpect(status().isNotFound());
         send(delete(resource.path() + "/" + id + "/permanent"), stranger).andExpect(status().isNotFound());
-        send(get(resource.at("")), stranger).andExpect(jsonPath("$[?(@.id == " + id + ")]").doesNotExist());
+        send(get(resource.at("")), stranger).andExpect(jsonPath(resource.items() + "[?(@.id == " + id + ")]").doesNotExist());
     }
 
     @Test
@@ -158,7 +163,7 @@ class SupportingResourceFlowTests {
         long logId = id(send(post("/api/progress-logs"), owner, Map.of("relatedTaskId", taskId,
                 "progressPercentBefore", 0, "progressPercentAfter", 40, "note", "Half the searches done")));
         send(get("/api/progress-logs/" + logId), owner).andExpect(status().isOk()).andExpect(jsonPath("$.note").value("Half the searches done"));
-        send(get("/api/progress-logs"), owner).andExpect(jsonPath("$[?(@.id == " + logId + ")]").exists());
+        send(get("/api/progress-logs"), owner).andExpect(jsonPath("$.content[?(@.id == " + logId + ")]").exists());
 
         send(post("/api/progress-logs"), owner, Map.of("relatedTaskId", taskId, "progressPercentBefore", 0, "progressPercentAfter", 140))
                 .andExpect(status().isBadRequest());
@@ -169,7 +174,7 @@ class SupportingResourceFlowTests {
 
         // Deleting a log archives it (BR-12): it leaves the list but is not destroyed.
         send(delete("/api/progress-logs/" + logId), owner).andExpect(status().is2xxSuccessful());
-        send(get("/api/progress-logs"), owner).andExpect(jsonPath("$[?(@.id == " + logId + ")]").doesNotExist());
+        send(get("/api/progress-logs"), owner).andExpect(jsonPath("$.content[?(@.id == " + logId + ")]").doesNotExist());
     }
 
     @Test

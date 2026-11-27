@@ -4,86 +4,86 @@ import com.visionmapping.dto.request.TotpConfirmRequest;
 import com.visionmapping.dto.response.RecoveryCodesResponse;
 import com.visionmapping.dto.response.TotpSetupResponse;
 import com.visionmapping.dto.response.TwoFactorStatusResponse;
-import com.visionmapping.service.stepup.StepUpService;
+import com.visionmapping.service.twofactor.TwoFactorRequirementService;
 import com.visionmapping.service.twofactor.TwoFactorService;
+import com.visionmapping.web.RequiresStepUp;
 import jakarta.validation.Valid;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.CacheControl;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.Nullable;
-import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.CacheControl;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * V21 (BRD 21.0.0, TF-FR-01 to TF-FR-09, TF-FR-23): the signed-in person's
- * two-factor settings and trusted devices. Changes need a fresh "Verify it's
- * you" code in the {@code X-Step-Up} header (TF-FR-06). Answers that carry a
- * secret or recovery codes are never cached.
+ * two-factor settings. Changes need a fresh "Verify it's you" code in the
+ * {@code X-Step-Up} header (TF-FR-06). Answers that carry a secret or recovery
+ * codes are never cached. Trusted devices are in {@link TrustedDeviceController}.
  */
 @RestController
+@RequestMapping(value = ApiPaths.V1 + "/account/two-factor", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Two-step sign-in settings", description = "My two-step sign-in: authenticator app, email codes, recovery codes")
 public class TwoFactorAccountController {
 
     private final TwoFactorService twoFactorService;
-    private final com.visionmapping.service.twofactor.TwoFactorRequirementService twoFactorRequirement;
+    private final TwoFactorRequirementService twoFactorRequirement;
 
-    @GetMapping("/api/account/two-factor")
-    public TwoFactorStatusResponse status() {
-        return twoFactorService.status();
+    @Operation(summary = "Get my two-step sign-in settings")
+    @GetMapping
+    public ResponseEntity<TwoFactorStatusResponse> status() {
+        return ResponseEntity.ok(twoFactorService.status());
     }
 
-    @PostMapping("/api/account/two-factor/totp")
-    public ResponseEntity<TotpSetupResponse> startAuthenticator(
-            @RequestHeader(value = StepUpService.HEADER, required = false) @Nullable String stepUp) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.startAuthenticator(stepUp));
+    @Operation(summary = "Start setting up an authenticator app")
+    @PostMapping("/totp")
+    @RequiresStepUp
+    public ResponseEntity<TotpSetupResponse> startAuthenticator() {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.startAuthenticator());
     }
 
-    @PostMapping("/api/account/two-factor/totp/confirm")
+    @Operation(summary = "Confirm the authenticator app with its first code")
+    @PostMapping(value = "/totp/confirm", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<RecoveryCodesResponse> confirmAuthenticator(@Valid @RequestBody TotpConfirmRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.confirmAuthenticator(request.code()));
     }
 
-    @PostMapping("/api/account/two-factor/email")
-    public ResponseEntity<RecoveryCodesResponse> useEmail(
-            @RequestHeader(value = StepUpService.HEADER, required = false) @Nullable String stepUp) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.useEmail(stepUp));
+    @Operation(summary = "Use email codes for two-step sign-in")
+    @PostMapping("/email")
+    @RequiresStepUp
+    public ResponseEntity<RecoveryCodesResponse> useEmail() {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.useEmail());
     }
 
-    @PostMapping("/api/account/two-factor/recovery-codes")
-    public ResponseEntity<RecoveryCodesResponse> newRecoveryCodes(
-            @RequestHeader(value = StepUpService.HEADER, required = false) @Nullable String stepUp) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.newRecoveryCodes(stepUp));
+    @Operation(summary = "Make new recovery codes")
+    @PostMapping("/recovery-codes")
+    @RequiresStepUp
+    public ResponseEntity<RecoveryCodesResponse> newRecoveryCodes() {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(twoFactorService.newRecoveryCodes());
     }
 
-    @PostMapping("/api/account/two-factor/disable")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void turnOff(@RequestHeader(value = StepUpService.HEADER, required = false) @Nullable String stepUp) {
-        twoFactorService.turnOff(stepUp);
+    @Operation(summary = "Turn off two-step sign-in")
+    @PostMapping("/disable")
+    @RequiresStepUp
+    public ResponseEntity<Void> turnOff() {
+        twoFactorService.turnOff();
+        return ResponseEntity.noContent().build();
     }
 
-    /** TF-FR-33: an admin or coach chose "Skip for now" (logged). */
-    @PostMapping("/api/account/two-factor/skip")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void skipSetup() {
+    /** TF-FR-34: an admin or coach may put off setting it up until the set-up-by date. */
+    @Operation(summary = "Set up two-step sign-in later")
+    @PostMapping("/skip")
+    public ResponseEntity<Void> skipSetup() {
         twoFactorRequirement.skip();
-    }
-
-    @DeleteMapping("/api/account/trusted-devices/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeDevice(@PathVariable Long id) {
-        twoFactorService.removeDevice(id);
-    }
-
-    @DeleteMapping("/api/account/trusted-devices")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeAllDevices() {
-        twoFactorService.removeAllDevices();
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,6 +1,7 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.findPageForUser;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.config.CacheConfig;
@@ -21,6 +22,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
 
 /**
  * FR-59.1: a lightweight, optional log of what's already going well — the
@@ -47,6 +52,16 @@ public class GratitudeEntryService {
         return findAllForUser(gratitudeEntryRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    /** V33 (D-33-10): the properties the gratitude journal can be sorted by. */
+    static final Set<String> GRATITUDE_SORTS = Set.of("category", "createdAt", "updatedAt");
+
+    /** V33 (D-33-9): one page of the gratitude journal. */
+    @Transactional(readOnly = true)
+    public PagedResponse<GratitudeEntryResponse> pageGratitudeEntries(ArchiveFilter archiveFilter, Pageable pageable) {
+        return PagedResponse.from(findPageForUser(gratitudeEntryRepository, lookup.userId(), archiveFilter,
+                Pageables.whitelist(pageable, GRATITUDE_SORTS)), mapper::toResponse);
     }
 
     public GratitudeEntryResponse createGratitudeEntry(GratitudeEntryRequest request) {

@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { pageOf } from '../test/apiMocks';
 import * as adminUsersApi from '../api/adminUsersApi';
 import * as rolesApi from '../api/rolesApi';
 import { renderPage } from '../test/render';
@@ -47,7 +48,7 @@ describe('UsersPage (V23 UM-FR-17 to UM-FR-22, UM-FR-35, UM-FR-39)', () => {
     vi.clearAllMocks();
     vi.mocked(rolesApi.listRoles).mockResolvedValue(roles);
     vi.mocked(adminUsersApi.listAdminUsers).mockResolvedValue({
-      items: [dara, blocked, chief], page: 0, size: 25, totalElements: 3, hasNext: false,
+      users: pageOf([dara, blocked, chief], 25),
       totalAccounts: 3, activeAccounts: 2, blockedAccounts: 1, countsByRole: { USER: 2, ADMIN: 1 },
     });
   });
@@ -127,7 +128,7 @@ describe('UsersPage (V23 UM-FR-17 to UM-FR-22, UM-FR-35, UM-FR-39)', () => {
   it('hides role, block and delete on your own account', async () => {
     const me = account({ id: 1, fullName: 'Me', email: 'me@example.com', role: 'ADMIN', roleName: 'Admin' });
     vi.mocked(adminUsersApi.listAdminUsers).mockResolvedValue({
-      items: [me], page: 0, size: 25, totalElements: 1, hasNext: false, totalAccounts: 1, activeAccounts: 1, blockedAccounts: 0,
+      users: pageOf([me], 25), totalAccounts: 1, activeAccounts: 1, blockedAccounts: 0,
       countsByRole: { ADMIN: 1 },
     });
     vi.mocked(adminUsersApi.getAdminUser).mockResolvedValue(detail(me));
@@ -158,7 +159,7 @@ describe('UsersPage (V23 UM-FR-17 to UM-FR-22, UM-FR-35, UM-FR-39)', () => {
     vi.mocked(adminUsersApi.getAdminUser).mockResolvedValue(detail(coach, { coachedCohorts: [{ id: 5, name: 'Spring 2027' }] }));
     vi.mocked(adminUsersApi.changeAdminUserRole).mockResolvedValue(detail(account({ ...coach, role: 'USER', roleName: 'Participant' })));
     vi.mocked(adminUsersApi.listAdminUsers).mockResolvedValue({
-      items: [coach], page: 0, size: 25, totalElements: 1, hasNext: false, totalAccounts: 1, activeAccounts: 1, blockedAccounts: 0,
+      users: pageOf([coach], 25), totalAccounts: 1, activeAccounts: 1, blockedAccounts: 0,
       countsByRole: { COACH: 1 },
     });
     renderPage(<UsersPage />, admin);

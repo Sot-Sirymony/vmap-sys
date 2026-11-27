@@ -10,6 +10,7 @@ import com.visionmapping.repository.AppUserRepository;
 import com.visionmapping.repository.CohortRepository;
 import com.visionmapping.repository.ReportCoachShareRepository;
 import com.visionmapping.service.support.EntityLookup;
+import com.visionmapping.service.support.RequestRateLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CohortService {
 
     private final EntityLookup lookup;
+    private final RequestRateLimiter rateLimiter;
     private final CohortRepository cohortRepository;
     private final AppUserRepository appUserRepository;
     private final ReportCoachShareRepository reportCoachShares;
@@ -28,6 +30,16 @@ public class CohortService {
     @Transactional(readOnly = true)
     public MyCohortResponse mine() {
         return toResponse(lookup.currentUser());
+    }
+
+    /**
+     * V10 (SEC-06-02, SEC-06-03): join codes cannot be guessed by repetition,
+     * whether from one account or one network address. V33 moved this check here.
+     */
+    public MyCohortResponse joinFrom(JoinCohortRequest request, String clientIp) {
+        rateLimiter.check(RequestRateLimiter.Action.JOIN_CODE, "user:" + lookup.userId());
+        rateLimiter.check(RequestRateLimiter.Action.JOIN_CODE, "ip:" + clientIp);
+        return join(request);
     }
 
     public MyCohortResponse join(JoinCohortRequest request) {

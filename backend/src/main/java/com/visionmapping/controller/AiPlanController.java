@@ -58,17 +58,22 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
 
 /**
  * V9 Phase 5: the AI vision area, dream, goal and plan builders. They only
  * suggest; adding goes through the normal create endpoints.
  */
-@Validated
 @RestController
-@RequestMapping("/api/ai/plan")
+@RequestMapping(value = ApiPaths.V1 + "/ai/plan", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "AI plan building", description = "AI suggestions and checks while building a dream plan")
 public class AiPlanController {
 
     private final AiPlanService service;
@@ -80,199 +85,225 @@ public class AiPlanController {
     private final BlockerAnalysisService blockers;
     private final DreamCoachIntakeService intake;
 
+    @Operation(summary = "Suggest vision areas")
     @PostMapping("/vision-area-suggestions")
-    public VisionAreaSuggestions visionAreas(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestVisionAreas(language);
+    public ResponseEntity<VisionAreaSuggestions> visionAreas(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return ResponseEntity.ok(service.suggestVisionAreas(language));
     }
 
+    @Operation(summary = "Suggest dreams for a vision area")
     @PostMapping("/vision-areas/{visionAreaId}/dream-suggestions")
-    public DreamSuggestions dreams(@PathVariable Long visionAreaId,
+    public ResponseEntity<DreamSuggestions> dreams(@PathVariable @Positive Long visionAreaId,
                                    @RequestParam(defaultValue = "false") boolean stretch,
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestDreams(visionAreaId, SuggestionScope.of(stretch), language);
+        return ResponseEntity.ok(service.suggestDreams(visionAreaId, SuggestionScope.of(stretch), language));
     }
 
-    @PostMapping("/dreams/{dreamId}/goal-suggestions")
-    public GoalSuggestions goals(@PathVariable Long dreamId,
+    @Operation(summary = "Suggest goals for a dream")
+    @PostMapping(value = "/dreams/{dreamId}/goal-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GoalSuggestions> goals(@PathVariable @Positive Long dreamId,
                                  @RequestParam(defaultValue = "false") boolean stretch,
                                  @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
                                  @Valid @RequestBody(required = false) PlanAskRequest ask) {
-        return service.suggestGoals(dreamId, SuggestionScope.of(stretch), language, ask);
+        return ResponseEntity.ok(service.suggestGoals(dreamId, SuggestionScope.of(stretch), language, ask));
     }
 
-    @PostMapping("/goals/{goalId}/step-suggestions")
-    public StepSuggestions steps(@PathVariable Long goalId,
+    @Operation(summary = "Suggest steps for a goal")
+    @PostMapping(value = "/goals/{goalId}/step-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<StepSuggestions> steps(@PathVariable @Positive Long goalId,
                                  @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
                                  @Valid @RequestBody(required = false) PlanAskRequest ask) {
-        return service.suggestSteps(goalId, language, ask);
+        return ResponseEntity.ok(service.suggestSteps(goalId, language, ask));
     }
 
     /** V11 (PB-FR-14): tasks for a complex step already in the plan. */
-    @PostMapping("/steps/{stepId}/task-suggestions")
-    public TaskSuggestions tasks(@PathVariable Long stepId,
+    @Operation(summary = "Suggest tasks for a step")
+    @PostMapping(value = "/steps/{stepId}/task-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TaskSuggestions> tasks(@PathVariable @Positive Long stepId,
                                  @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
                                  @Valid @RequestBody(required = false) PlanAskRequest ask) {
-        return service.suggestTasks(stepId, language, ask);
+        return ResponseEntity.ok(service.suggestTasks(stepId, language, ask));
     }
 
     /** V17 BL-FR-29: smaller tasks for one Blocked or overdue task. Suggestions only. */
+    @Operation(summary = "Suggest smaller tasks for a task")
     @PostMapping("/tasks/{taskId}/smaller-tasks")
-    public TaskSuggestions smallerTasks(@PathVariable Long taskId,
+    public ResponseEntity<TaskSuggestions> smallerTasks(@PathVariable @Positive Long taskId,
                                         @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestSmallerTasks(taskId, language);
+        return ResponseEntity.ok(service.suggestSmallerTasks(taskId, language));
     }
 
     /** V11 (PB-FR-14): tasks for a complex step that exists only in the Build my plan draft. */
-    @PostMapping("/dreams/{dreamId}/draft-task-suggestions")
-    public TaskSuggestions draftStepTasks(@PathVariable Long dreamId, @Valid @RequestBody DraftStepTasksRequest request,
+    @Operation(summary = "Suggest tasks for a draft plan's step")
+    @PostMapping(value = "/dreams/{dreamId}/draft-task-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TaskSuggestions> draftStepTasks(@PathVariable @Positive Long dreamId, @Valid @RequestBody DraftStepTasksRequest request,
                                           @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestDraftStepTasks(dreamId, request, language);
+        return ResponseEntity.ok(service.suggestDraftStepTasks(dreamId, request, language));
     }
 
     /** V11 (PB-FR-23 to PB-FR-26, PB-FR-40): helpers, risks and resources for the plan being built. */
-    @PostMapping("/dreams/{dreamId}/helpers-and-risks")
-    public HelpersAndRisks helpersAndRisks(@PathVariable Long dreamId, @Valid @RequestBody PlanHelpersRequest request,
+    @Operation(summary = "Suggest helpers and risks for a draft plan")
+    @PostMapping(value = "/dreams/{dreamId}/helpers-and-risks", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HelpersAndRisks> helpersAndRisks(@PathVariable @Positive Long dreamId, @Valid @RequestBody PlanHelpersRequest request,
                                            @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return helpers.suggest(dreamId, request, language);
+        return ResponseEntity.ok(helpers.suggest(dreamId, request, language));
     }
 
     /** V11 (PB-FR-28): the plan check on the saved Build my plan draft; rule checks work without AI. */
+    @Operation(summary = "Check a draft plan")
     @PostMapping("/dreams/{dreamId}/draft-check")
-    public DraftCheck draftCheck(@PathVariable Long dreamId,
+    public ResponseEntity<DraftCheck> draftCheck(@PathVariable @Positive Long dreamId,
                                  @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language,
                                  // V31 DC-FR-04: the live pass/fail list re-runs the rules alone, never AI (DC-NFR-03).
                                  @RequestParam(defaultValue = "false") boolean rulesOnly) {
-        return draftCheck.check(dreamId, language, rulesOnly);
+        return ResponseEntity.ok(draftCheck.check(dreamId, language, rulesOnly));
     }
 
     /** V11 (PB-FR-29): a proposed change for one AI issue in the draft; nothing is saved. */
-    @PostMapping("/dreams/{dreamId}/draft-fix")
-    public DraftFix draftFix(@PathVariable Long dreamId, @Valid @RequestBody DraftFixRequest request,
+    @Operation(summary = "Suggest a fix for a draft plan problem")
+    @PostMapping(value = "/dreams/{dreamId}/draft-fix", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DraftFix> draftFix(@PathVariable @Positive Long dreamId, @Valid @RequestBody DraftFixRequest request,
                              @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return draftCheck.fix(dreamId, request, language);
+        return ResponseEntity.ok(draftCheck.fix(dreamId, request, language));
     }
 
     /** V11 (PB-FR-16): hours a week for plan work, and the hours the saved plan already asks of each week. */
+    @Operation(summary = "Get my weekly planning capacity")
     @GetMapping("/capacity")
-    public PlanCapacity capacity() {
-        return draftCheck.capacity();
+    public ResponseEntity<PlanCapacity> capacity() {
+        return ResponseEntity.ok(draftCheck.capacity());
     }
 
-    @PutMapping("/capacity")
-    public PlanCapacity saveCapacity(@Valid @RequestBody PlanCapacityRequest request) {
-        return draftCheck.saveCapacity(request);
+    @Operation(summary = "Save my weekly planning capacity")
+    @PutMapping(value = "/capacity", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PlanCapacity> saveCapacity(@Valid @RequestBody PlanCapacityRequest request) {
+        return ResponseEntity.ok(draftCheck.saveCapacity(request));
     }
 
     /** V11 (PB-FR-08): the next clarifying question about the dream, one at a time, at most three. */
     /** V31 v1 (DC-FR-12): a vision statement worded from the participant's sentence; nothing is saved. */
-    @PostMapping("/vision-statement")
-    public VisionStatementDraft visionStatement(@Valid @RequestBody VisionStatementRequest request,
+    @Operation(summary = "Draft a vision statement")
+    @PostMapping(value = "/vision-statement", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<VisionStatementDraft> visionStatement(@Valid @RequestBody VisionStatementRequest request,
                                                 @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return intake.visionStatement(request, language);
+        return ResponseEntity.ok(intake.visionStatement(request, language));
     }
 
     /** V31 v1 (DC-FR-15, DC-FR-16): the next question about a dream not saved yet, or its restatement. */
-    @PostMapping("/dream-intake")
-    public DreamIntake dreamIntake(@Valid @RequestBody DreamIntakeRequest request,
+    @Operation(summary = "Turn a first idea into a dream draft")
+    @PostMapping(value = "/dream-intake", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DreamIntake> dreamIntake(@Valid @RequestBody DreamIntakeRequest request,
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return intake.dreamIntake(request, language);
+        return ResponseEntity.ok(intake.dreamIntake(request, language));
     }
 
-    @PostMapping("/dreams/{dreamId}/clarify")
-    public ClarifyQuestion clarify(@PathVariable Long dreamId, @Valid @RequestBody PlanClarifyRequest request,
+    @Operation(summary = "Ask a clarifying question about a dream")
+    @PostMapping(value = "/dreams/{dreamId}/clarify", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ClarifyQuestion> clarify(@PathVariable @Positive Long dreamId, @Valid @RequestBody PlanClarifyRequest request,
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.clarifyDream(dreamId, request, language);
+        return ResponseEntity.ok(service.clarifyDream(dreamId, request, language));
     }
 
     /** V11 (PB-FR-10): save one clarifying answer into the dream, when the participant chooses to. */
-    @PutMapping("/dreams/{dreamId}/clarified-field")
-    public DreamResponse saveClarifiedField(@PathVariable Long dreamId, @Valid @RequestBody PlanClarifiedFieldRequest request) {
-        return dreamService.saveClarifiedField(dreamId, request.field(), request.value());
+    @Operation(summary = "Save a dream field the AI helped clarify")
+    @PutMapping(value = "/dreams/{dreamId}/clarified-field", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DreamResponse> saveClarifiedField(@PathVariable @Positive Long dreamId, @Valid @RequestBody PlanClarifiedFieldRequest request) {
+        return ResponseEntity.ok(dreamService.saveClarifiedField(dreamId, request.field(), request.value()));
     }
 
+    @Operation(summary = "Check a dream plan")
     @PostMapping("/dreams/{dreamId}/check")
-    public PlanCheck check(@PathVariable Long dreamId,
+    public ResponseEntity<PlanCheck> check(@PathVariable @Positive Long dreamId,
                            @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.checkPlan(dreamId, language);
+        return ResponseEntity.ok(service.checkPlan(dreamId, language));
     }
 
     /** Vision Map: what is holding the dream back, ranked; the rule half works without AI. Nothing is saved. */
+    @Operation(summary = "Analyse what blocks a dream plan")
     @PostMapping("/dreams/{dreamId}/blocker-analysis")
-    public BlockerAnalysis blockerAnalysis(@PathVariable Long dreamId,
+    public ResponseEntity<BlockerAnalysis> blockerAnalysis(@PathVariable @Positive Long dreamId,
                                            @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return blockers.analyse(dreamId, language);
+        return ResponseEntity.ok(blockers.analyse(dreamId, language));
     }
 
+    @Operation(summary = "List steps that are slipping")
     @GetMapping("/slipping-steps")
-    public List<SlippingStep> slippingSteps() {
-        return service.slippingSteps();
+    public ResponseEntity<List<SlippingStep>> slippingSteps() {
+        return ResponseEntity.ok(service.slippingSteps());
     }
 
+    @Operation(summary = "Suggest how to rescue a slipping step")
     @PostMapping("/steps/{stepId}/rescue")
-    public StepRescue rescue(@PathVariable Long stepId,
+    public ResponseEntity<StepRescue> rescue(@PathVariable @Positive Long stepId,
                              @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.rescueStep(stepId, language);
+        return ResponseEntity.ok(service.rescueStep(stepId, language));
     }
 
     /** V11 Phase 2: steps for a goal that exists only in the Build my plan draft. */
-    @PostMapping("/dreams/{dreamId}/draft-step-suggestions")
-    public StepSuggestions draftGoalSteps(@PathVariable Long dreamId, @Valid @RequestBody DraftGoalStepsRequest request,
+    @Operation(summary = "Suggest steps for a draft plan's goal")
+    @PostMapping(value = "/dreams/{dreamId}/draft-step-suggestions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<StepSuggestions> draftGoalSteps(@PathVariable @Positive Long dreamId, @Valid @RequestBody DraftGoalStepsRequest request,
                                           @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.suggestDraftGoalSteps(dreamId, request, language);
+        return ResponseEntity.ok(service.suggestDraftGoalSteps(dreamId, request, language));
     }
 
     /** V11 (PB-FR-30): the participant's unfinished Build my plan draft; 204 when there is none. */
+    @Operation(summary = "Get a dream's saved plan draft (204 when there is none)")
     @GetMapping("/drafts/{dreamId}")
-    public ResponseEntity<PlanDraftResponse> draft(@PathVariable Long dreamId) {
+    public ResponseEntity<PlanDraftResponse> draft(@PathVariable @Positive Long dreamId) {
         return drafts.get(dreamId).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    @PutMapping("/drafts/{dreamId}")
-    public PlanDraftResponse saveDraft(@PathVariable Long dreamId, @Valid @RequestBody PlanDraftRequest request) {
-        return drafts.save(dreamId, request);
+    @Operation(summary = "Save a dream's plan draft")
+    @PutMapping(value = "/drafts/{dreamId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PlanDraftResponse> saveDraft(@PathVariable @Positive Long dreamId, @Valid @RequestBody PlanDraftRequest request) {
+        return ResponseEntity.ok(drafts.save(dreamId, request));
     }
 
+    @Operation(summary = "Discard a dream's plan draft")
     @DeleteMapping("/drafts/{dreamId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void discardDraft(@PathVariable Long dreamId) {
+    public ResponseEntity<Void> discardDraft(@PathVariable @Positive Long dreamId) {
         drafts.discard(dreamId);
+        return ResponseEntity.noContent().build();
     }
 
     /** V11 (PB-FR-31): every new item in the draft, saved all together or not at all; the draft is then removed. */
-    @PostMapping("/drafts/{dreamId}/add")
-    @ResponseStatus(HttpStatus.CREATED)
-    public PlanAddResult addDraft(@PathVariable Long dreamId,
+    @Operation(summary = "Add every new item in a plan draft to the plan")
+    @PostMapping(value = "/drafts/{dreamId}/add", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PlanAddResult> addDraft(@PathVariable @Positive Long dreamId,
                                   @Valid @RequestBody(required = false) com.visionmapping.dto.request.PlanSaveRequest request) {
         // V31 DC-FR-56: the server re-runs the rules and refuses any MUST fail.
-        return drafts.add(dreamId, request == null || request.acceptedShould() == null ? java.util.Set.of()
-                : java.util.Set.copyOf(request.acceptedShould()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(drafts.add(dreamId, com.visionmapping.dto.request.PlanSaveRequest.acceptedShouldOf(request)));
     }
 
     /** V11 (PB-FR-34): thumbs up or down on one plan builder answer. */
-    @PutMapping("/requests/{id}/rating")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void rate(@PathVariable Long id, @Valid @RequestBody AiRatingRequest request) {
+    @Operation(summary = "Rate an AI plan request")
+    @PutMapping(value = "/requests/{id}/rating", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> rate(@PathVariable @Positive Long id, @Valid @RequestBody AiRatingRequest request) {
         feedback.rate(id, request);
+        return ResponseEntity.noContent().build();
     }
 
     /** V11 (PB-FR-35): how many suggestions were kept, for those saved through the normal create endpoints. */
-    @PostMapping("/requests/{id}/outcome")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void outcome(@PathVariable Long id, @Valid @RequestBody AiPlanOutcomeRequest request) {
+    @Operation(summary = "Record what was done with AI suggestions")
+    @PostMapping(value = "/requests/{id}/outcome", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> outcome(@PathVariable @Positive Long id, @Valid @RequestBody AiPlanOutcomeRequest request) {
         feedback.recordOutcome(id, request);
+        return ResponseEntity.noContent().build();
     }
 
     /** V11 (PB-FR-31): kept goals and steps, saved all together or not at all. */
-    @PostMapping("/add")
-    @ResponseStatus(HttpStatus.CREATED)
-    public PlanAddResult add(@Valid @RequestBody AiPlanAddRequest request) {
-        return feedback.add(request);
+    @Operation(summary = "Add AI suggestions to the plan")
+    @PostMapping(value = "/add", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PlanAddResult> add(@Valid @RequestBody AiPlanAddRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(feedback.add(request));
     }
 
     /** V11 (PB-FR-32): archives what one Add saved. */
-    @PostMapping("/undo")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void undo(@Valid @RequestBody AiPlanUndoRequest request) {
+    @Operation(summary = "Undo AI suggestions added to the plan")
+    @PostMapping(value = "/undo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> undo(@Valid @RequestBody AiPlanUndoRequest request) {
         feedback.undo(request);
+        return ResponseEntity.noContent().build();
     }
 }

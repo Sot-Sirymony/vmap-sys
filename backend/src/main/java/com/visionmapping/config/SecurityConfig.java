@@ -21,7 +21,9 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import com.visionmapping.web.ApiPaths;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -42,6 +44,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+// V33 (D-33-15): @PreAuthorize next to admin, coach and permission-guarded endpoints.
+@EnableMethodSecurity
 public class SecurityConfig {
 
     static final String API_CONTENT_SECURITY_POLICY =
@@ -56,6 +60,41 @@ public class SecurityConfig {
                     + "frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
     /** The OpenAPI description and Swagger UI; they answer 404 when springdoc is off. */
     static final String[] DOCS_PATHS = {"/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**"};
+    /**
+     * The endpoints anyone may call, as paths under the API prefix. They are open
+     * under both {@code /api} and {@code /api/v1} while the old prefix still
+     * works (V33 D-33-2); {@code OpenApiConfig} marks them as needing no token.
+     */
+    static final String[] PUBLIC_API_PATHS = {
+            "/auth/register",
+            "/auth/login",
+            // V10 (SEC-07-04): called when the access token has
+            // run out; the refresh token in the body is the key.
+            "/auth/refresh",
+            "/auth/logout",
+            // Recovery is for users who cannot sign in, so it
+            // cannot sit behind authentication. Both are
+            // rate-limited only by the token being unguessable
+            // and single-use.
+            "/auth/forgot-password",
+            "/auth/reset-password",
+            // V23 (UM-FR-24): the invitation link is the only credential the person has yet.
+            "/auth/invitation/check",
+            "/auth/invitation/accept",
+            // V24 (SA-FR-03): which sign-in methods the sign-in pages offer. Read-only.
+            "/auth/sign-in-methods",
+            // V14 (BRD 14.0.0, Appendix B): Google sign-in. The
+            // person is not signed in yet; state, PKCE and the
+            // one-time codes are the keys.
+            "/auth/oauth/google/**",
+            // V21 (BRD 21.0.0): the second step of signing in;
+            // the challenge token is the key.
+            "/auth/two-factor/verify",
+            "/auth/two-factor/resend",
+            // FR-20: interface text changes, needed before
+            // sign-in to draw the sign-in page. Read-only.
+            "/ui-text"
+    };
     static final String PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()";
     static final long HSTS_MAX_AGE_SECONDS = 31_536_000L;
     static final int MIN_PRODUCTION_BCRYPT_COST = 12;
@@ -129,55 +168,26 @@ public class SecurityConfig {
                         // The error page only renders the status of a request that
                         // already ran; blocking it turned real errors into a 401.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(
-                                "/api/health",
-                                "/api/auth/register",
-                                "/api/auth/login",
-                                // V10 (SEC-07-04): called when the access token has
-                                // run out; the refresh token in the body is the key.
-                                "/api/auth/refresh",
-                                "/api/auth/logout",
-                                // Recovery is for users who cannot sign in, so it
-                                // cannot sit behind authentication. Both are
-                                // rate-limited only by the token being unguessable
-                                // and single-use.
-                                "/api/auth/forgot-password",
-                                "/api/auth/reset-password",
-                                // V23 (UM-FR-24): the invitation link is the only credential the person has yet.
-                                "/api/auth/invitation/check",
-                                "/api/auth/invitation/accept",
-                                // V24 (SA-FR-03): which sign-in methods the sign-in pages offer. Read-only.
-                                "/api/auth/sign-in-methods",
-                                // V14 (BRD 14.0.0, Appendix B): Google sign-in. The
-                                // person is not signed in yet; state, PKCE and the
-                                // one-time codes are the keys.
-                                "/api/auth/oauth/google/**",
-                                // V21 (BRD 21.0.0): the second step of signing in;
-                                // the challenge token is the key.
-                                "/api/auth/two-factor/verify",
-                                "/api/auth/two-factor/resend",
-                                // FR-20: interface text changes, needed before
-                                // sign-in to draw the sign-in page. Read-only.
-                                "/api/ui-text"
-                        ).permitAll()
+                        .requestMatchers(ApiPaths.HEALTH).permitAll()
+                        .requestMatchers(ApiPaths.underBothPrefixes(PUBLIC_API_PATHS)).permitAll()
                         // The API description and Swagger UI, when springdoc is turned
                         // on (local and test profiles, or SWAGGER_ENABLED=true). Every
                         // call made from the UI still needs a token.
                         .requestMatchers(DOCS_PATHS).permitAll()
                         // V9 (v0.1 FR-10): a partner opens a shared plan without an
                         // account. Read-only; the 256-bit token in the path is the key.
-                        .requestMatchers(HttpMethod.GET, "/api/shared-plans/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiPaths.underBothPrefixes("/shared-plans/*")).permitAll()
                         // V19 RM-FR-47: a reviewer opens a shared final report, and its
                         // PDF, without an account. Read-only; the token is the key.
-                        .requestMatchers(HttpMethod.GET, "/api/public/reports/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiPaths.underBothPrefixes("/public/reports/*")).permitAll()
                         // V10 (SEC-01-03): role rules by path, checked before any
                         // controller or request-body validation runs. Services check
                         // again through Roles. The role comes from the database on
                         // every request, so a role change applies at once.
                         // V23 (D-23-1): any administrative permission opens /api/admin/**;
                         // each service then asks for the exact one it needs.
-                        .requestMatchers("/api/admin/**").hasAnyAuthority(ADMIN_AREA_AUTHORITIES)
-                        .requestMatchers("/api/coach/**").hasAuthority(Permission.COACH_COHORTS.authority())
+                        .requestMatchers(ApiPaths.underBothPrefixes("/admin/**")).hasAnyAuthority(ADMIN_AREA_AUTHORITIES)
+                        .requestMatchers(ApiPaths.underBothPrefixes("/coach/**")).hasAuthority(Permission.COACH_COHORTS.authority())
                         .anyRequest().authenticated()
                 )
                 // Without these, Spring's default handling answers an anonymous
@@ -231,7 +241,8 @@ public class SecurityConfig {
         // V20: "Verify it's you" codes travel in their own headers; without them here the
         // browser's preflight is refused (403) and every protected action fails cross-site.
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", StepUpService.HEADER, StepUpService.CONFIRM_HEADER));
-        configuration.setExposedHeaders(List.of("Authorization"));
+        // V33: Location on a 201 (D-33-6), and the old-path notice (D-33-2).
+        configuration.setExposedHeaders(List.of("Authorization", "Location", "Deprecation", "Sunset"));
         configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

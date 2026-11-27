@@ -15,7 +15,6 @@ import com.visionmapping.service.support.ProgressOverride;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import com.visionmapping.dto.request.ArchiveRequest;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,84 +25,106 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
-@RequestMapping("/api/steps")
+@RequestMapping(value = ApiPaths.V1 + "/steps", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Steps", description = "Steps under a goal")
 public class VisionStepController {
 
     private final VisionStepService service;
     private final GapStepService gapStepService;
 
+    @Operation(summary = "List steps")
     @GetMapping
-    public List<VisionStepResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listSteps(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<List<VisionStepResponse>> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
+        return ResponseEntity.ok(service.listSteps(ArchiveFilter.of(includeArchived)));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public VisionStepResponse create(@Valid @RequestBody VisionStepRequest request) {
-        return service.createStep(request);
+    @Operation(summary = "Create a step")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<VisionStepResponse> create(@Valid @RequestBody VisionStepRequest request) {
+        VisionStepResponse created = service.createStep(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get a step")
     @GetMapping("/{id}")
-    public VisionStepResponse get(@PathVariable Long id) {
-        return service.getStep(id);
+    public ResponseEntity<VisionStepResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getStep(id));
     }
 
-    @PutMapping("/{id}")
-    public VisionStepResponse update(@PathVariable Long id, @Valid @RequestBody VisionStepRequest request) {
-        return service.updateStep(id, request);
+    @Operation(summary = "Update a step")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<VisionStepResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody VisionStepRequest request) {
+        return ResponseEntity.ok(service.updateStep(id, request));
     }
 
-    @PatchMapping("/{id}/status")
-    public VisionStepResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
-        return service.updateStepStatus(id, request.status(), ProgressOverride.of(request.manualOverride()));
+    @Operation(summary = "Change a step's status")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<VisionStepResponse> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
+        return ResponseEntity.ok(service.updateStepStatus(id, request.status(), ProgressOverride.of(request.manualOverride())));
     }
 
-    @PatchMapping("/reorder")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reorder(@Valid @RequestBody ReorderRequest request) {
+    @Operation(summary = "Reorder steps")
+    @PatchMapping(value = "/reorder", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> reorder(@Valid @RequestBody ReorderRequest request) {
         service.reorderSteps(request.parentId(), request.orderedIds());
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Archive a step")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id, @RequestParam(defaultValue = "false") boolean removePartner) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id, @RequestParam(defaultValue = "false") boolean removePartner) {
         // V17 BL-FR-21: removePartner also archives the partner a "find help" step created.
         service.archiveStep(id, removePartner);
+        return ResponseEntity.noContent().build();
     }
 
     /** V29 AR-FR-04: archive with an optional reason (BR-29-1); the DELETE above keeps working without one. */
-    @PostMapping("/{id}/archive")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void archive(@PathVariable Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
-        service.archiveStep(id, request != null && Boolean.TRUE.equals(request.removePartner()), request == null ? null : request.reason());
-    }
-    @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
-        service.restoreStep(id);
+    @Operation(summary = "Archive a step, with an optional reason")
+    @PostMapping(value = "/{id}/archive", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> archive(@PathVariable @Positive Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
+        service.archiveStep(id, ArchiveRequest.removesPartner(request), ArchiveRequest.reasonOf(request));
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Restore an archived step")
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
+        service.restoreStep(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Delete a step permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteStep(id);
+        return ResponseEntity.noContent().build();
     }
 
     /** V17 BL-FR-19: turns this step's gap into a "find help" step placed just before it. */
-    @PostMapping("/{id}/gap-step")
-    @ResponseStatus(HttpStatus.CREATED)
-    public GapStepResponse gapStep(@PathVariable Long id, @Valid @RequestBody GapStepRequest request) {
-        return gapStepService.createFromStep(id, request);
+    @Operation(summary = "Make a step that closes a gap (find help, learn, or decide)")
+    @PostMapping(value = "/{id}/gap-step", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GapStepResponse> gapStep(@PathVariable @Positive Long id, @Valid @RequestBody GapStepRequest request) {
+        GapStepResponse created = gapStepService.createFromStep(id, request);
+        return ApiResponses.createdAt("/steps", created.step().id(), created);
     }
 
+    @Operation(summary = "Count what archiving a step would also archive")
     @GetMapping("/{id}/archive-impact")
-    public ArchiveImpactResponse archiveImpact(@PathVariable Long id) {
-        return service.stepArchiveImpact(id);
+    public ResponseEntity<ArchiveImpactResponse> archiveImpact(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.stepArchiveImpact(id));
     }
 
 }

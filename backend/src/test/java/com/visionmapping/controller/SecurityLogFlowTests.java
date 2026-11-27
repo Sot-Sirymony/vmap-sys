@@ -120,7 +120,8 @@ class SecurityLogFlowTests {
 
         mockMvc.perform(get("/api/admin/cohorts").header("Authorization", "Bearer " + token)).andExpect(status().isForbidden());
 
-        assertThat(latest("ACCESS_DENIED", userId(email, token)).get("detail")).isEqualTo("GET /api/admin/cohorts");
+        // V33 (BR-33-7): the old path is forwarded first, so the log names the version 1 path.
+        assertThat(latest("ACCESS_DENIED", userId(email, token)).get("detail")).isEqualTo("GET /api/v1/admin/cohorts");
     }
 
     @Test
@@ -229,10 +230,10 @@ class SecurityLogFlowTests {
         mockMvc.perform(get("/api/admin/security-events").param("type", "LOGIN_FAILED").param("actorId", String.valueOf(userId))
                         .header("Authorization", "Bearer " + admin))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.events[0].eventType").value("LOGIN_FAILED"))
-                .andExpect(jsonPath("$.events[0].actorId").value(userId))
-                .andExpect(jsonPath("$.events[0].subjectHash").doesNotExist())
-                .andExpect(jsonPath("$.totalEvents").value(1));
+                .andExpect(jsonPath("$.events.content[0].eventType").value("LOGIN_FAILED"))
+                .andExpect(jsonPath("$.events.content[0].actorId").value(userId))
+                .andExpect(jsonPath("$.events.content[0].subjectHash").doesNotExist())
+                .andExpect(jsonPath("$.events.totalElements").value(1));
 
         mockMvc.perform(get("/api/admin/security-events").header("Authorization", "Bearer " + user))
                 .andExpect(status().isForbidden());

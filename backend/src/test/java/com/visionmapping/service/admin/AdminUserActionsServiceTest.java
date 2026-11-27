@@ -78,11 +78,11 @@ class AdminUserActionsServiceTest {
         // The target is the only active admin counted (the actor here stands for a session that is still open).
         when(users.countByRoleAndStatus("ADMIN", UserStatus.ACTIVE)).thenReturn(1L);
 
-        assertThatThrownBy(() -> service.changeRole(2L, new AdminRoleChangeRequest("USER", "No longer runs it", null), null))
+        assertThatThrownBy(() -> service.changeRole(2L, new AdminRoleChangeRequest("USER", "No longer runs it", null)))
                 .isInstanceOf(StateConflictException.class).hasMessage("There must be at least one active admin.");
-        assertThatThrownBy(() -> service.block(2L, new AdminReasonRequest("No longer runs it"), null))
+        assertThatThrownBy(() -> service.block(2L, new AdminReasonRequest("No longer runs it")))
                 .isInstanceOf(StateConflictException.class);
-        verify(stepUp, never()).require(any(), any(String.class));
+        verify(stepUp, never()).requireFromRequest(any());
         verify(users, never()).save(any());
     }
 
@@ -92,7 +92,7 @@ class AdminUserActionsServiceTest {
         when(users.findById(1L)).thenReturn(Optional.of(blocked));
         when(users.countByRoleAndStatus("ADMIN", UserStatus.ACTIVE)).thenReturn(1L);
 
-        service.changeRole(1L, new AdminRoleChangeRequest("USER", "Left the program", List.of()), null);
+        service.changeRole(1L, new AdminRoleChangeRequest("USER", "Left the program", List.of()));
 
         verify(users).save(blocked);
     }
@@ -109,13 +109,13 @@ class AdminUserActionsServiceTest {
     @Test
     void anActiveAccountOrAWrongEmailIsRefusedBeforeTheCodeIsUsed() {
         target(UserStatus.ACTIVE);
-        assertThatThrownBy(() -> service.delete(7L, new AdminUserDeleteRequest("leaving@example.com", "Left the program"), null))
+        assertThatThrownBy(() -> service.delete(7L, new AdminUserDeleteRequest("leaving@example.com", "Left the program")))
                 .isInstanceOf(StateConflictException.class).hasMessage("Block this account before deleting it.");
 
         target(UserStatus.DISABLED);
-        assertThatThrownBy(() -> service.delete(7L, new AdminUserDeleteRequest("someone@example.com", "Left the program"), null))
+        assertThatThrownBy(() -> service.delete(7L, new AdminUserDeleteRequest("someone@example.com", "Left the program")))
                 .isInstanceOf(BusinessRuleException.class);
-        verify(stepUp, never()).require(any(), any(String.class));
+        verify(stepUp, never()).requireFromRequest(any());
         verify(accountService, never()).erase(anyLong());
     }
 
@@ -123,10 +123,10 @@ class AdminUserActionsServiceTest {
     void deletingABlockedAccountNeedsAFreshCodeThenTellsThePersonThenErases() {
         AppUser leaving = target(UserStatus.DISABLED);
 
-        service.delete(7L, new AdminUserDeleteRequest("Leaving@Example.com ", "Left the program"), "code");
+        service.delete(7L, new AdminUserDeleteRequest("Leaving@Example.com ", "Left the program"));
 
         InOrder order = inOrder(stepUp, notices, accountService);
-        order.verify(stepUp).require(StepUpAction.ADMIN_USER_DELETE, "code");
+        order.verify(stepUp).requireFromRequest(StepUpAction.ADMIN_USER_DELETE);
         order.verify(notices).changed(AccountNotice.Kind.ACCOUNT_DELETED_BY_ADMIN, leaving);
         order.verify(accountService).erase(7L);
     }
@@ -137,7 +137,7 @@ class AdminUserActionsServiceTest {
         when(lookup.currentUser()).thenReturn(coach);
         target(UserStatus.DISABLED);
 
-        assertThatThrownBy(() -> service.delete(7L, new AdminUserDeleteRequest("leaving@example.com", "Left the program"), null))
+        assertThatThrownBy(() -> service.delete(7L, new AdminUserDeleteRequest("leaving@example.com", "Left the program")))
                 .isInstanceOf(AccessDeniedException.class);
         verify(accountService, never()).erase(anyLong());
     }
@@ -146,7 +146,7 @@ class AdminUserActionsServiceTest {
     void withoutMailAddUserCreatesNothing() {
         when(invitations.canDeliver()).thenReturn(false);
 
-        assertThatThrownBy(() -> service.create(new AdminUserCreateRequest("New Person", "new@example.com", null, null), null))
+        assertThatThrownBy(() -> service.create(new AdminUserCreateRequest("New Person", "new@example.com", null, null)))
                 .isInstanceOf(StateConflictException.class).hasMessage(AdminUserActionsService.NO_MAIL);
         verify(users, never()).save(any());
         verify(invitations, never()).issue(any(), any());
@@ -159,9 +159,9 @@ class AdminUserActionsServiceTest {
                 Set.of(Permission.USE_OWN_PLAN, Permission.COACH_COHORTS))));
         when(users.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.create(new AdminUserCreateRequest("New Coach", "coach@example.com", "coach", null), "code");
+        service.create(new AdminUserCreateRequest("New Coach", "coach@example.com", "coach", null));
 
-        verify(stepUp).require(StepUpAction.ADMIN_ROLE_CHANGE, "code");
+        verify(stepUp).requireFromRequest(StepUpAction.ADMIN_ROLE_CHANGE);
         verify(invitations).issue(any(), org.mockito.ArgumentMatchers.eq(actor));
     }
 }

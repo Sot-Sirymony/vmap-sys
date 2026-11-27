@@ -1,6 +1,6 @@
-import { apiClient } from './apiClient';
+import { fetchAllPages } from './apiClient';
 import type { ProgressLog } from '../types/vision';
 
 export function listProgressLogs(token: string) {
-  return apiClient<ProgressLog[]>('/progress-logs', { token });
+  return fetchAllPages<ProgressLog>('/progress-logs', token);
 }

@@ -14,7 +14,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,93 +26,116 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.validation.annotation.Validated;
+import com.visionmapping.dto.response.LinkedPartnerResponse;
 
 @RestController
-@RequestMapping("/api/dreams")
+@RequestMapping(value = ApiPaths.V1 + "/dreams", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Dreams", description = "Dreams under a vision area")
 public class DreamController {
 
     private final DreamService service;
     private final PlanPdfService planPdfService;
 
+    @Operation(summary = "List dreams")
     @GetMapping
-    public List<DreamResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listDreams(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<List<DreamResponse>> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
+        return ResponseEntity.ok(service.listDreams(ArchiveFilter.of(includeArchived)));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public DreamResponse create(@Valid @RequestBody DreamRequest request) {
-        return service.createDream(request);
+    @Operation(summary = "Create a dream")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DreamResponse> create(@Valid @RequestBody DreamRequest request) {
+        DreamResponse created = service.createDream(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get a dream")
     @GetMapping("/{id}")
-    public DreamResponse get(@PathVariable Long id) {
-        return service.getDream(id);
+    public ResponseEntity<DreamResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getDream(id));
     }
 
-    @PutMapping("/{id}")
-    public DreamResponse update(@PathVariable Long id, @Valid @RequestBody DreamRequest request) {
-        return service.updateDream(id, request);
+    @Operation(summary = "Update a dream")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DreamResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody DreamRequest request) {
+        return ResponseEntity.ok(service.updateDream(id, request));
     }
 
-    @PatchMapping("/{id}/status")
-    public DreamResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<DreamStatus> request) {
-        return service.updateDreamStatus(id, request.status());
+    @Operation(summary = "Change a dream's status")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DreamResponse> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody StatusUpdateRequest<DreamStatus> request) {
+        return ResponseEntity.ok(service.updateDreamStatus(id, request.status()));
     }
 
-    @PostMapping("/{id}/commitment")
-    public DreamResponse commit(@PathVariable Long id, @Valid @RequestBody DreamCommitmentRequest request) {
-        return service.commitToDream(id, request);
+    @Operation(summary = "Record the commitment to a dream")
+    @PostMapping(value = "/{id}/commitment", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<DreamResponse> commit(@PathVariable @Positive Long id, @Valid @RequestBody DreamCommitmentRequest request) {
+        return ResponseEntity.ok(service.commitToDream(id, request));
     }
 
+    @Operation(summary = "Download a dream plan as a PDF")
     @GetMapping(value = "/{id}/plan.pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> planPdf(@PathVariable Long id) {
+    public ResponseEntity<byte[]> planPdf(@PathVariable @Positive Long id) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"dream-plan-" + id + ".pdf\"")
                 .body(planPdfService.exportPlan(id));
     }
 
-    @PatchMapping("/reorder")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reorder(@Valid @RequestBody ReorderRequest request) {
+    @Operation(summary = "Reorder dreams")
+    @PatchMapping(value = "/reorder", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> reorder(@Valid @RequestBody ReorderRequest request) {
         service.reorderDreams(request.parentId(), request.orderedIds());
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Archive a dream")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveDream(id);
+        return ResponseEntity.noContent().build();
     }
 
     /** V29 AR-FR-04: archive with an optional reason (BR-29-1); the DELETE above keeps working without one. */
-    @PostMapping("/{id}/archive")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void archive(@PathVariable Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
-        service.archiveDream(id, request == null ? null : request.reason());
+    @Operation(summary = "Archive a dream, with an optional reason")
+    @PostMapping(value = "/{id}/archive", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> archive(@PathVariable @Positive Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
+        service.archiveDream(id, ArchiveRequest.reasonOf(request));
+        return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Restore an archived dream")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreDream(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete a dream permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteDream(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Count what archiving a dream would also archive")
     @GetMapping("/{id}/archive-impact")
-    public ArchiveImpactResponse archiveImpact(@PathVariable Long id) {
-        return service.dreamArchiveImpact(id);
+    public ResponseEntity<ArchiveImpactResponse> archiveImpact(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.dreamArchiveImpact(id));
     }
 
+    @Operation(summary = "Whether a dream has a linked partner")
     @GetMapping("/{id}/has-linked-partner")
-    public boolean hasLinkedPartner(@PathVariable Long id) {
-        return service.hasLinkedPartner(id);
+    public ResponseEntity<LinkedPartnerResponse> hasLinkedPartner(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(new LinkedPartnerResponse(service.hasLinkedPartner(id)));
     }
 
 }

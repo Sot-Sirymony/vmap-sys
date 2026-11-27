@@ -19,6 +19,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Structured outreach messages to partners (audience, hook, problem, request,
@@ -32,6 +36,21 @@ public class CommunicationMessageService {
     private final EntityLookup lookup;
     private final VisionMappingMapper mapper;
     private final CommunicationMessageRepository communicationMessageRepository;
+
+    /** V33 (D-33-10): the message table's sortable columns, and dates. */
+    static final Set<String> MESSAGE_SORTS = Set.of("subject", "audience", "purpose", "status", "followUpDate", "createdAt", "updatedAt");
+
+    /** V33 (D-33-9): one page of messages, in the shared page shape, with the sort checked first. */
+    @Transactional(readOnly = true)
+    public PagedResponse<CommunicationMessageResponse> pageCommunicationMessages(
+            Pageable pageable,
+            ArchiveFilter archiveFilter,
+            @Nullable String search,
+            @Nullable Long partnerId,
+            @Nullable CommunicationStatus status) {
+        return PagedResponse.from(listCommunicationMessages(Pageables.whitelist(pageable, MESSAGE_SORTS), archiveFilter, search, partnerId, status),
+                Function.identity());
+    }
 
     @Transactional(readOnly = true)
     public Page<CommunicationMessageResponse> listCommunicationMessages(

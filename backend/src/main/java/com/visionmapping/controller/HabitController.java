@@ -9,7 +9,6 @@ import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,64 +17,81 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
-@RequestMapping("/api/habits")
+@RequestMapping(value = ApiPaths.V1 + "/habits", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Habits", description = "Daily habits and their checks")
 public class HabitController {
 
     private final HabitService service;
 
+    @Operation(summary = "List habits with their state on a day")
     @GetMapping
-    public List<HabitResponse> list(
+    public ResponseEntity<List<HabitResponse>> list(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listHabits(date, ArchiveFilter.of(includeArchived));
+        return ResponseEntity.ok(service.listHabits(date, ArchiveFilter.of(includeArchived)));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public HabitResponse create(
+    @Operation(summary = "Create a habit")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HabitResponse> create(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @Valid @RequestBody HabitRequest request) {
-        return service.createHabit(request, date);
+        HabitResponse created = service.createHabit(request, date);
+        return ApiResponses.created(created.id(), created);
     }
 
-    @PutMapping("/{id}")
-    public HabitResponse rename(
-            @PathVariable Long id,
+    @Operation(summary = "Rename a habit")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<HabitResponse> rename(
+            @PathVariable @Positive Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @Valid @RequestBody HabitRequest request) {
-        return service.renameHabit(id, request, date);
+        return ResponseEntity.ok(service.renameHabit(id, request, date));
     }
 
+    @Operation(summary = "Tick a habit for a day")
     @PutMapping("/{id}/checks/{date}")
-    public HabitResponse check(@PathVariable Long id, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return service.setChecked(id, date, true);
+    public ResponseEntity<HabitResponse> check(@PathVariable @Positive Long id, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(service.setChecked(id, date, true));
     }
 
+    @Operation(summary = "Untick a habit for a day")
     @DeleteMapping("/{id}/checks/{date}")
-    public HabitResponse uncheck(@PathVariable Long id, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return service.setChecked(id, date, false);
+    public ResponseEntity<HabitResponse> uncheck(@PathVariable @Positive Long id, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(service.setChecked(id, date, false));
     }
 
+    @Operation(summary = "Archive a habit")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveHabit(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Restore an archived habit")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreHabit(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete a habit permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteHabit(id);
+        return ResponseEntity.noContent().build();
     }
 }

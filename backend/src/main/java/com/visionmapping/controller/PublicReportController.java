@@ -1,19 +1,24 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.response.SharedReportResponse;
-import com.visionmapping.service.ReportShareService;
-import com.visionmapping.service.support.RequestRateLimiter;
+import com.visionmapping.service.ReportActionsService;
+import com.visionmapping.web.FileDownloads;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.CacheControl;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
  * V19 (BRD 19.0.0, RM-FR-47): a shared final report, opened without signing
@@ -23,36 +28,38 @@ import org.springframework.web.bind.annotation.RestController;
  * minute per link (RM-NFR-07).
  */
 @RestController
+@RequestMapping(value = ApiPaths.V1 + "/public/reports", produces = MediaType.APPLICATION_JSON_VALUE)
 @Validated
-@RequestMapping("/api/public/reports")
 @RequiredArgsConstructor
+@Tag(name = "Public reports", description = "A shared final report, opened through its link without signing in")
 public class PublicReportController {
 
     static final String ROBOTS = "X-Robots-Tag";
     static final String NO_INDEX = "noindex, nofollow";
+    static final String REFERRER_POLICY = "Referrer-Policy";
+    static final String NO_REFERRER = "no-referrer";
 
-    private final ReportShareService service;
-    private final RequestRateLimiter rateLimiter;
+    private final ReportActionsService reports;
 
+    @Operation(summary = "Open a shared report through its link")
     @GetMapping("/{token}")
-    public ResponseEntity<SharedReportResponse> view(@PathVariable String token) {
-        rateLimiter.check(RequestRateLimiter.Action.SHARED_REPORT, ReportShareService.hash(token));
+    public ResponseEntity<SharedReportResponse> view(@PathVariable @Size(max = 200) String token) {
         return ResponseEntity.ok()
                 .header(ROBOTS, NO_INDEX)
-                .header("Referrer-Policy", "no-referrer")
+                .header(REFERRER_POLICY, NO_REFERRER)
                 .cacheControl(CacheControl.noStore())
-                .body(service.view(token));
+                .body(reports.publicView(token));
     }
 
-    @GetMapping("/{token}.pdf")
-    public ResponseEntity<ByteArrayResource> pdf(@PathVariable String token,
+    @Operation(summary = "Download a shared report as a PDF")
+    @GetMapping(value = "/{token}.pdf", produces = FileDownloads.PDF)
+    public ResponseEntity<ByteArrayResource> pdf(@PathVariable @Size(max = 200) String token,
                                                  @RequestParam(required = false) @Pattern(regexp = "en|km") String language) {
-        rateLimiter.check(RequestRateLimiter.Action.SHARED_REPORT, ReportShareService.hash(token));
-        ResponseEntity<ByteArrayResource> file = ManagementReportController.download(service.pdf(token, language), ManagementReportController.PDF);
+        ResponseEntity<ByteArrayResource> file = FileDownloads.attachment(reports.publicPdf(token, language), FileDownloads.PDF);
         return ResponseEntity.status(file.getStatusCode())
                 .headers(file.getHeaders())
                 .header(ROBOTS, NO_INDEX)
-                .header("Referrer-Policy", "no-referrer")
+                .header(REFERRER_POLICY, NO_REFERRER)
                 .cacheControl(CacheControl.noStore())
                 .body(file.getBody());
     }

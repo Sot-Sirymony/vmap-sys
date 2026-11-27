@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import type { Page } from '../types/vision';
 
 /** V10 (SEC-09-05): one row of the security log. */
 export type SecurityEvent = {
@@ -13,12 +14,9 @@ export type SecurityEvent = {
   detail: string | null;
 };
 
+/** V33 (D-33-9): the events are a page in the shared page shape. */
 export type SecurityLog = {
-  events: SecurityEvent[];
-  page: number;
-  size: number;
-  totalEvents: number;
-  hasMore: boolean;
+  events: Page<SecurityEvent>;
   recentAlerts: string[];
 };
 

@@ -17,6 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Records point-in-time progress notes against a task. Logging progress also
@@ -39,6 +43,16 @@ public class ProgressLogService {
     @Transactional(readOnly = true)
     public List<ProgressLogResponse> listProgressLogs() {
         return progressLogRepository.findByUser_IdAndArchivedFalse(lookup.userId()).stream().map(mapper::toResponse).toList();
+    }
+
+    /** V33 (D-33-10): the properties the progress log can be sorted by. */
+    static final Set<String> PROGRESS_LOG_SORTS = Set.of("loggedAt", "progressPercentAfter", "createdAt");
+
+    /** V33 (D-33-9): one page of the user's active progress logs. */
+    @Transactional(readOnly = true)
+    public PagedResponse<ProgressLogResponse> pageProgressLogs(Pageable pageable) {
+        return PagedResponse.from(progressLogRepository.findByUser_IdAndArchivedFalse(lookup.userId(),
+                Pageables.whitelist(pageable, PROGRESS_LOG_SORTS)), mapper::toResponse);
     }
 
     public ProgressLogResponse createProgressLog(ProgressLogRequest request) {

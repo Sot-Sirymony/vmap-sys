@@ -327,7 +327,7 @@ class StreamlineReviewFlowTests {
         assertThat(task.get("startedAt").isNull()).isFalse();
         assertThat(task.get("cycleTimeDays").isNull()).isFalse();
 
-        JsonNode history = read(mockMvc.perform(get("/api/tasks/" + taskId + "/history").header("Authorization", "Bearer " + plan.token())));
+        JsonNode history = read(mockMvc.perform(get("/api/tasks/" + taskId + "/history").header("Authorization", "Bearer " + plan.token()))).get("content");
         List<String> moves = new ArrayList<>();
         history.forEach(change -> moves.add(change.get("toStatus").asText()));
         assertThat(moves).containsExactly("NOT_STARTED", "IN_PROGRESS", "WAITING", "COMPLETED");

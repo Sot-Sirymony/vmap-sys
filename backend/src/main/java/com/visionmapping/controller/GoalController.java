@@ -12,7 +12,6 @@ import com.visionmapping.service.support.ProgressOverride;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import com.visionmapping.dto.request.ArchiveRequest;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,80 +22,103 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import com.visionmapping.dto.response.LinkedPartnerResponse;
 
 @RestController
-@RequestMapping("/api/goals")
+@RequestMapping(value = ApiPaths.V1 + "/goals", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Goals", description = "Goals under a dream")
 public class GoalController {
 
     private final GoalService service;
 
+    @Operation(summary = "List goals")
     @GetMapping
-    public List<GoalResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listGoals(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<List<GoalResponse>> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
+        return ResponseEntity.ok(service.listGoals(ArchiveFilter.of(includeArchived)));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public GoalResponse create(@Valid @RequestBody GoalRequest request) {
-        return service.createGoal(request);
+    @Operation(summary = "Create a goal")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GoalResponse> create(@Valid @RequestBody GoalRequest request) {
+        GoalResponse created = service.createGoal(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get a goal")
     @GetMapping("/{id}")
-    public GoalResponse get(@PathVariable Long id) {
-        return service.getGoal(id);
+    public ResponseEntity<GoalResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getGoal(id));
     }
 
-    @PutMapping("/{id}")
-    public GoalResponse update(@PathVariable Long id, @Valid @RequestBody GoalRequest request) {
-        return service.updateGoal(id, request);
+    @Operation(summary = "Update a goal")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GoalResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody GoalRequest request) {
+        return ResponseEntity.ok(service.updateGoal(id, request));
     }
 
-    @PatchMapping("/{id}/status")
-    public GoalResponse updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
-        return service.updateGoalStatus(id, request.status(), ProgressOverride.of(request.manualOverride()));
+    @Operation(summary = "Change a goal's status")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<GoalResponse> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody StatusUpdateRequest<WorkStatus> request) {
+        return ResponseEntity.ok(service.updateGoalStatus(id, request.status(), ProgressOverride.of(request.manualOverride())));
     }
 
-    @PatchMapping("/reorder")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reorder(@Valid @RequestBody ReorderRequest request) {
+    @Operation(summary = "Reorder goals")
+    @PatchMapping(value = "/reorder", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> reorder(@Valid @RequestBody ReorderRequest request) {
         service.reorderGoals(request.parentId(), request.orderedIds());
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Archive a goal")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveGoal(id);
+        return ResponseEntity.noContent().build();
     }
 
     /** V29 AR-FR-04: archive with an optional reason (BR-29-1); the DELETE above keeps working without one. */
-    @PostMapping("/{id}/archive")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void archive(@PathVariable Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
-        service.archiveGoal(id, request == null ? null : request.reason());
+    @Operation(summary = "Archive a goal, with an optional reason")
+    @PostMapping(value = "/{id}/archive", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> archive(@PathVariable @Positive Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
+        service.archiveGoal(id, ArchiveRequest.reasonOf(request));
+        return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Restore an archived goal")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreGoal(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete a goal permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteGoal(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Count what archiving a goal would also archive")
     @GetMapping("/{id}/archive-impact")
-    public ArchiveImpactResponse archiveImpact(@PathVariable Long id) {
-        return service.goalArchiveImpact(id);
+    public ResponseEntity<ArchiveImpactResponse> archiveImpact(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.goalArchiveImpact(id));
     }
 
+    @Operation(summary = "Whether a goal has a linked partner")
     @GetMapping("/{id}/has-linked-partner")
-    public boolean hasLinkedPartner(@PathVariable Long id) {
-        return service.hasLinkedPartner(id);
+    public ResponseEntity<LinkedPartnerResponse> hasLinkedPartner(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(new LinkedPartnerResponse(service.hasLinkedPartner(id)));
     }
 
 }

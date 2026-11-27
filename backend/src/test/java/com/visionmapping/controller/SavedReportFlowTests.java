@@ -243,7 +243,7 @@ class SavedReportFlowTests {
     private List<JsonNode> list(String token, String query) throws Exception {
         List<JsonNode> rows = new ArrayList<>();
         read(mockMvc.perform(get("/api/reports/saved" + query).header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())).forEach(rows::add);
+                .andExpect(status().isOk())).get("content").forEach(rows::add);
         return rows;
     }
 

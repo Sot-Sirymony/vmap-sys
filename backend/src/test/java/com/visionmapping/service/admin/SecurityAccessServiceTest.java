@@ -86,9 +86,9 @@ class SecurityAccessServiceTest {
         when(sessions.revokeBySignInMethod(SignInOrigin.PASSWORD, "ADMIN", SecurityAccessService.SESSION_ENDED_REASON, NOW))
                 .thenReturn(3);
 
-        var answer = service.update(new SecurityAccessUpdateRequest(false, true, null, "  Moving everyone to Google  "), "code");
+        var answer = service.update(new SecurityAccessUpdateRequest(false, true, null, "  Moving everyone to Google  "));
 
-        verify(stepUpService).require(StepUpAction.ADMIN_SECURITY_ACCESS, "code");
+        verify(stepUpService).requireFromRequest(StepUpAction.ADMIN_SECURITY_ACCESS);
         verify(rateLimiter).check(RequestRateLimiter.Action.USER_ADMIN, "7");
         verify(sessions, never()).revokeBySignInMethod(eq(SignInOrigin.GOOGLE), anyString(), anyString(), any());
         verify(securityEvents).record(SecurityEventType.SECURITY_ACCESS_CHANGED, SecurityOutcome.SUCCESS, "security-settings", null,
@@ -103,14 +103,14 @@ class SecurityAccessServiceTest {
     @Test
     void refusalsComeBeforeTheStepUpCode() {
         when(repository.countProviderOnly(UserStatus.ACTIVE, "ADMIN", IdentityProvider.GOOGLE)).thenReturn(1L);
-        assertThatThrownBy(() -> service.update(new SecurityAccessUpdateRequest(true, false, null, "Google is retired"), "code"))
+        assertThatThrownBy(() -> service.update(new SecurityAccessUpdateRequest(true, false, null, "Google is retired")))
                 .isInstanceOf(StateConflictException.class).hasMessageStartingWith("1 person can only sign in with Google");
 
         when(googleSettings.enabled()).thenReturn(false);
-        assertThatThrownBy(() -> service.update(new SecurityAccessUpdateRequest(false, true, null, "Google only from now"), "code"))
+        assertThatThrownBy(() -> service.update(new SecurityAccessUpdateRequest(false, true, null, "Google only from now")))
                 .isInstanceOf(StateConflictException.class).hasMessageContaining("not set up on this server");
 
-        verify(stepUpService, never()).require(any(), any());
+        verify(stepUpService, never()).requireFromRequest(any());
         verify(sessions, never()).revokeBySignInMethod(any(), anyString(), anyString(), any());
         verify(securityEvents, never()).record(any(), any(), anyString(), isNull(), anyString());
         assertThat(row.isGoogleSignIn()).isTrue();

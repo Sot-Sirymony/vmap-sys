@@ -37,6 +37,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /** V20 SV-NFR-03, D-20-3, D-20-4: what a protected action needs before it may go on. */
 class StepUpServiceTest {
@@ -122,6 +125,31 @@ class StepUpServiceTest {
         when(repository.findByIdAndUser_IdAndSession_Id(9L, 1L, SESSION_ID)).thenReturn(Optional.of(unverified));
         assertThatThrownBy(() -> service(true).require(StepUpAction.DELETE_ACCOUNT, 9L, null)).isInstanceOf(StepUpException.class);
         assertThatThrownBy(() -> service(true).require(StepUpAction.DELETE_ACCOUNT, 404L, null)).isInstanceOf(StepUpException.class);
+    }
+
+    /** V33 D-33-12: the code comes from the request's StepUpContext, not a controller parameter. */
+    @Test
+    void theCodeCanComeFromTheRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            assertThatThrownBy(() -> service(true).requireFromRequest(StepUpAction.DELETE_ACCOUNT))
+                    .as("no header is no code").isInstanceOf(StepUpException.class);
+
+            StepUpChallenge good = challenge(StepUpAction.DELETE_ACCOUNT, NOW.minusSeconds(60), null);
+            when(repository.findByIdAndUser_IdAndSession_Id(5L, 1L, SESSION_ID)).thenReturn(Optional.of(good));
+            StepUpContext.store(request, new StepUpContext("5", null));
+            service(true).requireFromRequest(StepUpAction.DELETE_ACCOUNT);
+            assertThat(good.getUsedAt()).isEqualTo(NOW);
+
+            StepUpChallenge sent = challenge(StepUpAction.CONFIRM_REMINDER_EMAIL, NOW.minusSeconds(60), StepUpCodes.targetHash("new@work.org"));
+            when(repository.findByIdAndUser_IdAndSession_Id(6L, 1L, SESSION_ID)).thenReturn(Optional.of(sent));
+            StepUpContext.store(request, new StepUpContext(null, "6"));
+            service(true).requireForAddressFromRequest(StepUpAction.CONFIRM_REMINDER_EMAIL, "new@work.org");
+            assertThat(sent.getUsedAt()).isEqualTo(NOW);
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
     }
 
     @Test

@@ -81,7 +81,7 @@ class PermanentDeleteFlowTests {
                 .andExpect(jsonPath("$.length()").value(0));
         mockMvc.perform(get("/api/tasks?includeArchived=true").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
 
         // The partner survives, but its link to the deleted dream is cleared.
         mockMvc.perform(get("/api/partners/" + partnerId).header("Authorization", "Bearer " + token))

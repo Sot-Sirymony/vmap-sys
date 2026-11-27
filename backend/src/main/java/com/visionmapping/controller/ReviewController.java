@@ -7,7 +7,6 @@ import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,52 +15,74 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import com.visionmapping.dto.response.PagedResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping(value = ApiPaths.V1 + "/reviews", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Reviews", description = "Daily, weekly, monthly and quarterly reviews")
 public class ReviewController {
 
     private final ReviewService service;
 
+    @Operation(summary = "List reviews, one page at a time")
     @GetMapping
-    public List<ReviewResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listReviews(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<PagedResponse<ReviewResponse>> list(
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(service.pageReviews(ArchiveFilter.of(includeArchived), pageable));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ReviewResponse create(@Valid @RequestBody ReviewRequest request) {
-        return service.createReview(request);
+    @Operation(summary = "Create a review")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ReviewResponse> create(@Valid @RequestBody ReviewRequest request) {
+        ReviewResponse created = service.createReview(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get a review")
     @GetMapping("/{id}")
-    public ReviewResponse get(@PathVariable Long id) {
-        return service.getReview(id);
+    public ResponseEntity<ReviewResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getReview(id));
     }
 
-    @PutMapping("/{id}")
-    public ReviewResponse update(@PathVariable Long id, @Valid @RequestBody ReviewRequest request) {
-        return service.updateReview(id, request);
+    @Operation(summary = "Update a review")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ReviewResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody ReviewRequest request) {
+        return ResponseEntity.ok(service.updateReview(id, request));
     }
 
+    @Operation(summary = "Archive a review")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveReview(id);
+        return ResponseEntity.noContent().build();
     }
+    @Operation(summary = "Restore an archived review")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreReview(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete a review permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteReview(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

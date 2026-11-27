@@ -996,14 +996,17 @@ export type ExcelImportSummary = {
   backupFile?: string | null;
 };
 
+/** V33 (D-33-9): one page of a list, as every paged endpoint answers it (`PagedResponse` on the server). */
 export type Page<T> = {
   content: T[];
+  /** The page number, from 0. */
+  page: number;
+  size: number;
   totalElements: number;
   totalPages: number;
-  number: number;
-  size: number;
   first: boolean;
   last: boolean;
+  sort: { property: string; direction: 'ASC' | 'DESC' }[];
 };
 
 export type ArchiveImpact = {

@@ -1,7 +1,7 @@
 package com.visionmapping.service;
 
 import com.visionmapping.dto.request.ClientErrorLogRequest;
-import com.visionmapping.dto.response.ClientErrorLogPageResponse;
+import com.visionmapping.dto.response.PagedResponse;
 import com.visionmapping.dto.response.ClientErrorLogResponse;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.ClientErrorLog;
@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,14 +78,13 @@ public class ClientErrorLogService {
 
     /** Everyone's failures, for admins, optionally for one page or one status. */
     @Transactional(readOnly = true)
-    public ClientErrorLogPageResponse search(@Nullable String page, @Nullable Integer status, int pageNumber, int size) {
+    public PagedResponse<ClientErrorLogResponse> search(@Nullable String page, @Nullable Integer status, Pageable pageable) {
         AppUser user = lookup.currentUser();
         permissions.require(user, Permission.HANDLE_SUPPORT, "Only an administrator can read the failed request log.");
-        int pageSize = Math.max(1, Math.min(size, MAX_PAGE_SIZE));
-        Page<ClientErrorLog> found = repository.search(blankToNull(page), status, PageRequest.of(Math.max(0, pageNumber), pageSize));
-        return new ClientErrorLogPageResponse(
-                found.getContent().stream().map(entry -> toResponse(entry, true)).toList(),
-                found.getNumber(), found.getSize(), found.getTotalElements(), found.hasNext());
+        // V33 (D-33-9): newest first is the log's only order; the page size is at most MAX_PAGE_SIZE.
+        int pageSize = Math.max(1, Math.min(pageable.getPageSize(), MAX_PAGE_SIZE));
+        Page<ClientErrorLog> found = repository.search(blankToNull(page), status, PageRequest.of(pageable.getPageNumber(), pageSize));
+        return PagedResponse.from(found, entry -> toResponse(entry, true));
     }
 
     private static ClientErrorLogResponse toResponse(ClientErrorLog entry, boolean withUser) {

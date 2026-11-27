@@ -71,7 +71,8 @@ function describeBody(body: BodyInit | null | undefined): string {
   return ` [${body.constructor.name}]`;
 }
 
-const fetchMock = vi.fn(async () => new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+// V33: an empty last page, so functions that read every page of a paged list stop after one request.
+const fetchMock = vi.fn(async () => new Response('{"content":[],"last":true}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
 
 beforeAll(() => {
   vi.stubGlobal('fetch', fetchMock);

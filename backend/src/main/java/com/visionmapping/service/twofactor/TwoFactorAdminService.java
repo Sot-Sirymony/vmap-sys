@@ -93,7 +93,7 @@ public class TwoFactorAdminService {
      * raises an alert. Needs the admin's own fresh code; never for the admin's
      * own account.
      */
-    public void reset(Long userId, @Nullable String reason, @Nullable String stepUp) {
+    public void reset(Long userId, @Nullable String reason) {
         AppUser admin = userScope.currentUser();
         permissions.require(admin, Permission.RESET_TWO_FACTOR, "Only admins can reset two-step sign-in.");
         if (admin.getId().equals(userId)) {
@@ -104,7 +104,7 @@ public class TwoFactorAdminService {
         if (settingsRepository.findById(userId).isEmpty()) {
             throw new BusinessRuleException("This person does not use two-step sign-in.");
         }
-        stepUpService.require(StepUpAction.ADMIN_TWO_FACTOR_RESET, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_TWO_FACTOR_RESET);
         settingsRepository.deleteById(userId);
         recoveryRepository.deleteByUserId(userId);
         trustedDevices.removeAll(userId, "reset by an admin");

@@ -6,7 +6,10 @@ import com.visionmapping.security.AppUserPrincipal;
 import com.visionmapping.service.twofactor.TwoFactorRequirementService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.visionmapping.web.ApiPaths;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,15 +25,14 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class TwoFactorSetupInterceptor implements HandlerInterceptor {
 
-    /** What the setup flow, sign-out and drawing the page need. */
-    static final List<String> ALLOWED_PREFIXES = List.of(
-            "/api/account/two-factor",
-            "/api/account/step-up",
-            "/api/account/sign-in-methods",
-            "/api/auth/",
-            "/api/ui-text",
-            "/api/health",
-            "/api/preferences/appearance");
+    /** What the setup flow, sign-out and drawing the page need, under both API prefixes (V33 D-33-2). */
+    static final List<String> ALLOWED_PREFIXES = Stream.concat(Stream.of(ApiPaths.HEALTH), Arrays.stream(ApiPaths.underBothPrefixes(
+            "/account/two-factor",
+            "/account/step-up",
+            "/account/sign-in-methods",
+            "/auth/",
+            "/ui-text",
+            "/preferences/appearance"))).toList();
 
     private final AppUserRepository appUserRepository;
     private final TwoFactorRequirementService requirement;

@@ -95,7 +95,7 @@ public class AdminUserActionsService {
     static final String EMAIL_TAKEN = "This email already has an account.";
 
     /** UM-FR-29, UM-FR-30. */
-    public void changeRole(Long id, AdminRoleChangeRequest request, @Nullable String stepUp) {
+    public void changeRole(Long id, AdminRoleChangeRequest request) {
         AppUser actor = requireManager();
         AppUser target = target(id, actor);
         Role newRole = roles.findById(request.role().trim().toUpperCase(Locale.ROOT))
@@ -109,7 +109,7 @@ public class AdminUserActionsService {
         }
         Map<Cohort, AppUser> handover = cohortHandover(target, newRole,
                 request.cohortChanges() == null ? List.of() : request.cohortChanges());
-        stepUpService.require(StepUpAction.ADMIN_ROLE_CHANGE, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_ROLE_CHANGE);
 
         handover.forEach((cohort, coach) -> {
             cohort.setCoach(coach);
@@ -134,7 +134,7 @@ public class AdminUserActionsService {
     }
 
     /** UM-FR-31: no sign-in, and every open session ends at once. */
-    public void block(Long id, AdminReasonRequest request, @Nullable String stepUp) {
+    public void block(Long id, AdminReasonRequest request) {
         AppUser actor = requireManager();
         AppUser target = target(id, actor);
         if (target.getStatus() == UserStatus.DISABLED) {
@@ -143,7 +143,7 @@ public class AdminUserActionsService {
         if (target.hasRole(UserRole.ADMIN)) {
             requireAnotherActiveAdmin(target);
         }
-        stepUpService.require(StepUpAction.ADMIN_USER_BLOCK, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_USER_BLOCK);
 
         target.setStatus(UserStatus.DISABLED);
         target.setBlockedAt(clock.instant());
@@ -156,13 +156,13 @@ public class AdminUserActionsService {
     }
 
     /** UM-FR-33: the person signs in again; old sessions are not restored. */
-    public void unblock(Long id, AdminReasonRequest request, @Nullable String stepUp) {
+    public void unblock(Long id, AdminReasonRequest request) {
         AppUser actor = requireManager();
         AppUser target = target(id, actor);
         if (target.getStatus() == UserStatus.ACTIVE) {
             throw new StateConflictException("This account is not blocked.");
         }
-        stepUpService.require(StepUpAction.ADMIN_USER_BLOCK, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_USER_BLOCK);
 
         target.setStatus(UserStatus.ACTIVE);
         target.setBlockedAt(null);
@@ -177,7 +177,7 @@ public class AdminUserActionsService {
      * UM-FR-22 to UM-FR-25: a new account with no usable password, and an
      * invitation to choose one. Answers the new account's id.
      */
-    public Long create(AdminUserCreateRequest request, @Nullable String stepUp) {
+    public Long create(AdminUserCreateRequest request) {
         AppUser actor = requireManager();
         String roleKey = request.role() == null || request.role().isBlank()
                 ? UserRole.USER.name() : request.role().trim().toUpperCase(Locale.ROOT);
@@ -194,7 +194,7 @@ public class AdminUserActionsService {
         Cohort cohort = request.cohortId() == null ? null : openCohort(request.cohortId());
         boolean privileged = permissions.isPrivilegedRole(role.getKey());
         if (privileged) {
-            stepUpService.require(StepUpAction.ADMIN_ROLE_CHANGE, stepUp);
+            stepUpService.requireFromRequest(StepUpAction.ADMIN_ROLE_CHANGE);
         }
 
         byte[] secret = new byte[32];
@@ -275,7 +275,7 @@ public class AdminUserActionsService {
      * self-deletion erase routine in this one transaction. The security log keeps
      * the account id, the viewer and the reason, never the name or email.
      */
-    public void delete(Long id, AdminUserDeleteRequest request, @Nullable String stepUp) {
+    public void delete(Long id, AdminUserDeleteRequest request) {
         AppUser actor = permissions.require(lookup.currentUser(), Permission.DELETE_USERS,
                 "You do not have permission to delete accounts.");
         rateLimiter.check(RequestRateLimiter.Action.USER_ADMIN, String.valueOf(actor.getId()));
@@ -290,7 +290,7 @@ public class AdminUserActionsService {
         if (target.hasRole(UserRole.ADMIN)) {
             requireAnotherActiveAdmin(target);
         }
-        stepUpService.require(StepUpAction.ADMIN_USER_DELETE, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_USER_DELETE);
 
         Long targetId = target.getId();
         String role = target.getRole();

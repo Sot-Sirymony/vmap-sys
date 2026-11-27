@@ -65,7 +65,7 @@ class ErrorHandlingFlowTests {
     @Test
     void anUnexpectedErrorHidesItsCauseAndGivesAReference() throws Exception {
         String token = registerAndToken("unexpected");
-        doThrow(new IllegalStateException("org.hibernate.Boom at " + SECRET_DETAIL)).when(fearEntryService).listFearEntries(any());
+        doThrow(new IllegalStateException("org.hibernate.Boom at " + SECRET_DETAIL)).when(fearEntryService).pageFearEntries(any(), any());
 
         MockHttpServletResponse response = mockMvc.perform(get("/api/fear-entries").header("Authorization", "Bearer " + token))
                 .andReturn().getResponse();
@@ -78,7 +78,7 @@ class ErrorHandlingFlowTests {
     void anUnreachableDatabaseAnswers503NotA500() throws Exception {
         String token = registerAndToken("database");
         doThrow(new DataAccessResourceFailureException("connection refused: " + SECRET_DETAIL))
-                .when(fearEntryService).listFearEntries(any());
+                .when(fearEntryService).pageFearEntries(any(), any());
 
         MockHttpServletResponse response = mockMvc.perform(get("/api/fear-entries").header("Authorization", "Bearer " + token))
                 .andReturn().getResponse();

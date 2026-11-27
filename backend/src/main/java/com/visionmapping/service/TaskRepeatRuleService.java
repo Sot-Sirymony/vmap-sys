@@ -3,6 +3,7 @@ package com.visionmapping.service;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
 
 import com.visionmapping.dto.response.StreamlineResponses;
+import com.visionmapping.dto.request.StreamlineRequests;
 import com.visionmapping.entity.TaskItem;
 import com.visionmapping.entity.TaskRepeatRule;
 import com.visionmapping.entity.enums.RepeatCadence;
@@ -50,6 +51,14 @@ public class TaskRepeatRuleService {
     }
 
     /** Makes a task repeat; a second call for the same task changes the cadence of its active rule. */
+    /** SR-FR-09: a new rule from the page; both the task and the cadence are needed (V33 D-33-11 moved this check here). */
+    public StreamlineResponses.RepeatRule createRule(StreamlineRequests.CreateRule request) {
+        if (request.taskId() == null || request.cadence() == null) {
+            throw new BusinessRuleException("Choose a task and how often it repeats.");
+        }
+        return toResponse(repeatTask(request.taskId(), request.cadence(), request.firstDue()));
+    }
+
     public TaskRepeatRule repeatTask(Long taskId, RepeatCadence cadence, @Nullable LocalDate firstDue) {
         TaskItem task = lookup.task(taskId);
         if (task.isArchived() || task.getStep().isArchived()) {

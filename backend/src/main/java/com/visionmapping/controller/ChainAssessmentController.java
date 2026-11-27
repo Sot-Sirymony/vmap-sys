@@ -11,21 +11,31 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
-@RequestMapping("/api/chain-assessments")
+@RequestMapping(value = ApiPaths.V1 + "/chain-assessments", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Chain assessments", description = "The chain assessment")
 public class ChainAssessmentController {
 
     private final ChainAssessmentService service;
 
+    @Operation(summary = "Get the chain assessment summary")
     @GetMapping
-    public ChainAssessmentSummaryResponse summary() {
-        return service.summary();
+    public ResponseEntity<ChainAssessmentSummaryResponse> summary() {
+        return ResponseEntity.ok(service.summary());
     }
 
-    @PutMapping
-    public ChainAssessmentResponse save(@Valid @RequestBody ChainAssessmentRequest request) {
-        return service.save(request);
+    @Operation(summary = "Save a chain assessment")
+    @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ChainAssessmentResponse> save(@Valid @RequestBody ChainAssessmentRequest request) {
+        return ResponseEntity.ok(service.save(request));
     }
 }

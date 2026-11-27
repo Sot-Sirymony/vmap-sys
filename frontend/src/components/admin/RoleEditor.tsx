@@ -98,10 +98,10 @@ export function RoleEditor({ token, role, roles, catalogue, onSave, onClose }: R
       listAdminUsers(token, { status: 'ACTIVE', sort: 'name' }, 0, 100),
     ]).then(([holders, cohorts, active]) => {
       if (cancelled) return;
-      const holderIds = new Set(holders.items.map((item) => item.id));
+      const holderIds = new Set(holders.users.content.map((item) => item.id));
       setAffected(cohorts.filter((cohort) => !cohort.archived && cohort.coachId && holderIds.has(cohort.coachId))
         .map(({ id, name: cohortName }) => ({ id, name: cohortName })));
-      setCoaches(active.items.filter((item) => otherCoachingRoles.has(item.role)));
+      setCoaches(active.users.content.filter((item) => otherCoachingRoles.has(item.role)));
     }).catch(() => undefined);
     return () => {
       cancelled = true;

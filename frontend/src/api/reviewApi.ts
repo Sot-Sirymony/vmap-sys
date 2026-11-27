@@ -1,8 +1,8 @@
-import { apiClient } from './apiClient';
+import { apiClient, fetchAllPages } from './apiClient';
 import type { DueReview, Review, ReviewRequest, ReviewRhythm, ReviewRhythmChoice } from '../types/vision';
 
 export function listReviews(token: string, includeArchived = false) {
-  return apiClient<Review[]>(`/reviews?includeArchived=${includeArchived}`, { token });
+  return fetchAllPages<Review>(`/reviews?includeArchived=${includeArchived}`, token);
 }
 
 export function createReview(token: string, request: ReviewRequest) {

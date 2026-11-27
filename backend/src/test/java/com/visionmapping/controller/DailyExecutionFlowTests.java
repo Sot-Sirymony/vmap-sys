@@ -137,10 +137,10 @@ class DailyExecutionFlowTests {
                 "fear", "Nobody buys it", "worstCase", "Lose a month", "likelihood", "MEDIUM", "firstTest", "Ask five people")));
 
         mockMvc.perform(get("/api/fear-entries").header("Authorization", "Bearer " + token))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].createdAt").exists());
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].createdAt").exists());
         mockMvc.perform(get("/api/fear-entries").header("Authorization", "Bearer " + stranger))
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(jsonPath("$.content.length()").value(0));
         mockMvc.perform(delete("/api/fear-entries/" + id).header("Authorization", "Bearer " + stranger))
                 .andExpect(status().isNotFound());
     }
@@ -156,8 +156,8 @@ class DailyExecutionFlowTests {
         mockMvc.perform(delete("/api/dreams/" + dreamId + "/permanent").header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/fear-entries").header("Authorization", "Bearer " + token))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].relatedDreamId").doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].relatedDreamId").doesNotExist());
     }
 
     @Test
@@ -177,11 +177,11 @@ class DailyExecutionFlowTests {
         mockMvc.perform(delete("/api/dreams/" + dreamId + "/permanent").header("Authorization", "Bearer " + token)).andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/gratitude-entries").header("Authorization", "Bearer " + token))
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].relatedDreamId").doesNotExist())
-                .andExpect(jsonPath("$[0].relatedGoalId").doesNotExist())
-                .andExpect(jsonPath("$[1].relatedDreamId").doesNotExist())
-                .andExpect(jsonPath("$[1].relatedGoalId").doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].relatedDreamId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].relatedGoalId").doesNotExist())
+                .andExpect(jsonPath("$.content[1].relatedDreamId").doesNotExist())
+                .andExpect(jsonPath("$.content[1].relatedGoalId").doesNotExist());
     }
 
     @Test
@@ -203,8 +203,8 @@ class DailyExecutionFlowTests {
         send(put("/api/attitude-checkins/" + TODAY.plusDays(5)), token, Map.of("score", 3)).andExpect(status().is4xxClientError());
 
         mockMvc.perform(get("/api/attitude-checkins").header("Authorization", "Bearer " + token))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].score").value(4));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].score").value(4));
     }
 
     @Test

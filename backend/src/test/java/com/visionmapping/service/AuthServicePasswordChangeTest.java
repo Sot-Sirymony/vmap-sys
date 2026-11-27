@@ -83,7 +83,7 @@ class AuthServicePasswordChangeTest {
         when(userScope.currentUser()).thenReturn(user);
         String originalHash = user.getPasswordHash();
 
-        authService.changePassword(new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD), null);
+        authService.changePassword(new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD));
 
         assertThat(user.getPasswordHash()).isNotEqualTo(originalHash);
         assertThat(passwordEncoder.matches(NEW_PASSWORD, user.getPasswordHash())).isTrue();
@@ -106,7 +106,7 @@ class AuthServicePasswordChangeTest {
         String originalHash = user.getPasswordHash();
 
         assertThatThrownBy(() -> authService.changePassword(
-                new ChangePasswordRequest("NotMyPassword", NEW_PASSWORD), null))
+                new ChangePasswordRequest("NotMyPassword", NEW_PASSWORD)))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("Current password is incorrect.");
 
@@ -125,7 +125,7 @@ class AuthServicePasswordChangeTest {
         when(userScope.currentUser()).thenReturn(user);
 
         assertThatThrownBy(() -> authService.changePassword(
-                new ChangePasswordRequest(CURRENT_PASSWORD, CURRENT_PASSWORD), null))
+                new ChangePasswordRequest(CURRENT_PASSWORD, CURRENT_PASSWORD)))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessage("New password must be different from the current password.");
 
@@ -143,7 +143,7 @@ class AuthServicePasswordChangeTest {
     void doesNotDelegateToAuthenticationManager() {
         when(userScope.currentUser()).thenReturn(user);
 
-        authService.changePassword(new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD), null);
+        authService.changePassword(new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD));
 
         verify(authenticationManager, never()).authenticate(any());
     }
@@ -153,7 +153,7 @@ class AuthServicePasswordChangeTest {
     void operatesOnTheAuthenticatedUser() {
         when(userScope.currentUser()).thenReturn(user);
 
-        authService.changePassword(new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD), null);
+        authService.changePassword(new ChangePasswordRequest(CURRENT_PASSWORD, NEW_PASSWORD));
 
         // The request carries no user identifier at all; the account comes from
         // the security context, so one user cannot re-password another.

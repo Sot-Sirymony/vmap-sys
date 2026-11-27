@@ -5,6 +5,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.visionmapping.service.HealthService;
+import com.visionmapping.web.ServerSentEvents;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,22 +17,19 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.test.util.ReflectionTestUtils;
 
 /** BRD 12 COV-FR-30: the health check's cache detail (BR-21) and the Dream Coach's event stream. */
 class HealthAndEventsTest {
 
     @SuppressWarnings("unchecked")
-    private HealthController health(String cacheType, RedisConnectionFactory factory) {
+    private HealthService health(String cacheType, RedisConnectionFactory factory) {
         ObjectProvider<RedisConnectionFactory> provider = mock(ObjectProvider.class);
         when(provider.getIfAvailable()).thenReturn(factory);
-        HealthController controller = new HealthController(provider);
-        ReflectionTestUtils.setField(controller, "cacheType", cacheType);
-        return controller;
+        return new HealthService(provider, cacheType);
     }
 
-    private static Map<String, String> body(HealthController controller) {
-        return controller.health().getBody();
+    private static Map<String, String> body(HealthService service) {
+        return service.health();
     }
 
     @Test

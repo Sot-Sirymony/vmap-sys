@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient, fetchAllPages } from './apiClient';
 import { fetchReportFile, fileOptions, type DeckOptions, type ReportFilter, type ReportFormat } from './reportApi';
 import type {
   CoachShareStatus, CommentaryDraft, ReportExport, ReportReminderStatus, ReportRow, ReportSection, ReportShare, SavedReport, SavedReportCommentary,
@@ -14,7 +14,8 @@ export type SavedReportSettings = ReportFilter & { name?: string; language?: str
 
 /** RM-FR-17: newest change first; archived ones only when asked for. */
 export function listSavedReports(token: string, includeArchived = false) {
-  return apiClient<SavedReport[]>(`/reports/saved${includeArchived ? '?includeArchived=true' : ''}`, { token });
+  // V33: the list is paged on the server; the Reports page shows them all.
+  return fetchAllPages<SavedReport>(`/reports/saved?includeArchived=${includeArchived}`, token);
 }
 
 function body(settings: SavedReportSettings) {

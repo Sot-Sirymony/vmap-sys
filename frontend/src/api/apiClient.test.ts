@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiClient, clearApiCache } from './apiClient';
+import { apiClient, clearApiCache, fetchAllPages, MAX_PAGE_SIZE, problemMessage } from './apiClient';
 
 /**
  * The GET cache is the one piece of this layer that can show someone stale or,
@@ -99,6 +99,55 @@ describe('apiClient GET caching', () => {
       text: () => Promise.resolve(JSON.stringify({ message: 'Fill in every field.', reference: 'a1b2c3d4e5f6' })),
     } as unknown as Response);
     await expect(apiClient('/dreams', { token: 'token-a' })).rejects.toThrow(/^Fill in every field\.$/);
+  });
+
+  it('reads an RFC 9457 problem: detail first, then the older message (V33 D-33-13)', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      text: () =>
+        Promise.resolve(
+          JSON.stringify({
+            type: 'urn:vms:problem:step-up-required',
+            title: 'Forbidden',
+            status: 403,
+            detail: 'Enter your code to continue.',
+            reference: 'a1b2c3d4e5f6',
+            code: 'STEP_UP_REQUIRED',
+            action: 'TOTP',
+          }),
+        ),
+    } as unknown as Response);
+    const refused = apiClient('/account/export', { token: 'token-a' });
+    await expect(refused).rejects.toThrow(/^Enter your code to continue\.$/);
+    await expect(refused).rejects.toMatchObject({ status: 403, code: 'STEP_UP_REQUIRED', action: 'TOTP' });
+
+    expect(problemMessage({ detail: 'New text', message: 'Old text' })).toBe('New text');
+    expect(problemMessage({ message: 'Old text', error: 'Bad Request' })).toBe('Old text');
+    expect(problemMessage({ title: 'Not Found' })).toBe('Not Found');
+    expect(problemMessage({})).toBeUndefined();
+    expect(problemMessage(null)).toBeUndefined();
+  });
+
+  it('reads every page of a paged list, largest pages first (V33 D-33-9)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ content: [1, 2], last: false }))
+      .mockResolvedValueOnce(jsonResponse({ content: [3], last: true }));
+
+    await expect(fetchAllPages<number>('/tasks?includeArchived=false', 'token-a')).resolves.toEqual([1, 2, 3]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(new RegExp(`/tasks\\?includeArchived=false&page=0&size=${MAX_PAGE_SIZE}$`));
+    expect(String(fetchMock.mock.calls[1][0])).toMatch(/&page=1&size=200$/);
+  });
+
+  it('stops at an empty page and adds a query string when there is none', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ content: [], last: false }));
+
+    await expect(fetchAllPages<number>('/progress-logs', 'token-a')).resolves.toEqual([]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/progress-logs\?page=0&size=200$/);
   });
 
   it('does not leave a failed GET cached', async () => {

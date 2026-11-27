@@ -23,85 +23,112 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import com.visionmapping.dto.response.PagedResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
-@RequestMapping("/api/tasks")
+@RequestMapping(value = ApiPaths.V1 + "/tasks", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Tasks", description = "Tasks under a step")
 public class TaskItemController {
 
     private final TaskItemService service;
 
+    @Operation(summary = "List tasks, one page at a time")
     @GetMapping
-    public List<TaskItemResponse> list(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listTasks(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<PagedResponse<TaskItemResponse>> list(
+            @RequestParam(defaultValue = "false") boolean includeArchived,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(service.pageTasks(ArchiveFilter.of(includeArchived), pageable));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public TaskItemResponse create(@Valid @RequestBody TaskItemRequest request) {
-        return service.createTask(request);
+    @Operation(summary = "Create a task")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TaskItemResponse> create(@Valid @RequestBody TaskItemRequest request) {
+        TaskItemResponse created = service.createTask(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get a task")
     @GetMapping("/{id}")
-    public TaskItemResponse get(@PathVariable Long id) {
-        return service.getTask(id);
+    public ResponseEntity<TaskItemResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getTask(id));
     }
 
-    @PutMapping("/{id}")
-    public TaskItemResponse update(@PathVariable Long id, @Valid @RequestBody TaskItemRequest request) {
-        return service.updateTask(id, request);
+    @Operation(summary = "Update a task")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TaskItemResponse> update(@PathVariable @Positive Long id, @Valid @RequestBody TaskItemRequest request) {
+        return ResponseEntity.ok(service.updateTask(id, request));
     }
 
-    @PatchMapping("/{id}/status")
-    public TaskItemResponse updateStatus(@PathVariable Long id, @Valid @RequestBody TaskStatusUpdateRequest request) {
+    @Operation(summary = "Change a task's status")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TaskItemResponse> updateStatus(@PathVariable @Positive Long id, @Valid @RequestBody TaskStatusUpdateRequest request) {
         // V17 BL-FR-27: changeNote is kept when the task leaves Blocked.
-        return service.updateTaskStatus(id, request.status(), request.changeNote());
+        return ResponseEntity.ok(service.updateTaskStatus(id, request.status(), request.changeNote()));
     }
 
     /** V17 BL-FR-25: breaks this task into 2 to 5 smaller tasks under the same step. */
-    @PostMapping("/{id}/split")
-    @ResponseStatus(HttpStatus.CREATED)
-    public TaskSplitResponse split(@PathVariable Long id, @Valid @RequestBody TaskSplitRequest request) {
-        return service.splitTask(id, request);
+    @Operation(summary = "Split a task into smaller tasks")
+    @PostMapping(value = "/{id}/split", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TaskSplitResponse> split(@PathVariable @Positive Long id, @Valid @RequestBody TaskSplitRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.splitTask(id, request));
     }
 
-    @PatchMapping("/reorder")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reorder(@Valid @RequestBody ReorderRequest request) {
+    @Operation(summary = "Reorder tasks")
+    @PatchMapping(value = "/reorder", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> reorder(@Valid @RequestBody ReorderRequest request) {
         service.reorderTasks(request.parentId(), request.orderedIds());
+        return ResponseEntity.noContent().build();
     }
 
     /** Tasks page: the participant's own order across all steps (V70). */
-    @PatchMapping("/list-order")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void reorderList(@Valid @RequestBody SimpleReorderRequest request) {
+    @Operation(summary = "Reorder the task list")
+    @PatchMapping(value = "/list-order", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> reorderList(@Valid @RequestBody SimpleReorderRequest request) {
         service.reorderTaskList(request.orderedIds());
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Archive a task")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveTask(id);
+        return ResponseEntity.noContent().build();
     }
 
     /** V29 AR-FR-04: archive with an optional reason (BR-29-1); the DELETE above keeps working without one. */
-    @PostMapping("/{id}/archive")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void archive(@PathVariable Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
-        service.archiveTask(id, request == null ? null : request.reason());
-    }
-    @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
-        service.restoreTask(id);
+    @Operation(summary = "Archive a task, with an optional reason")
+    @PostMapping(value = "/{id}/archive", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> archive(@PathVariable @Positive Long id, @Valid @RequestBody(required = false) ArchiveRequest request) {
+        service.archiveTask(id, ArchiveRequest.reasonOf(request));
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Restore an archived task")
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
+        service.restoreTask(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Delete a task permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteTask(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

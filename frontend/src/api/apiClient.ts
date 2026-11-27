@@ -5,7 +5,14 @@ type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
+/**
+ * V33 (D-33-13): an RFC 9457 problem (application/problem+json). `detail` is the
+ * message to show; `message`, `error` and `path` are the older names the server
+ * still sends during API version 1.
+ */
 type ApiErrorResponse = {
+  detail?: string;
+  title?: string;
   message?: string;
   error?: string;
   // V10 (SEC-10-02): matches the server log line for this error.
@@ -280,6 +287,38 @@ async function sendRequest<T>(path: string, options: RequestOptions = {}): Promi
   return response.json() as Promise<T>;
 }
 
+/** V33 (D-33-9): the largest page the server sends; asking for more still gets this many. */
+export const MAX_PAGE_SIZE = 200;
+
+/** A safety stop: 50 pages of 200 is 10,000 items, far more than any one user has. */
+const MAX_PAGES = 50;
+
+/**
+ * V33 (D-33-9): every item of a paged list, for screens that need the whole list
+ * (the task board, the timeline, pickers). It asks for the largest pages and
+ * stops at the last one. `path` may already have a query string.
+ */
+export async function fetchAllPages<T>(path: string, token: string | null | undefined): Promise<T[]> {
+  const items: T[] = [];
+  const separator = path.includes('?') ? '&' : '?';
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const result = await apiClient<{ content: T[]; last: boolean }>(`${path}${separator}page=${page}&size=${MAX_PAGE_SIZE}`, { token });
+    items.push(...result.content);
+    if (result.last || result.content.length === 0) {
+      break;
+    }
+  }
+  return items;
+}
+
+/** V33: the text to show from an error body, whether it is a problem or the older shape. */
+export function problemMessage(body: { detail?: string; message?: string; title?: string; error?: string } | null | undefined): string | undefined {
+  if (!body) {
+    return undefined;
+  }
+  return body.detail || body.message || body.title || body.error || undefined;
+}
+
 /** The message to show, and the server's reference for this error when it sent one. */
 async function readError(response: Response): Promise<{ message: string; reference?: string; code?: string; triesLeft?: number; action?: string }> {
   const fallback = `Request failed with status ${response.status}`;
@@ -290,7 +329,7 @@ async function readError(response: Response): Promise<{ message: string; referen
 
   try {
     const error = JSON.parse(text) as ApiErrorResponse;
-    const message = error.message || error.error || fallback;
+    const message = problemMessage(error) || fallback;
     // A server fault has nothing the user can fix, so give them the reference
     // to quote when they report it. Other errors keep their message as is, so
     // it can still be translated.

@@ -90,8 +90,8 @@ public class TwoFactorService {
      * TF-FR-02, TF-FR-03: a new authenticator secret, kept pending; the settings
      * in use (if any) stay as they are until a code confirms it.
      */
-    public TotpSetupResponse startAuthenticator(@Nullable String stepUp) {
-        stepUpService.require(StepUpAction.TWO_FACTOR_SETTINGS, stepUp);
+    public TotpSetupResponse startAuthenticator() {
+        stepUpService.requireFromRequest(StepUpAction.TWO_FACTOR_SETTINGS);
         AppUser user = userScope.currentUser();
         Instant now = clock.instant();
         String secret = TotpCodes.newSecret();
@@ -140,7 +140,7 @@ public class TwoFactorService {
      * it's you" code, sent to the account email and typed back, is the proof the
      * address works, so no second code is sent.
      */
-    public RecoveryCodesResponse useEmail(@Nullable String stepUp) {
+    public RecoveryCodesResponse useEmail() {
         AppUser user = userScope.currentUser();
         if (permissions.isPrivileged(user)) {
             throw new BusinessRuleException("Coach and admin accounts must use an authenticator app.");
@@ -148,7 +148,7 @@ public class TwoFactorService {
         if (mailer.delivery() == StepUpMailer.Delivery.NONE) {
             throw new BusinessRuleException("Email codes cannot be sent right now. Use an authenticator app instead.");
         }
-        stepUpService.require(StepUpAction.TWO_FACTOR_SETTINGS, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.TWO_FACTOR_SETTINGS);
         Instant now = clock.instant();
         UserTwoFactor settings = settingsRepository.findById(user.getId())
                 .orElseGet(() -> UserTwoFactor.builder().userId(user.getId()).build());
@@ -170,12 +170,12 @@ public class TwoFactorService {
     }
 
     /** TF-FR-07: ten new recovery codes; every old one stops working at once. */
-    public RecoveryCodesResponse newRecoveryCodes(@Nullable String stepUp) {
+    public RecoveryCodesResponse newRecoveryCodes() {
         AppUser user = userScope.currentUser();
         if (enabledSettings(user.getId()).isEmpty()) {
             throw new BusinessRuleException("Turn on two-factor sign-in first.");
         }
-        stepUpService.require(StepUpAction.TWO_FACTOR_SETTINGS, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.TWO_FACTOR_SETTINGS);
         List<String> codes = replaceRecoveryCodes(user);
         securityEvents.recordFor(user.getId(), SecurityEventType.RECOVERY_CODES_REGENERATED, SecurityOutcome.SUCCESS, null);
         accountNotices.changed(AccountNotice.Kind.TWO_FACTOR_CHANGED, user, null, "given new recovery codes");
@@ -183,7 +183,7 @@ public class TwoFactorService {
     }
 
     /** TF-FR-08: removes the secret, recovery codes and trusted devices. Not for an admin or coach past their date. */
-    public void turnOff(@Nullable String stepUp) {
+    public void turnOff() {
         AppUser user = userScope.currentUser();
         if (enabledSettings(user.getId()).isEmpty()) {
             throw new BusinessRuleException("Two-factor sign-in is already off.");
@@ -194,7 +194,7 @@ public class TwoFactorService {
                     // V24 (D-24-4): required for every account.
                     : "Two-step sign-in is required for every account, so it must stay on.");
         }
-        stepUpService.require(StepUpAction.TWO_FACTOR_SETTINGS, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.TWO_FACTOR_SETTINGS);
         settingsRepository.deleteById(user.getId());
         recoveryRepository.deleteByUserId(user.getId());
         trustedDevices.removeAll(user.getId(), "two-factor turned off");

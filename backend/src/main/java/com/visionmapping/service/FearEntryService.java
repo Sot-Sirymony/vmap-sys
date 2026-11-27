@@ -1,6 +1,7 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.findPageForUser;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
 import com.visionmapping.dto.request.FearEntryRequest;
@@ -16,6 +17,10 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
 
 /** FR-65: the fear log. Private to its owner and never gates anything else. */
 @Service
@@ -33,6 +38,16 @@ public class FearEntryService {
                 .sorted(Comparator.comparing(FearEntry::getCreatedAt).reversed())
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    /** V33 (D-33-10): the properties the fear journal can be sorted by. */
+    static final Set<String> FEAR_SORTS = Set.of("likelihood", "createdAt", "updatedAt");
+
+    /** V33 (D-33-9): one page of the fear journal. */
+    @Transactional(readOnly = true)
+    public PagedResponse<FearEntryResponse> pageFearEntries(ArchiveFilter archiveFilter, Pageable pageable) {
+        return PagedResponse.from(findPageForUser(fearEntryRepository, lookup.userId(), archiveFilter,
+                Pageables.whitelist(pageable, FEAR_SORTS)), mapper::toResponse);
     }
 
     public FearEntryResponse createFearEntry(FearEntryRequest request) {

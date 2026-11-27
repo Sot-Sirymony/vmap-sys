@@ -1,3 +1,5 @@
+import type { Page } from './vision';
+
 /** V23 (BRD 23.0.0): the Users and Roles pages. Mirrors the server's records. */
 
 export type TwoFactorState = 'ON' | 'DUE' | 'OFF';
@@ -17,12 +19,9 @@ export type AdminUserSummary = {
   lastSignInAt?: string | null;
 };
 
+/** V33 (D-33-9): the page of accounts is in the shared page shape; the counts are for all accounts. */
 export type AdminUserPage = {
-  items: AdminUserSummary[];
-  page: number;
-  size: number;
-  totalElements: number;
-  hasNext: boolean;
+  users: Page<AdminUserSummary>;
   totalAccounts: number;
   activeAccounts: number;
   blockedAccounts: number;

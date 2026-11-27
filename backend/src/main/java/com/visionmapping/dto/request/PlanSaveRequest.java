@@ -12,6 +12,11 @@ import java.util.List;
  */
 public record PlanSaveRequest(@Size(max = 8) List<@NotNull @Pattern(regexp = "^R-0[1-8]$") String> acceptedShould) {
 
+    /** V33 (D-33-11): the accepted SHOULD rules of an optional body; none when there is no body. */
+    public static java.util.Set<String> acceptedShouldOf(@org.springframework.lang.Nullable PlanSaveRequest request) {
+        return request == null || request.acceptedShould() == null ? java.util.Set.of() : java.util.Set.copyOf(request.acceptedShould());
+    }
+
     public PlanSaveRequest {
         acceptedShould = Copies.list(acceptedShould);
     }

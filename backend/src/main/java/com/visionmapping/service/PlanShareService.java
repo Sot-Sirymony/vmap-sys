@@ -36,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.service.support.RequestRateLimiter;
 
 /**
  * V9 (v0.1 FR-10): read-only links to one dream's plan for a partner or mentor.
@@ -55,6 +56,7 @@ public class PlanShareService {
     private static final String LINK_GONE = "This link has ended or was stopped.";
 
     private final EntityLookup lookup;
+    private final RequestRateLimiter rateLimiter;
     private final SecurityEventService securityEvents;
     private final PlanShareRepository planShareRepository;
     private final GoalRepository goalRepository;
@@ -104,6 +106,12 @@ public class PlanShareService {
     }
 
     /** Public: the partner's view. Counts the visit so the owner sees the link was opened. */
+    /** V10 (SEC-06-02): opening share links is limited per network address. V33 moved this check here. Counts the view. */
+    public SharedPlanResponse viewFrom(String token, String clientIp) {
+        rateLimiter.check(RequestRateLimiter.Action.SHARED_PLAN, clientIp);
+        return view(token);
+    }
+
     public SharedPlanResponse view(String token) {
         Instant now = Instant.now(clock);
         PlanShare share = planShareRepository.findByTokenHash(hash(token))

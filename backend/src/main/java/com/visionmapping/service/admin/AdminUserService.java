@@ -2,6 +2,7 @@ package com.visionmapping.service.admin;
 
 import com.visionmapping.dto.response.AdminUserDetailResponse;
 import com.visionmapping.dto.response.AdminUserPageResponse;
+import com.visionmapping.dto.response.PagedResponse;
 import com.visionmapping.dto.response.AdminUserSummaryResponse;
 import com.visionmapping.dto.response.SecurityEventResponse;
 import com.visionmapping.entity.AppUser;
@@ -9,7 +10,6 @@ import com.visionmapping.entity.Cohort;
 import com.visionmapping.entity.SecurityEvent;
 import com.visionmapping.entity.UserTwoFactor;
 import com.visionmapping.entity.enums.IdentityProvider;
-import com.visionmapping.entity.enums.UserRole;
 import com.visionmapping.entity.enums.UserStatus;
 import com.visionmapping.exception.BusinessRuleException;
 import com.visionmapping.exception.ResourceNotFoundException;
@@ -91,9 +91,8 @@ public class AdminUserService {
         Page<AppUser> found = users.findAll(specification(filter), PageRequest.of(Math.max(0, page), pageSize, sort(filter.sort())));
         Map<Long, UserTwoFactor> twoFactorById = twoFactorOf(found.getContent());
         Map<String, String> roleNames = roleNames();
-        List<AdminUserSummaryResponse> items = found.getContent().stream()
-                .map(user -> summary(user, twoFactorById.get(user.getId()), roleNames))
-                .toList();
+        PagedResponse<AdminUserSummaryResponse> usersPage = PagedResponse.from(found,
+                user -> summary(user, twoFactorById.get(user.getId()), roleNames));
 
         long active = 0;
         long blocked = 0;
@@ -107,8 +106,7 @@ public class AdminUserService {
                 blocked += count;
             }
         }
-        return new AdminUserPageResponse(items, found.getNumber(), found.getSize(), found.getTotalElements(), found.hasNext(),
-                active + blocked, active, blocked, byRole);
+        return new AdminUserPageResponse(usersPage, active + blocked, active, blocked, byRole);
     }
 
     public AdminUserDetailResponse detail(Long id) {

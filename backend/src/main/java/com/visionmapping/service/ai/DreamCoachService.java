@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.lang.Nullable;
 
 /**
  * V9 Phase 3: the Dream Coach chat. Each message goes through the safety layer
@@ -67,6 +68,18 @@ public class DreamCoachService {
     private final TransactionTemplate transactions;
 
     @Transactional(readOnly = true)
+    /**
+     * V33 (D-33-11): which conversations the list shows. A page tag with no dream
+     * gives the page assistant's (AH-FR-11); a dream and a section give the plan
+     * assistant's (PB-FR-50); otherwise the Dream Coach's own.
+     */
+    public List<AiConversationResponse> listConversations(@Nullable Long dreamId, @Nullable String section) {
+        if (dreamId == null && section != null && section.startsWith(PageAssistantService.SECTION_PREFIX)) {
+            return pageConversations(section);
+        }
+        return dreamId != null && section != null ? conversations(dreamId, section) : conversations();
+    }
+
     public List<AiConversationResponse> conversations() {
         return conversationRepository.findByUser_IdOrderByUpdatedAtDesc(lookup.userId()).stream()
                 .map(conversation -> toResponse(conversation, null))

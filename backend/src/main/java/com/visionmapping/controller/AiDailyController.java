@@ -20,46 +20,59 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 /** V9 Phase 6: AI for daily use. Suggestions only; saving goes through the normal endpoints. */
-@Validated
 @RestController
-@RequestMapping("/api/ai/daily")
+@RequestMapping(value = ApiPaths.V1 + "/ai/daily", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "AI daily help", description = "AI help with the next step, the weekly review, pitches, outreach and resources")
 public class AiDailyController {
 
     private final AiDailyService service;
 
+    @Operation(summary = "Suggest the next step for the minutes I have")
     @PostMapping("/next-step")
-    public NextStep nextStep(@RequestParam @Min(5) @Max(480) int minutes,
+    public ResponseEntity<NextStep> nextStep(@RequestParam @Min(5) @Max(480) int minutes,
                              @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.nextStep(minutes, language);
+        return ResponseEntity.ok(service.nextStep(minutes, language));
     }
 
+    @Operation(summary = "Draft my weekly review with AI")
     @PostMapping("/weekly-review-draft")
-    public WeeklyReviewDraft weeklyReview(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.weeklyReview(language);
+    public ResponseEntity<WeeklyReviewDraft> weeklyReview(@RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
+        return ResponseEntity.ok(service.weeklyReview(language));
     }
 
-    @PostMapping("/pitch-feedback")
-    public PitchFeedback pitch(@Valid @RequestBody AiPitchRequest request) {
-        return service.pitch(request);
+    @Operation(summary = "Get AI feedback on a pitch")
+    @PostMapping(value = "/pitch-feedback", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PitchFeedback> pitch(@Valid @RequestBody AiPitchRequest request) {
+        return ResponseEntity.ok(service.pitch(request));
     }
 
-    @PostMapping("/outreach-draft")
-    public OutreachDraft outreach(@Valid @RequestBody AiOutreachRequest request) {
-        return service.outreach(request);
+    @Operation(summary = "Draft an outreach message with AI")
+    @PostMapping(value = "/outreach-draft", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<OutreachDraft> outreach(@Valid @RequestBody AiOutreachRequest request) {
+        return ResponseEntity.ok(service.outreach(request));
     }
 
+    @Operation(summary = "Suggest resources for a goal")
     @PostMapping("/goals/{goalId}/resource-ideas")
-    public ResourceIdeas resources(@PathVariable Long goalId,
+    public ResponseEntity<ResourceIdeas> resources(@PathVariable @Positive Long goalId,
                                    @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.resources(goalId, language);
+        return ResponseEntity.ok(service.resources(goalId, language));
     }
 
+    @Operation(summary = "Suggest resources for a step")
     @PostMapping("/steps/{stepId}/resource-ideas")
-    public ResourceIdeas stepResources(@PathVariable Long stepId,
+    public ResponseEntity<ResourceIdeas> stepResources(@PathVariable @Positive Long stepId,
                                        @RequestParam(defaultValue = "en") @Pattern(regexp = "en|km") String language) {
-        return service.stepResources(stepId, language);
+        return ResponseEntity.ok(service.stepResources(stepId, language));
     }
 }

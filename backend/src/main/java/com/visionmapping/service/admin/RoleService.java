@@ -98,14 +98,14 @@ public class RoleService {
     }
 
     /** UM-FR-09. */
-    public RoleResponse create(RoleRequest request, @Nullable String stepUp) {
+    public RoleResponse create(RoleRequest request) {
         requireRoleManager();
         String name = request.name().trim();
         if (roles.existsByNameIgnoreCase(name)) {
             throw new BusinessRuleException("A role named " + name + " already exists.");
         }
         Set<Permission> wanted = normalise(request.permissions());
-        stepUpService.require(StepUpAction.ADMIN_ROLE_EDIT, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_ROLE_EDIT);
 
         Role role = roles.saveAndFlush(new Role(newKey(name), name, blankToNull(request.description()), wanted));
         permissions.evict();
@@ -115,7 +115,7 @@ public class RoleService {
     }
 
     /** UM-FR-10 to UM-FR-13. */
-    public RoleResponse update(String key, RoleRequest request, @Nullable String stepUp) {
+    public RoleResponse update(String key, RoleRequest request) {
         requireRoleManager();
         Role role = role(key);
         if (LOCKED.contains(role.getKey())) {
@@ -133,7 +133,7 @@ public class RoleService {
         Set<Permission> after = normalise(request.permissions());
         boolean losesCoaching = before.contains(Permission.COACH_COHORTS) && !after.contains(Permission.COACH_COHORTS);
         Map<Cohort, AppUser> handover = losesCoaching ? handover(role, request.cohortChanges()) : Map.of();
-        stepUpService.require(StepUpAction.ADMIN_ROLE_EDIT, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_ROLE_EDIT);
 
         boolean wasPrivileged = permissions.isPrivilegedRole(role.getKey());
         handover.forEach((cohort, coach) -> {
@@ -166,7 +166,7 @@ public class RoleService {
     }
 
     /** UM-FR-14, UM-FR-15. */
-    public void delete(String key, RoleDeleteRequest request, @Nullable String stepUp) {
+    public void delete(String key, RoleDeleteRequest request) {
         AppUser actor = requireRoleManager();
         Role role = role(key);
         if (role.isBuiltIn()) {
@@ -192,7 +192,7 @@ public class RoleService {
                 }
             }
         }
-        stepUpService.require(StepUpAction.ADMIN_ROLE_EDIT, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_ROLE_EDIT);
 
         boolean privileged = target != null && permissions.isPrivilegedRole(target.getKey());
         for (AppUser holder : holders) {

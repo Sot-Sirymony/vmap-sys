@@ -1,6 +1,7 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.findPageForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
 
@@ -29,6 +30,11 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.Set;
+import org.springframework.data.domain.Pageable;
+import java.util.function.Function;
 
 /**
  * Obstacles blocking a step or task, optionally linked to the partner whose
@@ -65,6 +71,24 @@ public class ObstacleService {
         return findAllForUser(obstacleRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    /** V33 (D-33-10): the properties the obstacle list can be sorted by. */
+    static final Set<String> OBSTACLE_SORTS = Set.of("title", "obstacleType", "severity", "letterRank", "status", "resolvedAt",
+            "createdAt", "updatedAt");
+
+    /**
+     * V33 (D-33-9): one page of the user's obstacles. {@code placement=UNPLACED}
+     * pages the obstacles that still need a step (BL-FR-05), which are few, in
+     * memory; any other value pages every obstacle in the database.
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<ObstacleResponse> pageObstacles(ArchiveFilter archiveFilter, @Nullable String placement, Pageable pageable) {
+        Pageable checked = Pageables.whitelist(pageable, OBSTACLE_SORTS);
+        if ("UNPLACED".equalsIgnoreCase(placement)) {
+            return PagedResponse.from(Pageables.slice(listUnplacedObstacles(), checked), Function.identity());
+        }
+        return PagedResponse.from(findPageForUser(obstacleRepository, lookup.userId(), archiveFilter, checked), mapper::toResponse);
     }
 
     /**

@@ -9,14 +9,17 @@ import com.visionmapping.security.audit.SecurityOutcome;
 import com.visionmapping.security.audit.SecurityEventType;
 import com.visionmapping.security.audit.SecurityEventService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -30,8 +33,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
- * Turns every exception into an {@link ErrorResponse} with the right HTTP
- * status, in one place. Messages are short and safe to show: raw framework
+ * Turns every exception into an RFC 9457 {@link ProblemDetail} (built by
+ * {@link Problems}, V33 D-33-13) with the right HTTP status, in one place. Messages are short and safe to show: raw framework
  * messages, which can name internal classes or echo the request, are never
  * returned. Unexpected exceptions are logged and answered with a plain 500.
  */
@@ -44,7 +47,7 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(
+    public ResponseEntity<ProblemDetail> handleValidation(
             MethodArgumentNotValidException exception,
             HttpServletRequest request
     ) {
@@ -52,8 +55,10 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .orElse("Validation failed");
-
-        return buildResponse(HttpStatus.BAD_REQUEST, message, request);
+        List<Problems.FieldProblem> errors = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new Problems.FieldProblem(error.getField(), error.getDefaultMessage()))
+                .toList();
+        return Problems.answer(Problems.invalid(message, request.getRequestURI(), errors));
     }
 
     /**
@@ -62,7 +67,7 @@ public class GlobalExceptionHandler {
      * input, not a server fault, so it must not surface as a 500.
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+    public ResponseEntity<ProblemDetail> handleTypeMismatch(
             MethodArgumentTypeMismatchException exception,
             HttpServletRequest request
     ) {
@@ -78,13 +83,13 @@ public class GlobalExceptionHandler {
      * how the controller is validated; both are bad input, never a 500.
      */
     @ExceptionHandler({ConstraintViolationException.class, HandlerMethodValidationException.class})
-    public ResponseEntity<ErrorResponse> handleParameterValidation(Exception exception, HttpServletRequest request) {
+    public ResponseEntity<ProblemDetail> handleParameterValidation(Exception exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, "One of the values sent is not allowed.", request);
     }
 
     /** A path that exists but not for this method, e.g. POST where only PUT is mapped: 405, not a 500. */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+    public ResponseEntity<ProblemDetail> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException exception,
             HttpServletRequest request
     ) {
@@ -93,7 +98,7 @@ public class GlobalExceptionHandler {
 
     /** A required query parameter left out is the caller's mistake, like a wrong one above. */
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponse> handleMissingParameter(
+    public ResponseEntity<ProblemDetail> handleMissingParameter(
             MissingServletRequestParameterException exception,
             HttpServletRequest request
     ) {
@@ -114,7 +119,7 @@ public class GlobalExceptionHandler {
      * "you sent something invalid" apart from "the server broke".
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadableBody(
+    public ResponseEntity<ProblemDetail> handleUnreadableBody(
             HttpMessageNotReadableException exception,
             HttpServletRequest request
     ) {
@@ -132,7 +137,7 @@ public class GlobalExceptionHandler {
 
     /** V19 RMC-09: a change the record's state does not allow, such as editing a final report. */
     @ExceptionHandler(StateConflictException.class)
-    public ResponseEntity<ErrorResponse> handleStateConflict(
+    public ResponseEntity<ProblemDetail> handleStateConflict(
             StateConflictException exception,
             HttpServletRequest request
     ) {
@@ -140,7 +145,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(
+    public ResponseEntity<ProblemDetail> handleNotFound(
             ResourceNotFoundException exception,
             HttpServletRequest request
     ) {
@@ -148,7 +153,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<ErrorResponse> handleBusinessRule(
+    public ResponseEntity<ProblemDetail> handleBusinessRule(
             BusinessRuleException exception,
             HttpServletRequest request
     ) {
@@ -166,31 +171,32 @@ public class GlobalExceptionHandler {
      */
     /** V20: "Verify it's you" answers, with the code the page acts on. */
     @ExceptionHandler(StepUpException.class)
-    public ResponseEntity<ErrorResponse> handleStepUp(StepUpException exception, HttpServletRequest request) {
-        return ResponseEntity.status(exception.getStatus()).body(ErrorResponse.of(exception.getStatus(), exception.getMessage(),
+    public ResponseEntity<ProblemDetail> handleStepUp(StepUpException exception, HttpServletRequest request) {
+        return Problems.answer(Problems.of(exception.getStatus(), exception.getMessage(),
                 request.getRequestURI(), exception.getCode(), exception.getTriesLeft(), exception.getAction()));
     }
 
     /** V21: a two-factor answer the page acts on (wrong code, step ended). */
     @ExceptionHandler(TwoFactorException.class)
-    public ResponseEntity<ErrorResponse> handleTwoFactor(TwoFactorException exception, HttpServletRequest request) {
-        return ResponseEntity.status(exception.getStatus()).body(ErrorResponse.of(exception.getStatus(), exception.getMessage(),
+    public ResponseEntity<ProblemDetail> handleTwoFactor(TwoFactorException exception, HttpServletRequest request) {
+        return Problems.answer(Problems.of(exception.getStatus(), exception.getMessage(),
                 request.getRequestURI(), exception.getCode(), exception.getTriesLeft(), null));
     }
 
     @ExceptionHandler(TooManyRequestsException.class)
-    public ResponseEntity<ErrorResponse> handleTooManyRequests(
+    public ResponseEntity<ProblemDetail> handleTooManyRequests(
             TooManyRequestsException exception,
             HttpServletRequest request
     ) {
         securityEvents.record(SecurityEventType.RATE_LIMITED, SecurityOutcome.DENIED, null, null,
                 request.getMethod() + " " + request.getRequestURI());
-        ResponseEntity<ErrorResponse> response =
+        ResponseEntity<ProblemDetail> response =
                 buildResponse(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage(), request);
         if (exception.getRetryAfterSeconds() == null) {
             return response;
         }
         return ResponseEntity.status(response.getStatusCode())
+                .headers(response.getHeaders())
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.getRetryAfterSeconds()))
                 .body(response.getBody());
     }
@@ -201,7 +207,7 @@ public class GlobalExceptionHandler {
      * fault; 413 tells the user the file itself is the problem.
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleUploadTooLarge(
+    public ResponseEntity<ProblemDetail> handleUploadTooLarge(
             MaxUploadSizeExceededException exception,
             HttpServletRequest request
     ) {
@@ -211,7 +217,7 @@ public class GlobalExceptionHandler {
 
     /** AI-NFR-02: AI is off or unreachable; the rest of the app still works. */
     @ExceptionHandler(AiUnavailableException.class)
-    public ResponseEntity<ErrorResponse> handleAiUnavailable(
+    public ResponseEntity<ProblemDetail> handleAiUnavailable(
             AiUnavailableException exception,
             HttpServletRequest request
     ) {
@@ -220,7 +226,7 @@ public class GlobalExceptionHandler {
 
     /** V14 (GA-FR-02): Google sign-in is not set up; password sign-in still works. */
     @ExceptionHandler(GoogleSignInUnavailableException.class)
-    public ResponseEntity<ErrorResponse> handleGoogleSignInUnavailable(
+    public ResponseEntity<ProblemDetail> handleGoogleSignInUnavailable(
             GoogleSignInUnavailableException exception,
             HttpServletRequest request
     ) {
@@ -229,7 +235,7 @@ public class GlobalExceptionHandler {
 
     /** V10 (SEC-07-03): the refresh token no longer opens a session. */
     @ExceptionHandler(SessionEndedException.class)
-    public ResponseEntity<ErrorResponse> handleSessionEnded(
+    public ResponseEntity<ProblemDetail> handleSessionEnded(
             SessionEndedException exception,
             HttpServletRequest request
     ) {
@@ -238,7 +244,7 @@ public class GlobalExceptionHandler {
 
     /** V10 (SEC-07-04): another tab renewed the session first; retry with its token. */
     @ExceptionHandler(SessionSupersededException.class)
-    public ResponseEntity<ErrorResponse> handleSessionSuperseded(
+    public ResponseEntity<ProblemDetail> handleSessionSuperseded(
             SessionSupersededException exception,
             HttpServletRequest request
     ) {
@@ -246,35 +252,39 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAccessDenied(
+    public ResponseEntity<ProblemDetail> handleAccessDenied(
             AccessDeniedException exception,
             HttpServletRequest request
     ) {
         securityEvents.record(SecurityEventType.ACCESS_DENIED, SecurityOutcome.DENIED, null, null,
                 request.getMethod() + " " + request.getRequestURI());
-        return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
+        // V33 (D-33-15): a refusal from @PreAuthorize carries Spring's own "Access Denied";
+        // it gets the same words as a refusal from the security filter chain.
+        String message = exception instanceof AuthorizationDeniedException
+                ? "You do not have permission to perform this action." : exception.getMessage();
+        return buildResponse(HttpStatus.FORBIDDEN, message, request);
     }
 
     /** V23 (UM-FR-32): a blocked account with the right password. */
     /** V23 (UM-FR-24): a used, replaced or expired invitation link. */
     @ExceptionHandler(InvitationGoneException.class)
-    public ResponseEntity<ErrorResponse> handleInvitationGone(InvitationGoneException exception, HttpServletRequest request) {
+    public ResponseEntity<ProblemDetail> handleInvitationGone(InvitationGoneException exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.GONE, exception.getMessage(), request);
     }
 
     /** V24 (SA-FR-10 to SA-FR-12): the method is turned off; the message names the one to use. */
     @ExceptionHandler(SignInMethodOffException.class)
-    public ResponseEntity<ErrorResponse> handleSignInMethodOff(SignInMethodOffException exception, HttpServletRequest request) {
+    public ResponseEntity<ProblemDetail> handleSignInMethodOff(SignInMethodOffException exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
     }
 
     @ExceptionHandler(AccountBlockedException.class)
-    public ResponseEntity<ErrorResponse> handleAccountBlocked(AccountBlockedException exception, HttpServletRequest request) {
+    public ResponseEntity<ProblemDetail> handleAccountBlocked(AccountBlockedException exception, HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
     }
 
     @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
-    public ResponseEntity<ErrorResponse> handleAuthentication(
+    public ResponseEntity<ProblemDetail> handleAuthentication(
             RuntimeException exception,
             HttpServletRequest request
     ) {
@@ -287,7 +297,7 @@ public class GlobalExceptionHandler {
      * server fault, and must not be swallowed by the catch-all below as a 500.
      */
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoResource(
+    public ResponseEntity<ProblemDetail> handleNoResource(
             NoResourceFoundException exception,
             HttpServletRequest request
     ) {
@@ -295,17 +305,17 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(
+    public ResponseEntity<ProblemDetail> handleUnexpected(
             Exception exception,
             HttpServletRequest request
     ) {
         // Log the real cause: the client only ever sees a generic message, so
         // without this the actual exception (a failed query, a missing table)
         // would be invisible and impossible to diagnose.
-        ResponseEntity<ErrorResponse> response = buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+        ResponseEntity<ProblemDetail> response = buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Something went wrong on our side. If it keeps happening, report it with the reference.", request);
         log.error("Unhandled exception on {} {} [ref {}]", request.getMethod(), request.getRequestURI(),
-                response.getBody().reference(), exception);
+                Problems.reference(response.getBody()), exception);
         return response;
     }
 
@@ -317,19 +327,19 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler({DataAccessResourceFailureException.class, QueryTimeoutException.class,
             CannotCreateTransactionException.class, TransientDataAccessException.class})
-    public ResponseEntity<ErrorResponse> handleDataUnavailable(Exception exception, HttpServletRequest request) {
-        ResponseEntity<ErrorResponse> response = buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
+    public ResponseEntity<ProblemDetail> handleDataUnavailable(Exception exception, HttpServletRequest request) {
+        ResponseEntity<ProblemDetail> response = buildResponse(HttpStatus.SERVICE_UNAVAILABLE,
                 "The service is busy or briefly unavailable. Try again in a moment.", request);
         log.error("Data store unavailable on {} {} [ref {}]", request.getMethod(), request.getRequestURI(),
-                response.getBody().reference(), exception);
+                Problems.reference(response.getBody()), exception);
         return response;
     }
 
-    private ResponseEntity<ErrorResponse> buildResponse(
+    private ResponseEntity<ProblemDetail> buildResponse(
             HttpStatus status,
             String message,
             HttpServletRequest request
     ) {
-        return ResponseEntity.status(status).body(ErrorResponse.of(status, message, request.getRequestURI()));
+        return Problems.answer(Problems.of(status, message, request.getRequestURI()));
     }
 }

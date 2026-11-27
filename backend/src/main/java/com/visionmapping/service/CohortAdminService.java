@@ -57,18 +57,18 @@ public class CohortAdminService {
     }
 
     @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
-    public CohortResponse create(CohortRequest request, @Nullable String stepUp) {
+    public CohortResponse create(CohortRequest request) {
         requireAdmin();
         Cohort cohort = Cohort.builder().joinCode(newCode()).build();
-        apply(cohort, request, stepUp);
+        apply(cohort, request);
         return toResponse(cohortRepository.save(cohort));
     }
 
     @SecurityAudit(value = SecurityEventType.COHORT_CHANGED, target = "cohort")
-    public CohortResponse update(Long id, CohortRequest request, @Nullable String stepUp) {
+    public CohortResponse update(Long id, CohortRequest request) {
         requireAdmin();
         Cohort cohort = cohort(id);
-        apply(cohort, request, stepUp);
+        apply(cohort, request);
         return toResponse(cohortRepository.save(cohort));
     }
 
@@ -119,7 +119,7 @@ public class CohortAdminService {
         appUserRepository.save(user);
     }
 
-    private void apply(Cohort cohort, CohortRequest request, @Nullable String stepUp) {
+    private void apply(Cohort cohort, CohortRequest request) {
         cohort.setName(request.name().trim());
         cohort.setStartDate(request.startDate());
         if (request.aiPagesOff() != null) {
@@ -134,7 +134,7 @@ public class CohortAdminService {
         if (!Objects.equals(currentCoachId, coach == null ? null : coach.getId())) {
             // V20 SV-FR-06, SV-FR-08: a fresh code for the admin. Making someone a coach is a role change, which covers both.
             boolean promotes = coach != null && !permissions.has(coach, com.visionmapping.security.Permission.COACH_COHORTS);
-            stepUpService.require(promotes ? StepUpAction.ADMIN_ROLE_CHANGE : StepUpAction.ADMIN_COHORT_COACH, stepUp);
+            stepUpService.requireFromRequest(promotes ? StepUpAction.ADMIN_ROLE_CHANGE : StepUpAction.ADMIN_COHORT_COACH);
         }
         if (coach == null) {
             cohort.setCoach(null);

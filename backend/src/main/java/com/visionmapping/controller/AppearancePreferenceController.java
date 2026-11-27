@@ -10,6 +10,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * FR-39.6: the authenticated user's appearance preferences. There is no id in
@@ -18,23 +24,27 @@ import org.springframework.web.bind.annotation.RestController;
  * forgotten.
  */
 @RestController
-@RequestMapping("/api/preferences/appearance")
+@RequestMapping(value = ApiPaths.V1 + "/preferences/appearance", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Appearance", description = "My appearance preferences")
 public class AppearancePreferenceController {
 
     private final AppearancePreferenceService service;
 
+    @Operation(summary = "Get my appearance preferences")
     @GetMapping
-    public AppearancePreferencesResponse get() {
-        return service.getMyPreferences();
+    public ResponseEntity<AppearancePreferencesResponse> get() {
+        return ResponseEntity.ok(service.getMyPreferences());
     }
 
     /**
      * Partial updates are expected: the Appearance UI saves one control at a
      * time, so an omitted field keeps its stored value.
      */
-    @PutMapping
-    public AppearancePreferencesResponse update(@Valid @RequestBody AppearancePreferencesRequest request) {
-        return service.updateMyPreferences(request);
+    @Operation(summary = "Change my appearance preferences")
+    @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AppearancePreferencesResponse> update(@Valid @RequestBody AppearancePreferencesRequest request) {
+        return ResponseEntity.ok(service.updateMyPreferences(request));
     }
 }

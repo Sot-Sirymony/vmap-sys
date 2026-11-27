@@ -174,9 +174,9 @@ public class AuthService {
      * mid-change for the ordinary mistake of mistyping their old password.
      */
     @SecurityAudit(value = SecurityEventType.PASSWORD_CHANGED, target = "user")
-    public void changePassword(ChangePasswordRequest request, @Nullable String stepUp) {
+    public void changePassword(ChangePasswordRequest request) {
         // V20 SV-FR-01: the email code first, so this is no password oracle for someone holding the session.
-        stepUpService.require(StepUpAction.CHANGE_PASSWORD, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.CHANGE_PASSWORD);
         AppUser user = userScope.currentUser();
 
         // V14 (D-14-3): an account created with Google has no password anyone

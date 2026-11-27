@@ -215,7 +215,7 @@ class TaskBreakdownFlowTests {
 
     private List<String> notesFor(String token, long taskId) throws Exception {
         JsonNode logs = read(mockMvc.perform(get("/api/progress-logs").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk()));
+                .andExpect(status().isOk())).get("content");
         List<String> notes = new ArrayList<>();
         logs.forEach(log -> {
             if (log.get("relatedTaskId").asLong() == taskId && !log.get("note").isNull()) {

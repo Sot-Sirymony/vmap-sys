@@ -188,8 +188,10 @@ class CoreResourceLifecycleFlowTests {
     @Test
     void listsEachLevelShowsWhatArchivingWouldTakeWithItAndReordersDreamsGoalsAndSteps() throws Exception {
         for (String path : List.of("/api/vision-areas", "/api/dreams", "/api/goals", "/api/steps", "/api/tasks")) {
-            perform(get(path), owner.token()).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
-            perform(get(path), stranger).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+            // V33 (D-33-9): tasks answer a page; the other levels a plain list.
+            String count = path.equals("/api/tasks") ? "$.content.length()" : "$.length()";
+            perform(get(path), owner.token()).andExpect(status().isOk()).andExpect(jsonPath(count).value(1));
+            perform(get(path), stranger).andExpect(status().isOk()).andExpect(jsonPath(count).value(0));
         }
         perform(get("/api/dreams/" + owner.dreamId() + "/archive-impact"), owner.token()).andExpect(status().isOk())
                 .andExpect(jsonPath("$.goals").value(1)).andExpect(jsonPath("$.steps").value(1)).andExpect(jsonPath("$.tasks").value(1));

@@ -78,8 +78,8 @@ class ExcelImportFlowTests {
 
         mockMvc.perform(get("/api/tasks").header("Authorization", "Bearer " + importer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].title").value("Search PubMed"));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Search PubMed"));
     }
 
     /** V16 (TL-FR-49): the export adds a week-by-week Timeline sheet after Tasks; import ignores it. */

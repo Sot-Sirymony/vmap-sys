@@ -177,8 +177,8 @@ public class AccountService {
      */
     @Transactional
     @SecurityAudit(value = SecurityEventType.ACCOUNT_EXPORTED)
-    public AccountExportResponse exportData(@Nullable String stepUp) {
-        stepUpService.require(StepUpAction.EXPORT_DATA, stepUp);
+    public AccountExportResponse exportData() {
+        stepUpService.requireFromRequest(StepUpAction.EXPORT_DATA);
         AppUser user = userScope.currentUser();
         Long userId = user.getId();
         // V20 SV-FR-28: a notice to the account email once the download is made.
@@ -251,9 +251,9 @@ public class AccountService {
     }
 
     @SecurityAudit(value = SecurityEventType.ACCOUNT_DELETED)
-    public void deleteAccount(DeleteAccountRequest request, @Nullable String stepUp) {
+    public void deleteAccount(DeleteAccountRequest request) {
         // V20 SV-FR-02: a fresh email code first, never covered by the verified window.
-        stepUpService.require(StepUpAction.DELETE_ACCOUNT, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.DELETE_ACCOUNT);
         AppUser user = userScope.currentUser();
         // V14 (GA-FR-32, D-14-3): an account created with Google has no password
         // anyone knows; the fresh email code above is its proof.

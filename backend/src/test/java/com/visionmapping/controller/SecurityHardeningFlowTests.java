@@ -10,7 +10,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionmapping.entity.AppUser;
 import com.visionmapping.entity.enums.UserStatus;
-import com.visionmapping.exception.ErrorResponse;
 import com.visionmapping.exception.GlobalExceptionHandler;
 import com.visionmapping.repository.AppUserRepository;
 import java.util.Map;
@@ -22,6 +21,7 @@ import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -180,11 +180,12 @@ class SecurityHardeningFlowTests {
     void tooLargeUploadIsAnswered413WithAClearMessage() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/excel/import");
 
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleUploadTooLarge(
+        ResponseEntity<ProblemDetail> response = exceptionHandler.handleUploadTooLarge(
                 new MaxUploadSizeExceededException(DataSize.ofMegabytes(10).toBytes()), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
-        assertThat(response.getBody().message()).contains("10 MB");
+        assertThat(response.getBody().getDetail()).contains("10 MB");
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
     }
 
     // ---------- helpers ----------

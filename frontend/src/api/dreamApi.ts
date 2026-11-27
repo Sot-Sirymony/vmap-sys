@@ -72,5 +72,5 @@ export function permanentlyDeleteDream(token: string, id: number) {
 
 // FR-59.4: backs the completion-time contribution nudge.
 export function dreamHasLinkedPartner(token: string, id: number) {
-  return apiClient<boolean>(`/dreams/${id}/has-linked-partner`, { token });
+  return apiClient<{ linked: boolean }>(`/dreams/${id}/has-linked-partner`, { token }).then((answer) => answer.linked);
 }

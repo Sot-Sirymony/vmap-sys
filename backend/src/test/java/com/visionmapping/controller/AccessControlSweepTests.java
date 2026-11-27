@@ -215,6 +215,9 @@ class AccessControlSweepTests {
                 Map.of("expiresInDays", 7)));
         // V20: a "Verify it's you" code of the owner's own session.
         ownerIds.put("step-up", postAndId("/api/account/step-up", ownerToken, Map.of("action", "EXPORT_DATA"), "challengeId"));
+        // With no mail set up, no code is made and the answer has no id. V33 (D-33-8) refuses id 0 with 400
+        // before any lookup, so a positive id that is nobody's code stands in, as 0 did before.
+        ownerIds.computeIfPresent("step-up", (key, id) -> id > 0 ? id : 999_999_999L);
         ownerIds.put("goals/synergy-links", postAndId("/api/goals/" + goalId + "/synergy-links", ownerToken,
                 Map.of("relatedGoalId", secondGoalId)));
         // V27: a Streamline review of the goal, one of its items, and a repeating task.
@@ -526,8 +529,11 @@ class AccessControlSweepTests {
                 if (!pattern.startsWith("/api/")) {
                     continue;
                 }
+                // V33 (D-33-2): a version 1 route is called on its old path, which the
+                // legacy filter forwards, so every check here also covers the forwarding.
+                String legacy = pattern.startsWith("/api/v1/") ? "/api/" + pattern.substring("/api/v1/".length()) : pattern;
                 for (RequestMethod method : methods) {
-                    routes.add(new Route(HttpMethod.valueOf(method.name()), pattern));
+                    routes.add(new Route(HttpMethod.valueOf(method.name()), legacy));
                 }
             }
         }

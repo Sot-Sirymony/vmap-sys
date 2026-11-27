@@ -8,6 +8,11 @@ spring:
   mvc:
     async:
       request-timeout: 120s
+  # V33 (D-33-9): a paged list answers at most 200 rows, whatever size is asked for.
+  data:
+    web:
+      pageable:
+        max-page-size: 200
   # V10 (SEC-02-07): an explicit upload limit instead of the framework default.
   # Only the Excel import accepts files. A larger upload is refused with 413.
   servlet:
@@ -71,6 +76,11 @@ springdoc:
   paths-to-match: /api/**
 
 app:
+  # V33 (D-33-2): the HTTP date sent in the Sunset header on old /api/... paths
+  # forwarded to /api/v1, for example "Sat, 30 Jan 2027 00:00:00 GMT". Blank
+  # sends no Sunset header (Deprecation: true is always sent).
+  api:
+    legacy-sunset: ${API_LEGACY_SUNSET:}
   # BRD C-7 / V10 SEC-04-06: the snapshot saved before each Excel import, and how
   # long it is kept before the daily clean-up deletes it.
   excel:

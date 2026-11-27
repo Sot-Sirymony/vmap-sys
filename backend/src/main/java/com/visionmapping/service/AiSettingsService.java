@@ -121,13 +121,13 @@ public class AiSettingsService {
 
     /** V20 SV-FR-07: a fresh "Verify it's you" code for the admin, every time. */
     @SecurityAudit(value = SecurityEventType.AI_KEY_CHANGED)
-    public AiSettingsResponse saveApiKey(AiApiKeyRequest request, @org.springframework.lang.Nullable String stepUp) {
+    public AiSettingsResponse saveApiKey(AiApiKeyRequest request) {
         requireAdmin();
         String key = request.apiKey().trim();
         if (!key.startsWith("sk-ant-") || key.chars().anyMatch(Character::isWhitespace)) {
             throw new BusinessRuleException("That does not look like a Claude API key. It starts with sk-ant-.");
         }
-        stepUpService.require(StepUpAction.ADMIN_AI_KEY, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_AI_KEY);
         AiSettings settings = settings();
         settings.setApiKeyEncrypted(cipher.encrypt(key));
         settings.setApiKeyLast4(key.substring(key.length() - 4));
@@ -140,9 +140,9 @@ public class AiSettingsService {
     /** Removes the saved key; AI turns off unless the server setting supplies one. */
     /** V20 SV-FR-07: a fresh "Verify it's you" code for the admin, every time. */
     @SecurityAudit(value = SecurityEventType.AI_KEY_REMOVED)
-    public AiSettingsResponse removeApiKey(@org.springframework.lang.Nullable String stepUp) {
+    public AiSettingsResponse removeApiKey() {
         requireAdmin();
-        stepUpService.require(StepUpAction.ADMIN_AI_KEY, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_AI_KEY);
         AiSettings settings = settings();
         settings.setApiKeyEncrypted(null);
         settings.setApiKeyLast4(null);

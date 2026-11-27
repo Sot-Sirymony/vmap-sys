@@ -8,6 +8,8 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.lang.Nullable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Stateless helpers every entity service shares: generating the next display
@@ -28,6 +30,17 @@ public final class ServiceSupport {
         return archiveFilter.includesArchived()
                 ? repository.findByUser_Id(userId)
                 : repository.findByUser_IdAndArchivedFalse(userId);
+    }
+
+    /** V33 (D-33-9): one page of the user's records, through the same two finders as {@link #findAllForUser}. */
+    public static <T> Page<T> findPageForUser(UserScopedRepository<T> repository, Long userId, ArchiveFilter archiveFilter,
+                                              Pageable pageable) {
+        Objects.requireNonNull(repository, "repository");
+        Objects.requireNonNull(userId, "userId");
+        Objects.requireNonNull(archiveFilter, "archiveFilter");
+        return archiveFilter.includesArchived()
+                ? repository.findByUser_Id(userId, pageable)
+                : repository.findByUser_IdAndArchivedFalse(userId, pageable);
     }
 
     /**

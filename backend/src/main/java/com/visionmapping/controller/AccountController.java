@@ -9,21 +9,26 @@ import com.visionmapping.service.AccountService;
 import com.visionmapping.service.ReminderService;
 import com.visionmapping.service.SignInMethodsService;
 import jakarta.validation.Valid;
-import com.visionmapping.service.stepup.StepUpService;
+import com.visionmapping.web.RequiresStepUp;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
-@RequestMapping("/api/account")
+@RequestMapping(value = ApiPaths.V1 + "/account", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Account", description = "My account: data export, deletion, reminders and sign-in methods")
 public class AccountController {
 
     private final AccountService accountService;
@@ -31,38 +36,44 @@ public class AccountController {
     private final SignInMethodsService signInMethodsService;
 
     /** V14 (GA-FR-26, GA-FR-27): whether a password is set, and any linked Google account. */
+    @Operation(summary = "Get my sign-in methods")
     @GetMapping("/sign-in-methods")
-    public SignInMethodsResponse signInMethods() {
-        return signInMethodsService.current();
+    public ResponseEntity<SignInMethodsResponse> signInMethods() {
+        return ResponseEntity.ok(signInMethodsService.current());
     }
 
+    @Operation(summary = "Export all my data")
     @GetMapping("/export")
-    public AccountExportResponse export(@RequestHeader(value = StepUpService.HEADER, required = false) String stepUp) {
-        return accountService.exportData(stepUp);
+    @RequiresStepUp
+    public ResponseEntity<AccountExportResponse> export() {
+        return ResponseEntity.ok(accountService.exportData());
     }
 
     /** POST rather than DELETE: it carries the password, and DELETE bodies are poorly supported. */
-    @PostMapping("/delete")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@Valid @RequestBody DeleteAccountRequest request,
-                       @RequestHeader(value = StepUpService.HEADER, required = false) String stepUp) {
-        accountService.deleteAccount(request, stepUp);
+    @Operation(summary = "Delete my account")
+    @PostMapping(value = "/delete", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @RequiresStepUp
+    public ResponseEntity<Void> delete(@Valid @RequestBody DeleteAccountRequest request) {
+        accountService.deleteAccount(request);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Get my reminder settings")
     @GetMapping("/reminders")
-    public ReminderSettingsResponse reminders() {
-        return reminderService.settings();
+    public ResponseEntity<ReminderSettingsResponse> reminders() {
+        return ResponseEntity.ok(reminderService.settings());
     }
 
-    @PutMapping("/reminders")
-    public ReminderSettingsResponse updateReminders(@Valid @RequestBody ReminderSettingsRequest request,
-                                                    @RequestHeader(value = StepUpService.HEADER, required = false) String stepUp,
-                                                    @RequestHeader(value = StepUpService.CONFIRM_HEADER, required = false) String confirm) {
-        return reminderService.updateSettings(request, stepUp, confirm);
+    @Operation(summary = "Change my reminder settings")
+    @PutMapping(value = "/reminders", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @RequiresStepUp(confirm = true)
+    public ResponseEntity<ReminderSettingsResponse> updateReminders(@Valid @RequestBody ReminderSettingsRequest request) {
+        return ResponseEntity.ok(reminderService.updateSettings(request));
     }
 
+    @Operation(summary = "Send me a test reminder")
     @PostMapping("/reminders/test")
-    public ReminderSettingsResponse sendTestReminder() {
-        return reminderService.sendTest();
+    public ResponseEntity<ReminderSettingsResponse> sendTestReminder() {
+        return ResponseEntity.ok(reminderService.sendTest());
     }
 }

@@ -61,6 +61,10 @@ import java.util.TreeSet;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import java.util.function.Function;
+import org.springframework.data.domain.Pageable;
 
 /**
  * V19 (BRD 19.0.0, RM-FR-16 to RM-FR-31): saved Management Reports. A Draft
@@ -121,6 +125,16 @@ public class SavedReportService {
                         || report.getCode().toLowerCase(Locale.ROOT).contains(needle))
                 .map(report -> toResponse(report, null, null))
                 .toList();
+    }
+
+    /** V33 (D-33-10): saved reports are listed newest change first; that is the only order. */
+    static final Set<String> SAVED_REPORT_SORTS = Set.of("updatedAt");
+
+    /** V33 (D-33-9): one page of the list above, filtered in memory as before. */
+    @Transactional(readOnly = true)
+    public PagedResponse<SavedReportResponse> page(@Nullable String status, boolean includeArchived, @Nullable String query, Pageable pageable) {
+        return PagedResponse.from(Pageables.slice(list(status, includeArchived, query), Pageables.whitelist(pageable, SAVED_REPORT_SORTS)),
+                Function.identity());
     }
 
     /** RM-FR-18, RM-FR-20: a draft with live figures, or a final report from its snapshot only. */

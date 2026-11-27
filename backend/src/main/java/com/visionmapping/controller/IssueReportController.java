@@ -8,7 +8,6 @@ import com.visionmapping.service.support.ArchiveFilter;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -17,8 +16,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.web.ApiPaths;
+import com.visionmapping.web.ApiResponses;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Positive;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * FR-38: in-app issue & improvement reporting. A user raises reports and lists
@@ -26,60 +32,70 @@ import org.springframework.web.bind.annotation.RestController;
  * enforcement lives in the service (admin paths throw 403).
  */
 @RestController
-@RequestMapping("/api/issue-reports")
+@RequestMapping(value = ApiPaths.V1 + "/issue-reports", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Issue reports", description = "Problems and ideas reported by users")
 public class IssueReportController {
 
     private final IssueReportService service;
 
     /** FR-38.3: the caller's own reports. */
+    @Operation(summary = "List my issue reports")
     @GetMapping
-    public List<IssueReportResponse> listMine(@RequestParam(defaultValue = "false") boolean includeArchived) {
-        return service.listMyReports(ArchiveFilter.of(includeArchived));
+    public ResponseEntity<List<IssueReportResponse>> listMine(@RequestParam(defaultValue = "false") boolean includeArchived) {
+        return ResponseEntity.ok(service.listMyReports(ArchiveFilter.of(includeArchived)));
     }
 
     /** FR-38.4: admin triage queue, optionally filtered. */
+    @Operation(summary = "List everyone's issue reports (support only)")
     @GetMapping("/all")
-    public List<IssueReportResponse> listAll(
+    public ResponseEntity<List<IssueReportResponse>> listAll(
             @RequestParam(required = false) String reportType,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String severity) {
-        return service.listAllReports(reportType, status, severity);
+        return ResponseEntity.ok(service.listAllReports(reportType, status, severity));
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public IssueReportResponse create(@Valid @RequestBody IssueReportRequest request) {
-        return service.createReport(request);
+    @Operation(summary = "Create an issue report")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<IssueReportResponse> create(@Valid @RequestBody IssueReportRequest request) {
+        IssueReportResponse created = service.createReport(request);
+        return ApiResponses.created(created.id(), created);
     }
 
+    @Operation(summary = "Get an issue report")
     @GetMapping("/{id}")
-    public IssueReportResponse get(@PathVariable Long id) {
-        return service.getReport(id);
+    public ResponseEntity<IssueReportResponse> get(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.getReport(id));
     }
 
-    @PatchMapping("/{id}/status")
-    public IssueReportResponse updateStatus(
-            @PathVariable Long id,
+    @Operation(summary = "Change an issue report's status (support only)")
+    @PatchMapping(value = "/{id}/status", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<IssueReportResponse> updateStatus(
+            @PathVariable @Positive Long id,
             @Valid @RequestBody IssueReportStatusUpdateRequest request) {
-        return service.updateStatus(id, request.status(), request.resolutionNote());
+        return ResponseEntity.ok(service.updateStatus(id, request.status(), request.resolutionNote()));
     }
 
+    @Operation(summary = "Archive an issue report")
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id) {
         service.archiveReport(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Restore an archived issue report")
     @PostMapping("/{id}/restore")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void restore(@PathVariable Long id) {
+    public ResponseEntity<Void> restore(@PathVariable @Positive Long id) {
         service.restoreReport(id);
+        return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Delete an issue report permanently")
     @DeleteMapping("/{id}/permanent")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable Long id) {
+    public ResponseEntity<Void> deletePermanently(@PathVariable @Positive Long id) {
         service.permanentlyDeleteReport(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1,8 +1,8 @@
-import { apiClient } from './apiClient';
+import { apiClient, fetchAllPages } from './apiClient';
 import type { TaskItem, TaskItemRequest, TaskSplitRequest, TaskSplitResult } from '../types/vision';
 
 export function listTasks(token: string, includeArchived = false) {
-  return apiClient<TaskItem[]>(`/tasks?includeArchived=${includeArchived}`, { token });
+  return fetchAllPages<TaskItem>(`/tasks?includeArchived=${includeArchived}`, token);
 }
 
 export function createTask(token: string, request: TaskItemRequest) {

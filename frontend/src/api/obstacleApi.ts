@@ -1,8 +1,8 @@
-import { apiClient } from './apiClient';
+import { apiClient, fetchAllPages } from './apiClient';
 import type { GapStepRequest, GapStepResult, Obstacle, ObstacleRequest } from '../types/vision';
 
 export function listObstacles(token: string, includeArchived = false) {
-  return apiClient<Obstacle[]>(`/obstacles?includeArchived=${includeArchived}`, { token });
+  return fetchAllPages<Obstacle>(`/obstacles?includeArchived=${includeArchived}`, token);
 }
 
 // FR-36.2: the user's own already-resolved obstacles of the same type, for

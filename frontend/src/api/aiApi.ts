@@ -1,4 +1,4 @@
-import { apiClient, authorizedFetch, clearApiCache, reportSessionEnded } from './apiClient';
+import { apiClient, authorizedFetch, clearApiCache, problemMessage, reportSessionEnded } from './apiClient';
 import type { AiChatTurn, AiConversation, AiFocus, AiMessage, AiSafetyAlert, AiStatus, AssistantSection } from '../types/vision';
 
 // V9 Phase 3: AI consent, the Dream Coach chat and crisis alerts.
@@ -69,8 +69,8 @@ export async function streamAiMessage(
     reportSessionEnded(response, token);
     let errorMessage = 'AI help is temporarily unavailable.';
     try {
-      const error = (await response.json()) as { message?: string };
-      errorMessage = error.message || errorMessage;
+      const error = (await response.json()) as { detail?: string; message?: string };
+      errorMessage = problemMessage(error) || errorMessage;
     } catch {
       // Not JSON: keep the general message.
     }

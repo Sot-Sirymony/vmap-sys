@@ -1,55 +1,56 @@
 package com.visionmapping.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import com.visionmapping.util.ClientIp;
-import com.visionmapping.service.support.RequestRateLimiter;
 import com.visionmapping.dto.request.PlanShareRequest;
 import com.visionmapping.dto.response.PlanShareResponse;
-import com.visionmapping.dto.response.SharedPlanResponse;
 import com.visionmapping.service.PlanShareService;
+import com.visionmapping.web.ApiResponses;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
 
 /**
- * V9 (v0.1 FR-10): the owner manages share links under /api/plan-shares; a
- * partner opens one under /api/shared-plans without signing in.
+ * V9 (v0.1 FR-10): the owner manages share links. A partner opens one through
+ * {@link SharedPlanController} without signing in.
  */
 @RestController
+@RequestMapping(value = ApiPaths.V1 + "/plan-shares", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Plan shares", description = "Read-only links to a dream plan, for partners")
 public class PlanShareController {
 
     private final PlanShareService service;
-    private final RequestRateLimiter rateLimiter;
 
-    @GetMapping("/api/plan-shares")
-    public List<PlanShareResponse> list(@RequestParam(required = false) Long dreamId) {
-        return service.list(dreamId);
+    @Operation(summary = "List my plan share links")
+    @GetMapping
+    public ResponseEntity<List<PlanShareResponse>> list(@RequestParam(required = false) @Positive Long dreamId) {
+        return ResponseEntity.ok(service.list(dreamId));
     }
 
-    @PostMapping("/api/plan-shares")
-    @ResponseStatus(HttpStatus.CREATED)
-    public PlanShareResponse create(@Valid @RequestBody PlanShareRequest request) {
-        return service.create(request);
+    @Operation(summary = "Make a share link for a dream plan")
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<PlanShareResponse> create(@Valid @RequestBody PlanShareRequest request) {
+        PlanShareResponse created = service.create(request);
+        return ApiResponses.created(created.id(), created);
     }
 
-    @PostMapping("/api/plan-shares/{id}/revoke")
-    public PlanShareResponse revoke(@PathVariable Long id) {
-        return service.revoke(id);
-    }
-
-    @GetMapping("/api/shared-plans/{token}")
-    public SharedPlanResponse view(@PathVariable String token, HttpServletRequest http) {
-        // V10 (SEC-06-02): opening share links is limited per network address.
-        rateLimiter.check(RequestRateLimiter.Action.SHARED_PLAN, ClientIp.of(http));
-        return service.view(token);
+    @Operation(summary = "Revoke a share link")
+    @PostMapping("/{id}/revoke")
+    public ResponseEntity<PlanShareResponse> revoke(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(service.revoke(id));
     }
 }

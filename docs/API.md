@@ -24,8 +24,78 @@ Auth failures are distinguished:
 | **401** Unauthorized | No token, or a malformed/expired/tampered one — authenticate and retry |
 | **403** Forbidden | Authenticated, but lacking the role for this action (e.g. admin-only issue triage) |
 
-Both return the standard error body (`timestamp`, `status`, `error`, `message`,
-`path`).
+Both return the standard error body.
+
+### Error body (V33)
+
+Every error is an RFC 9457 problem, sent as `application/problem+json`:
+
+```json
+{
+  "type": "urn:vms:problem:step-up-required",
+  "title": "Forbidden",
+  "status": 403,
+  "detail": "Enter your code to continue.",
+  "instance": "/api/account/export",
+  "reference": "a1b2c3d4e5f6",
+  "timestamp": "2026-11-27T08:00:00Z",
+  "code": "STEP_UP_REQUIRED",
+  "action": "TOTP",
+  "message": "Enter your code to continue.",
+  "error": "Forbidden",
+  "path": "/api/account/export"
+}
+```
+
+- `type` is `about:blank` for a plain HTTP error, and `urn:vms:problem:<code>` when there is a VMS `code`.
+- `detail` is the message to show. `reference` matches the server log line.
+- `code`, `triesLeft`, `action` and `errors` (`[{ "field", "message" }]` for a body that failed validation) are
+  sent only when they apply.
+- `message`, `error` and `path` repeat `detail`, `title` and `instance`. They are kept for all of API version 1.
+
+### Version 1 paths (V33)
+
+The API is moving to `/api/v1/...` (BRD 33). A controller that has moved answers on `/api/v1/...`. For 30 days
+after the move, its old `/api/...` path is forwarded to `/api/v1/...` with `Deprecation: true` and a `Sunset`
+date. `/api/health` is never versioned. `docs/CONTROLLER_AUDIT_V33.md` shows which endpoints have moved.
+
+Moved so far:
+- the plan core, rhythm and journal endpoints (phase 2): vision areas, dreams, goals, steps, tasks, obstacles,
+  partners, messages, reviews, habits, the journals, the dashboard and the daily plan;
+- the AI, Streamline, report, sharing, Excel and learning module endpoints (phase 3);
+- the account, sign-in, admin and coaching endpoints (phase 4). Every endpoint except `/api/health` is now under
+  `/api/v1`.
+
+"Verify it's you": an endpoint that needs a code is marked in Swagger with the `X-Step-Up` header (and
+`X-Step-Up-Confirm` when it also needs a confirmation code). Admin endpoints name the permission they need.
+
+### Paged lists (V33)
+
+These lists answer one page at a time: `GET /tasks`, `/progress-logs`, `/reviews`, `/obstacles`, `/fear-entries`,
+`/gratitude-entries`, `/attitude-checkins`, `/tasks/{id}/history`, `/partners`, `/communication-messages`,
+`/reports/saved` and `/admin/client-errors`. The admin user list (`users`) and the security log (`events`) answer
+the same page shape inside their answer, beside their counts and alerts.
+
+- They take `page` (from 0), `size` (20 by default, at most 200) and `sort` (for example `sort=dueDate,desc`).
+- Each list accepts only its own sort properties. Any other property answers 400. `id` is always added as the last
+  sort, so pages never repeat or skip rows.
+- The answer is:
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 0,
+  "totalPages": 0,
+  "first": true,
+  "last": true,
+  "sort": [{ "property": "id", "direction": "ASC" }]
+}
+```
+
+Other changes in v1: every create answers **201** with a `Location` header, and every answer without a body is
+**204**. `GET /dreams/{id}/has-linked-partner` and `GET /goals/{id}/has-linked-partner` answer `{ "linked": true }`.
 
 ## Public
 

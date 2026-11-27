@@ -96,7 +96,7 @@ public class SecurityAccessService {
      * SA-FR-05 to SA-FR-08. Every refusal comes before the step-up check, so a
      * refused change does not use the code (as in V23).
      */
-    public SecurityAccessResponse update(SecurityAccessUpdateRequest request, @Nullable String stepUp) {
+    public SecurityAccessResponse update(SecurityAccessUpdateRequest request) {
         AppUser actor = permissions.require(lookup.currentUser(), Permission.MANAGE_ROLES, NOT_ALLOWED);
         rateLimiter.check(RequestRateLimiter.Action.USER_ADMIN, String.valueOf(actor.getId()));
         SecuritySettings row = row();
@@ -115,7 +115,7 @@ public class SecurityAccessService {
             throw new StateConflictException("Two-step sign-in is turned off on this server, so it cannot be required for everyone.");
         }
         guardNobodyIsStranded(password, google, passwordTurnedOff, googleTurnedOff);
-        stepUpService.require(StepUpAction.ADMIN_SECURITY_ACCESS, stepUp);
+        stepUpService.requireFromRequest(StepUpAction.ADMIN_SECURITY_ACCESS);
 
         String before = describe(row.isPasswordSignIn(), row.isGoogleSignIn(), row.getTwoFactorScope());
         row.setPasswordSignIn(password);

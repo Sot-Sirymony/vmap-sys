@@ -1,6 +1,7 @@
 package com.visionmapping.service;
 
 import static com.visionmapping.service.support.ServiceSupport.findAllForUser;
+import static com.visionmapping.service.support.ServiceSupport.findPageForUser;
 import static com.visionmapping.service.support.ServiceSupport.isBlank;
 import static com.visionmapping.service.support.ServiceSupport.nextCode;
 import static com.visionmapping.service.support.ServiceSupport.requireArchived;
@@ -42,6 +43,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.visionmapping.dto.response.PagedResponse;
+import com.visionmapping.util.Pageables;
+import org.springframework.data.domain.Pageable;
 
 /**
  * The executable unit of work. Every change to a task rolls its progress up
@@ -71,6 +75,17 @@ public class TaskItemService {
         return findAllForUser(taskItemRepository, lookup.userId(), archiveFilter).stream()
                 .map(mapper::toResponse)
                 .toList();
+    }
+
+    /** V33 (D-33-9, D-33-10): the properties the task list can be sorted by. */
+    static final Set<String> TASK_SORTS = Set.of("code", "title", "owner", "priority", "status", "startDate", "dueDate",
+            "progressPercent", "completedAt", "sortOrder", "listOrder", "createdAt", "updatedAt");
+
+    /** V33 (D-33-9): one page of the user's tasks. */
+    @Transactional(readOnly = true)
+    public PagedResponse<TaskItemResponse> pageTasks(ArchiveFilter archiveFilter, Pageable pageable) {
+        return PagedResponse.from(findPageForUser(taskItemRepository, lookup.userId(), archiveFilter,
+                Pageables.whitelist(pageable, TASK_SORTS)), mapper::toResponse);
     }
 
     /** CLAUDE.md Core Business Rule 4: the new record belongs to one step, which must be the caller's own. */

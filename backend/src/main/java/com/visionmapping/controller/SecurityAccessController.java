@@ -2,41 +2,46 @@ package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.SecurityAccessUpdateRequest;
 import com.visionmapping.dto.response.SecurityAccessResponse;
-import com.visionmapping.dto.response.OfferedSignInMethodsResponse;
 import com.visionmapping.service.admin.SecurityAccessService;
-import com.visionmapping.service.stepup.StepUpService;
+import com.visionmapping.web.RequiresStepUp;
 import jakarta.validation.Valid;
+import com.visionmapping.web.ApiPaths;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.lang.Nullable;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.visionmapping.security.Authorities;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
-/** V24 (BRD 24.0.0): sign-in method settings. The admin path is checked by path rule and in the service. */
+/** V24 (BRD 24.0.0): the sign-in method switches. Checked by path rule, @PreAuthorize and in the service. */
 @RestController
+@RequestMapping(value = ApiPaths.V1 + "/admin/security-access", produces = MediaType.APPLICATION_JSON_VALUE)
+@Validated
 @RequiredArgsConstructor
+@Tag(name = "Admin: security access", description = "Which sign-in methods are on, and two-step sign-in for everyone")
 public class SecurityAccessController {
 
     private final SecurityAccessService securityAccessService;
 
-    /** SA-FR-03: public; the sign-in pages need it before anyone signs in. */
-    @GetMapping("/api/auth/sign-in-methods")
-    public OfferedSignInMethodsResponse signInMethods() {
-        return securityAccessService.publicMethods();
+    @Operation(summary = "Get the sign-in method settings")
+    @GetMapping
+    @PreAuthorize("hasAnyAuthority('" + Authorities.MANAGE_ROLES + "', '" + Authorities.VIEW_SECURITY_LOG + "')")
+    public ResponseEntity<SecurityAccessResponse> view() {
+        return ResponseEntity.ok(securityAccessService.view());
     }
 
-    /** SA-FR-02. */
-    @GetMapping("/api/admin/security-access")
-    public SecurityAccessResponse view() {
-        return securityAccessService.view();
-    }
-
-    /** SA-FR-05: Admin only; a reason and a fresh "Verify it's you" code. */
-    @PutMapping("/api/admin/security-access")
-    public SecurityAccessResponse update(@Valid @RequestBody SecurityAccessUpdateRequest request,
-                                         @RequestHeader(value = StepUpService.HEADER, required = false) @Nullable String stepUp) {
-        return securityAccessService.update(request, stepUp);
+    @Operation(summary = "Change the sign-in method settings")
+    @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAuthority('" + Authorities.MANAGE_ROLES + "')")
+    @RequiresStepUp
+    public ResponseEntity<SecurityAccessResponse> update(@Valid @RequestBody SecurityAccessUpdateRequest request) {
+        return ResponseEntity.ok(securityAccessService.update(request));
     }
 }

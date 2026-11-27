@@ -105,11 +105,11 @@ class ClientErrorLogFlowTests {
         mockMvc.perform(get("/api/admin/client-errors").header("Authorization", "Bearer " + user))
                 .andExpect(status().isForbidden());
 
-        String body = mockMvc.perform(get("/api/admin/client-errors?page=strengths&status=404&size=100")
+        String body = mockMvc.perform(get("/api/admin/client-errors?pageKey=strengths&status=404&size=100")
                         .header("Authorization", "Bearer " + admin))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        var entries = objectMapper.readTree(body).get("entries");
+        var entries = objectMapper.readTree(body).get("content");
         assertThat(entries.size()).isGreaterThanOrEqualTo(1);
         assertThat(entries.get(0).get("path").asText()).isEqualTo("/strengths-profiles/42");
         assertThat(entries.get(0).get("userId").isNull()).isFalse();
