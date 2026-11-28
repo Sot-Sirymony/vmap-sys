@@ -694,6 +694,9 @@ class AccessControlSweepTests {
         if (pattern.endsWith("/target")) {
             return json(Map.of("targetCycleDays", 3));
         }
+        if (pattern.endsWith("/move-to-inner-blocker")) {
+            return json(Map.of("blocker", "Giving up too soon", "practice", "Never miss twice"));
+        }
         if (pattern.endsWith("/inner-blockers/{id}/habit")) {
             return json(Map.of("name", "Never miss twice"));
         }

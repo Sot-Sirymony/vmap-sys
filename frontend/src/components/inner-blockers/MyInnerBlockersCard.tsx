@@ -3,6 +3,9 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
+import Link from '@mui/material/Link';
+import { Link as RouterLink } from 'react-router';
+import { GapsRuleLine } from './GapsRuleLine';
 import { listDreams } from '../../api/dreamApi';
 import { tr } from '../../i18n/translate';
 import { InnerBlockerList } from './InnerBlockerList';
@@ -31,6 +34,8 @@ export function MyInnerBlockersCard({ token }: { token: string }) {
         subheader={tr('Name what holds you back in your own words, how it shows up, and one short practice for it.')}
       />
       <CardContent sx={{ display: 'grid', gap: 1.5 }}>
+        {/* V36 (D-36-7): where each thing belongs, with the way to the other page. */}
+        <GapsRuleLine link={<Link component={RouterLink} to="/strengths">{tr('Open Strengths and Gaps')}</Link>} />
         <InnerBlockerList token={token} dreams={dreams} />
         <Typography variant="caption" color="text.secondary">
           {tr('This is a practice, not a diagnosis. If something feels heavy, talk to your coach or someone you trust.')}

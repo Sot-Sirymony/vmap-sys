@@ -30,6 +30,10 @@ type Props = {
   fixedDreamId?: number;
   onSaved: (blocker: InnerBlocker) => void;
   onCancel: () => void;
+  /** V36 (D-36-5): a save action of its own, such as moving a gap; otherwise the blocker is created or updated. */
+  onSubmit?: (request: InnerBlockerRequest) => Promise<InnerBlocker>;
+  /** The save button's text, when it is not "Save blocker". */
+  submitLabel?: string;
 };
 
 /**
@@ -37,7 +41,7 @@ type Props = {
  * Inner blockers stage and on the Assessment page. It names, never diagnoses
  * (D-34-13); the wording is the program's own.
  */
-export function InnerBlockerForm({ token, initial, dreams, fixedDreamId, onSaved, onCancel }: Props) {
+export function InnerBlockerForm({ token, initial, dreams, fixedDreamId, onSaved, onCancel, onSubmit, submitLabel }: Props) {
   const [blocker, setBlocker] = useState(initial?.blocker ?? '');
   const [showsUp, setShowsUp] = useState(initial?.showsUp ?? '');
   const [practice, setPractice] = useState(initial?.practice ?? '');
@@ -58,9 +62,11 @@ export function InnerBlockerForm({ token, initial, dreams, fixedDreamId, onSaved
     setError('');
     const request: InnerBlockerRequest = { blocker: blocker.trim(), showsUp: showsUp.trim(), practice: practice.trim(), chainKey, dreamId };
     try {
-      const saved = editing && initial?.id !== undefined
-        ? await updateInnerBlocker(token, initial.id, request)
-        : await createInnerBlocker(token, request);
+      const saved = onSubmit
+        ? await onSubmit(request)
+        : editing && initial?.id !== undefined
+          ? await updateInnerBlocker(token, initial.id, request)
+          : await createInnerBlocker(token, request);
       onSaved(saved);
     } catch (saveError) {
       setError(saveError instanceof Error ? tr(saveError.message) : tr('Unable to save this blocker.'));
@@ -114,7 +120,7 @@ export function InnerBlockerForm({ token, initial, dreams, fixedDreamId, onSaved
       )}
       {error && <Alert severity="error">{error}</Alert>}
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        <Button type="submit" disabled={saving}>{saving ? tr('Saving…') : editing ? tr('Save changes') : tr('Save blocker')}</Button>
+        <Button type="submit" disabled={saving}>{saving ? tr('Saving…') : submitLabel ?? (editing ? tr('Save changes') : tr('Save blocker'))}</Button>
         <Button variant="secondary" onClick={onCancel}>{tr('Cancel')}</Button>
       </Box>
     </Box>

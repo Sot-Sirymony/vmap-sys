@@ -927,6 +927,7 @@ Private to the account (BR-64); no coach endpoint reads them.
 | GET, POST | `/api/self-assessment-items` | List with `?dreamId=` (and `includeArchived`), or add a strength or weakness. `evidence` is required (BR-61) |
 | PUT | `/api/self-assessment-items/{id}` | Update. Changing a weakness to a strength clears its cover but keeps the linked record |
 | PUT | `/api/self-assessment-items/{id}/cover` | Choose the one way a high-relevance weakness is covered: `PARTNER` (`partnerName`), `DELEGATE` or `RESOURCE` (`note`), `LEARN` (`goalId`, `targetDate`; at most 2 at once, BR-62) or `ACCEPT` (`note`). **400** if it already has one |
+| POST | `/api/v1/self-assessment-items/{id}/move-to-inner-blocker` | V36: body is an inner blocker request (BRD 34). Creates the inner blocker and archives the item in one transaction; records its cover created are kept. **201** with the blocker and `Location` at it; **400** unless it is a not archived weakness from the six-chain check (`SIX_CHAIN`); **404** for another user's item; **409** at 10 active inner blockers |
 | DELETE | `/api/self-assessment-items/{id}/cover` | Clear the cover. `?removeLinked=true` also archives the partner or step, or removes the exercise row. Returns `{ linkedItemRemoved, note }` |
 | DELETE | `/api/self-assessment-items/{id}` | Archive, with the same `removeLinked` choice (`POST .../restore`, `DELETE .../permanent`) |
 | GET | `/api/strengths-profiles/{dreamId}` | The one-page profile: what I bring, what I lack, recorded only, `complete`, Learn use, and changes since the last earlier save |

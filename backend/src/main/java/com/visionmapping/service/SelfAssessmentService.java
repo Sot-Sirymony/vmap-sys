@@ -7,6 +7,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visionmapping.dto.request.GapCoverRequest;
+import com.visionmapping.dto.request.InnerBlockerRequest;
+import com.visionmapping.dto.response.InnerBlockerResponse;
 import com.visionmapping.dto.request.PartnerRequest;
 import com.visionmapping.dto.request.SelfAssessmentItemRequest;
 import com.visionmapping.dto.response.GapCoverRemovalResponse;
@@ -69,6 +71,7 @@ public class SelfAssessmentService {
     private final VisionStepService visionStepService;
     private final GapStepService gapStepService;
     private final LearningModuleService learningModuleService;
+    private final InnerBlockerService innerBlockerService;
 
     @Transactional(readOnly = true)
     public List<SelfAssessmentItemResponse> listItems(@Nullable Long dreamId, ArchiveFilter archiveFilter) {
@@ -157,6 +160,26 @@ public class SelfAssessmentService {
         }
         item.setArchived(true);
         return result;
+    }
+
+    /**
+     * V36 (D-36-3 to D-36-5, BR-36-1 to BR-36-3): a weakness from the six-chain
+     * check becomes an inner blocker. The blocker is created first, so a refusal
+     * (the ten-active limit, a bad field) leaves the item as it was; then the
+     * item is archived, never deleted, keeping any record its cover created.
+     * One transaction: both happen or neither.
+     */
+    public InnerBlockerResponse moveToInnerBlocker(Long id, InnerBlockerRequest request) {
+        SelfAssessmentItem item = item(id);
+        if (item.isArchived()) {
+            throw new BusinessRuleException("This item is archived. Restore it before moving it.");
+        }
+        if (item.getKind() != StrengthKind.WEAKNESS || item.getSource() != SelfAssessmentSource.SIX_CHAIN) {
+            throw new BusinessRuleException("Only a weakness from the 2-minute check can move to inner blockers.");
+        }
+        InnerBlockerResponse created = innerBlockerService.create(request);
+        archiveItem(id, false);
+        return created;
     }
 
     public void restoreItem(Long id) {

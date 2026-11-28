@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, RotateCcw, X } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router';
+import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -54,7 +55,10 @@ import type {
   WorkStyleProfile,
 } from '../types/vision';
 import { gapCoverMethodLabels, relevanceLabels, strengthKindLabels } from '../utils/enumLabels';
-import { StrengthSuggestion, strengthSuggestions } from '../utils/strengthSuggestions';
+import { StrengthSuggestion, chainForGapText, checkSuggestsInnerBlocker, strengthSuggestions } from '../utils/strengthSuggestions';
+import { moveToInnerBlocker } from '../api/strengthsApi';
+import { InnerBlockerForm } from '../components/inner-blockers/InnerBlockerForm';
+import { GapsRuleLine } from '../components/inner-blockers/GapsRuleLine';
 import { PageSection } from './PageSection';
 
 /** What a cover created, named so the remove question is clear. */
@@ -85,6 +89,22 @@ type PendingRemoval = { item: SelfAssessmentItem; action: 'archive' | 'uncover' 
  * one dream. Strengths come first and there is no score (NFR-11). Each gap
  * that matters a lot gets one way to cover it; the rest are recorded only.
  */
+/** V36 (D-36-4): text cut to a field's limit at a word boundary. */
+export function cutAtWord(text: string, max: number): string {
+  const clean = text.trim().replace(/\s+/g, ' ');
+  if (clean.length <= max) {
+    return clean;
+  }
+  const cut = clean.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return (space > max / 3 ? cut.slice(0, space) : cut).replace(/[\s,.;:]+$/, '');
+}
+
+/** V36 (D-36-3): only a not archived weakness from the six-chain check can move. */
+function canMove(item: SelfAssessmentItem) {
+  return item.kind === 'WEAKNESS' && item.source === 'SIX_CHAIN' && !item.archived;
+}
+
 export function StrengthsPage() {
   const { t } = useI18n();
   const { token } = useAuth();
@@ -96,6 +116,9 @@ export function StrengthsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [workStyle, setWorkStyle] = useState<WorkStyleProfile | null>(null);
   const [latestAssessment, setLatestAssessment] = useState<ChainAssessment | undefined>(undefined);
+  // V36 (D-36-4, D-36-6): the weakness being moved to inner blockers, and the notice after a move.
+  const [moving, setMoving] = useState<SelfAssessmentItem | null>(null);
+  const [moved, setMoved] = useState(false);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [notice, setNotice] = useState('');
@@ -151,7 +174,7 @@ export function StrengthsPage() {
 
   const activeItems = profile ? [...profile.whatIBring, ...profile.whatILack, ...profile.recordedOnly] : [];
   const suggestions = profile
-    ? strengthSuggestions(workStyle, latestAssessment, [...activeItems, ...archived].map((item) => item.description))
+    ? strengthSuggestions(workStyle, [...activeItems, ...archived].map((item) => item.description))
     : [];
 
   function resetForm() {
@@ -261,7 +284,8 @@ export function StrengthsPage() {
 
   function itemRow(item: SelfAssessmentItem, showCover: boolean) {
     return (
-      <Box key={item.id} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+      <Box key={item.id} sx={{ display: 'grid', gap: 1 }}>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.description}</Typography>
           <Typography variant="body2" color="text.secondary">{t('Evidence: {text}', { text: item.evidence })}</Typography>
@@ -288,11 +312,20 @@ export function StrengthsPage() {
               />
             )}
           </Box>
-          {showCover && !item.coverMethod && (
-            <Box sx={{ mt: 1 }}>
-              <Button variant="secondary" onClick={() => { setCoverError(''); setCovering(item); }}>{t('Choose how to cover it')}</Button>
+          {(showCover && !item.coverMethod) || canMove(item) ? (
+            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {showCover && !item.coverMethod && (
+                <Button variant="secondary" onClick={() => { setCoverError(''); setCovering(item); }}>{t('Choose how to cover it')}</Button>
+              )}
+              {canMove(item) && moving?.id !== item.id && (
+                // V36 (D-36-3): a mindset item from the check belongs with the inner blockers.
+                <Button variant="secondary" aria-label={t('Move {name} to inner blockers', { name: item.description })}
+                  onClick={() => { setMoved(false); setMoving(item); }}>
+                  {t('Move to inner blockers')}
+                </Button>
+              )}
             </Box>
-          )}
+          ) : null}
         </Box>
         <IconButton size="small" aria-label={t('Edit {name}', { name: item.description })} onClick={() => startEdit(item)}>
           <Pencil size={14} />
@@ -300,6 +333,24 @@ export function StrengthsPage() {
         <IconButton size="small" aria-label={t('Remove {name}', { name: item.description })} onClick={() => requestRemoval(item, 'archive')}>
           <X size={14} />
         </IconButton>
+      </Box>
+      {moving?.id === item.id && token && (
+        // V36 (D-36-4, D-36-5): the inner blocker form, filled in; the practice is the participant's to write.
+        <Box component="section" aria-label={t('Move to inner blockers')}
+          sx={{ p: 1.5, border: 1, borderColor: 'primary.main', borderRadius: 'var(--style-radius-control)', display: 'grid', gap: 1 }}>
+          <Typography variant="subtitle2">{t('Move this to My inner blockers?')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('Write one short practice for it. This item is archived here, not deleted, and anything its cover created is kept.')}
+          </Typography>
+          <InnerBlockerForm token={token} fixedDreamId={item.dreamId}
+            initial={{ blocker: cutAtWord(item.description, 120), showsUp: cutAtWord(item.evidence ?? '', 500), practice: '',
+              chainKey: chainForGapText(item.description) || null, dreamId: item.dreamId }}
+            submitLabel={t('Move it')}
+            onSubmit={(request) => moveToInnerBlocker(token, item.id, request)}
+            onSaved={() => { setMoving(null); setMoved(true); void load(); }}
+            onCancel={() => setMoving(null)} />
+        </Box>
+      )}
       </Box>
     );
   }
@@ -351,6 +402,14 @@ export function StrengthsPage() {
               </Select>
             </FormControl>
           </label>
+          {/* V36 (D-36-7): where each thing belongs, with the way to the other page. */}
+          <GapsRuleLine link={<Link component={RouterLink} to="/assessment">{t('Open My inner blockers')}</Link>} />
+          {moved && (
+            <Alert severity="success" onClose={() => setMoved(false)}
+              action={<Button variant="secondary" onClick={() => navigate('/assessment')}>{t('View it')}</Button>}>
+              {t('Moved to My inner blockers. The old item is archived here.')}
+            </Alert>
+          )}
           {actionError && <Alert severity="error">{t(actionError)}</Alert>}
           {notice && <Alert severity="info" onClose={() => setNotice('')}>{notice}</Alert>}
 
@@ -378,11 +437,17 @@ export function StrengthsPage() {
                 </CardContent>
               </Card>
 
-              {suggestions.length > 0 && (
+              {(suggestions.length > 0 || checkSuggestsInnerBlocker(latestAssessment)) && (
                 <Card>
-                  <CardHeader title={t('Suggestions')} subheader={t('From your Work Style and your latest assessment. Nothing is saved until you add your own evidence.')} />
+                  <CardHeader title={t('Suggestions')} subheader={t('From your Work Style. Nothing is saved until you add your own evidence.')} />
                   <CardContent>
                     <Stack spacing={1}>
+                      {checkSuggestsInnerBlocker(latestAssessment) && (
+                        // V36 (D-36-2): the check points to inner blockers, not to a gap.
+                        <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate('/assessment')}>{t('Add as an inner blocker')}</Button>}>
+                          {t('Your check suggests something that holds you back inside. Add it as an inner blocker.')}
+                        </Alert>
+                      )}
                       {suggestions.map((suggestion) => (
                         <Box key={suggestion.description} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                           <Chip size="small" label={t(strengthKindLabels[suggestion.kind])} />

@@ -2,6 +2,8 @@ import { apiClient } from './apiClient';
 import type {
   GapCoverRemoval,
   GapCoverRequest,
+  InnerBlocker,
+  InnerBlockerRequest,
   SelfAssessmentItem,
   SelfAssessmentItemRequest,
   StrengthsProfile,
@@ -31,6 +33,11 @@ export function removeGapCover(token: string, id: number, removeLinked: boolean)
 
 export function archiveSelfAssessmentItem(token: string, id: number, removeLinked: boolean) {
   return apiClient<GapCoverRemoval>(`/self-assessment-items/${id}?removeLinked=${removeLinked}`, { method: 'DELETE', token });
+}
+
+/** V36 (D-36-5): create the inner blocker and archive this six-chain weakness, in one step. */
+export function moveToInnerBlocker(token: string, id: number, request: InnerBlockerRequest) {
+  return apiClient<InnerBlocker>(`/self-assessment-items/${id}/move-to-inner-blocker`, { method: 'POST', token, body: JSON.stringify(request) });
 }
 
 export function restoreSelfAssessmentItem(token: string, id: number) {

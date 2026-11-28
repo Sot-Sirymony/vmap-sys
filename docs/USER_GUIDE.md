@@ -642,3 +642,20 @@ There are two places to plan a dream. **Build my plan builds it. The plan checkl
   It shows only a count, never what you wrote, and it never changes whether the plan counts as ready.
 
 **After Save my plan** in the builder, choose **See your plan checklist** to see what the plan still needs.
+
+## Gaps or inner blockers? (V36)
+
+**A gap is something someone or something can cover. An inner blocker is something you change by practising.**
+
+- "I don't know SQL" is a **gap**. Write it on **Strengths and Gaps** and choose how to cover it (a partner, a course,
+  someone to delegate to, a resource, or accept it).
+- "I give up when progress is slow" is an **inner blocker**. Write it under **My inner blockers** on the Assessment
+  page, with a short practice.
+
+Strengths and Gaps no longer suggests weaknesses from the 2-minute check. If your check has a low score, it shows one
+line: **Add as an inner blocker**.
+
+**Moving an older item.** If you saved a weakness from the 2-minute check before this change, it shows **Move to inner
+blockers**. The inner blocker form opens filled in with its text, its evidence as "How it shows up", its chain and its
+dream. Write one short practice and choose **Move it**. The old item is archived, not deleted, so you can restore it,
+and anything its cover created (a partner, a step) is kept.

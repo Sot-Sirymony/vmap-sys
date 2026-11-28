@@ -17,6 +17,29 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 36.0.0 — Gaps and inner blockers, kept apart (built; awaiting deploy, UAT and the Khmer review)
+
+Implements [BRD 36.0.0](VMS_BRD_V36.0.0.md), all three phases. No migration. The product owner reviewed a clickable
+mock before the BRD.
+
+**Backend.**
+- `POST /api/v1/self-assessment-items/{id}/move-to-inner-blocker`: a not archived six-chain weakness becomes an inner
+  blocker and is archived, in one transaction. Cover records are kept; the ten-active limit applies (409 leaves the
+  item as it was).
+
+**Frontend.**
+- Strengths and Gaps no longer suggests weaknesses from the six-chain check. Work Style suggestions stay. When the
+  check has a score of 2 or lower, one line says to add it as an inner blocker.
+- **Move to inner blockers** on six-chain weaknesses opens the inner blocker form filled in (description, evidence as
+  How it shows up, the matching chain, the dream); the practice is left for the participant to write.
+- The rule "A gap is something someone or something can cover. An inner blocker is something you change by
+  practising." on Strengths and Gaps and on My inner blockers, each linking to the other.
+- 15 Khmer drafts (`docs/km-review-v36.csv`).
+
+**Docs.** `UAT_V36.md`, the user guide section and the API line.
+
+---
+
 ## 35.0.0 — Plan checklist and Build my plan, joined up (built; awaiting deploy, UAT and the Khmer review)
 
 Implements [BRD 35.0.0](VMS_BRD_V35.0.0.md), all three phases. No migration.

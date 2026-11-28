@@ -8,7 +8,7 @@ import * as goalApi from '../api/goalApi';
 import * as strengthsApi from '../api/strengthsApi';
 import * as workStyleProfileApi from '../api/workStyleProfileApi';
 import { aDream, aGoal } from '../test/builders';
-import { renderPage } from '../test/render';
+import { currentLocation, renderPage } from '../test/render';
 import type { SelfAssessmentItem, StrengthsProfile } from '../types/vision';
 import { StrengthsPage } from './StrengthsPage';
 
@@ -80,16 +80,52 @@ describe('StrengthsPage (V8.1 Strengths and Gaps)', () => {
     })));
   });
 
-  it('suggests items from Work Style and low assessment scores without saving them', async () => {
+  it('suggests from Work Style only, and sends a low check score to inner blockers (V36 D-36-1, D-36-2)', async () => {
     renderPage(<StrengthsPage />);
     const suggestions = within((await screen.findByText('Suggestions')).closest('.MuiCard-root') as HTMLElement);
-    expect(suggestions.getByText('Fear of failing stops me from trying.')).toBeInTheDocument();
-    expect(suggestions.getAllByRole('button', { name: 'Use this' })).toHaveLength(3);
+    expect(suggestions.queryByText('Fear of failing stops me from trying.')).not.toBeInTheDocument();
+    expect(suggestions.getAllByRole('button', { name: 'Use this' })).toHaveLength(2);
+    expect(suggestions.getByText('Your check suggests something that holds you back inside. Add it as an inner blocker.')).toBeInTheDocument();
     expect(strengthsApi.createSelfAssessmentItem).not.toHaveBeenCalled();
 
-    await userEvent.click(suggestions.getAllByRole('button', { name: 'Use this' })[2]);
-    expect(screen.getByRole('textbox', { name: /What do you lack/ })).toHaveValue('Fear of failing stops me from trying.');
+    await userEvent.click(suggestions.getAllByRole('button', { name: 'Use this' })[1]);
     expect(strengthsApi.createSelfAssessmentItem).not.toHaveBeenCalled();
+    await userEvent.click(suggestions.getByRole('button', { name: 'Add as an inner blocker' }));
+    expect(currentLocation()).toBe('/assessment');
+  });
+
+  it('shows the rule that tells a gap from an inner blocker (V36 D-36-7)', async () => {
+    renderPage(<StrengthsPage />);
+    expect(await screen.findByText('A gap is something someone or something can cover. An inner blocker is something you change by practising.'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open My inner blockers' })).toHaveAttribute('href', '/assessment');
+  });
+
+  it('moves a weakness from the check to inner blockers, with the practice left to write (V36 D-36-3 to D-36-6)', async () => {
+    const fromCheck = anItem({ id: 9, kind: 'WEAKNESS', source: 'SIX_CHAIN', description: 'I give up when progress is slow.',
+      evidence: 'Stopped two courses halfway' });
+    vi.mocked(strengthsApi.getStrengthsProfile).mockResolvedValue(aProfile({ whatILack: [gap, fromCheck], uncoveredGaps: 2 }));
+    vi.mocked(strengthsApi.moveToInnerBlocker).mockResolvedValue({ id: 50 } as never);
+    renderPage(<StrengthsPage />);
+
+    // Only the item from the check can move; the real gap can't.
+    const move = await screen.findByRole('button', { name: 'Move I give up when progress is slow. to inner blockers' });
+    expect(screen.getAllByRole('button', { name: /to inner blockers$/ })).toHaveLength(1);
+    await userEvent.click(move);
+    const form = within(screen.getByRole('region', { name: 'Move to inner blockers' }));
+    expect(form.getByRole('textbox', { name: /Possible blocker/ })).toHaveValue('I give up when progress is slow.');
+    expect(form.getByRole('textbox', { name: /How it shows up/ })).toHaveValue('Stopped two courses halfway');
+    expect(form.getByRole('textbox', { name: /Short practice/ })).toHaveValue('');
+    expect(form.getByRole('combobox', { name: 'Linked chain' })).toHaveTextContent('Giving up too soon');
+
+    await userEvent.type(form.getByRole('textbox', { name: /Short practice/ }), 'Never miss twice');
+    await userEvent.click(form.getByRole('button', { name: 'Move it' }));
+    await waitFor(() => expect(strengthsApi.moveToInnerBlocker).toHaveBeenCalledWith('token', 9, {
+      blocker: 'I give up when progress is slow.', showsUp: 'Stopped two courses halfway', practice: 'Never miss twice',
+      chainKey: 'persistenceScore', dreamId: 2,
+    }));
+    expect(await screen.findByText('Moved to My inner blockers. The old item is archived here.')).toBeInTheDocument();
+    expect(strengthsApi.archiveSelfAssessmentItem).not.toHaveBeenCalled();
   });
 
   it('shows strengths before gaps and asks how an uncovered gap is covered', async () => {

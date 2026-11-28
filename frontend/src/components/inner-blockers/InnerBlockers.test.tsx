@@ -18,6 +18,7 @@ import { InnerBlockerCard } from './InnerBlockerCard';
 import { InnerBlockerForm } from './InnerBlockerForm';
 import { InnerBlockerList, habitNameFrom } from './InnerBlockerList';
 import { InnerBlockersNote } from './InnerBlockersNote';
+import { MyInnerBlockersCard } from './MyInnerBlockersCard';
 import { WeeklyInnerBlockerCheckins, type CheckinAnswers } from './WeeklyInnerBlockerCheckins';
 
 vi.mock('../../api/innerBlockerApi', () => ({
@@ -32,6 +33,7 @@ vi.mock('../../api/innerBlockerApi', () => ({
   saveInnerBlockerCheckins: vi.fn(),
 }));
 vi.mock('../../api/chainAssessmentApi', () => ({ getChainAssessments: vi.fn() }));
+vi.mock('../../api/dreamApi', () => ({ listDreams: vi.fn().mockResolvedValue([]) }));
 
 const blocker = (patch: Partial<InnerBlocker> = {}): InnerBlocker => ({
   id: 1,
@@ -137,6 +139,22 @@ describe('V34 inner blockers', () => {
     await userEvent.click(screen.getAllByRole('button', { name: 'No longer holds me back' })[1]);
     await waitFor(() => expect(changeInnerBlockerStatus).toHaveBeenCalledWith('t', 1, 'RESOLVED', false));
     expect(screen.queryByText('Also stop the habit?')).not.toBeInTheDocument();
+  });
+
+  it('saves through its own action when given one, such as a move (V36 D-36-5)', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(blocker());
+    render(<InnerBlockerForm token="t" initial={{ blocker: 'Fear', practice: 'Test one fear' }} submitLabel="Move it"
+      onSubmit={onSubmit} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Move it' }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ blocker: 'Fear', practice: 'Test one fear' })));
+    expect(createInnerBlocker).not.toHaveBeenCalled();
+  });
+
+  it('shows the gap rule with a link to Strengths and Gaps on My inner blockers (V36 D-36-7)', async () => {
+    render(<MemoryRouter><MyInnerBlockersCard token="t" /></MemoryRouter>);
+    expect(await screen.findByText('A gap is something someone or something can cover. An inner blocker is something you change by practising.'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open Strengths and Gaps' })).toHaveAttribute('href', '/strengths');
   });
 
   it('filters by status on the Assessment page (§2.2)', async () => {

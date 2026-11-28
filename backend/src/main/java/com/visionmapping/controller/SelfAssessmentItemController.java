@@ -1,6 +1,8 @@
 package com.visionmapping.controller;
 
 import com.visionmapping.dto.request.GapCoverRequest;
+import com.visionmapping.dto.request.InnerBlockerRequest;
+import com.visionmapping.dto.response.InnerBlockerResponse;
 import com.visionmapping.dto.request.SelfAssessmentItemRequest;
 import com.visionmapping.dto.response.GapCoverRemovalResponse;
 import com.visionmapping.dto.response.SelfAssessmentItemResponse;
@@ -75,6 +77,15 @@ public class SelfAssessmentItemController {
     @DeleteMapping("/{id}")
     public ResponseEntity<GapCoverRemovalResponse> delete(@PathVariable @Positive Long id, @RequestParam(defaultValue = "false") boolean removeLinked) {
         return ResponseEntity.ok(service.archiveItem(id, removeLinked));
+    }
+
+    /** V36 (D-36-5): create the inner blocker and archive this six-chain weakness, in one step. */
+    @Operation(summary = "Move a weakness from the 2-minute check to inner blockers")
+    @PostMapping(value = "/{id}/move-to-inner-blocker", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<InnerBlockerResponse> moveToInnerBlocker(@PathVariable @Positive Long id,
+                                                                   @Valid @RequestBody InnerBlockerRequest request) {
+        InnerBlockerResponse created = service.moveToInnerBlocker(id, request);
+        return ApiResponses.createdAt("/inner-blockers", created.id(), created);
     }
 
     @Operation(summary = "Restore an archived self-assessment item")
