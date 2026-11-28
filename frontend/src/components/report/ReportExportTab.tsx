@@ -45,7 +45,8 @@ export function ReportExportTab({
   const { language: appLanguage } = useI18n();
   const [language, setLanguage] = useState(defaultLanguage ?? appLanguage);
   const [sections, setSections] = useState<ReportSection[]>(initialSections?.length ? initialSections : ALL_SECTIONS);
-  const [busy, setBusy] = useState<ReportFormat | null>(null);
+  // Each format tracks its own download, so one button never locks the others.
+  const [busy, setBusy] = useState<ReadonlySet<ReportFormat>>(new Set());
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
   // MR-FR-31: deck options.
@@ -53,7 +54,7 @@ export function ReportExportTab({
   const [includeName, setIncludeName] = useState(true);
 
   async function download(format: ReportFormat) {
-    setBusy(format);
+    setBusy((current) => new Set(current).add(format));
     setError('');
     setSaved('');
     try {
@@ -69,7 +70,11 @@ export function ReportExportTab({
     } catch (downloadError) {
       setError(downloadError instanceof Error ? downloadError.message : tr('Unable to download the report.'));
     } finally {
-      setBusy(null);
+      setBusy((current) => {
+        const next = new Set(current);
+        next.delete(format);
+        return next;
+      });
     }
   }
 
@@ -114,8 +119,8 @@ export function ReportExportTab({
             {tr('One row per task with its goal and step, blockers and management issues, progress, priority, due date and next action. Also a summary sheet and a list of every blocker.')}
           </Typography>
           <Box>
-            <Button onClick={() => void download('xlsx')} disabled={off || busy !== null}>
-              {busy === 'xlsx' ? tr('Preparing…') : tr('Export to Excel')}
+            <Button onClick={() => void download('xlsx')} disabled={off || busy.has('xlsx')}>
+              {busy.has('xlsx') ? tr('Preparing…') : tr('Export to Excel')}
             </Button>
           </Box>
         </CardContent>
@@ -136,8 +141,8 @@ export function ReportExportTab({
             {tr('Put my name on the title slide')}
           </label>
           <Box>
-            <Button onClick={() => void download('pptx')} disabled={off || busy !== null}>
-              {busy === 'pptx' ? tr('Preparing…') : tr('Export to PowerPoint')}
+            <Button onClick={() => void download('pptx')} disabled={off || busy.has('pptx')}>
+              {busy.has('pptx') ? tr('Preparing…') : tr('Export to PowerPoint')}
             </Button>
           </Box>
         </CardContent>
@@ -150,8 +155,8 @@ export function ReportExportTab({
             {tr('A printable A4 report: commentary, headline figures, goal health with reasons, what changed, blockers, next actions and the support needed, with page numbers.')}
           </Typography>
           <Box>
-            <Button onClick={() => void download('pdf')} disabled={off || busy !== null}>
-              {busy === 'pdf' ? tr('Preparing…') : tr('Export to PDF')}
+            <Button onClick={() => void download('pdf')} disabled={off || busy.has('pdf')}>
+              {busy.has('pdf') ? tr('Preparing…') : tr('Export to PDF')}
             </Button>
           </Box>
         </CardContent>

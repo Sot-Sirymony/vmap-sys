@@ -63,6 +63,22 @@ describe('Management Report export tab (V18 MR-FR-15)', () => {
     expect(onDownloaded).toHaveBeenCalledTimes(1);
   });
 
+  it('busies only the button clicked; the other formats stay ready', async () => {
+    let finish: (value: { blob: Blob; fileName: string }) => void = () => {};
+    downloadManagementReport.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    render(<ReportExportTab token="t" filter={{}} disabledReason="" />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Export to PowerPoint' }));
+    expect(screen.getByRole('button', { name: 'Preparing…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export to Excel' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Export to PDF' })).toBeEnabled();
+    expect(downloadManagementReport).toHaveBeenCalledTimes(1);
+
+    finish({ blob: new Blob(['pptx']), fileName: 'report.pptx' });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Export to PowerPoint' })).toBeEnabled());
+    expect(saveBlob).toHaveBeenCalledTimes(1);
+  });
+
   it('turns the buttons off until at least one section is chosen', async () => {
     render(<ReportExportTab token="t" filter={{}} disabledReason="" sections={['SUMMARY']} />);
     await userEvent.click(screen.getByRole('checkbox', { name: 'Summary' }));
