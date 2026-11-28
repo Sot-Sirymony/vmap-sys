@@ -10,6 +10,9 @@ import { listDreams } from '../../api/dreamApi';
 import { tr } from '../../i18n/translate';
 import { InnerBlockerList } from './InnerBlockerList';
 
+/** V36 (D-36-2): the link that opens the Assessment page at this section. */
+export const MY_INNER_BLOCKERS_PATH = '/assessment#my-inner-blockers';
+
 /**
  * V34 (§2.2, D-34-4): the My inner blockers section of the Assessment page,
  * where the participant sees, edits, resolves and archives every blocker.
@@ -28,7 +31,7 @@ export function MyInnerBlockersCard({ token }: { token: string }) {
   }, [token]);
 
   return (
-    <Card component="section" aria-labelledby="my-inner-blockers">
+    <Card component="section" id="my-inner-blockers-section" aria-labelledby="my-inner-blockers" sx={{ scrollMarginTop: 80 }}>
       <CardHeader
         title={<span id="my-inner-blockers">{tr('My inner blockers')}</span>}
         subheader={tr('Name what holds you back in your own words, how it shows up, and one short practice for it.')}

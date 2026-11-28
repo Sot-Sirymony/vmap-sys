@@ -59,6 +59,7 @@ import { StrengthSuggestion, chainForGapText, checkSuggestsInnerBlocker, strengt
 import { moveToInnerBlocker } from '../api/strengthsApi';
 import { InnerBlockerForm } from '../components/inner-blockers/InnerBlockerForm';
 import { GapsRuleLine } from '../components/inner-blockers/GapsRuleLine';
+import { MY_INNER_BLOCKERS_PATH } from '../components/inner-blockers/MyInnerBlockersCard';
 import { PageSection } from './PageSection';
 
 /** What a cover created, named so the remove question is clear. */
@@ -403,10 +404,10 @@ export function StrengthsPage() {
             </FormControl>
           </label>
           {/* V36 (D-36-7): where each thing belongs, with the way to the other page. */}
-          <GapsRuleLine link={<Link component={RouterLink} to="/assessment">{t('Open My inner blockers')}</Link>} />
+          <GapsRuleLine link={<Link component={RouterLink} to={MY_INNER_BLOCKERS_PATH}>{t('Open My inner blockers')}</Link>} />
           {moved && (
             <Alert severity="success" onClose={() => setMoved(false)}
-              action={<Button variant="secondary" onClick={() => navigate('/assessment')}>{t('View it')}</Button>}>
+              action={<Button variant="secondary" onClick={() => navigate(MY_INNER_BLOCKERS_PATH)}>{t('View it')}</Button>}>
               {t('Moved to My inner blockers. The old item is archived here.')}
             </Alert>
           )}
@@ -444,7 +445,7 @@ export function StrengthsPage() {
                     <Stack spacing={1}>
                       {checkSuggestsInnerBlocker(latestAssessment) && (
                         // V36 (D-36-2): the check points to inner blockers, not to a gap.
-                        <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate('/assessment')}>{t('Add as an inner blocker')}</Button>}>
+                        <Alert severity="info" action={<Button variant="secondary" onClick={() => navigate(MY_INNER_BLOCKERS_PATH)}>{t('Add as an inner blocker')}</Button>}>
                           {t('Your check suggests something that holds you back inside. Add it as an inner blocker.')}
                         </Alert>
                       )}

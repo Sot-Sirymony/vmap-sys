@@ -98,7 +98,7 @@ describe('StrengthsPage (V8.1 Strengths and Gaps)', () => {
     renderPage(<StrengthsPage />);
     expect(await screen.findByText('A gap is something someone or something can cover. An inner blocker is something you change by practising.'))
       .toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open My inner blockers' })).toHaveAttribute('href', '/assessment');
+    expect(screen.getByRole('link', { name: 'Open My inner blockers' })).toHaveAttribute('href', '/assessment#my-inner-blockers');
   });
 
   it('moves a weakness from the check to inner blockers, with the practice left to write (V36 D-36-3 to D-36-6)', async () => {

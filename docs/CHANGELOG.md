@@ -38,6 +38,9 @@ mock before the BRD.
 
 **Docs.** `UAT_V36.md`, the user guide section and the API line.
 
+**Follow-up.** The links to inner blockers from Strengths and Gaps open the Assessment page scrolled to My inner
+blockers (`/assessment#my-inner-blockers`), as D-36-2 asks.
+
 ---
 
 ## 35.0.0 — Plan checklist and Build my plan, joined up (built; awaiting deploy, UAT and the Khmer review)

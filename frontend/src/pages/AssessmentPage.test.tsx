@@ -30,6 +30,22 @@ describe('AssessmentPage (FR-71)', () => {
     vi.mocked(aiApi.getAiStatus).mockResolvedValue({ reason: 'OFF' } as never);
   });
 
+  it('opens at My inner blockers when linked from Strengths and Gaps (V36 D-36-2)', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    renderPage(<AssessmentPage />, { route: '/assessment#my-inner-blockers' });
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' }));
+    expect((scrollIntoView.mock.contexts[0] as HTMLElement).id).toBe('my-inner-blockers-section');
+  });
+
+  it('does not jump anywhere when opened without the link', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    renderPage(<AssessmentPage />, { route: '/assessment' });
+    await screen.findAllByRole('button', { name: 'What does this mean?' });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
   it('explains each statement with a low and a high example, with no AI (V15, AH-FR-23)', async () => {
     renderPage(<AssessmentPage />);
     const links = await screen.findAllByRole('button', { name: 'What does this mean?' });

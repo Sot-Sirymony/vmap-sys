@@ -9,7 +9,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Link from '@mui/material/Link';
 import Typography from '@mui/material/Typography';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { getChainAssessments, saveChainAssessment } from '../api/chainAssessmentApi';
 import { Button } from '../components/common/Button';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -34,6 +34,7 @@ export function AssessmentPage() {
   const { t } = useI18n();
   const { token } = useAuth();
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const [summary, setSummary] = useState<ChainAssessmentSummary | null>(null);
   const [scores, setScores] = useState<Partial<Record<ChainScoreKey, number>>>({});
   const [loadError, setLoadError] = useState('');
@@ -53,6 +54,14 @@ export function AssessmentPage() {
       setLoadError(error instanceof Error ? error.message : t('Unable to load your assessment.'));
     }
   }, [token]);
+
+  // V36 (D-36-2): links from Strengths and Gaps open this page at My inner blockers, once it has loaded.
+  const loaded = summary !== null;
+  useEffect(() => {
+    if (loaded && hash === '#my-inner-blockers') {
+      document.getElementById('my-inner-blockers-section')?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [loaded, hash]);
 
   useEffect(() => {
     void load();
