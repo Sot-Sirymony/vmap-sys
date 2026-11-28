@@ -934,6 +934,11 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Excel export: a dropdown on every fixed-list column** (28 Nov 2026): the exported workbook works as a template.
+Priority, Status, Type, Severity, Complex, Energy, Support Type and Offer Type, 21 columns across 9 sheets, offer a
+list for the first 1,000 rows, read from the app's enums so they match what the import accepts. A typed value not on
+the list is refused. Before, only four columns had one (`ExportDropdowns`).
+
 **Excel import: link a row to its parent by Code** (28 Nov 2026): a row on the Dreams, Goals, Steps, Tasks or
 Obstacles sheet may name its parent by the parent's ID or by its Code (`G-002`, `S-002`, any case). Rows typed by hand
 have no ID, so before this every child of such a row was skipped with "Goal ID must be a number".

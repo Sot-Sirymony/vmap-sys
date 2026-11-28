@@ -68,8 +68,6 @@ import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.util.CellRangeAddressList;
-import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
@@ -236,15 +234,13 @@ public class ExcelService {
                     List.of("Export", "Export creates a new workbook and does not overwrite the original workbook."),
                     List.of(STATUS, "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
                     List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL."),
+                    List.of("Dropdowns", "Priority, Status, Type, Severity, Complex, Energy, Support Type and Offer Type cells have a list to choose from, for the first " + ExportDropdowns.ROWS + " rows."),
                     List.of(OBSTACLES, "Put each blocker on a step (Step ID) or a task (Task ID). Its goal and dream are worked out from that. A row with only a Dream ID or Goal ID is imported as \"Not placed\" so you can choose its step in the app. \"Placed on\" is filled by the export and ignored by import."),
                     List.of("Streamline", "A read-only record of your Streamline reviews: what you questioned, cut, simplified, sped up and automated. Import ignores this sheet."),
                     List.of(TimelineSheet.NAME, "A read-only picture of the plan by week. Shaded weeks follow the Start and End dates; the current week is marked. Import ignores this sheet.")
             ), headerStyle);
 
-            addDropdown(workbook.getSheet(VISION_AREAS), 4, "LOW,MEDIUM,HIGH,CRITICAL");
-            addDropdown(workbook.getSheet(TASKS), 5, "LOW,MEDIUM,HIGH,CRITICAL");
-            addDropdown(workbook.getSheet(TASKS), 8, "NOT_STARTED,IN_PROGRESS,WAITING,BLOCKED,COMPLETED,PAUSED");
-            addDropdown(workbook.getSheet(TASKS), 12, "CHARGE,NEUTRAL,DRAIN");
+            ExportDropdowns.addAll(workbook);
 
             workbook.write(output);
             return output.toByteArray();
@@ -447,15 +443,6 @@ public class ExcelService {
         fill.setFillBackgroundColor(color.getIndex());
         fill.setFillPattern(PatternFormatting.SOLID_FOREGROUND);
         formatting.addConditionalFormatting(new CellRangeAddress[] {CellRangeAddress.valueOf(column + "2:" + column + "501")}, rule);
-    }
-
-    private void addDropdown(@Nullable Sheet sheet, int columnIndex, String csvValues) {
-        if (sheet == null) {
-            return;
-        }
-        XSSFDataValidationHelper helper = new XSSFDataValidationHelper((org.apache.poi.xssf.usermodel.XSSFSheet) sheet);
-        CellRangeAddressList range = new CellRangeAddressList(1, 500, columnIndex, columnIndex);
-        sheet.addValidationData(helper.createValidation(helper.createExplicitListConstraint(csvValues.split(",")), range));
     }
 
     static boolean looksLikeFormula(String text) {
