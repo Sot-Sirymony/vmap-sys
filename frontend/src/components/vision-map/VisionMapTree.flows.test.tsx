@@ -105,12 +105,34 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     const [taskTitle] = screen.getAllByRole('textbox', { name: 'New task title' });
     const form = within(taskTitle.closest('form') as HTMLElement);
     await userEvent.type(taskTitle, 'Save 15 articles');
-    expect(form.getByRole('button', { name: 'Add task' })).toBeDisabled();
-    await userEvent.type(form.getByLabelText('Due date'), '2027-02-01');
+    await userEvent.type(form.getByLabelText(/^Due date/), '2027-02-01');
     await userEvent.click(form.getByRole('button', { name: 'Add task' }));
     await waitFor(() => expect(taskApi.createTask).toHaveBeenCalledWith('token', expect.objectContaining({
       stepId: 20, title: 'Save 15 articles', owner: 'Sok Dara', dueDate: '2027-02-01',
     })));
+  });
+
+  it('lets a task added in the tree leave the date empty, due with its step', async () => {
+    renderTree({ steps: [{ ...literature, targetDate: '2027-03-15' }, rationale] });
+    const [taskTitle] = screen.getAllByRole('textbox', { name: 'New task title' });
+    const form = within(taskTitle.closest('form') as HTMLElement);
+    await userEvent.type(taskTitle, 'Save 15 articles');
+    expect(form.getByLabelText('Due date (optional)')).toHaveValue('');
+    expect(screen.getByText(/No date chosen: due with the step on/)).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: 'Add task' }));
+    await waitFor(() => expect(taskApi.createTask).toHaveBeenCalledWith('token', expect.objectContaining({
+      stepId: 20, title: 'Save 15 articles', dueDate: '2027-03-15',
+    })));
+  });
+
+  it('still asks for a date when the step has none', async () => {
+    renderTree({ steps: [{ ...literature, targetDate: undefined }, rationale] });
+    const [taskTitle] = screen.getAllByRole('textbox', { name: 'New task title' });
+    const form = within(taskTitle.closest('form') as HTMLElement);
+    await userEvent.type(taskTitle, 'Save 15 articles');
+    expect(form.getByRole('button', { name: 'Add task' })).toBeDisabled();
+    expect(screen.getByText('This step has no target date, so choose a due date for the task.')).toBeInTheDocument();
+    expect(form.getByLabelText('Due date')).toBeInTheDocument();
   });
 
   it('changes the status of a goal, a step and a task from the row', async () => {
@@ -445,7 +467,7 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     const [taskTitle] = screen.getAllByRole('textbox', { name: 'New task title' });
     const taskForm = within(taskTitle.closest('form') as HTMLElement);
     await userEvent.type(taskTitle, 'Save articles');
-    await userEvent.type(taskForm.getByLabelText('Due date'), '2027-02-01');
+    await userEvent.type(taskForm.getByLabelText(/^Due date/), '2027-02-01');
     await userEvent.click(taskForm.getByRole('button', { name: 'Add task' }));
     expect(await screen.findByText('Due date is required.')).toBeInTheDocument();
 

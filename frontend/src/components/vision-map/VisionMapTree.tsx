@@ -61,6 +61,7 @@ import { RowActionsMenu } from '../common/RowActionsMenu';
 import { StatusBadge } from '../common/StatusBadge';
 import { Textarea } from '../common/Textarea';
 import { tr } from '../../i18n/translate';
+import { formatDate } from '../../i18n/formatDate';
 import { progressTone, progressToneLegend } from '../../utils/progressTone';
 import { safeHttpUrl } from '../../utils/safeUrl';
 
@@ -1927,6 +1928,7 @@ export function VisionMapTree({
                                     stepId={step.id}
                                     token={token}
                                     defaultOwner={user?.fullName ?? ''}
+                                    stepTargetDate={step.targetDate ?? null}
                                     onDataChange={onDataChange}
                                     inputRef={registerAdd(stepKey)}
                                   />
@@ -2107,10 +2109,12 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
   );
 }
 
-function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
+function TaskAddRow({ stepId, token, defaultOwner, stepTargetDate, onDataChange, inputRef }: {
   stepId: number;
   token: string;
   defaultOwner: string;
+  /** The step's own target date: a task added without a date is due then. */
+  stepTargetDate: string | null;
   onDataChange: () => Promise<void>;
   inputRef: (element: HTMLInputElement | null) => void;
 }) {
@@ -2120,11 +2124,14 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  // BR-16: a task needs title + owner + due date — owner defaults to the
-  // signed-in user, the due date is asked inline (FR-22.2).
+  // BR-16: a task needs title + owner + due date. The owner defaults to the
+  // signed-in user. The due date may be left empty here: the task is then due
+  // on its step's target date, and can be changed later (business rule 5 still
+  // holds, every task has a date). Only a step with no date asks for one.
+  const effectiveDueDate = dueDate || stepTargetDate || '';
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!title.trim() || !owner.trim() || !dueDate) {
+    if (!title.trim() || !owner.trim() || !effectiveDueDate) {
       return;
     }
     setBusy(true);
@@ -2135,7 +2142,7 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
         title: title.trim(),
         owner: owner.trim(),
         priority: 'MEDIUM',
-        dueDate,
+        dueDate: effectiveDueDate,
         status: 'NOT_STARTED',
         progressPercent: 0,
       });
@@ -2155,11 +2162,18 @@ function TaskAddRow({ stepId, token, defaultOwner, onDataChange, inputRef }: {
       <form className={`map-add map-add--task${title.trim() ? ' map-add--open' : ''}`} onSubmit={(event) => void handleSubmit(event)}>
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New task title')} aria-label={tr('New task title')} inputRef={inputRef} />
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Owner')} />
-        <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} aria-label={tr('Due date')} />
-        <Button type="submit" variant="secondary" disabled={busy || !title.trim() || !owner.trim() || !dueDate}>
+        <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)}
+          aria-label={stepTargetDate ? tr('Due date (optional)') : tr('Due date')} />
+        <Button type="submit" variant="secondary" disabled={busy || !title.trim() || !owner.trim() || !effectiveDueDate}>
           {busy ? tr('Adding...') : tr('Add task')}
         </Button>
       </form>
+      {title.trim() && !dueDate && stepTargetDate && (
+        <p className="map-meta">{tr('No date chosen: due with the step on {date}.', { date: formatDate(new Date(`${stepTargetDate}T00:00:00`), { year: true }) })}</p>
+      )}
+      {title.trim() && !stepTargetDate && !dueDate && (
+        <p className="map-meta">{tr('This step has no target date, so choose a due date for the task.')}</p>
+      )}
       {error && <p className="map-meta" role="alert">{error}</p>}
     </div>
   );

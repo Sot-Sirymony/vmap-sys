@@ -934,6 +934,11 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Vision Map tree: a task's due date can be left empty** (28 Nov 2026, product owner's request): in the tree's quick
+add, a task added without a date is due on its step's target date, shown under the row before adding ("No date chosen:
+due with the step on …"), and can be changed later. Business rule 5 still holds, because every task is saved with a due
+date. If the step has no target date, the tree still asks for one. Other task forms are unchanged.
+
 **Build my plan session limit is now an AI setting** (PB-NFR-03 follow-up): admins set "AI requests per Build my plan
 session" (1 to 100, default 15, migration V103) on the AI settings page instead of the fixed 15. The guide, the draft's
 counter and the "used its N AI requests" message all use the setting; raising it lets a session that ran out carry on.

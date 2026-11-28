@@ -4335,4 +4335,8 @@ export const km: Record<string, string> = {
   'Review': 'ពិនិត្យឡើងវិញ',
   'Know yourself': 'ស្គាល់ខ្លួនឯង',
   'Ask the coach': 'សួរគ្រូបង្វឹក',
+  // Tree task due date defaults to the step's date (drafts for the Khmer reviewer)
+  'Due date (optional)': 'កាលបរិច្ឆេទកំណត់ (មិនបង្ខំ)',
+  'No date chosen: due with the step on {date}.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ ត្រូវបញ្ចប់ជាមួយជំហាននៅ {date}។',
+  'This step has no target date, so choose a due date for the task.': 'ជំហាននេះគ្មានកាលបរិច្ឆេទគោលដៅទេ ដូច្នេះសូមជ្រើសកាលបរិច្ឆេទកំណត់សម្រាប់កិច្ចការ។',
 };
