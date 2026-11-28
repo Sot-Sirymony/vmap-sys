@@ -1,5 +1,6 @@
 package com.visionmapping.service.report;
 
+import com.visionmapping.util.SheetColumns;
 import com.visionmapping.dto.response.ManagementReportResponse;
 import com.visionmapping.entity.enums.Priority;
 import com.visionmapping.entity.enums.Severity;
@@ -214,7 +215,7 @@ public final class ManagementReportExcelWriter {
         }
         sheet.createFreezePane(0, HEADER_ROW + 1);
         for (int column = 0; column < headers.size(); column++) {
-            sheet.autoSizeColumn(column);
+            SheetColumns.fit(sheet, column);
             capWidth(sheet, column, column == 1 || column == 2 ? WIDE_TEXT_WIDTH : TEXT_WIDTH);
         }
         printSetup(sheet, HEADER_ROW);
@@ -265,7 +266,7 @@ public final class ManagementReportExcelWriter {
             goalTable(sheet, row);
         }
         for (int column = 0; column < 10; column++) {
-            sheet.autoSizeColumn(column);
+            SheetColumns.fit(sheet, column);
             capWidth(sheet, column, WIDE_TEXT_WIDTH);
         }
         printSetup(sheet, -1);
@@ -378,7 +379,7 @@ public final class ManagementReportExcelWriter {
         sheet.createFreezePane(0, HEADER_ROW + 1);
         sheet.setAutoFilter(new CellRangeAddress(HEADER_ROW, last, 0, headers.size() - 1));
         for (int column = 0; column < headers.size(); column++) {
-            sheet.autoSizeColumn(column);
+            SheetColumns.fit(sheet, column);
             capWidth(sheet, column, column == issuesColumn ? WIDE_TEXT_WIDTH : TEXT_WIDTH);
         }
         sheet.setColumnWidth(issuesColumn, WIDE_TEXT_WIDTH * 256);
@@ -472,7 +473,7 @@ public final class ManagementReportExcelWriter {
         }
         sheet.createFreezePane(0, HEADER_ROW + 1);
         for (int column = 0; column < headers.size(); column++) {
-            sheet.autoSizeColumn(column);
+            SheetColumns.fit(sheet, column);
             capWidth(sheet, column, column == 0 || column == 7 ? WIDE_TEXT_WIDTH : TEXT_WIDTH);
         }
         printSetup(sheet, HEADER_ROW);

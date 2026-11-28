@@ -934,6 +934,11 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Fix: Excel downloads no longer fail with error 500** (28 Nov 2026): the plan export and the Management Report
+workbook sized their columns with POI's `autoSizeColumn`, which asks the operating system for a font. The Alpine
+production image has no system fonts, so the call failed. Columns are now sized by counting characters
+(`SheetColumns`), which needs no fonts and gives the same widths on every machine. A test keeps `autoSizeColumn` out.
+
 **Vision Map tree: a step's target date can be left empty** (28 Nov 2026, product owner's request): in the tree's
 quick add, a step added without a date takes its goal's target date, or the dream's when the goal has none, shown under
 the row before adding, and can be changed later. Every step is still saved with a target date (V8), so nothing else

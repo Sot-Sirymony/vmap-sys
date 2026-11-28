@@ -85,6 +85,7 @@ import com.visionmapping.dto.response.ReviewResponse;
 import com.visionmapping.dto.response.VisionAreaResponse;
 import java.util.Map;
 import com.visionmapping.service.support.RequestRateLimiter;
+import com.visionmapping.util.SheetColumns;
 import com.visionmapping.util.UserScope;
 
 @Slf4j
@@ -412,9 +413,7 @@ public class ExcelService {
         }
 
         sheet.createFreezePane(0, 1);
-        for (int index = 0; index < headers.size(); index++) {
-            sheet.autoSizeColumn(index);
-        }
+        SheetColumns.fitAll(sheet, headers.size());
     }
 
     private CellStyle headerStyle(Workbook workbook) {

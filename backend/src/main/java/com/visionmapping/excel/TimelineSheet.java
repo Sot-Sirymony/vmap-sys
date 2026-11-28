@@ -5,6 +5,7 @@ import com.visionmapping.dto.response.GoalResponse;
 import com.visionmapping.dto.response.TaskItemResponse;
 import com.visionmapping.dto.response.VisionStepResponse;
 import com.visionmapping.util.Copies;
+import com.visionmapping.util.SheetColumns;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -171,9 +172,7 @@ final class TimelineSheet {
         }
 
         sheet.createFreezePane(FIRST_WEEK_COLUMN, 1);
-        for (int index = 0; index < HEADERS.size(); index++) {
-            sheet.autoSizeColumn(index);
-        }
+        SheetColumns.fitAll(sheet, HEADERS.size());
         if (weeks > 0 && !lines.isEmpty()) {
             addBars(sheet, lines.size(), weeks);
         }
