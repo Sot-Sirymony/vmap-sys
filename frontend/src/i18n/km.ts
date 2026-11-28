@@ -4329,4 +4329,10 @@ export const km: Record<string, string> = {
   'View it': 'មើលវា',
   'This item is archived. Restore it before moving it.': 'ធាតុនេះត្រូវបានទុកក្នុងបណ្ណសារ។ សូមស្តារវាវិញមុនពេលផ្លាស់ទី។',
   'Only a weakness from the 2-minute check can move to inner blockers.': 'មានតែចំណុចខ្សោយពីការត្រួតពិនិត្យ 2 នាទីប៉ុណ្ណោះ ដែលអាចផ្លាស់ទីទៅឧបសគ្គខាងក្នុងបាន។',
+  // V37: sidebar groups (drafts for the Khmer reviewer, docs/km-review-v37.csv)
+  'Home': 'ទំព័រដើម',
+  'Do': 'អនុវត្ត',
+  'Review': 'ពិនិត្យឡើងវិញ',
+  'Know yourself': 'ស្គាល់ខ្លួនឯង',
+  'Ask the coach': 'សួរគ្រូបង្វឹក',
 };

@@ -35,6 +35,7 @@ import { periodLabel, reportDate } from '../utils/managementReport';
 import { PageSection } from './PageSection';
 import { ReportStatusChip } from './SavedReportsPage';
 import { tr } from '../i18n/translate';
+import { VisionMapTabs } from '../components/vision-map/VisionMapTabs';
 
 /** RM-FR-27: commentary is saved at most this often while typing. */
 export const AUTOSAVE_MS = 2000;
@@ -254,6 +255,8 @@ export function SavedReportPage() {
         </Stack>
       )}
     >
+      {/* V37 (D-37-3): the Vision Map pages share one tab bar. */}
+      <VisionMapTabs />
       <Card>
         <CardContent sx={{ display: 'grid', gap: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>

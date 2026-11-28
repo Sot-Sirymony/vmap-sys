@@ -17,6 +17,28 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 37.0.0 — A shorter sidebar (built; awaiting deploy, UAT and the Khmer review)
+
+Implements [BRD 37.0.0](VMS_BRD_V37.0.0.md), all three phases. Navigation only: no route, API, permission or data
+change. The product owner reviewed a clickable mock before the BRD.
+
+**Frontend.**
+- The sidebar has five groups by activity, Home, Plan, Do, Review and Know yourself, then Admin (shown only with a
+  permission). A participant sees 20 links instead of 29.
+- Group headings fold. The current page's group is always open; the others are remembered on that device.
+  The collapsed icon rail still shows every icon.
+- Timeline, Management Report and Saved reports are tabs on the Vision Map (`VisionMapTabs`), on all four pages and
+  a saved report. The tab bar is left off printed pages.
+- The account menu at the foot of the sidebar holds Account, Security, Appearance, Import / Export and Issue Reports,
+  then Log out.
+- **Ask the coach** at the top of the sidebar opens the Dream Coach. The floating launcher is unchanged (Q-37-4).
+- The header title and the command palette read one list of every destination, so moved pages are still found.
+- 5 Khmer drafts (`docs/km-review-v37.csv`).
+
+**Docs.** `UAT_V37.md` and the user guide section "Finding your way (V37)".
+
+---
+
 ## 36.0.0 — Gaps and inner blockers, kept apart (built; awaiting deploy, UAT and the Khmer review)
 
 Implements [BRD 36.0.0](VMS_BRD_V36.0.0.md), all three phases. No migration. The product owner reviewed a clickable

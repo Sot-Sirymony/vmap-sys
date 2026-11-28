@@ -12,6 +12,8 @@ export type NavItem = {
 };
 
 export type NavGroup = {
+  /** V37: a stable key, used to remember which groups are open. */
+  id: string;
   label: string;
   items: NavItem[];
 };
@@ -44,59 +46,66 @@ export function navPathname(pathname: string): string {
   return /^\/dreams\/\d+/.test(pathname) ? '/vision-map' : pathname;
 }
 
-// FR-23.2: three sections mirroring the method's mental model — set the
-// direction (Plan), do the work (Execute), get help and review (Support).
+// V37 (D-37-1): five groups by what the person is doing, then Admin. Replaces
+// FR-23.2's Plan / Execute / Support. Pages, routes and permissions are unchanged.
 export const navGroups: NavGroup[] = [
   {
-    label: tr('Plan'),
+    id: 'home',
+    label: tr('Home'),
     items: [
+      { to: '/today', label: tr('Today'), icon: CalendarCheck },
       { to: '/', label: tr('Dashboard'), icon: LayoutDashboard },
-      { to: '/vision-areas', label: tr('Vision Areas'), icon: Compass },
-      { to: '/dreams', label: tr('Dreams'), icon: MoonStar },
-      { to: '/vision-map', label: tr('Vision Map'), icon: Network },
-      // V16 (TL-FR-05): every dream on one calendar.
-      { to: '/vision-map/timeline', label: tr('Timeline'), icon: ChartGantt },
-      // V18 (MR-FR-01): plan health and documents to share.
-      { to: '/vision-map/report', label: tr('Management Report'), icon: FileBarChart },
-      // V19 (RM-FR-17): reports saved from it, draft and final.
-      { to: '/vision-map/reports', label: tr('Saved reports'), icon: FolderClock },
-      { to: '/plan', label: tr('Plan checklist'), icon: ListChecks },
-      { to: '/modules', label: tr('Modules'), icon: GraduationCap },
-      { to: '/assessment', label: tr('Assessment'), icon: Gauge },
-      // V8.1 FR-79 to FR-84: what I bring, what I lack, and how each gap is covered.
-      { to: '/strengths', label: tr('Strengths and Gaps'), icon: Scale },
     ],
   },
   {
-    label: tr('Execute'),
+    id: 'plan',
+    label: tr('Plan'),
     items: [
-      { to: '/today', label: tr('Today'), icon: CalendarCheck },
+      { to: '/vision-areas', label: tr('Vision Areas'), icon: Compass },
+      { to: '/dreams', label: tr('Dreams'), icon: MoonStar },
+      // V37 (D-37-3): Timeline, Management Report and Saved reports are tabs on this page.
+      { to: '/vision-map', label: tr('Vision Map'), icon: Network },
+      { to: '/plan', label: tr('Plan checklist'), icon: ListChecks },
+    ],
+  },
+  {
+    id: 'do',
+    label: tr('Do'),
+    items: [
       { to: '/goals', label: tr('Goals'), icon: Target },
       { to: '/steps', label: tr('Steps'), icon: Footprints },
       { to: '/tasks', label: tr('Tasks'), icon: CheckSquare },
       { to: '/obstacles', label: tr('Obstacles'), icon: TrafficCone },
-      // V27 (BRD 27): trim a goal or step before speeding it up or automating it.
+      { to: '/partners', label: tr('Partners'), icon: Handshake },
+      { to: '/communication', label: tr('Communication'), icon: Send },
+    ],
+  },
+  {
+    id: 'review',
+    label: tr('Review'),
+    items: [
+      { to: '/reviews', label: tr('Reviews'), icon: ClipboardList },
       { to: '/streamline', label: tr('Streamline'), icon: Scissors },
+      { to: '/insights', label: tr('Insights'), icon: Lightbulb },
+    ],
+  },
+  {
+    id: 'know',
+    label: tr('Know yourself'),
+    items: [
+      { to: '/assessment', label: tr('Assessment'), icon: Gauge },
+      // V8.1 FR-79 to FR-84: what I bring, what I lack, and how each gap is covered.
+      { to: '/strengths', label: tr('Strengths and Gaps'), icon: Scale },
+      { to: '/work-style', label: tr('Work Style'), icon: Fingerprint },
+      { to: '/modules', label: tr('Modules'), icon: GraduationCap },
       { to: '/journal', label: tr('Journal'), icon: BookOpen },
     ],
   },
   {
-    label: tr('Support'),
+    // V37 (D-37-1, BR-37-2): shown only with a permission, as before (V23 UM-FR-05).
+    id: 'admin',
+    label: tr('Admin'),
     items: [
-      // V9: the AI Dream Coach.
-      { to: '/dream-coach', label: tr('Dream Coach'), icon: Bot },
-      { to: '/partners', label: tr('Partners'), icon: Handshake },
-      { to: '/work-style', label: tr('Work Style'), icon: Fingerprint },
-      { to: '/communication', label: tr('Communication'), icon: Send },
-      { to: '/reviews', label: tr('Reviews'), icon: ClipboardList },
-      { to: '/insights', label: tr('Insights'), icon: Lightbulb },
-      { to: '/issue-reports', label: tr('Issue Reports'), icon: Bug },
-      { to: '/import-export', label: tr('Import / Export'), icon: FileSpreadsheet },
-      // FR-39.5: the full Appearance surface. Reachable from the sidebar as well
-      // as the header menu, so the header icon isn't the only way to find it.
-      { to: '/settings/appearance', label: tr('Appearance'), icon: Palette },
-      { to: '/settings/security', label: tr('Security'), icon: KeyRound },
-      { to: '/settings/account', label: tr('Account'), icon: UserCog },
       // V9: the coach workspace and cohort management.
       { to: '/coach', label: tr('Coaching'), icon: Users, permission: 'COACH_COHORTS' },
       // V23 (UM-FR-17, UM-FR-08): accounts and roles.
@@ -114,6 +123,35 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
+/** V37 (D-37-3): the tabs shared by the Vision Map pages. */
+export const visionMapTabs: NavItem[] = [
+  { to: '/vision-map', label: tr('Map'), icon: Network },
+  // V16 (TL-FR-05): every dream on one calendar.
+  { to: '/vision-map/timeline', label: tr('Timeline'), icon: ChartGantt },
+  // V18 (MR-FR-01): plan health and documents to share.
+  { to: '/vision-map/report', label: tr('Management Report'), icon: FileBarChart },
+  // V19 (RM-FR-17): reports saved from it, draft and final.
+  { to: '/vision-map/reports', label: tr('Saved reports'), icon: FolderClock },
+];
+
+/** V37 (D-37-4): the account menu at the foot of the sidebar, before Log out. */
+export const accountMenuItems: NavItem[] = [
+  { to: '/settings/account', label: tr('Account'), icon: UserCog },
+  { to: '/settings/security', label: tr('Security'), icon: KeyRound },
+  { to: '/settings/appearance', label: tr('Appearance'), icon: Palette },
+  { to: '/import-export', label: tr('Import / Export'), icon: FileSpreadsheet },
+  { to: '/issue-reports', label: tr('Issue Reports'), icon: Bug },
+];
+
+/** V37 (D-37-5): the Dream Coach, opened by "Ask the coach" at the top of the sidebar. */
+export const coachItem: NavItem = { to: '/dream-coach', label: tr('Dream Coach'), icon: Bot };
+
+/** The group a path belongs to, so the sidebar can keep it unfolded (BR-37-3). */
+export function groupIdFor(pathname: string, groups: NavGroup[]): string | null {
+  const to = activeNavTo(navPathname(pathname), groups.flatMap((group) => group.items));
+  return groups.find((group) => group.items.some((item) => item.to === to))?.id ?? null;
+}
+
 /** Whether this person may see the item: no permission named, or the one (V24: any one of those) named. */
 export function canSeeNavItem(user: AuthUser | null | undefined, item: NavItem): boolean {
   if (!item.permission) return true;
@@ -122,11 +160,21 @@ export function canSeeNavItem(user: AuthUser | null | undefined, item: NavItem):
 
 /** The nav groups this person may see (V23: by permission, not role name). */
 export function navGroupsFor(user: AuthUser | null | undefined): NavGroup[] {
-  return navGroups.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => canSeeNavItem(user, item)),
-  }));
+  return navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => canSeeNavItem(user, item)) }))
+    // V37 (D-37-1): a group with nothing this person may see is not shown.
+    .filter((group) => group.items.length > 0);
 }
 
-// Flat view of the same items — the Header's page-label lookup keys off this.
-export const navItems: NavItem[] = navGroups.flatMap((group) => group.items);
+/**
+ * Every destination, wherever it lives (V37 D-37-6, BR-37-1): the sidebar
+ * groups, the Vision Map tabs, the account menu and the coach. The header's
+ * page title and the command palette read this, so no page is lost by moving.
+ * The Map tab is the Vision Map link itself, so it is not listed twice.
+ */
+export const navItems: NavItem[] = [
+  ...navGroups.flatMap((group) => group.items),
+  ...visionMapTabs.filter((tab) => tab.to !== '/vision-map'),
+  ...accountMenuItems,
+  coachItem,
+];

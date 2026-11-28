@@ -659,3 +659,24 @@ line: **Add as an inner blocker**.
 blockers**. The inner blocker form opens filled in with its text, its evidence as "How it shows up", its chain and its
 dream. Write one short practice and choose **Move it**. The old item is archived, not deleted, so you can restore it,
 and anything its cover created (a partner, a step) is kept.
+
+## Finding your way (V37)
+
+The sidebar groups pages by what you are doing:
+
+| Group | Pages |
+| --- | --- |
+| Home | Today, Dashboard |
+| Plan | Vision Areas, Dreams, Vision Map, Plan checklist |
+| Do | Goals, Steps, Tasks, Obstacles, Partners, Communication |
+| Review | Reviews, Streamline, Insights |
+| Know yourself | Assessment, Strengths and Gaps, Work Style, Modules, Journal |
+| Admin | Only the admin pages your role allows |
+
+- Click a group name to open or fold it. The group of the page you are on always stays open. The app remembers which
+  groups you opened, on this device.
+- **Timeline**, **Management Report** and **Saved reports** are tabs at the top of the Vision Map.
+- **Account**, **Security**, **Appearance**, **Import / Export** and **Issue Reports** are in your account menu: click
+  your name at the bottom of the sidebar.
+- **Ask the coach**, at the top of the sidebar, opens the Dream Coach.
+- Can't find a page? Press **Ctrl+K** (**⌘K** on a Mac) and type its name.

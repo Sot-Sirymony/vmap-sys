@@ -20,6 +20,7 @@ import type { Dream, ManagementReport, SavedReport, VisionArea } from '../types/
 import { filterFromSearch, filterToSearch, periodLabel, reportDate } from '../utils/managementReport';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
+import { VisionMapTabs } from '../components/vision-map/VisionMapTabs';
 
 /**
  * V18 (BRD 18.0.0): the Management Report under the Vision Map. Summary
@@ -110,6 +111,8 @@ export function ManagementReportPage() {
         </Stack>
       )}
     >
+      {/* V37 (D-37-3): the Vision Map pages share one tab bar. */}
+      <VisionMapTabs />
       <Card>
         <CardContent>
           <ReportControls value={filter} onChange={(next) => update(filterToSearch(sameScope(next) ? next : { ...next, compareTo: undefined }))}

@@ -24,6 +24,7 @@ import type { Dream, Goal, TaskItem, VisionArea, VisionStep } from '../types/vis
 import { priorityLabels, workStatusLabels } from '../utils/enumLabels';
 import { MARKER_TYPES, buildPlanTimeline, editLinkFor, expandedForDream, fromDay, toDay, type TimelineMarkerType } from '../utils/timeline';
 import { PageSection } from './PageSection';
+import { VisionMapTabs } from '../components/vision-map/VisionMapTabs';
 
 const ZOOMS: TimelineZoom[] = ['week', 'month', 'quarter', 'year'];
 
@@ -139,6 +140,8 @@ export function VisionTimelinePage() {
         </>
       )}
     >
+      {/* V37 (D-37-3): the Vision Map pages share one tab bar. */}
+      <VisionMapTabs />
       {hasDreams && (
         <Card className="vm-timeline-filters" sx={{ mb: 2 }}>
           <CardContent sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>

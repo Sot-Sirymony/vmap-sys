@@ -44,6 +44,7 @@ import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
 import { progressTone } from '../utils/progressTone';
 import { editLinkFor, parseEditTarget, type TimelineKind } from '../utils/timeline';
+import { VisionMapTabs } from '../components/vision-map/VisionMapTabs';
 
 /** V16 (TL-FR-01): how one dream is shown. */
 type DreamView = 'tree' | 'timeline';
@@ -287,6 +288,8 @@ export function DreamDetailPage() {
         </Button>
       )}
     >
+      {/* V37 (D-37-3): the Vision Map pages share one tab bar. */}
+      <VisionMapTabs />
       {dreams.length > 0 && (
         <Card>
           <CardContent className="map-filter-bar" sx={{ display: 'flex', alignItems: 'flex-end', gap: 2, flexWrap: 'wrap' }}>

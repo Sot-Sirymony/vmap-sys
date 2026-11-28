@@ -4249,3 +4249,10 @@ button:focus-visible,
 .repeated-block .row-actions {
   align-items: center;
 }
+
+/* V37 (D-37-3): the Vision Map tab bar is navigation, so it is left off printed reports. */
+@media print {
+  .vision-map-tabs {
+    display: none !important;
+  }
+}

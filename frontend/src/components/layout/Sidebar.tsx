@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react';
-import { ChevronsUpDown, LogOut, Search } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router';
+import { ChevronDown, ChevronsUpDown, LogOut, Search } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router';
 import Drawer from '@mui/material/Drawer';
 import Toolbar from '@mui/material/Toolbar';
 import List from '@mui/material/List';
@@ -20,7 +20,7 @@ import MenuItem from '@mui/material/MenuItem';
 import { useAuth } from '@/context/AuthContext';
 import { useInterfaceStyle } from '@/hooks/useInterfaceStyle';
 import { useI18n } from '@/i18n/I18nContext';
-import { activeNavTo, navGroupsFor, navPathname } from './nav-items';
+import { accountMenuItems, activeNavTo, coachItem, groupIdFor, navGroupsFor, navPathname } from './nav-items';
 import { useCommandPalette } from './command-palette-context';
 import { useSidebarState } from './sidebar-context';
 import { tr } from '../../i18n/translate';
@@ -139,6 +139,7 @@ function Brand({ collapsed }: { collapsed: boolean }) {
  */
 function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean }) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   function handleOpen(event: MouseEvent<HTMLElement>) {
@@ -212,6 +213,16 @@ function NavUser({ collapsed, modern }: { collapsed: boolean; modern: boolean })
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
+        {/* V37 (D-37-4): the settings pages live here, out of the daily list. */}
+        {accountMenuItems.map((item) => (
+          <MenuItem key={item.to} onClick={() => { setAnchorEl(null); navigate(item.to); }}>
+            <ListItemIcon sx={{ minWidth: 32 }}>
+              <item.icon size={16} />
+            </ListItemIcon>
+            {tr(item.label)}
+          </MenuItem>
+        ))}
+        <Divider />
         <MenuItem onClick={handleLogout}>
           <ListItemIcon sx={{ minWidth: 32 }}>
             <LogOut size={16} />
@@ -228,28 +239,52 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
   const location = useLocation();
   const { user } = useAuth();
   const pathname = navPathname(location.pathname);
-  const activeTo = activeNavTo(pathname, navGroupsFor(user).flatMap((group) => group.items));
+  const groups = navGroupsFor(user);
+  const activeTo = activeNavTo(pathname, groups.flatMap((group) => group.items));
+  // V37 (D-37-2, BR-37-3): the current page's group is always open; the others
+  // stay as the person left them, on this device only.
+  const currentGroup = groupIdFor(location.pathname, groups);
+  const [openGroups, setOpenGroups] = useState<string[]>(readOpenGroups);
 
-  // FR-23.2: three labeled sections (Plan / Execute / Support) instead of a
-  // flat list of eleven entries. Collapsed mode drops the labels and keeps a
-  // subtle divider between groups.
+  function toggle(id: string) {
+    const next = openGroups.includes(id) ? openGroups.filter((open) => open !== id) : [...openGroups, id];
+    setOpenGroups(next);
+    writeOpenGroups(next);
+  }
+
+  // V37 (D-37-1): five groups by activity, then Admin. Collapsed mode drops the
+  // headings, shows every icon and keeps a subtle divider between groups.
   return (
     <Box>
     <List sx={{ px: 1 }}>
-      {navGroupsFor(user).map((group, groupIndex) => (
-        <li key={group.label} style={{ listStyle: 'none' }}>
+      <CoachButton collapsed={collapsed} onNavigate={onNavigate} modern={modern} active={pathname.startsWith(coachItem.to)} />
+      {groups.map((group, groupIndex) => {
+        const isCurrent = group.id === currentGroup;
+        const open = collapsed || isCurrent || openGroups.includes(group.id);
+        const listId = `nav-group-${group.id}`;
+        return (
+        <li key={group.id} style={{ listStyle: 'none' }}>
           {collapsed
             ? groupIndex > 0 && <Divider sx={{ my: 1 }} />
             : (
-              <Typography
-                component="p"
-                variant="overline"
-                sx={{ px: 1.5, pt: groupIndex === 0 ? 0.5 : 2, pb: 0.5, color: 'text.secondary', letterSpacing: '0.05em' }}
+              <ButtonBase
+                // The current page's group can't fold (BR-37-3); its heading still says it is open.
+                onClick={isCurrent ? undefined : () => toggle(group.id)}
+                aria-disabled={isCurrent || undefined}
+                aria-expanded={open}
+                aria-controls={listId}
+                sx={{
+                  width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  px: 1.5, pt: groupIndex === 0 ? 0.5 : 2, pb: 0.5, borderRadius: 'var(--style-radius-nav)',
+                  color: 'text.secondary',
+                }}
               >
-                {t(group.label)}
-              </Typography>
+                <Typography component="span" variant="overline" sx={{ letterSpacing: '0.05em', lineHeight: 1.6 }}>{t(group.label)}</Typography>
+                <ChevronDown size={14} aria-hidden style={{ transform: open ? 'none' : 'rotate(-90deg)', transition: 'transform 120ms' }} />
+              </ButtonBase>
             )}
-          <List disablePadding>
+          {open && (
+          <List disablePadding id={listId}>
       {group.items.map((item) => {
         const isActive = item.to === activeTo;
         const button = (
@@ -299,10 +334,64 @@ function NavList({ collapsed, onNavigate, modern }: { collapsed: boolean; onNavi
         );
       })}
           </List>
+          )}
         </li>
-      ))}
+        );
+      })}
     </List>
     </Box>
+  );
+}
+
+const OPEN_GROUPS_KEY = 'vms.sidebar.openGroups';
+
+/** D-37-2: remembered on this device only; a missing or blocked store opens nothing extra. */
+function readOpenGroups(): string[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem(OPEN_GROUPS_KEY) ?? '[]') as unknown;
+    return Array.isArray(stored) ? stored.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOpenGroups(groups: string[]) {
+  try {
+    localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(groups));
+  } catch {
+    // Without storage the groups still fold for this visit.
+  }
+}
+
+/** V37 (D-37-5): "Ask the coach" at the top of the sidebar, opening the Dream Coach. */
+function CoachButton({ collapsed, onNavigate, modern, active }: { collapsed: boolean; onNavigate: () => void; modern: boolean; active: boolean }) {
+  const label = tr('Ask the coach');
+  const button = (
+    <ListItemButton
+      component={NavLink}
+      to={coachItem.to}
+      selected={active}
+      onClick={onNavigate}
+      sx={{
+        minHeight: 40,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        px: collapsed ? 1 : 1.5,
+        border: 1,
+        borderColor: 'primary.main',
+        color: 'primary.main',
+        borderRadius: modern ? 'var(--style-radius-nav)' : 'var(--style-radius-control)',
+      }}
+    >
+      <ListItemIcon sx={{ minWidth: 0, mr: collapsed ? 0 : 1.5, justifyContent: 'center', color: 'inherit' }}>
+        <coachItem.icon size={18} />
+      </ListItemIcon>
+      {!collapsed && <ListItemText primary={label} slotProps={{ primary: { sx: { fontSize: 'var(--font-body-sm)', fontWeight: 600 } } }} />}
+    </ListItemButton>
+  );
+  return (
+    <ListItem disablePadding sx={{ display: 'block', mb: 1 }}>
+      {collapsed ? <Tooltip title={label} placement="right">{button}</Tooltip> : button}
+    </ListItem>
   );
 }
 

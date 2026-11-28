@@ -29,6 +29,18 @@ describe('CommandPalette (FR-29.1)', () => {
     vi.mocked(listDreams).mockResolvedValue([{ id: 4, title: 'Own a home', archived: false } as Dream]);
   });
 
+  it('still finds pages that moved out of the sidebar (V37 D-37-6)', async () => {
+    renderPalette();
+    const search = screen.getByRole('combobox', { name: 'Command palette search' });
+    for (const name of ['Appearance', 'Timeline', 'Dream Coach', 'Issue Reports']) {
+      await userEvent.clear(search);
+      await userEvent.type(search, name);
+      expect(screen.getByRole('option', { name: new RegExp(name) })).toBeInTheDocument();
+    }
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByText('At /issue-reports')).toBeInTheDocument();
+  });
+
   it('moves through matches with the arrow keys in the search box and runs the chosen one with Enter', async () => {
     const onClose = renderPalette();
     const search = screen.getByRole('combobox', { name: 'Command palette search' });

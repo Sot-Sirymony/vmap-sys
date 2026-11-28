@@ -22,6 +22,7 @@ import type { SavedReport } from '../types/vision';
 import { PERIOD_LABELS, reportDate } from '../utils/managementReport';
 import { PageSection } from './PageSection';
 import { tr } from '../i18n/translate';
+import { VisionMapTabs } from '../components/vision-map/VisionMapTabs';
 
 type StatusFilter = 'ALL' | 'DRAFT' | 'FINAL';
 
@@ -102,6 +103,8 @@ export function SavedReportsPage() {
       subtitle={tr('Reports you saved from the Management Report. Final ones keep their figures.')}
       actions={<Button onClick={() => navigate('/vision-map/report')}>{tr('Open the Management Report')}</Button>}
     >
+      {/* V37 (D-37-3): the Vision Map pages share one tab bar. */}
+      <VisionMapTabs />
       <ReportReminderNotice token={token} onReportsPage />
       {error && <ErrorMessage message={error} />}
       {reports === null && !error && <Loading />}
