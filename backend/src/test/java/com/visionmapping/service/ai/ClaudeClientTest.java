@@ -131,6 +131,22 @@ class ClaudeClientTest {
         assertThat(client.stream("key-1", OPUS, "System", TURNS, piece -> { }).refused()).isTrue();
     }
 
+    /** A reply the SDK cannot read used to escape as a 500 ("Something went wrong on our side"). */
+    @Test
+    void reportsAReplyThatCannotBeReadAsAiUnavailable() {
+        stub.answer(Answer.json(200, "{\"id\":\"msg_1\",\"type\":\"message\",\"role\":\"assistant\"}"));
+        assertThatThrownBy(() -> client.send("key-1", OPUS, "System", TURNS)).isInstanceOf(AiUnavailableException.class);
+    }
+
+    @Test
+    void reportsAStreamThatEndsBeforeTheWholeMessageAsAiUnavailable() {
+        String whole = ClaudeStubServer.stream(OPUS, "end_turn", "Start ", "with a ");
+        String cut = whole.substring(0, whole.indexOf("event: message_delta"));
+        stub.answer(Answer.sse(cut));
+        assertThatThrownBy(() -> client.stream("key-1", OPUS, "System", TURNS, piece -> { }))
+                .isInstanceOf(AiUnavailableException.class);
+    }
+
     @Test
     void reportsAStreamThatFailsAsAiUnavailable() {
         stub.answer(Answer.json(500, ClaudeStubServer.error("api_error", "Internal error")));

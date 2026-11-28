@@ -934,6 +934,10 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Fix: the Dream Coach shows "AI help is temporarily unavailable" instead of a server error** (28 Nov 2026): a
+Claude reply the SDK could not read, or a stream that ended before the whole message, escaped the chat calls as a 500
+("Something went wrong on our side"). Both now give the AI message and log the real cause.
+
 **Excel export: a dropdown on every fixed-list column** (28 Nov 2026): the exported workbook works as a template.
 Priority, Status, Type, Severity, Complex, Energy, Support Type and Offer Type, 21 columns across 9 sheets, offer a
 list for the first 1,000 rows, read from the app's enums so they match what the import accepts. A typed value not on

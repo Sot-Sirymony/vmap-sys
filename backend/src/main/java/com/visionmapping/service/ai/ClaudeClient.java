@@ -123,6 +123,10 @@ public class ClaudeClient {
         } catch (AnthropicIoException exception) {
             log.warn("Could not reach the Claude API: {}", exception.getMessage());
             throw new AiUnavailableException();
+        } catch (AnthropicInvalidDataException exception) {
+            // A reply the SDK could not read: the participant gets the AI message, not a 500.
+            log.error("Could not read a Claude reply for model {}", model, exception);
+            throw new AiUnavailableException();
         }
     }
 
@@ -157,6 +161,10 @@ public class ClaudeClient {
             throw new AiUnavailableException();
         } catch (AnthropicIoException exception) {
             log.warn("Lost the Claude API stream: {}", exception.getMessage());
+            throw new AiUnavailableException();
+        } catch (AnthropicInvalidDataException | IllegalStateException exception) {
+            // An unreadable event, or a stream that ended before the whole message arrived.
+            log.error("Could not read the Claude stream for model {}", model, exception);
             throw new AiUnavailableException();
         }
     }
