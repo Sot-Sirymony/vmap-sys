@@ -91,13 +91,41 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     renderTree();
     const [stepTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
     await userEvent.type(stepTitle, 'Define the research gap');
-    const [stepDate] = screen.getAllByLabelText('Step target date');
+    const [stepDate] = screen.getAllByLabelText(/^Step target date/);
     await userEvent.type(stepDate, '2027-04-01');
     expect(screen.getAllByRole('textbox', { name: 'Step owner' })[0]).toHaveValue('Sok Dara');
     await userEvent.click(within(stepTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' }));
     await waitFor(() => expect(stepApi.createStep).toHaveBeenCalledWith('token', expect.objectContaining({
       goalId: 10, title: 'Define the research gap', owner: 'Sok Dara', targetDate: '2027-04-01', sequenceNumber: 3,
     })));
+  });
+
+  it('lets a step added in the tree leave the date empty, due with its goal', async () => {
+    renderTree();
+    const [stepTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
+    await userEvent.type(stepTitle, 'Define the research gap');
+    expect(screen.getAllByLabelText('Step target date (optional)')[0]).toHaveValue('');
+    expect(screen.getByText(/No date chosen: due with the goal on/)).toBeInTheDocument();
+    await userEvent.click(within(stepTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' }));
+    await waitFor(() => expect(stepApi.createStep).toHaveBeenCalledWith('token', expect.objectContaining({
+      goalId: 10, title: 'Define the research gap', targetDate: '2027-06-30',
+    })));
+  });
+
+  it('uses the dream\'s date when the goal has none, and asks when neither has one', async () => {
+    const first = renderTree({ goals: [{ ...conceptNote, targetDate: undefined }, tools] });
+    const [stepTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
+    await userEvent.type(stepTitle, 'Define the research gap');
+    expect(screen.getByText(/No date chosen: due with the dream on/)).toBeInTheDocument();
+    await userEvent.click(within(stepTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' }));
+    await waitFor(() => expect(stepApi.createStep).toHaveBeenCalledWith('token', expect.objectContaining({ targetDate: '2028-06-30' })));
+    first.unmount();
+
+    renderTree({ dream: { ...dream, targetDate: undefined }, goals: [{ ...conceptNote, targetDate: undefined }, tools] });
+    const [noDateTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
+    await userEvent.type(noDateTitle, 'Define the research gap');
+    expect(screen.getByText('Neither the goal nor the dream has a target date, so choose one for the step.')).toBeInTheDocument();
+    expect(within(noDateTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' })).toBeDisabled();
   });
 
   it('adds a task under a step with owner and due date (BR-5)', async () => {
@@ -460,7 +488,7 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
 
     const [stepTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
     await userEvent.type(stepTitle, 'Draft methodology');
-    await userEvent.type(screen.getAllByLabelText('Step target date')[0], '2027-04-01');
+    await userEvent.type(screen.getAllByLabelText(/^Step target date/)[0], '2027-04-01');
     await userEvent.click(within(stepTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' }));
     expect(await screen.findByText('Owner is required.')).toBeInTheDocument();
 

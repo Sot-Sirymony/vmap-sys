@@ -934,6 +934,11 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Vision Map tree: a step's target date can be left empty** (28 Nov 2026, product owner's request): in the tree's
+quick add, a step added without a date takes its goal's target date, or the dream's when the goal has none, shown under
+the row before adding, and can be changed later. Every step is still saved with a target date (V8), so nothing else
+changes. If neither the goal nor the dream has a date, the tree still asks for one.
+
 **Vision Map tree: a task's due date can be left empty** (28 Nov 2026, product owner's request): in the tree's quick
 add, a task added without a date is due on its step's target date, shown under the row before adding ("No date chosen:
 due with the step on …"), and can be changed later. Business rule 5 still holds, because every task is saved with a due

@@ -4339,4 +4339,9 @@ export const km: Record<string, string> = {
   'Due date (optional)': 'កាលបរិច្ឆេទកំណត់ (មិនបង្ខំ)',
   'No date chosen: due with the step on {date}.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ ត្រូវបញ្ចប់ជាមួយជំហាននៅ {date}។',
   'This step has no target date, so choose a due date for the task.': 'ជំហាននេះគ្មានកាលបរិច្ឆេទគោលដៅទេ ដូច្នេះសូមជ្រើសកាលបរិច្ឆេទកំណត់សម្រាប់កិច្ចការ។',
+  // Tree step date defaults to the goal's or dream's date (drafts for the Khmer reviewer)
+  'Step target date (optional)': 'កាលបរិច្ឆេទគោលដៅនៃជំហាន (មិនបង្ខំ)',
+  'No date chosen: due with the goal on {date}.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ ត្រូវបញ្ចប់ជាមួយគោលដៅនៅ {date}។',
+  'No date chosen: due with the dream on {date}.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ ត្រូវបញ្ចប់ជាមួយក្តីស្រមៃនៅ {date}។',
+  'Neither the goal nor the dream has a target date, so choose one for the step.': 'ទាំងគោលដៅ និងក្តីស្រមៃ គ្មានកាលបរិច្ឆេទគោលដៅទេ ដូច្នេះសូមជ្រើសមួយសម្រាប់ជំហាន។',
 };

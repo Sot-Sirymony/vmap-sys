@@ -1947,6 +1947,8 @@ export function VisionMapTree({
                           nextSequence={allGoalSteps.reduce((max, step) => Math.max(max, step.sequenceNumber), 0) + 1}
                           token={token}
                           defaultOwner={user?.fullName ?? ''}
+                          parentDate={goal.targetDate ?? dream.targetDate ?? null}
+                          parentIsGoal={Boolean(goal.targetDate)}
                           onDataChange={onDataChange}
                           inputRef={registerAdd(goalKey)}
                         />
@@ -2054,11 +2056,14 @@ function TitleAddRow({ placeholder, level, onAdd, inputRef }: {
 
 // FR-64: a step needs an owner and a date. Owner defaults to the signed-in
 // user and the date is asked inline, the same way TaskAddRow does it.
-function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, inputRef }: {
+function StepAddRow({ goalId, nextSequence, token, defaultOwner, parentDate, parentIsGoal, onDataChange, inputRef }: {
   goalId: number;
   nextSequence: number;
   token: string;
   defaultOwner: string;
+  /** The goal's target date, or the dream's when the goal has none: a step added without a date is due then. */
+  parentDate: string | null;
+  parentIsGoal: boolean;
   onDataChange: () => Promise<void>;
   inputRef: (element: HTMLInputElement | null) => void;
 }) {
@@ -2067,7 +2072,11 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
   const [targetDate, setTargetDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const ready = Boolean(title.trim() && owner.trim() && targetDate);
+  // A step still always has a target date (V8): left empty here, it takes its
+  // goal's date (or the dream's), and can be changed later. Only when neither
+  // has a date does the tree ask for one.
+  const effectiveTargetDate = targetDate || parentDate || '';
+  const ready = Boolean(title.trim() && owner.trim() && effectiveTargetDate);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -2084,10 +2093,11 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
         sequenceNumber: nextSequence,
         complex: false,
         priority: 'MEDIUM',
-        targetDate,
+        targetDate: effectiveTargetDate,
         status: 'NOT_STARTED',
       });
       setTitle('');
+      setTargetDate('');
       await onDataChange();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : tr('Unable to add step.'));
@@ -2101,9 +2111,19 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, onDataChange, i
       <form className={`map-add map-add--task${title.trim() ? ' map-add--open' : ''}`} onSubmit={(event) => void handleSubmit(event)}>
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New step title')} aria-label={tr('New step title')} inputRef={inputRef} />
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Step owner')} />
-        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} aria-label={tr('Step target date')} />
+        <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)}
+          aria-label={parentDate ? tr('Step target date (optional)') : tr('Step target date')} />
         <Button type="submit" variant="secondary" disabled={busy || !ready}>{busy ? tr('Adding...') : tr('Add')}</Button>
       </form>
+      {title.trim() && !targetDate && parentDate && (
+        <p className="map-meta">
+          {tr(parentIsGoal ? 'No date chosen: due with the goal on {date}.' : 'No date chosen: due with the dream on {date}.',
+            { date: formatDate(new Date(`${parentDate}T00:00:00`), { year: true }) })}
+        </p>
+      )}
+      {title.trim() && !targetDate && !parentDate && (
+        <p className="map-meta">{tr('Neither the goal nor the dream has a target date, so choose one for the step.')}</p>
+      )}
       {error && <p className="map-meta" role="alert">{error}</p>}
     </div>
   );
