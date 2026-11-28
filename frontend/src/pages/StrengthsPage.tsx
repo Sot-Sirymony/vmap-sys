@@ -323,7 +323,7 @@ export function StrengthsPage() {
     <PageSection
       title={t('Strengths and Gaps')}
       subtitle={t('An honest look at what you bring and what you lack for one dream')}
-      actions={dreamId ? <Button variant="secondary" onClick={() => navigate(`/plan?dreamId=${dreamId}`)}>{t('Back to the plan')}</Button> : undefined}
+      actions={dreamId ? <Button variant="secondary" onClick={() => navigate(`/plan?dreamId=${dreamId}`)}>{t('Back to the plan checklist')}</Button> : undefined}
     >
       {error && <ErrorMessage message={error} onRetry={() => void load()} />}
       {!dreams && !error && <Loading />}

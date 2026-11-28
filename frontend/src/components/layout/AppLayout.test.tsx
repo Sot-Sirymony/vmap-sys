@@ -46,6 +46,8 @@ describe('AppLayout: sidebar, header and shortcuts', () => {
     }
     expect(nav.getByRole('link', { name: 'Goals' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('link', { name: 'Tasks' })).not.toHaveAttribute('aria-current');
+    // V35 (D-35-1): the sidebar Plan page is the Plan checklist; the route is unchanged.
+    expect(nav.getByRole('link', { name: 'Plan checklist' })).toHaveAttribute('href', '/plan');
   });
 
   it('highlights Timeline, not Vision Map, on the full timeline (TL-FR-05)', () => {

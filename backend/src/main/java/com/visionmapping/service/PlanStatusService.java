@@ -7,6 +7,7 @@ import com.visionmapping.entity.Goal;
 import com.visionmapping.entity.VisionStep;
 import com.visionmapping.repository.DreamRepository;
 import com.visionmapping.repository.GoalRepository;
+import com.visionmapping.repository.InnerBlockerRepository;
 import com.visionmapping.repository.ObstacleRepository;
 import com.visionmapping.repository.PartnerRepository;
 import com.visionmapping.repository.VisionStepRepository;
@@ -36,6 +37,7 @@ public class PlanStatusService {
     private final ObstacleRepository obstacleRepository;
     private final PartnerRepository partnerRepository;
     private final StrengthsProfileService strengthsProfileService;
+    private final InnerBlockerRepository innerBlockerRepository;
 
     public PlanStatusResponse statusFor(Long dreamId) {
         return evaluate(lookup.dream(dreamId), lookup.userId());
@@ -82,11 +84,16 @@ public class PlanStatusService {
         boolean peopleDone = partnerRepository.existsAnyPartnerForDream(userId, dream.getId());
         // V8.1 BR-63: shown after the statement, but like resources and people it never holds back planReady.
         StrengthsProfileService.ProfileState strengths = strengthsProfileService.stateFor(userId, dream.getId());
+        // V35 (D-35-6, BR-35-2): a count only, never the text, and never part of planReady.
+        long innerBlockers = innerBlockerRepository.countActiveForDream(userId, dream.getId());
 
         List<Stage> stages = List.of(
                 new Stage("STATEMENT", "Dream statement", statementDone,
                         statementDone ? "Why it matters and what success looks like are written." : "Write why it matters and what success looks like."),
                 new Stage("STRENGTHS", "Strengths and gaps", strengths.complete(), strengthsDetail(strengths)),
+                new Stage("INNER", "Inner blockers", innerBlockers > 0,
+                        innerBlockers > 0 ? count(innerBlockers, "inner blocker") + " named."
+                                : "Name what might hold you back inside, with one short practice."),
                 new Stage("GOALS", "Goals", goalsDone,
                         goalsDone ? count(goals.size(), "goal") + " in place." : "Add the major results this dream needs."),
                 new Stage("STEPS", "Steps", stepsDone,

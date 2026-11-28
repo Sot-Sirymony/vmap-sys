@@ -60,7 +60,7 @@ export const navGroups: NavGroup[] = [
       { to: '/vision-map/report', label: tr('Management Report'), icon: FileBarChart },
       // V19 (RM-FR-17): reports saved from it, draft and final.
       { to: '/vision-map/reports', label: tr('Saved reports'), icon: FolderClock },
-      { to: '/plan', label: tr('Plan'), icon: ListChecks },
+      { to: '/plan', label: tr('Plan checklist'), icon: ListChecks },
       { to: '/modules', label: tr('Modules'), icon: GraduationCap },
       { to: '/assessment', label: tr('Assessment'), icon: Gauge },
       // V8.1 FR-79 to FR-84: what I bring, what I lack, and how each gap is covered.

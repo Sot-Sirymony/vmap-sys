@@ -8,7 +8,7 @@ export const STYLE_ACTIONS: Record<StyleAction, { path: string; page: string }> 
   TASKS: { path: '/tasks', page: 'Tasks' },
   PARTNERS: { path: '/partners', page: 'Partners' },
   TODAY: { path: '/today', page: 'Today' },
-  PLAN: { path: '/plan', page: 'Plan' },
+  PLAN: { path: '/plan', page: 'Plan checklist' },
 };
 
 /**

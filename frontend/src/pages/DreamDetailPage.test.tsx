@@ -72,6 +72,8 @@ describe('DreamDetailPage (CLAUDE.md page 4: the Vision Map)', () => {
     expect(screen.getByRole('link', { name: 'All dreams' })).toHaveAttribute('href', '/vision-map');
     expect(screen.getByText('Commit to this dream')).toBeInTheDocument();
     expect(screen.getByText('Share with a partner')).toBeInTheDocument();
+    // V35 (D-35-8): the checklist sits beside the builder.
+    expect(screen.getByRole('link', { name: 'Plan checklist' })).toHaveAttribute('href', '/plan?dreamId=1');
     await userEvent.click(screen.getByRole('button', { name: 'Build my plan' }));
     expect(currentLocation()).toBe('/dreams/1/build');
   });

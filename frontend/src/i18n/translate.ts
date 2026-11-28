@@ -32,6 +32,8 @@ const SERVER_PATTERNS: [RegExp, string, string[]][] = [
   [/^Your latest assessment scored (.+) (\d) of 5, and this module works on it\.$/,
     'Your latest assessment scored {chain} {score} of 5, and this module works on it.', ['chain', 'score']],
   [/^(\d+) goals? in place\.$/, '{count} goal(s) in place.', ['count']],
+  // V35 (D-35-6): the plan checklist's Inner blockers row.
+  [/^(\d+) inner blockers? named\.$/, '{count} inner blocker(s) named.', ['count']],
   [/^(\d+) steps? in place\.$/, '{count} step(s) in place.', ['count']],
   [/^(\d+) goals? still without steps\.$/, '{count} goal(s) still without steps.', ['count']],
   [/^(\d+) steps? still without a date\.$/, '{count} step(s) still without a date.', ['count']],

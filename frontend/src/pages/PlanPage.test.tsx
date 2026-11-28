@@ -53,20 +53,50 @@ describe('PlanPage (V9 written plan)', () => {
     expect(screen.getAllByLabelText('Not done')).toHaveLength(3);
     expect(screen.getAllByRole('button', { name: 'Do this next' })).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: 'Do this next' }));
-    expect(currentLocation()).toBe('/dreams/1');
+    // V35 (D-35-4): Goals opens Build my plan at the Goals stage.
+    expect(currentLocation()).toBe('/dreams/1/build?stage=GOALS');
   });
 
-  it('sends each next stage to the page where it is done', async () => {
+  it('opens Build my plan at the matching stage, with the older page still linked (V35 D-35-4)', async () => {
     vi.mocked(planApi.getPlanStatus).mockResolvedValueOnce(status(1, ['STATEMENT', 'GOALS']));
     const first = renderPage(<PlanPage />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Do this next' }));
-    expect(currentLocation()).toBe('/steps');
+    expect(await screen.findByRole('link', { name: 'or open the Steps page' })).toHaveAttribute('href', '/steps');
+    await userEvent.click(screen.getByRole('button', { name: 'Do this next' }));
+    expect(currentLocation()).toBe('/dreams/1/build?stage=DATES');
     first.unmount();
 
     vi.mocked(planApi.getPlanStatus).mockResolvedValueOnce(status(1, ['STATEMENT', 'GOALS', 'DATES']));
     renderPage(<PlanPage />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Do this next' }));
-    expect(currentLocation()).toBe('/partners?create=partner');
+    expect(await screen.findByRole('link', { name: 'or open the Partners page' })).toHaveAttribute('href', '/partners?create=partner');
+    await userEvent.click(screen.getByRole('button', { name: 'Do this next' }));
+    expect(currentLocation()).toBe('/dreams/1/build?stage=STEPS');
+  });
+
+  it('is the Plan checklist, with Build my plan, a resumable draft and the inner blockers row (V35)', async () => {
+    vi.mocked(planApi.getPlanStatus).mockResolvedValueOnce({
+      dreamId: 1,
+      planReady: false,
+      stages: [
+        { key: 'STATEMENT', label: 'Dream statement', detail: 'Written.', done: true },
+        { key: 'INNER', label: 'Inner blockers', detail: 'Name what might hold you back inside, with one short practice.', done: false },
+      ],
+    });
+    vi.mocked(aiPlanApi.getPlanDraft).mockResolvedValue({
+      dreamId: 1, stage: 'GOALS', content: { goals: [] }, updatedAt: '2026-11-20T10:00:00Z', expiresAt: '2026-12-04T10:00:00Z',
+    });
+    renderPage(<PlanPage />);
+    expect(await screen.findByRole('heading', { name: 'Plan checklist' })).toBeInTheDocument();
+    expect(screen.getByText('Build my plan builds it. The plan checklist checks it.')).toBeInTheDocument();
+    expect(await screen.findByText(/Draft saved .*It is kept for 14 days/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'or open the Assessment page' })).toHaveAttribute('href', '/assessment');
+    await userEvent.click(screen.getByRole('button', { name: 'Do this next' }));
+    expect(currentLocation()).toBe('/dreams/1/build?stage=INNER');
+  });
+
+  it('opens Build my plan for the selected dream', async () => {
+    renderPage(<PlanPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Build my plan for Become a researcher' }));
+    expect(currentLocation()).toBe('/dreams/1/build');
   });
 
   it('sends the Strengths and Gaps stage to that page for the same dream (V8.1 FR-84)', async () => {

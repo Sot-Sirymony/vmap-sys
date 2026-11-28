@@ -17,6 +17,28 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 35.0.0 — Plan checklist and Build my plan, joined up (built; awaiting deploy, UAT and the Khmer review)
+
+Implements [BRD 35.0.0](VMS_BRD_V35.0.0.md), all three phases. No migration.
+
+**Backend.**
+- `GET /api/plan-status/{dreamId}` gains the `INNER` stage after `STRENGTHS`: done when an active, not archived inner
+  blocker is linked to the dream or to all dreams. A count only; never part of `planReady` or the complete plans count.
+
+**Frontend.**
+- The sidebar Plan page is now **Plan checklist** (route `/plan` unchanged), with the line "Build my plan builds it.
+  The plan checklist checks it." here and on the builder's Clarify stage.
+- Plan checklist: **Build my plan** / **Continue Build my plan** with the draft's saved date.
+- **Do this next** opens Build my plan at the matching stage (`?stage=`), with an "or open the … page" link to the
+  older page. Strengths and gaps still opens the Strengths page.
+- Build my plan accepts `?stage=` (`CLARIFY`, `INNER`, `GOALS`, `STEPS`, `DATES`) without changing the draft.
+- **See your plan checklist** after Save my plan; a **Plan checklist** link beside Build my plan on the dream page.
+- 12 Khmer drafts (`docs/km-review-v35.csv`).
+
+**Docs.** `UAT_V35.md`, the user guide section and the plan status API line.
+
+---
+
 ## 34.0.0 — My inner blockers (built; awaiting deploy, UAT and the Khmer review)
 
 Implements [BRD 34.0.0](VMS_BRD_V34.0.0.md), all five phases. Migration **V104**.

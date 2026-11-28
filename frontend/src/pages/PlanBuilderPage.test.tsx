@@ -28,9 +28,9 @@ vi.mock('../api/taskApi', () => ({ listTasks: vi.fn() }));
 const dream = { id: 5, title: 'Own a home', whyImportant: 'Family', successDefinition: 'Keys', archived: false } as Dream;
 const ready: AiStatus = { available: true, reason: 'OK', consentGiven: true, dailyLimit: 10, messagesLeftToday: 10 };
 
-function renderPage(fromCoach = false) {
+function renderPage(fromCoach = false, search = '') {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/dreams/5/build', state: fromCoach ? { fromCoach: true } : null }]}>
+    <MemoryRouter initialEntries={[{ pathname: '/dreams/5/build', search, state: fromCoach ? { fromCoach: true } : null }]}>
       <Routes>
         <Route path="/dreams/:dreamId/build" element={<PlanBuilderPage />} />
         <Route path="/dreams" element={<p>Dreams list</p>} />
@@ -90,9 +90,36 @@ describe('PlanBuilderPage (V11 Phase 2)', () => {
     // The latest edits are saved before adding.
     expect(vi.mocked(savePlanDraft).mock.lastCall?.[3].goals[0].steps[0].targetDate).toBe('2027-01-15');
     const notice = await screen.findByText(/Your plan is added: 1 goal\(s\), 1 step\(s\) and 0 task\(s\)/);
+    // V35 (D-35-8): back to the checklist for what the plan still needs.
+    expect(within(notice.closest('[role="alert"]') as HTMLElement).getByRole('link', { name: 'See your plan checklist' }))
+      .toHaveAttribute('href', '/plan?dreamId=5');
     await userEvent.click(within(notice.closest('[role="alert"]') as HTMLElement).getByRole('button', { name: 'Undo' }));
     expect(undoPlan).toHaveBeenCalledWith('token', { goalIds: [11], stepIds: [21], taskIds: [] });
   }, 30_000); // a long page test; slower when the whole suite runs at once
+
+  it('opens at the stage the Plan checklist asks for, keeping the draft (V35 D-35-5)', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue({ ...ready, available: false, reason: 'NO_CONSENT' });
+    vi.mocked(getPlanDraft).mockResolvedValue({
+      dreamId: 5, stage: 'GOALS', updatedAt: '', expiresAt: '',
+      content: { goals: [{ key: 'g1', title: 'Save a deposit', priority: 'HIGH', moonshot: false, edited: false, steps: [] }] },
+    });
+    const first = renderPage(false, '?stage=DATES');
+    expect(await screen.findByRole('heading', { name: '6. Dates' })).toBeInTheDocument();
+    expect(savePlanDraft).not.toHaveBeenCalled();
+    first.unmount();
+
+    // An unknown stage opens where the draft was.
+    renderPage(false, '?stage=NOPE');
+    expect(await screen.findByRole('heading', { name: '3. Goals' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Save a deposit')).toBeInTheDocument();
+  });
+
+  it('shows the line that tells it apart from the Plan checklist on Clarify (V35 D-35-2)', async () => {
+    vi.mocked(getAiStatus).mockResolvedValue({ ...ready, available: false, reason: 'NO_CONSENT' });
+    vi.mocked(getPlanDraft).mockResolvedValue(null);
+    renderPage();
+    expect(await screen.findByText('Build my plan builds it. The plan checklist checks it.')).toBeInTheDocument();
+  });
 
   it('picks up a saved draft where the participant left off (PB-FR-30)', async () => {
     vi.mocked(getAiStatus).mockResolvedValue(ready);

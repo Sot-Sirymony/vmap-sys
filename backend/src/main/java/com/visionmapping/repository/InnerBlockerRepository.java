@@ -29,6 +29,15 @@ public interface InnerBlockerRepository extends JpaRepository<InnerBlocker, Long
                               @Param("status") InnerBlockerStatus status, @Param("dreamId") Long dreamId,
                               @Param("allDreams") boolean allDreams, Pageable pageable);
 
+    /** V35 (D-35-6): active, not archived blockers for this dream or for all dreams. */
+    @Query("""
+            select count(b) from InnerBlocker b
+            where b.user.id = :userId and b.archived = false
+              and b.status = com.visionmapping.entity.enums.InnerBlockerStatus.ACTIVE
+              and (b.dream is null or b.dream.id = :dreamId)
+            """)
+    long countActiveForDream(@Param("userId") Long userId, @Param("dreamId") Long dreamId);
+
     /** D-34-11: what a coach reads when the participant shares journals. */
     List<InnerBlocker> findByUser_IdAndArchivedFalseOrderByCreatedAtDesc(Long userId);
 }

@@ -620,3 +620,25 @@ practice isn't helping yet. Try changing it."
 **Privacy.** Your inner blockers are private. Your coach sees them, read-only, only if you share your journals with
 your coach. They are never sent to the AI. **Check and add** in Build my plan lists the blockers for that dream, for
 information only.
+
+## Plan checklist and Build my plan (V35)
+
+There are two places to plan a dream. **Build my plan builds it. The plan checklist checks it.**
+
+| | Build my plan | Plan checklist |
+| --- | --- | --- |
+| Open it from | **Build my plan** on the Vision Map or a dream | **Plan checklist** in the sidebar, or the link beside Build my plan |
+| Use it to | Build or add to a dream's plan in one guided place | See what the plan has and still needs, record milestones, download the PDF |
+
+**On the Plan checklist:**
+
+- Pick a dream. **Build my plan** opens its builder. If you left a draft unfinished, the button says **Continue Build
+  my plan** and shows when the draft was saved. Drafts are kept for 14 days after their last change.
+- **Do this next** opens Build my plan at the right stage: the dream statement at Clarify, inner blockers at Inner
+  blockers, goals at Goals, steps at Steps, dates at Dates, and resources and people at Steps (gaps, helpers and
+  risks). Strengths and gaps opens the Strengths page. Prefer the old page? Use the "or open the … page" link under
+  the button.
+- The **Inner blockers** row is ticked when you've named at least one inner blocker for this dream or for all dreams.
+  It shows only a count, never what you wrote, and it never changes whether the plan counts as ready.
+
+**After Save my plan** in the builder, choose **See your plan checklist** to see what the plan still needs.

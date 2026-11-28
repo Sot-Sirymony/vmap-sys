@@ -914,7 +914,7 @@ the server's date is rejected for check-ins and habit checks.
 | GET | `/api/modules` | All modules in order, with status for this user |
 | GET | `/api/modules/{number}` | Content, saved rows, and what is missing. **400** while locked |
 | PUT | `/api/modules/{number}/completion` | Save `{ "rows": [...] }`. Data-proven modules send an empty list |
-| GET | `/api/plan-status/{dreamId}` | The seven plan stages and `planReady`. The `STRENGTHS` stage (V8.1) never affects `planReady` |
+| GET | `/api/plan-status/{dreamId}` | The eight plan stages and `planReady`. The `STRENGTHS` stage (V8.1) and the `INNER` stage (V35, after `STRENGTHS`: done when an active inner blocker is linked to this dream or to all dreams; a count only, never the text) never affect `planReady` |
 | GET, POST | `/api/milestones` | List with `?dreamId=`, or add one |
 | DELETE | `/api/milestones/{id}` | Archive |
 

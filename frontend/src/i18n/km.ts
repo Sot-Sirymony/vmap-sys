@@ -4300,4 +4300,17 @@ export const km: Record<string, string> = {
   'This practice is already a daily habit.': 'ការអនុវត្តនេះជាទម្លាប់ប្រចាំថ្ងៃរួចហើយ។',
   'Inner blocker check-ins belong to weekly reviews only.': 'ការឆ្លើយអំពីឧបសគ្គខាងក្នុង គឺសម្រាប់តែការពិនិត្យឡើងវិញប្រចាំសប្តាហ៍ប៉ុណ្ណោះ។',
   'Each inner blocker can have one answer per review.': 'ឧបសគ្គខាងក្នុងនីមួយៗអាចមានចម្លើយមួយក្នុងមួយការពិនិត្យឡើងវិញ។',
+  // V35: Plan checklist and Build my plan (drafts for the Khmer reviewer, docs/km-review-v35.csv)
+  'Plan checklist': 'បញ្ជីត្រួតពិនិត្យផែនការ',
+  'See what one dream\'s plan has and what it still needs.': 'មើលថាផែនការនៃក្តីស្រមៃមួយមានអ្វីខ្លះ និងនៅខ្វះអ្វីខ្លះ។',
+  'Build my plan builds it. The plan checklist checks it.': 'កសាងផែនការរបស់ខ្ញុំ ជាអ្នកកសាងវា។ បញ្ជីត្រួតពិនិត្យផែនការ ជាអ្នកពិនិត្យវា។',
+  'Continue Build my plan': 'បន្តកសាងផែនការរបស់ខ្ញុំ',
+  'Continue Build my plan for {dream}': 'បន្តកសាងផែនការរបស់ខ្ញុំសម្រាប់ {dream}',
+  'Build my plan for {dream}': 'កសាងផែនការរបស់ខ្ញុំសម្រាប់ {dream}',
+  'Draft saved {date}. It is kept for 14 days after its last change.': 'សេចក្តីព្រាងបានរក្សាទុកនៅ {date}។ វាត្រូវបានរក្សាទុក 14 ថ្ងៃ បន្ទាប់ពីការផ្លាស់ប្តូរចុងក្រោយ។',
+  'or open the {page} page': 'ឬបើកទំព័រ {page}',
+  'See your plan checklist': 'មើលបញ្ជីត្រួតពិនិត្យផែនការរបស់អ្នក',
+  'Back to the plan checklist': 'ត្រឡប់ទៅបញ្ជីត្រួតពិនិត្យផែនការ',
+  '{count} inner blocker(s) named.': 'បានដាក់ឈ្មោះឧបសគ្គខាងក្នុង {count}។',
+  'Name what might hold you back inside, with one short practice.': 'ដាក់ឈ្មោះអ្វីដែលអាចរារាំងអ្នកពីខាងក្នុង ជាមួយការអនុវត្តខ្លីមួយ។',
 };

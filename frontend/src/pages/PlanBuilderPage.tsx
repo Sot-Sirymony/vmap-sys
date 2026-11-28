@@ -9,7 +9,7 @@ import Step from '@mui/material/Step';
 import StepButton from '@mui/material/StepButton';
 import Stepper from '@mui/material/Stepper';
 import Typography from '@mui/material/Typography';
-import { Link as RouterLink, useLocation, useNavigate, useParams } from 'react-router';
+import { Link as RouterLink, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { getAiStatus } from '../api/aiApi';
 import { addPlanDraft, discardPlanDraft, getPlanCapacity, getPlanDraft, savePlanDraft, undoPlan } from '../api/aiPlanApi';
 import { archiveDream, listDreams, updateDream } from '../api/dreamApi';
@@ -51,8 +51,14 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
  * which saves everything at once (PB-FR-31) and can be undone (PB-FR-32).
  * Without AI the same stages work as a guided form.
  */
+/** V35 (D-35-5): the stages the Plan checklist can open. */
+const OPENABLE_STAGES: PlanStage[] = ['CLARIFY', 'INNER', 'GOALS', 'STEPS', 'DATES'];
+
 export function PlanBuilderPage() {
   const { dreamId } = useParams();
+  // V35 (D-35-5): the Plan checklist opens the builder at a stage; only the shown stage changes, never the draft.
+  const [searchParams] = useSearchParams();
+  const requestedStage = OPENABLE_STAGES.find((value) => value === searchParams.get('stage'));
   // V31 v1: the Dream Coach start page saved this dream and sent the participant here.
   const fromCoach = (useLocation().state as { fromCoach?: boolean } | null)?.fromCoach === true;
   const navigate = useNavigate();
@@ -123,7 +129,7 @@ export function PlanBuilderPage() {
         }
         setContent(fromCoach ? { ...startContent, coachCreated: true } : startContent);
         // V31 v1: the coach has already clarified the dream, so a new plan starts at the goals.
-        setStage(draft?.stage ? currentStage(draft.stage) : fromCoach ? 'GOALS' : 'CLARIFY');
+        setStage(requestedStage ?? (draft?.stage ? currentStage(draft.stage) : fromCoach ? 'GOALS' : 'CLARIFY'));
         setResumed(draft !== null);
         setSession(draft ? { used: draft.aiRequestsUsed ?? 0, limit: draft.aiRequestLimit ?? 15 } : null);
         setError(plan.found ? '' : tr('Dream not found.'));
@@ -369,6 +375,8 @@ export function PlanBuilderPage() {
             : undefined}>
             {notice}{' '}
             {added && <Link component={RouterLink} to={`/dreams/${dream.id}`}>{tr('See it on the vision map')}</Link>}
+            {/* V35 (D-35-8): what the plan still needs. */}
+            {added && <>{' · '}<Link component={RouterLink} to={`/plan?dreamId=${dream.id}`}>{tr('See your plan checklist')}</Link></>}
           </Alert>
         )}
         {actionError && <Alert severity="error">{actionError}</Alert>}
@@ -385,6 +393,10 @@ export function PlanBuilderPage() {
               <Typography variant="h6">{`${index + 1}. ${tr(STAGES[index].label)}`}</Typography>
               <HelpWithSectionButton section={assistantSection} />
             </Box>
+            {stage === 'CLARIFY' && (
+              // V35 (D-35-2): the same line as on the Plan checklist.
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{tr('Build my plan builds it. The plan checklist checks it.')}</Typography>
+            )}
             {stage === 'CLARIFY' && (
               <ClarifyStage dream={dream} content={content} onChange={change} onDreamChange={setDream} token={token ?? ''}
                 language={language} aiReady={aiReady} onDone={() => goTo('INNER')} />

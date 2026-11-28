@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChartGantt, LayoutGrid, ListTree, MoonStar, Rocket, SlidersHorizontal } from 'lucide-react';
-import { useLocation, useNavigate, useParams } from 'react-router';
+import { Link as RouterLink, useLocation, useNavigate, useParams } from 'react-router';
+import Link from '@mui/material/Link';
 import { listDreams } from '../api/dreamApi';
 import { listGoals } from '../api/goalApi';
 import { listSteps } from '../api/stepApi';
@@ -263,6 +264,8 @@ export function DreamDetailPage() {
           <Typography variant="body2" color="text.secondary">
             {tr('A step-by-step guide from this dream to goals, steps and tasks.')}
           </Typography>
+          {/* V35 (D-35-8): what this dream's plan has and still needs. */}
+          <Link component={RouterLink} to={`/plan?dreamId=${selectedDream.id}`} variant="body2">{tr('Plan checklist')}</Link>
         </Box>
       )}
       {!selectedDream.archived && token && (
