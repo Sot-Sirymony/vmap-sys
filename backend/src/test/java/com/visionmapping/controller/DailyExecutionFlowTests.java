@@ -44,19 +44,21 @@ class DailyExecutionFlowTests {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void stepWithoutOwnerOrDateCannotBeSaved() throws Exception {
+    void stepNeedsAnOwnerButItsDateIsOptional() throws Exception {
         String token = registerAndToken("step-rules");
         long goalId = goal(token, dream(token, "Why it matters"));
 
         send(post("/api/steps"), token, stepBody(goalId, "No owner", null, TODAY.toString())).andExpect(status().isBadRequest());
-        send(post("/api/steps"), token, stepBody(goalId, "No date", "Me", null)).andExpect(status().isBadRequest());
+        send(post("/api/steps"), token, stepBody(goalId, "No date", "Me", null))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.targetDate").doesNotExist());
         send(post("/api/steps"), token, stepBody(goalId, "Complete", "Me", TODAY.toString()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.owner").value("Me"));
     }
 
     @Test
-    void anOldUndatedStepCanChangeStatusButNotBeSavedInFull() throws Exception {
+    void anUndatedStepCanChangeStatusAndBeSavedInFull() throws Exception {
         String token = registerAndToken("old-step");
         long goalId = goal(token, dream(token, "Why it matters"));
         long stepId = step(token, goalId, "Old step", TODAY.plusDays(3));
@@ -64,7 +66,9 @@ class DailyExecutionFlowTests {
 
         send(patch("/api/steps/" + stepId + "/status"), token, Map.of("status", "IN_PROGRESS", "manualOverride", false))
                 .andExpect(status().isOk());
-        send(put("/api/steps/" + stepId), token, stepBody(goalId, "Renamed", "Me", null)).andExpect(status().isBadRequest());
+        send(put("/api/steps/" + stepId), token, stepBody(goalId, "Renamed", "Me", null))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Renamed"));
     }
 
     @Test

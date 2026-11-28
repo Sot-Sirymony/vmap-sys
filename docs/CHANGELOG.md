@@ -934,6 +934,12 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**A step's target date is optional** (28 Nov 2026, product owner's request; changes FR-64): `POST`/`PUT /api/steps`
+accept a step with no target date. In the Vision Map tree's quick add, a step left without a date still takes its
+goal's date, or the dream's; when neither has one, **Add** now works and the step is saved without a date ("No date
+chosen: you can add one later"). Undated steps were already handled everywhere else (daily plan count, plan status,
+reports). Tasks still need a due date (business rule 5).
+
 **Fix: the Dream Coach shows "AI help is temporarily unavailable" instead of a server error** (28 Nov 2026): a
 Claude reply the SDK could not read, or a stream that ended before the whole message, escaped the chat calls as a 500
 ("Something went wrong on our side"). Both now give the AI message and log the real cause.

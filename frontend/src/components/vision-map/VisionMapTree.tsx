@@ -2072,11 +2072,11 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, parentDate, par
   const [targetDate, setTargetDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  // A step still always has a target date (V8): left empty here, it takes its
-  // goal's date (or the dream's), and can be changed later. Only when neither
-  // has a date does the tree ask for one.
+  // The date is optional (28 Nov 2026, product owner). Left empty, the step
+  // takes its goal's date (or the dream's); when neither has one, it is saved
+  // without a date and can get one later.
   const effectiveTargetDate = targetDate || parentDate || '';
-  const ready = Boolean(title.trim() && owner.trim() && effectiveTargetDate);
+  const ready = Boolean(title.trim() && owner.trim());
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -2093,7 +2093,7 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, parentDate, par
         sequenceNumber: nextSequence,
         complex: false,
         priority: 'MEDIUM',
-        targetDate: effectiveTargetDate,
+        targetDate: effectiveTargetDate || undefined,
         status: 'NOT_STARTED',
       });
       setTitle('');
@@ -2112,7 +2112,7 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, parentDate, par
         <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={tr('New step title')} aria-label={tr('New step title')} inputRef={inputRef} />
         <Input value={owner} onChange={(event) => setOwner(event.target.value)} placeholder={tr('Owner')} aria-label={tr('Step owner')} />
         <Input type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)}
-          aria-label={parentDate ? tr('Step target date (optional)') : tr('Step target date')} />
+          aria-label={tr('Step target date (optional)')} />
         <Button type="submit" variant="secondary" disabled={busy || !ready}>{busy ? tr('Adding...') : tr('Add')}</Button>
       </form>
       {title.trim() && !targetDate && parentDate && (
@@ -2122,7 +2122,7 @@ function StepAddRow({ goalId, nextSequence, token, defaultOwner, parentDate, par
         </p>
       )}
       {title.trim() && !targetDate && !parentDate && (
-        <p className="map-meta">{tr('Neither the goal nor the dream has a target date, so choose one for the step.')}</p>
+        <p className="map-meta">{tr('No date chosen: you can add one later.')}</p>
       )}
       {error && <p className="map-meta" role="alert">{error}</p>}
     </div>

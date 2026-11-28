@@ -4343,5 +4343,5 @@ export const km: Record<string, string> = {
   'Step target date (optional)': 'កាលបរិច្ឆេទគោលដៅនៃជំហាន (មិនបង្ខំ)',
   'No date chosen: due with the goal on {date}.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ ត្រូវបញ្ចប់ជាមួយគោលដៅនៅ {date}។',
   'No date chosen: due with the dream on {date}.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ ត្រូវបញ្ចប់ជាមួយក្តីស្រមៃនៅ {date}។',
-  'Neither the goal nor the dream has a target date, so choose one for the step.': 'ទាំងគោលដៅ និងក្តីស្រមៃ គ្មានកាលបរិច្ឆេទគោលដៅទេ ដូច្នេះសូមជ្រើសមួយសម្រាប់ជំហាន។',
+  'No date chosen: you can add one later.': 'មិនបានជ្រើសកាលបរិច្ឆេទ៖ អ្នកអាចបន្ថែមវាពេលក្រោយ។',
 };

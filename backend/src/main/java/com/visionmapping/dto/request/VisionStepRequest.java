@@ -20,7 +20,8 @@ public record VisionStepRequest(
         @NotNull @PositiveOrZero Integer sequenceNumber,
         boolean complex,
         @NotNull Priority priority,
-        @NotNull LocalDate targetDate,
+        // Optional (28 Nov 2026, product owner): a step may wait for its date; blank clears it.
+        LocalDate targetDate,
         @NotNull WorkStatus status,
         // v0.1 FR-05: resources and people. Left out keeps what is saved; blank clears it.
         @Size(max = 1000) String resources,

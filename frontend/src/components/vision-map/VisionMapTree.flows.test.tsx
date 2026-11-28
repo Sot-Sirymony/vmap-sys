@@ -112,7 +112,7 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     })));
   });
 
-  it('uses the dream\'s date when the goal has none, and asks when neither has one', async () => {
+  it('uses the dream\'s date when the goal has none, and adds an undated step when neither has one', async () => {
     const first = renderTree({ goals: [{ ...conceptNote, targetDate: undefined }, tools] });
     const [stepTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
     await userEvent.type(stepTitle, 'Define the research gap');
@@ -124,8 +124,14 @@ describe('VisionMapTree: working the plan in the tree (CLAUDE.md page 4)', () =>
     renderTree({ dream: { ...dream, targetDate: undefined }, goals: [{ ...conceptNote, targetDate: undefined }, tools] });
     const [noDateTitle] = screen.getAllByRole('textbox', { name: 'New step title' });
     await userEvent.type(noDateTitle, 'Define the research gap');
-    expect(screen.getByText('Neither the goal nor the dream has a target date, so choose one for the step.')).toBeInTheDocument();
-    expect(within(noDateTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' })).toBeDisabled();
+    expect(screen.getByText('No date chosen: you can add one later.')).toBeInTheDocument();
+    const add = within(noDateTitle.closest('form') as HTMLElement).getByRole('button', { name: 'Add' });
+    expect(add).toBeEnabled();
+    vi.mocked(stepApi.createStep).mockClear();
+    await userEvent.click(add);
+    await waitFor(() => expect(stepApi.createStep).toHaveBeenCalledWith('token', expect.objectContaining({
+      title: 'Define the research gap', targetDate: undefined,
+    })));
   });
 
   it('adds a task under a step with owner and due date (BR-5)', async () => {
