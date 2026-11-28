@@ -50,7 +50,9 @@ import org.springframework.lang.Nullable;
  * Recreates a workbook's Vision Area → Dream → Goal → Step → Task hierarchy
  * for the current user. Each sheet's own "ID" column is the exporting user's
  * database id; it means nothing here, so it is used only to link children to
- * the freshly created parents through the id maps below. A row is skipped
+ * the freshly created parents through the maps below. A child may name its
+ * parent by that ID or by the parent's Code (column 2, such as {@code G-002}),
+ * so rows typed by hand, which have no ID, can still be linked. A row is skipped
  * (never fatal) when its data is invalid or its parent was itself skipped.
  *
  * <p>V17 BL-FR-41: obstacles are imported last. A row with a Task or Step ID
@@ -69,11 +71,11 @@ class HierarchyImport {
     private final TaskItemService taskService;
     private final ObstacleService obstacleService;
     private final Validator validator;
-    private final Map<Long, Long> newVisionAreaIds = new HashMap<>();
-    private final Map<Long, Long> newDreamIds = new HashMap<>();
-    private final Map<Long, Long> newGoalIds = new HashMap<>();
-    private final Map<Long, Long> newStepIds = new HashMap<>();
-    private final Map<Long, Long> newTaskIds = new HashMap<>();
+    private final Map<String, Long> newVisionAreaIds = new HashMap<>();
+    private final Map<String, Long> newDreamIds = new HashMap<>();
+    private final Map<String, Long> newGoalIds = new HashMap<>();
+    private final Map<String, Long> newStepIds = new HashMap<>();
+    private final Map<String, Long> newTaskIds = new HashMap<>();
     // New task id → its new step id, to spot an obstacle row whose Step ID and Task ID disagree.
     private final Map<Long, Long> newTaskStepIds = new HashMap<>();
     private final List<String> warnings = new ArrayList<>();
@@ -125,7 +127,7 @@ class HierarchyImport {
 
     private void importDreams(Sheet sheet) {
         eachRow(sheet, "Dreams", reader -> {
-            long parentId = resolveParent(newVisionAreaIds, reader.requiredReference(2, "Vision Area ID"), "Vision Area");
+            long parentId = resolveParent(newVisionAreaIds, reader.requiredKey(2, "Vision Area ID"), "Vision Area");
             DreamRequest request = new DreamRequest(
                     parentId,
                     reader.requiredText(3, TITLE),
@@ -149,7 +151,7 @@ class HierarchyImport {
 
     private void importGoals(Sheet sheet) {
         eachRow(sheet, "Goals", reader -> {
-            long parentId = resolveParent(newDreamIds, reader.requiredReference(2, "Dream ID"), "Dream");
+            long parentId = resolveParent(newDreamIds, reader.requiredKey(2, "Dream ID"), "Dream");
             GoalRequest request = new GoalRequest(
                     parentId,
                     reader.requiredText(3, TITLE),
@@ -169,7 +171,7 @@ class HierarchyImport {
 
     private void importSteps(Sheet sheet) {
         eachRow(sheet, "Steps", reader -> {
-            long parentId = resolveParent(newGoalIds, reader.requiredReference(2, "Goal ID"), "Goal");
+            long parentId = resolveParent(newGoalIds, reader.requiredKey(2, "Goal ID"), "Goal");
             VisionStepRequest request = new VisionStepRequest(
                     parentId,
                     reader.requiredText(3, TITLE),
@@ -188,7 +190,7 @@ class HierarchyImport {
 
     private void importTasks(Sheet sheet) {
         eachRow(sheet, "Tasks", reader -> {
-            long parentId = resolveParent(newStepIds, reader.requiredReference(2, "Step ID"), "Step");
+            long parentId = resolveParent(newStepIds, reader.requiredKey(2, "Step ID"), "Step");
             WorkStatus status = reader.enumValue(WorkStatus.class, 8, STATUS);
             String blockerReason = reader.textOrNull(10);
             if (status == WorkStatus.BLOCKED && blockerReason == null) {
@@ -217,11 +219,8 @@ class HierarchyImport {
                     // an in-app tag; existing rows read as NEUTRAL (BR-27).
                     null);
             TaskItemResponse task = taskService.createTask(valid(request));
-            Long workbookId = reader.referenceOrNull(0);
-            if (workbookId != null) {
-                newTaskIds.put(workbookId, task.id());
-                newTaskStepIds.put(task.id(), task.stepId());
-            }
+            mapWorkbookId(reader, newTaskIds, task.id());
+            newTaskStepIds.put(task.id(), task.stepId());
         });
     }
 
@@ -239,16 +238,16 @@ class HierarchyImport {
                 throw new RowParseException("a " + status.name().toLowerCase(java.util.Locale.ROOT)
                         + " obstacle needs a root cause or alternatives, which the workbook does not hold; add it in the app");
             }
-            Long taskId = mapped(newTaskIds, reader.referenceOrNull(4));
-            Long stepId = mapped(newStepIds, reader.referenceOrNull(3));
-            if (reader.referenceOrNull(4) != null && taskId == null) {
+            Long taskId = mapped(newTaskIds, reader.keyOrNull(4));
+            Long stepId = mapped(newStepIds, reader.keyOrNull(3));
+            if (reader.keyOrNull(4) != null && taskId == null) {
                 warnings.add("Obstacles row " + rowNumber + ": its task was not imported, so it was put on its step instead.");
             }
             if (taskId != null && stepId != null && !stepId.equals(newTaskStepIds.get(taskId))) {
                 warnings.add("Obstacles row " + rowNumber + ": its Step ID and Task ID disagree; it was put on the task.");
             }
-            Long goalId = mapped(newGoalIds, reader.referenceOrNull(2));
-            Long dreamId = mapped(newDreamIds, reader.referenceOrNull(1));
+            Long goalId = mapped(newGoalIds, reader.keyOrNull(2));
+            Long dreamId = mapped(newDreamIds, reader.keyOrNull(1));
             ObstacleRequest request = new ObstacleRequest(dreamId, goalId, taskId != null ? null : stepId, taskId,
                     reader.requiredText(5, TITLE), null,
                     reader.enumValue(ObstacleType.class, 6, TYPE),
@@ -270,22 +269,28 @@ class HierarchyImport {
     }
 
     @Nullable
-    private static Long mapped(Map<Long, Long> idMap, @Nullable Long workbookId) {
-        return workbookId == null ? null : idMap.get(workbookId);
+    private static Long mapped(Map<String, Long> idMap, @Nullable String workbookKey) {
+        return workbookKey == null ? null : idMap.get(workbookKey);
     }
 
-    private long resolveParent(Map<Long, Long> parentIds, long workbookParentId, String parentLabel) {
-        Long newId = parentIds.get(workbookParentId);
+    private long resolveParent(Map<String, Long> parentIds, String workbookParentKey, String parentLabel) {
+        Long newId = parentIds.get(workbookParentKey);
         if (newId == null) {
-            throw new RowParseException(parentLabel + " " + workbookParentId + " was not imported");
+            throw new RowParseException(parentLabel + " " + workbookParentKey
+                    + " was not imported (use the ID or Code of a row on the " + parentLabel + "s sheet)");
         }
         return newId;
     }
 
-    private void mapWorkbookId(RowReader reader, Map<Long, Long> idMap, long newId) {
-        Long workbookId = reader.referenceOrNull(0);
+    /** Remembers the new record under the row's ID and under its Code, so a child may name either. */
+    private void mapWorkbookId(RowReader reader, Map<String, Long> idMap, long newId) {
+        String workbookId = reader.keyOrNull(0);
         if (workbookId != null) {
             idMap.put(workbookId, newId);
+        }
+        String code = reader.keyOrNull(1);
+        if (code != null) {
+            idMap.putIfAbsent(code, newId);
         }
     }
 

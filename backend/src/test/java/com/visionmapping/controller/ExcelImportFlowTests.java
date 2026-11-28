@@ -82,6 +82,57 @@ class ExcelImportFlowTests {
                 .andExpect(jsonPath("$.content[0].title").value("Search PubMed"));
     }
 
+    /**
+     * Rows typed by hand have no ID, so they name their parent by Code
+     * (G-002, S-002, …). Every ID is cleared and every link rewritten as a
+     * code; the whole hierarchy, and an obstacle on a step, still imports.
+     */
+    @Test
+    void handTypedRowsLinkToTheirParentsByCode() throws Exception {
+        String author = registerAndToken("code-author");
+        buildSampleHierarchy(author);
+        byte[] exported = mockMvc.perform(post("/api/excel/export").header("Authorization", "Bearer " + author))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+
+        byte[] edited;
+        try (XSSFWorkbook book = new XSSFWorkbook(new ByteArrayInputStream(exported))) {
+            String[][] childToParent = {{"Dreams", "Vision Areas"}, {"Goals", "Dreams"}, {"Steps", "Goals"}, {"Tasks", "Steps"}};
+            for (String[] pair : childToParent) {
+                Row parent = book.getSheet(pair[1]).getRow(1);
+                Row child = book.getSheet(pair[0]).getRow(1);
+                assertThat(child.getCell(2).getStringCellValue()).isEqualTo(parent.getCell(0).getStringCellValue());
+                // Lower case on purpose: codes match whatever their case.
+                child.getCell(2).setCellValue(parent.getCell(1).getStringCellValue().toLowerCase(java.util.Locale.ROOT));
+            }
+            for (String name : new String[] {"Vision Areas", "Dreams", "Goals", "Steps", "Tasks"}) {
+                book.getSheet(name).getRow(1).getCell(0).setBlank();
+            }
+            Row obstacle = book.getSheet("Obstacles").createRow(1);
+            obstacle.createCell(3).setCellValue(book.getSheet("Steps").getRow(1).getCell(1).getStringCellValue());
+            obstacle.createCell(5).setCellValue("No time to search");
+            obstacle.createCell(6).setCellValue("TIME");
+            obstacle.createCell(7).setCellValue("MEDIUM");
+            obstacle.createCell(8).setCellValue("OPEN");
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            book.write(out);
+            edited = out.toByteArray();
+        }
+
+        String importer = registerAndToken("code-import");
+        MockMultipartFile upload = new MockMultipartFile("file", "by-code.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", edited);
+        mockMvc.perform(multipart("/api/excel/import").file(upload).header("Authorization", "Bearer " + importer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.createdRecords").value(6))
+                .andExpect(jsonPath("$.skippedRecords").value(0))
+                .andExpect(jsonPath("$.warnings.length()").value(0));
+
+        mockMvc.perform(get("/api/tasks").header("Authorization", "Bearer " + importer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].title").value("Search PubMed"));
+    }
+
     /** V16 (TL-FR-49): the export adds a week-by-week Timeline sheet after Tasks; import ignores it. */
     @Test
     void exportIncludesATimelineSheetWithWeekBarsAfterTasks() throws Exception {

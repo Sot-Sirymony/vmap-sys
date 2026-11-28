@@ -934,6 +934,10 @@ BRD [`VMS_BRD_V14.0.0.md`](VMS_BRD_V14.0.0.md), resumed 2026-11-21.
 
 ## Unreleased — no BRD change
 
+**Excel import: link a row to its parent by Code** (28 Nov 2026): a row on the Dreams, Goals, Steps, Tasks or
+Obstacles sheet may name its parent by the parent's ID or by its Code (`G-002`, `S-002`, any case). Rows typed by hand
+have no ID, so before this every child of such a row was skipped with "Goal ID must be a number".
+
 **Fix: Excel downloads no longer fail with error 500** (28 Nov 2026): the plan export and the Management Report
 workbook sized their columns with POI's `autoSizeColumn`, which asks the operating system for a font. The Alpine
 production image has no system fonts, so the call failed. Columns are now sized by counting characters

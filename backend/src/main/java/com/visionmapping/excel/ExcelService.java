@@ -232,7 +232,7 @@ public class ExcelService {
                     streamlineReviewService.exportRows(), headerStyle);
 
             writeRows(workbook, "Instructions", List.of("Topic", "Instruction"), List.of(
-                    List.of("Import", "Use this workbook as a clean template. Keep required sheet names and header rows."),
+                    List.of("Import", "Use this workbook as a clean template. Keep required sheet names and header rows. A new row may leave ID empty; its children then name it by its Code (for example G-002)."),
                     List.of("Export", "Export creates a new workbook and does not overwrite the original workbook."),
                     List.of(STATUS, "Use application values such as ACTIVE, IN_PROGRESS, BLOCKED, COMPLETED, and ARCHIVED."),
                     List.of(PRIORITY, "Use LOW, MEDIUM, HIGH, or CRITICAL."),

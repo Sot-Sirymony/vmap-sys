@@ -79,14 +79,32 @@ class RowReader {
         return value;
     }
 
+    /**
+     * A link to another row: its ID (an exported database id) or its Code
+     * (such as {@code G-002}). Numbers are written without decimals and codes
+     * in capitals, so "406", "406.0" and 406 match, and so do "g-002" and "G-002".
+     */
     @Nullable
-    Long referenceOrNull(int column) {
+    String keyOrNull(int column) {
         String value = text(column);
-        return value.isEmpty() ? null : parseReference(value, "reference in column " + (column + 1));
+        return value.isEmpty() ? null : key(value);
     }
 
-    long requiredReference(int column, String field) {
-        return parseReference(requiredText(column, field), field);
+    String requiredKey(int column, String field) {
+        return key(requiredText(column, field));
+    }
+
+    static String key(String value) {
+        String trimmed = value.trim();
+        try {
+            double number = Double.parseDouble(trimmed);
+            if (number == Math.rint(number) && !Double.isInfinite(number)) {
+                return Long.toString((long) number);
+            }
+        } catch (NumberFormatException exception) {
+            // Not a number: a code such as G-002.
+        }
+        return trimmed.toUpperCase(java.util.Locale.ROOT);
     }
 
     @Nullable
@@ -144,14 +162,6 @@ class RowReader {
             return Enum.valueOf(type, value);
         } catch (IllegalArgumentException exception) {
             throw new RowParseException("invalid " + field + " '" + value + "'");
-        }
-    }
-
-    private long parseReference(String value, String field) {
-        try {
-            return (long) Double.parseDouble(value);
-        } catch (NumberFormatException exception) {
-            throw new RowParseException(field + " must be a number");
         }
     }
 }
