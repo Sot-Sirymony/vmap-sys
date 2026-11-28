@@ -17,6 +17,35 @@ marker was dropped when the last BRD v4.0.0 requirement shipped (2026-07-25).
 
 ---
 
+## 34.0.0 — My inner blockers (built; awaiting deploy, UAT and the Khmer review)
+
+Implements [BRD 34.0.0](VMS_BRD_V34.0.0.md), all five phases. Migration **V104**.
+
+**Backend.**
+- New `inner_blockers` and `inner_blocker_checkins` tables, with `InnerBlocker`, `InnerBlockerCheckin`,
+  `InnerBlockerService` and `InnerBlockerCheckinService`.
+- `/api/v1/inner-blockers`: paged list (status, archived, dream plus all dreams, habit streak by `date`), add, edit,
+  status (resolve or reopen), archive with `stopHabit`, restore, and make it a daily habit. At most 10 active (409).
+- `/api/v1/reviews/{reviewId}/inner-blocker-checkins`: the weekly "Did the practice help?" answers (weekly reviews
+  only). A blocker shows its last four answers and `practiceNotHelping` after two No answers in a row.
+- The coach participant detail gains `innerBlockers` (only when journals are shared). The account export gains
+  `innerBlockers` and `innerBlockerCheckins`. Account deletion removes both tables.
+- No AI service reads inner blockers. A test checks this.
+
+**Frontend.**
+- A shared `InnerBlockerForm`, `InnerBlockerCard` and `InnerBlockerList` (`components/inner-blockers`).
+- Build my plan → Inner blockers: **Add as my blocker** on each named chain, and **Your inner blockers** with
+  **Add your own blocker**, linked to the dream.
+- Assessment page: **My inner blockers**, with Active / No longer holds me back / Archived filters.
+- **Make it a daily habit**, and the "Also stop the habit?" choice on resolve or archive.
+- Reviews page: a **My inner blockers** check-in on weekly reviews.
+- Check and add: "Inner blockers for this dream: n". Coach participant page: read-only blockers under Journals.
+- 59 Khmer drafts (`docs/km-review-v34.csv`).
+
+**Docs.** `UAT_V34.md`, the API, data model and user guide sections for V34.
+
+---
+
 ## 33.0.0 — One standard for every REST controller (phases 1 to 4 of 6 built)
 
 ### Phase 4: account, sign-in, admin and coaching on /api/v1

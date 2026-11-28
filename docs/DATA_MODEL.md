@@ -574,3 +574,17 @@ the build. Item numbers are from the book.
 - **Small visibility (Item 15).** A class used only inside its package is package-private, like
   `ReminderJob`, `DashboardTrend` and `DashboardAttention`. Do not make Spring beans that are proxied
   (`@Transactional`, `@Cacheable`) or JPA entities `final`.
+
+## V34 My inner blockers
+
+Migration V104.
+
+- **InnerBlocker** (`inner_blockers`): `blocker` (up to 120), `showsUp` (up to 500, optional), `practice` (up to
+  300), `chainKey` (one of the six chain score keys, or null), optional `dream` (null = all dreams), optional `habit`
+  (the daily habit made from the practice), `status` (`ACTIVE`, `RESOLVED`), `resolvedAt`, `archived`. At most 10
+  active and not archived per user (enforced in `InnerBlockerService`). The dream and habit links clear if either is
+  permanently deleted. Not an Obstacle: it belongs to the person, not to a step (D-17-1).
+- **InnerBlockerCheckin** (`inner_blocker_checkins`): `innerBlocker`, `review`, `answer` (`YES`, `PARTLY`, `NO`,
+  `NOT_DONE`). One per blocker per weekly review; deleted with the blocker or the review.
+- Both are private like the journals: a coach reads them only when the participant shares journals; an admin never.
+  Both are in the account export and are deleted with the account.

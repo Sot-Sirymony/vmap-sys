@@ -195,6 +195,8 @@ class AccessControlSweepTests {
                 "evidence", "Missed a filing", "relevance", "HIGH"));
         create("fear-entries", Map.of("fear", "Rejection", "worstCase", "They say no", "likelihood", "LOW",
                 "firstTest", "Ask once"));
+        // V34: an inner blocker; its weekly answers hang off the weekly review above.
+        create("inner-blockers", Map.of("blocker", "Inconsistency", "practice", "Never miss twice"));
         Map<String, Object> habit = Map.of("name", "Read daily");
         ownerIds.put("habits", postAndId("/api/habits?date=" + DATE, ownerToken, habit));
         createBodies.put("habits", habit);
@@ -353,7 +355,8 @@ class AccessControlSweepTests {
                 continue;
             }
             checked++;
-            if (route.method() == HttpMethod.PUT && route.pattern().equals("/api/habits/{id}")) {
+            if (route.method() == HttpMethod.PUT && route.pattern().equals("/api/habits/{id}")
+                    || route.pattern().equals("/api/inner-blockers/{id}/habit")) {
                 path += "?date=" + DATE;
             }
             int expected = ADMIN_ONLY_ACTIONS.containsKey(route.key()) ? 403 : 404;
@@ -579,6 +582,7 @@ class AccessControlSweepTests {
             case "challengeId" -> ownerIds.get("step-up");
             case "itemId" -> ownerIds.get("streamline-items");
             case "batchId" -> ownerIds.get("streamline-batches");
+            case "reviewId" -> ownerIds.get("reviews");
             case "id" -> ownerIds.get(pattern.substring("/api/".length(), pattern.indexOf("/{id}")));
             default -> null;
         };
@@ -613,7 +617,7 @@ class AccessControlSweepTests {
                 case "vision-areas", "dreams" -> "ACTIVE";
                 case "partners" -> "CONTACTED";
                 case "communication-messages" -> "SENT";
-                case "issue-reports" -> "RESOLVED";
+                case "issue-reports", "inner-blockers" -> "RESOLVED";
                 default -> "IN_PROGRESS";
             }));
         }
@@ -689,6 +693,12 @@ class AccessControlSweepTests {
         }
         if (pattern.endsWith("/target")) {
             return json(Map.of("targetCycleDays", 3));
+        }
+        if (pattern.endsWith("/inner-blockers/{id}/habit")) {
+            return json(Map.of("name", "Never miss twice"));
+        }
+        if (pattern.endsWith("/inner-blocker-checkins")) {
+            return json(Map.of("checkins", List.of(Map.of("innerBlockerId", ownerIds.get("inner-blockers"), "answer", "YES"))));
         }
         if (pattern.endsWith("/items/bulk")) {
             return json(Map.of("itemIds", List.of(ownerIds.get("streamline-items")), "verdict", "NOT_NEEDED"));

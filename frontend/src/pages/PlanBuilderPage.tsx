@@ -390,7 +390,7 @@ export function PlanBuilderPage() {
                 language={language} aiReady={aiReady} onDone={() => goTo('INNER')} />
             )}
             {stage === 'INNER' && (
-              <InnerStage content={content} onChange={change} token={token ?? ''} onDone={() => goTo('GOALS')} />
+              <InnerStage content={content} onChange={change} token={token ?? ''} onDone={() => goTo('GOALS')} dreamId={dream.id} />
             )}
             {stage === 'GOALS' && (
               <GoalsStage dream={dream} content={content} onChange={change} token={token ?? ''} language={language} aiReady={aiReady} />

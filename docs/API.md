@@ -1445,3 +1445,24 @@ The import checks the workbook, saves a snapshot of the person's current data, t
 signed-in person and reports created and skipped rows, errors and warnings. `backupFile` is the snapshot's file name
 only (for example `vision-mapping-backup-20261122-101010-0a1b2c3d.xlsx`), never a server path; snapshots are deleted
 after 30 days (`EXCEL_BACKUP_RETENTION_DAYS`).
+
+## My inner blockers (V34)
+
+The participant's own inner blockers (BRD 34). Every endpoint is scoped to the signed-in user: another user's blocker
+or review answers `404`. Nothing here is sent to the AI.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/inner-blockers?status=&archived=&dreamId=&includeAllDreams=&date=` | One page (`PagedResponse`, newest first; sort by `createdAt` or `updatedAt`). `status` is `ACTIVE` or `RESOLVED` (none = any). `dreamId` with `includeAllDreams=true` also returns the blockers for all dreams. `date` (the local day) fills `habitStreak` |
+| POST | `/api/v1/inner-blockers` | Add `{ blocker, showsUp, practice, chainKey, dreamId }`; `201` with `Location`. `409` when 10 are already active |
+| GET | `/api/v1/inner-blockers/{id}?date=` | One blocker with `lastAnswers` (latest four, newest first) and `practiceNotHelping` (two No answers in a row) |
+| PUT | `/api/v1/inner-blockers/{id}` | Edit the five fields |
+| PATCH | `/api/v1/inner-blockers/{id}/status` | `{ status, stopHabit }`; `RESOLVED` sets `resolvedAt`; reopening needs room under the limit |
+| POST | `/api/v1/inner-blockers/{id}/archive?stopHabit=` | Archive (`204`); `stopHabit=true` also archives the linked habit |
+| POST | `/api/v1/inner-blockers/{id}/restore` | Restore (`204`); `409` if an active blocker would pass the limit |
+| POST | `/api/v1/inner-blockers/{id}/habit?date=` | `{ name }`: create a daily habit from the practice (at most 3 habits active) and link it; `201`, `Location` is the habit |
+| GET, PUT | `/api/v1/reviews/{reviewId}/inner-blocker-checkins` | Read or save `{ checkins: [{ innerBlockerId, answer }] }` (`YES`, `PARTLY`, `NO`, `NOT_DONE`). Weekly reviews only; saving replaces the review's answers |
+
+`chainKey` is one of the six chain score keys or empty; the retired `knowledgeScore` and `resourcesScore` are refused.
+`GET /api/v1/coach/participants/{id}` gains `innerBlockers` (read-only, `null` unless the participant shares journals),
+and `GET /api/v1/account/export` gains `innerBlockers` and `innerBlockerCheckins`.

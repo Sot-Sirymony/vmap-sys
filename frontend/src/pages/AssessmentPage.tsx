@@ -22,6 +22,7 @@ import { useI18n } from '../i18n/I18nContext';
 import { PageSection } from './PageSection';
 import { HelpWithThis, PageAssistantProvider, PageHelpButton } from '../components/ai/page-assistant/PageAssistant';
 import { PracticeCard, WhatChangedCard } from '../components/assessment/AssessmentHelpers';
+import { MyInnerBlockersCard } from '../components/inner-blockers/MyInnerBlockersCard';
 import { STATEMENT_GUIDE } from '../utils/assessmentContent';
 import { CHAINS, chainScore, fearLinkSuggested, retiredChainsIn } from '../utils/chains';
 
@@ -176,6 +177,7 @@ export function AssessmentPage() {
           {baseline && token && <AssessmentExplainCard token={token} />}
           {latest && token && <PracticeCard token={token} latest={latest} />}
           {assessments.length > 1 && token && <WhatChangedCard token={token} />}
+          {token && <MyInnerBlockersCard token={token} />}
 
           <Card>
             <CardHeader

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -14,6 +14,8 @@ import { CHAINS, chainScore } from '../../utils/chains';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import type { DraftUpdate } from './draftModel';
+import { InnerBlockerList } from '../inner-blockers/InnerBlockerList';
+import type { InnerBlockerDraft } from '../inner-blockers/InnerBlockerForm';
 
 /** A take older than this is offered again (DC-FR-19). */
 const STALE_DAYS = 90;
@@ -41,6 +43,8 @@ type Props = {
   token: string;
   onDone: () => void;
   today?: Date;
+  /** V34 (D-34-4, D-34-8): the draft's dream; the participant's own blockers are added for it. */
+  dreamId?: number;
 };
 
 /**
@@ -53,8 +57,11 @@ type Props = {
  * loses nothing. "I'm ready to plan" or "Skip for now" both continue; the choice
  * is kept in the draft, and skipping shows once as a warning on the check.
  */
-export function InnerStage({ content, onChange, token, onDone, today = new Date() }: Props) {
+export function InnerStage({ content, onChange, token, onDone, today = new Date(), dreamId }: Props) {
   const navigate = useNavigate();
+  // V34 (D-34-5): a chain's label and practice, opened in the blocker form.
+  const [prefill, setPrefill] = useState<InnerBlockerDraft | null>(null);
+  const clearPrefill = useCallback(() => setPrefill(null), []);
   const [takes, setTakes] = useState<ChainAssessment[] | null>(null);
   const [error, setError] = useState('');
 
@@ -102,11 +109,32 @@ export function InnerStage({ content, onChange, token, onDone, today = new Date(
         <Box key={key} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 'var(--style-radius-control)', display: 'grid', gap: 0.5 }}>
           <Typography variant="subtitle2">{tr(CHAINS.find((chain) => chain.key === key)?.label ?? key)}</Typography>
           <Typography variant="body2">{tr(PRACTICE_PROGRAM[key].practice)}</Typography>
-          <Link component={RouterLink} to={PRACTICE_ACTIONS[key].path} variant="body2">
-            {tr('Open {page}', { page: tr(PRACTICE_ACTIONS[key].page) })}
-          </Link>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link component={RouterLink} to={PRACTICE_ACTIONS[key].path} variant="body2">
+              {tr('Open {page}', { page: tr(PRACTICE_ACTIONS[key].page) })}
+            </Link>
+            {dreamId !== undefined && (
+              <Button variant="text" onClick={() => setPrefill({
+                blocker: tr(CHAINS.find((chain) => chain.key === key)?.label ?? key),
+                practice: tr(PRACTICE_PROGRAM[key].practice),
+                chainKey: key,
+              })}>
+                {tr('Add as my blocker')}
+              </Button>
+            )}
+          </Box>
         </Box>
       ))}
+      {dreamId !== undefined && (
+        // V34 (§2.1): the participant's own blockers, in their own words.
+        <Box component="section" aria-labelledby="own-inner-blockers" sx={{ display: 'grid', gap: 1 }}>
+          <Typography id="own-inner-blockers" variant="subtitle2" component="h3">{tr('Your inner blockers')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {tr('Inner blockers are about you. Gaps in knowledge, skill or money go on the steps.')}
+          </Typography>
+          <InnerBlockerList token={token} dreamId={dreamId} prefill={prefill} onPrefillUsed={clearPrefill} />
+        </Box>
+      )}
       <Typography variant="caption" color="text.secondary">
         {tr('This is a practice, not a diagnosis. If something feels heavy, talk to your coach or someone you trust.')}
       </Typography>

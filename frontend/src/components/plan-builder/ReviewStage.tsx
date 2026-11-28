@@ -18,6 +18,7 @@ import { obstacleTypeLabels, workStatusLabels } from '../../utils/enumLabels';
 import { Button } from '../common/Button';
 import { Loading } from '../common/Loading';
 import { SuggestionRating } from '../ai/SuggestionRating';
+import { InnerBlockersNote } from '../inner-blockers/InnerBlockersNote';
 import { type DraftUpdate, STAGES, applyAiFix, applyIssueFix, countNew, readiness } from './draftModel';
 
 type Props = {
@@ -136,6 +137,7 @@ export function ReviewStage({
   return (
     <Stack spacing={2}>
       <Typography variant="body1">{summary(counts)}</Typography>
+      <InnerBlockersNote token={token} dreamId={dreamId} />
       {counts.total > 0 && <PlanTree content={content} dream={dream} existingGoals={existingGoals} existingSteps={existingSteps} />}
       {helperErrors.length > 0 && (
         <Alert severity="error">

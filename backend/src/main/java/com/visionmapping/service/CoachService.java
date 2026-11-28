@@ -75,6 +75,7 @@ public class CoachService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final PermissionService permissions;
+    private final InnerBlockerService innerBlockerService;
 
     public List<CoachParticipantResponse> participants() {
         AppUser coach = requireCoach();
@@ -104,7 +105,8 @@ public class CoachService {
                         .filter(completion -> completion.getRowsJson() != null)
                         .map(this::pitch)
                         .orElse(null),
-                guidePlans(id));
+                guidePlans(id),
+                shared ? innerBlockerService.forParticipant(id) : null);
     }
 
     /** V31 v2 (DC-FR-67): the latest guided plan per dream, for dreams still in the plan. Never the draft or the chat. */

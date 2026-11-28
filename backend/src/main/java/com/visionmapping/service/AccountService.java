@@ -103,6 +103,9 @@ public class AccountService {
             "chain_assessments",
             "milestones",
             "attitude_checkins",
+            // V34: inner blockers reference habits, dreams and reviews; their answers go first.
+            "inner_blocker_checkins",
+            "inner_blockers",
             "habits",
             "fear_entries",
             "gratitude_entries",
@@ -134,6 +137,8 @@ public class AccountService {
             "vision_areas");
 
     private final UserScope userScope;
+    private final InnerBlockerService innerBlockerService;
+    private final InnerBlockerCheckinService innerBlockerCheckinService;
     private final CoachCommentService coachCommentService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
@@ -247,6 +252,8 @@ public class AccountService {
                         .toList())
                 .linkedAccounts(signInMethodsService.linkedAccounts(userId))
                 .twoFactor(twoFactorService.exportFor(userId))
+                .innerBlockers(innerBlockerService.forExport(userId))
+                .innerBlockerCheckins(innerBlockerCheckinService.forExport(userId))
                 .build();
     }
 

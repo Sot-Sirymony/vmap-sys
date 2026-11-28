@@ -50,7 +50,10 @@ public record AccountExportResponse(
         // V14 (GA-FR-32): provider, email and link date of each linked sign-in, never the provider's user ID.
         List<SignInMethodsResponse.LinkedAccount> linkedAccounts,
         // V21 (TF-FR-41): status and remembered devices; never the secret, a code or a token.
-        TwoFactor twoFactor
+        TwoFactor twoFactor,
+        // V34 (IB-FR-12): inner blockers and their weekly answers.
+        List<InnerBlockerResponse> innerBlockers,
+        List<InnerBlockerCheckinResponse> innerBlockerCheckins
 ) {
 
     /** V21 (TF-FR-41). */
@@ -95,6 +98,8 @@ public record AccountExportResponse(
         selfAssessmentItems = Copies.list(selfAssessmentItems);
         selfAssessmentSnapshots = Copies.list(selfAssessmentSnapshots);
         linkedAccounts = Copies.list(linkedAccounts);
+        innerBlockers = Copies.list(innerBlockers);
+        innerBlockerCheckins = Copies.list(innerBlockerCheckins);
     }
 
 

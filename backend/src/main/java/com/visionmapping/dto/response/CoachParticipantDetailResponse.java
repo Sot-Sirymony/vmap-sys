@@ -20,7 +20,9 @@ public record CoachParticipantDetailResponse(
         // V9 (v0.1 FR-11): null until the participant saves a pitch.
         PitchReviewResponse pitch,
         // V31 v2 (DC-FR-67): dreams whose plan was built with the Dream Coach, and when; nothing else about the session.
-        List<GuidePlan> guidePlans) {
+        List<GuidePlan> guidePlans,
+        // V34 (D-34-11): the participant's inner blockers, null unless journals are shared.
+        List<InnerBlockerResponse> innerBlockers) {
 
     /** A dream whose plan was saved from Build my plan, with the latest time. */
     public record GuidePlan(Long dreamId, java.time.Instant finishedAt) {
@@ -35,5 +37,6 @@ public record CoachParticipantDetailResponse(
         fearEntries = Copies.list(fearEntries);
         attitudeCheckIns = Copies.list(attitudeCheckIns);
         comments = Copies.list(comments);
+        innerBlockers = Copies.list(innerBlockers);
     }
 }

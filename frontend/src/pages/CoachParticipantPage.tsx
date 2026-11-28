@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { addCoachComment, getCoachParticipant, ratePitch } from '../api/cohortApi';
+import { InnerBlockerCard } from '../components/inner-blockers/InnerBlockerCard';
 import { draftCoachFeedback } from '../api/aiCoachApi';
 import { ParticipantSummaryCard } from '../components/ai/CoachSummaryCards';
 import { WhenAiOn } from '../components/ai/WhenAiOn';
@@ -165,6 +166,10 @@ function JournalsCard({ detail }: { detail: CoachParticipantDetail }) {
                 {checkIn.checkInDate} · {tr('{score} of 5', { score: checkIn.score })}{checkIn.note ? ` · ${checkIn.note}` : ''}
               </Typography>
             ))}
+            {/* V34 (D-34-11): inner blockers, read-only, only when journals are shared. */}
+            <Typography variant="subtitle2">{tr('Inner blockers')}</Typography>
+            {(detail.innerBlockers ?? []).length === 0 && <Typography variant="body2">{tr('No inner blockers yet.')}</Typography>}
+            {(detail.innerBlockers ?? []).map((blocker) => <InnerBlockerCard key={blocker.id} blocker={blocker} />)}
           </Stack>
         )}
       </CardContent>

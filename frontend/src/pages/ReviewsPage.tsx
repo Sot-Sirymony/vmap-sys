@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import { listDreams } from '../api/dreamApi';
 import { archiveReview, permanentlyDeleteReview, createReview, listDueReviews, listReviews, restoreReview, updateReview } from '../api/reviewApi';
@@ -35,6 +35,8 @@ import { draftWeeklyReview } from '../api/aiDailyApi';
 import { Button } from '../components/common/Button';
 import { WhenAiOn } from '../components/ai/WhenAiOn';
 import { letterRankFilterOptions } from '../utils/sortRank';
+import { saveInnerBlockerCheckins } from '../api/innerBlockerApi';
+import { WeeklyInnerBlockerCheckins, type CheckinAnswers } from '../components/inner-blockers/WeeklyInnerBlockerCheckins';
 
 // FR-16.3: guided questions per review type, shown alongside the form.
 const REVIEW_GUIDES: Record<ReviewType, string[]> = {
@@ -105,12 +107,23 @@ const EMPTY_DILIGENCE: Record<DiligenceKey, boolean | null> = {
 
 export function ReviewsPage() {
   const { token } = useAuth();
+  // V34 (D-34-10): the id of the review just saved, so its inner blocker answers can be saved with it.
+  const savedReviewId = useRef<number | null>(null);
+  const [checkins, setCheckins] = useState<CheckinAnswers>({});
   const crud = useCrudEntity<Review, ReviewRequest>({
     token,
     entityLabel: 'reviews',
     list: listReviews,
-    create: createReview,
-    update: updateReview,
+    create: async (authToken, request) => {
+      const saved = await createReview(authToken, request);
+      savedReviewId.current = saved.id;
+      return saved;
+    },
+    update: async (authToken, id, request) => {
+      const saved = await updateReview(authToken, id, request);
+      savedReviewId.current = saved.id;
+      return saved;
+    },
     archive: archiveReview,
     permanentlyDelete: permanentlyDeleteReview,
     restore: restoreReview,
@@ -190,6 +203,8 @@ export function ReviewsPage() {
       return false;
     }
     const includeChecklist = checklistApplies && answeredCount === answers.length;
+    const editingWeekly = crud.editingId !== null;
+    savedReviewId.current = null;
     const success = await crud.save({
       reviewType,
       reviewDate,
@@ -214,7 +229,17 @@ export function ReviewsPage() {
       diligenceNote: includeChecklist ? diligenceNote || undefined : undefined,
       gratitudeNote: gratitudeNote.trim() || undefined,
     });
+    if (success && reviewType === 'WEEKLY' && token && savedReviewId.current !== null
+        && (Object.keys(checkins).length > 0 || editingWeekly)) {
+      try {
+        await saveInnerBlockerCheckins(token, savedReviewId.current,
+          Object.entries(checkins).map(([innerBlockerId, answer]) => ({ innerBlockerId: Number(innerBlockerId), answer })));
+      } catch (checkinError) {
+        crud.setError(checkinError instanceof Error ? tr(checkinError.message) : tr('The review was saved, but the inner blocker answers were not.'));
+      }
+    }
     if (success) {
+      setCheckins({});
       setSummary('');
       setCompletedTasks('');
       setBlockedTasks('');
@@ -270,6 +295,7 @@ export function ReviewsPage() {
     setDiligence(EMPTY_DILIGENCE);
     setDiligenceNote('');
     setGratitudeNote('');
+    setCheckins({});
   }
 
   useEffect(() => {
@@ -527,6 +553,9 @@ export function ReviewsPage() {
           Optional. Answering logs it to your gratitude list; leaving it blank changes nothing about this review.
         </span>
       </label>
+      {reviewType === 'WEEKLY' && token && (
+        <WeeklyInnerBlockerCheckins token={token} reviewId={crud.editingId} value={checkins} onChange={setCheckins} />
+      )}
     </>
   );
 

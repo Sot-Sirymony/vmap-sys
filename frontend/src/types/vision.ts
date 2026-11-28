@@ -758,6 +758,8 @@ export type CoachParticipantDetail = {
   pitch?: PitchReview | null;
   // V31 v2 (DC-FR-67): dreams whose plan was built with the Dream Coach, and when.
   guidePlans?: { dreamId: number; finishedAt: string }[];
+  // V34 (D-34-11): null unless the participant shares journals.
+  innerBlockers?: InnerBlocker[] | null;
 };
 
 // V9 (v0.1 FR-11): a participant's saved pitch (module 11) and the coach's rating.
@@ -877,6 +879,44 @@ export type AttitudeCheckInRequest = {
 };
 
 // FR-68: a discipline with its streak, as of the date it was asked for.
+// V34 (BRD 34): the participant's own inner blockers.
+export type InnerBlockerStatus = 'ACTIVE' | 'RESOLVED';
+export type InnerBlockerAnswer = 'YES' | 'PARTLY' | 'NO' | 'NOT_DONE';
+
+export type InnerBlocker = {
+  id: number;
+  blocker: string;
+  showsUp?: string | null;
+  practice: string;
+  chainKey?: ChainScoreKey | null;
+  dreamId?: number | null;
+  dreamTitle?: string | null;
+  habitId?: number | null;
+  habitName?: string | null;
+  habitArchived: boolean;
+  /** Only when the request gave the local day. */
+  habitStreak?: number | null;
+  status: InnerBlockerStatus;
+  resolvedAt?: string | null;
+  archived: boolean;
+  /** The latest four weekly answers, newest first. */
+  lastAnswers: InnerBlockerAnswer[];
+  /** Two No answers in a row (D-34-10). */
+  practiceNotHelping: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type InnerBlockerRequest = {
+  blocker: string;
+  showsUp: string;
+  practice: string;
+  chainKey: ChainScoreKey | '';
+  dreamId: number | null;
+};
+
+export type InnerBlockerCheckin = { innerBlockerId: number; reviewId: number; answer: InnerBlockerAnswer };
+
 export type Habit = {
   id: number;
   name: string;

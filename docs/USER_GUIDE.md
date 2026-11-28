@@ -586,3 +586,37 @@ Open `Import / Export`.
 Export downloads the current system data as an `.xlsx` workbook.
 
 Import currently validates workbook structure and reports row counts. It does not yet create database records.
+
+## My inner blockers (V34)
+
+Some of what slows a plan down is inside you, not in the steps. Write those blockers down in your own words.
+
+**Where:** on the **Assessment** page under **My inner blockers**, or in **Build my plan** on the **Inner blockers**
+stage under **Your inner blockers**.
+
+**Add one.** Choose **Add your own blocker** and fill in:
+
+- **Possible blocker**, for example "Inconsistency".
+- **How it shows up**: what you see yourself doing, for example "Big bursts, then weeks of nothing".
+- **Short practice**: one small action you can repeat, even on a bad day, for example "Never miss twice. 15 minutes
+  counts."
+- Optionally a **Linked chain** (one of the six in the 2-minute check) and a **Dream** (or **For all my dreams**). In
+  Build my plan the blocker is linked to the dream you are planning.
+
+In Build my plan, each chain the check names also has **Add as my blocker**. It opens the form with that chain and its
+practice filled in, for you to change before you save.
+
+**Make it a daily habit.** Choose **Make it a daily habit** on a blocker. You can change the name. The habit shows on
+the Today page, and the blocker shows its streak. You can have up to three habits at a time.
+
+**When it no longer holds you back,** choose **No longer holds me back**, or **Archive** to hide it. If it has a daily
+habit, you are asked whether to keep the habit or stop it too. Nothing is deleted. You can have up to 10 active
+blockers.
+
+**Weekly review.** A weekly review on the Reviews page asks, for each active blocker, "Did the practice help this
+week?" (Yes, Partly, No, Didn't do it). Answers are optional. After two No answers in a row, the blocker says "This
+practice isn't helping yet. Try changing it."
+
+**Privacy.** Your inner blockers are private. Your coach sees them, read-only, only if you share your journals with
+your coach. They are never sent to the AI. **Check and add** in Build my plan lists the blockers for that dream, for
+information only.
